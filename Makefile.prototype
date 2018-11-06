@@ -1,0 +1,51 @@
+# standard amuse configuration include
+# config.mk will be made after ./configure has run
+AMUSE_DIR?=../../../..
+-include $(AMUSE_DIR)/config.mk
+
+MPIFC ?= ${MPI_HOME}/bin/mpifort #/home/josh/local/bin/mpif90
+FC      = $(MPIFC)
+
+LDFLAGS  += -lm $(MUSE_LD_FLAGS)
+
+OBJS = base_grid_interface.o interface.o
+
+CODELIB = src/libflash.a
+
+CODE_GENERATOR = $(AMUSE_DIR)/build.py
+
+#drive_loc = ./src/FLASH4.2.2/object
+#drive_loc = ./src/FLASH4.4-mod/object
+drive_loc = ./src/flash4.2.2-rad/object
+
+#flash_obj =  $(drive_loc)/Driver_interface.o $(drive_loc)/Driver_evolveFlash.o $(drive_loc)/Driver_initParallel.o $(drive_loc)/Driver_initFlash.o
+allflash_obj =  $(wildcard $(drive_loc)/*.o)
+ignore_obj = $(drive_loc)/Flash.o $(drive_loc)/UNIT_TEST.o
+flash_obj = $(filter-out  $(ignore_obj), $(allflash_obj))
+
+all: flash_worker 
+
+
+debug: FCFLAGS = -O0 -ggdb -Wall -Wsurprising -Wfatal-errors -pedantic -fimplicit-none -fcheck=all -fbacktrace \
+       -Wcharacter-truncation -Waliasing -fwhole-file -ffpe-trap=zero,overflow,invalid
+debug: flash_worker
+opt:   FCFLAGS = -O3 -march=native
+opt:   flash_worker
+
+
+clean:
+	$(RM) -f *.so *.o *.pyc worker_code.cc worker_code.h #flash.par
+	$(RM) *~ flash_worker worker_code.f90
+	make -C src clean
+
+$(CODELIB):
+	make -C src all
+
+worker_code.f90: interface.py
+	$(CODE_GENERATOR) --type=f90 interface.py FlashInterface -o $@
+
+flash_worker: worker_code.f90 $(CODELIB) $(OBJS)
+	$(MPIFC) $(FCFLAGS) $(FS_FLAGS) $< $(OBJS)  $(FS_LIBS) -o $@ $(flash_obj) $(HDF5_LIBS)
+
+%.o: %.F90
+	$(FC) $(FCFLAGS) -I$(drive_loc) -c -o $@ $<
