@@ -2,7 +2,6 @@
 
 from numpy import *
 import yt
-import fftw3
 import sys
 import argparse
 import numpy as np
@@ -106,41 +105,21 @@ def create_spspace_box(kmin, kmax, NCD, Eslp):
     # v ~ sqrt(E) => 0.5*Eslp-1, k^2 is in mask => 0.25*Eslp-0.5
     mask[where(mask>0)] = mask[where(mask>0)]**(0.25*Eslp-0.5)
 
-    # multiply random coefficients with mask
     ssbox *= mask
 
-    #ssbox = zeros(NCD, dtype=complex)
-    #ssbox[63,63,63] = 1.0 + 0.0j
-    #return ssbox
     return ssbox
 
 
 def kolmogorov_vel(NCD, kmin, kmax, Eslp):
-    # prepare fftw plan
-    inarr  = zeros(NCD, dtype=complex)
-    outarr = zeros(NCD, dtype=complex)
-    fft = fftw3.Plan(inarr, outarr, direction='backward', flags=['measure'])
-
-    # arrays for velocity field
-    velx  = zeros(NCD, dtype=float64)
-    vely  = zeros(NCD, dtype=float64)
-    velz  = zeros(NCD, dtype=float64)
-
     # create velocity field in spectral space (sp_vel[xyz])
     # and FFT it to configuration space (vel[xyz])
     sp_velx = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_velx
-    fft.execute()
-    velx[:,:,:] = outarr.real
     sp_vely = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_vely
-    fft.execute()
-    vely[:,:,:] = outarr.real
     sp_velz = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_velz
-    fft.execute()
-    velz[:,:,:] = outarr.real
 
+    velx = fft.ifftn(sp_velx).real
+    vely = fft.ifftn(sp_vely).real
+    velz = fft.ifftn(sp_velz).real
 
     return (velx, vely, velz)
 
