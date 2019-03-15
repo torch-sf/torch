@@ -34,14 +34,14 @@ parser = argparse.ArgumentParser(description='Builds a data set in a cube \
 
 parser.add_argument("-m", "--mass", default=None, required=False, type=float,
                    help="Input the total mass of the sphere in MSun.")
-parser.add_argument("-mus", "--musph", default=2.3, required=False, type=float,
-                   help="Atomic mass of gas in the sphere.")
+#parser.add_argument("-mus", "--musph", default=2.3, required=False, type=float,
+#                   help="Atomic mass of gas in the sphere.")
 parser.add_argument("-B", "--magnetic_field", default=0.0, required=False, type=float,
                    help="Input the background magnetic field magnitude in Gauss.")
 parser.add_argument("-n", "--number_density", default=1.25, required=False, type=float,
                    help="Input the background number density of H in cm^-3.")
-parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
-                   help="Atomic mass of gas in the sphere.")
+#parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
+#                   help="Atomic mass of gas in the sphere.")
 parser.add_argument("-r", "--radius", default=None, required=False, type=float,
                    help="Input the radius of the sphere in parsecs.")
 parser.add_argument("-v", "--virial_ratio", default=0.4, required=False, type=float,
@@ -179,7 +179,6 @@ def calc_sphsym_pot(r_arr, rho_arr):
 def gauss_dens_prof(Rsph, Msph, rho_rat, Nr):
     rarr   = arange(0.0, Rsph+Rsph/Nr, Rsph/Nr)
     sig_R  = Rsph / sqrt(-log(rho_rat)) # characteristic radius
-    #print '# sigma_r = ', sig_R
     rho_rarr = exp(-rarr*rarr/(sig_R*sig_R))
     # calculate mass of the sphere with temporary density profile
     (pot_rarr, Mrmid_rarr, Frmid_rarr) = calc_sphsym_pot(rarr, rho_rarr)
@@ -267,13 +266,10 @@ def window_avg(x,n):
 # The actual code to make the data file.
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, Bmag, filename, write_data):
 
-    if (box == None): box = Rsph*1.25
-
-
     #Msph    = 1e4*MSun # Sphere mass
     #Tsph    = 30.      # Sphere temperature
     musph   = 1.3 #2.3      # molecular mass inside sphere
-    rho_rat = 1.0/3.0  # density ratio between centre and border
+    rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
 
     # ambient gas
@@ -293,21 +289,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     #kmax = 32          # shorest wave number of turbulence
 
     # computational domain
-    #CD   = ((0.0, 10*cmpc), (0.0, 10*cmpc), (0.0, 10*cmpc))
-    CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)*cmpc
+    CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)
     NCD  = (128,128,128)
-
-
-    #rarr = arange(11, dtype=float64)
-    #rhoarr = ones(11, dtype=float64)
-    #phi_arr = calc_sphsym_pot(rarr, rhoarr)
-    #R = 10
-    #M = 4*pi*R**3/3.0
-    #for i in range(len(rarr)):
-    #    print '% 20.10e % 20.10e % 20.10e' \
-    #    % (rarr[i], phi_arr[i], -G*M*(3*R*R-rarr[i]**2)/(2*R**3))
-    #sys.exit()
-    #
 
     # calculate density, pressure and potential fields
     (r_rarr, rho_rarr) = gauss_dens_prof(Rsph, Msph, rho_rat, Nr)
@@ -317,44 +300,17 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     # Lets just set the temperature initially from the density in the sphere
     # (which is likely in the unstable regime) directly from the equilibrium
     # cooling curve calculated previously.
-    numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
-    #print shape(numdens_arr)
-    #numdens_cp = (numdens_arr.copy()).flatten()
-    data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
-    #print (numdens_arr == numdens_cp.reshape(128,128,128)).all()
-    #print shape(T_arr)
+    #numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
+    #data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
+    #p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
 
     # Wunsch's old method
-    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
+    p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
 
-    p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
-
-
-    # My method where I pressure match at the boundary with the sphere. - JW
-    # NOTE: This just doesn't matter. Anything more massive than a few 100 solar masses
-    #       is just Jeans unstable and collapsing, its not in "pressure equ" with the
-    #       surrounding medium. And adding any amount of density doesn't make it in
-    #       equ with the surrounding, because its collapsing. If anything, its likely
-    #       *accreting from the surroundings* (see Vazquez-Semadeni 2009).
-    #       Therefore we're going back to separately setting the ambient and
-    #       core temps and pressures independently.  - JW 8/30/18
-    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
-    # Invert to get the ambient density.
     rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
     # calculate turbulent velocity field
     (velx, vely, velz) = kolmogorov_vel(NCD, kmin, kmax, Eslp)
-
-
-    # smooth the velocity field on the smallest scales. - JW
-
-    #velx = window_avg(velx,3)
-    #vely = window_avg(vely,3)
-    #velz = window_avg(velz,3)
-
-    #plt.imshow(velx[:,:,64])
-    #plt.savefig('extra_crispy_velocity.png')
-
 
     # calculate total kinetic and potential energy
     dx = (CD[0][1] - CD[0][0]) / NCD[0]
@@ -499,6 +455,13 @@ if (infile is None):
         print "Using the default factors for Rsph and box size:"
         print "--radius", args.radius, "--box_size", args.box_side
 
+    elif (args.radius is not None and args.box_side is None):
+
+        args.box_side = args.radius * 1.25
+
+        print "Using default box size +/-(1.25x Rsph):"
+        print "--box_size", args.box_side
+
 
     if (args.radius is None or args.mass is None or args.virial_ratio is None or args.filename is None):
         raise Exception("Error: You must either pass sphere radius, mass,"
@@ -509,7 +472,7 @@ if (infile is None):
     # sphere params
     Rsph       = [args.radius*cmpc]
     Msph       = [args.mass*MSun]
-    box        = [args.box_side]
+    box        = [args.box_side*cmpc]
     vir_rat    = [args.virial_ratio]
     kmin       = [args.kmin]
     kmax       = [args.kmax]
