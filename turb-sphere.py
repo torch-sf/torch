@@ -484,9 +484,31 @@ write_data = not args.no_data
 if (infile is None):
 
 
+    if (args.radius is None and args.box_side is None):
+
+        if   (args.mass == 1e3):
+            args.radius     =  5.0
+            args.box_side   =  7.0
+        elif (args.mass == 1e4):
+            args.radius     = 10.0
+            args.box_side   = 12.5
+        elif (args.mass == 1e5):
+            args.radius     = 50.0
+            args.box_side   = 55.0
+
+        print "Using the default factors for Rsph and box size:"
+        print "--radius", args.radius, "--box_size", args.box_side
+
+
+    if (args.radius is None or args.mass is None or args.virial_ratio is None or args.filename is None):
+        raise Exception("Error: You must either pass sphere radius, mass,"
+                        + " virial ratio and output filename or you must pass"
+                        + " in an input file with the proper values specified!")
+
+
     # sphere params
-    Rsph       = [args.radius*cmpc] #5*cmpc
-    Msph       = [args.mass*MSun]   #1e3*MSun # Sphere mass
+    Rsph       = [args.radius*cmpc]
+    Msph       = [args.mass*MSun]
     box        = [args.box_side]
     vir_rat    = [args.virial_ratio]
     kmin       = [args.kmin]
@@ -499,25 +521,6 @@ if (infile is None):
     Bmag       = [args.magnetic_field]
     num_runs   = 1
 
-
-    if (Rsph is None and box is None): # Use default values for the box sizes.
-
-        print "Using the default factors for Rsph and box size."
-        if   (Msph[0] == 1e3*MSun):
-            Rsph    = [5*cmpc]
-            box     = [7.0]
-        elif (Msph[0] == 1e4*MSun):
-            Rsph    = [10.0*cmpc] # Sphere radius
-            box     = [12.5]
-        elif (Msph[0] == 1e5*MSun):
-            Rsph    = [50.0*cmpc] # Sphere radius
-            box     = [55.0]
-
-
-    if (Rsph is None or Msph is None or vir_rat is None or filename is None):
-        print "Error: You must either pass sphere radius, mass, virial ratio and \
-               output filename or you must pass in an input file with the proper \
-               values specified!"
 
 else: # load from the file
 
