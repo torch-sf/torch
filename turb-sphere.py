@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import matplotlib as mpl
+mpl.use('Agg')
+
 from numpy import *
 import yt
 import sys
@@ -7,9 +10,6 @@ import argparse
 import numpy as np
 import os
 from scipy.interpolate import interp1d as ip1d
-
-
-#filename = 'clouds/cubeM3V04E'
 
 ########################
 ### Units
@@ -32,49 +32,52 @@ parser = argparse.ArgumentParser(description='Builds a data set in a cube \
                                  background is cool neutral medium (CNM).')
 
 parser.add_argument("-m", "--mass", default=None, required=False, type=float,
-                   help="Input the total mass of the sphere in MSun.")
-#parser.add_argument("-mus", "--musph", default=2.3, required=False, type=float,
-#                   help="Atomic mass of gas in the sphere.")
+                   help="Total mass of the sphere in MSun.")
 parser.add_argument("-B", "--magnetic_field", default=0.0, required=False, type=float,
-                   help="Input the background magnetic field magnitude in Gauss.")
+                   help="Background magnetic field magnitude in Gauss.")
 parser.add_argument("-n", "--number_density", default=1.25, required=False, type=float,
-                   help="Input the background number density of H in cm^-3.")
-#parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
-#                   help="Atomic mass of gas in the sphere.")
+                   help="Background number density of H in cm^-3.")
 parser.add_argument("-r", "--radius", default=None, required=False, type=float,
-                   help="Input the radius of the sphere in parsecs.")
+                   help="Radius of the sphere in parsecs.")
 parser.add_argument("-v", "--virial_ratio", default=0.4, required=False, type=float,
-                   help="Input the virial ratio of the sphere. CUrrently only \
+                   help="Virial ratio of the sphere. CUrrently only \
                          calculates virial ratio using kinetic and gravitational \
                          energy. NOTE: equilibrium is v=0.5!")
 parser.add_argument("-b", "--box_side", default=None, required=False, type=float,
-                   help="Input the distance from the center of the cube to the \
+                   help="Distance from the center of the cube to the \
                          edge of the cube (half the length of a side). \
                          If not specified, is Rsph*1.25 by default.")
-parser.add_argument("-f", "--filename", default=None, required=False,
-                   help="Output filename.")
+
 parser.add_argument("-kmin", "--kmin", default=1, required=False, type=int,
-                   help="Input the smallest wavenumber of the turbulence. \
+                   help="Smallest wavenumber of the turbulence. \
                          Default is 1.")
 parser.add_argument("-kmax", "--kmax", default=32, required=False, type=int,
-                   help="Input the largest wavenumber of the turbulence. \
+                   help="Largest wavenumber of the turbulence. \
                          Default is 32.")
 parser.add_argument("-e", "--turb_exp", default=5./3., required=False, type=float,
-                   help="Input the exponent of the energy spectrum for the turbulence. \
+                   help="Exponent of the energy spectrum for the turbulence. \
                          Default is Kolmogorov (-5/3). Note that you pass the positive \
                          value and the code tacks on the negative sign.")
+
+parser.add_argument("-mus", "--musph", default=1.3, required=False, type=float,
+                   help="Mean particle mass of sphere gas in mH.")
+parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
+                   help="Mean particle mass of ambient gas in mH.")
 parser.add_argument("-Ts", "--sphere_temperature", default=30., required=False, type=float,
-                   help="Input the sphere temperature of the gas in Kelvin. \
+                   help="Sphere gas temperature in Kelvin. \
                          Default is 30 Kelvin.")
 parser.add_argument("-Tb", "--background_temperature", default=8e3, required=False, type=float,
-                   help="Input the background temperature of the gas in Kelvin. \
+                   help="Background gas temperature in Kelvin. \
                          Default is 8e3 Kelvin.")
+
+parser.add_argument("-f", "--filename", default=None, required=False,
+                   help="Output filename.")
 parser.add_argument('-nd','--no_data', action='store_true', default=False,
                     help="Don't write a data output file, just do the calculations. \
                           Default is false (write data).")
 parser.add_argument('-rf','--read_file', default=None,
                     help="Read all input data from file, formatted in the following order: \
-                          Mass	Radius	box	virial ratio	NumDensSph	Tsph	Tamb	filename \
+                          Mass	Radius	box	virial_ratio	NumDensSph	Tsph	Tamb	kmin	kmax	Eslp	Bmag	filename \
                           Pass in the input filename.")
 
 #############################
@@ -219,53 +222,15 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
 
     return (rarr, rho_arr, pot_arr)
 
-def window_avg(x,n):
-
-    from scipy.signal import convolve
-
-
-    """
-    A function that averages over the elements of an array x.
-
-    Attributes
-    ----------
-    x       : numpy array (float)
-              Array that you want to average over.
-    n       : iteger
-              Number of elements that you want to average over (window radius).
-    avg_all : Whether you want to average over all elements within the window (True)
-              or only those at either end of the window boundary (False). Default is True.
-    """
-
-    # Numpy version does 1 d arrays only.
-    #return np.convolve(x, np.ones(n)*1.0/float(n), 'full') #[(n-1):-(n-1)]
-    # Scipy version can do any d array. Nice.
-    return convolve(x, np.ones((n,n,n))*1.0/float(n**3.0), mode='same')
 
 # The actual code to make the data file.
-def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, Bmag, filename, write_data):
+def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
+                   kmin, kmax, Eslp, Bmag, filename, write_data):
 
-    #Msph    = 1e4*MSun # Sphere mass
-    #Tsph    = 30.      # Sphere temperature
-    musph   = 1.3 #2.3      # molecular mass inside sphere
     rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
 
-    # ambient gas
-    mu_amb  = 1.3      # molecular mass of ambient gas
-    rho_amb = n0*mH*mu_amb # Ambient density
-    #T_amb   = 100.     # Ambient temperature
-
-    #box     = 7.0     # dist from center to edge of box in pc
-    #box    = 12.5
-    #box     = 55.0     # dist from center to edge of box in pc
-
-    # energy spectrum
-    #Eslp = -5./3.      # spectrum exponent (maybe also try Burger spectrum?)
-    #vir_rat = 0.4      # virial ratio
-    # per M-MML 99 make kmax=2, kmin=1
-    #kmin = 1           # longest wave number of turbulence
-    #kmax = 32          # shorest wave number of turbulence
+    rho_amb = n0*mH*mu_amb # Ambient gas density
 
     # computational domain
     CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)
@@ -306,10 +271,6 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     vely *= sqrt(vir_rat / Qvir)*mask
     velz *= sqrt(vir_rat / Qvir)*mask
 
-    #velx *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-    #vely *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-    #velz *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-
     # recalculate kinetic energy
     Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
     Qvir = (Ekin) / np.abs(Epot)
@@ -323,39 +284,25 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     from matplotlib import colors
 
     fig, ax = plt.subplots()
-    cmap = plt.get_cmap('viridis')
-    #bounds = [velx.min(), velx.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(velx[:,:,64], cmap.N)
-    #print cNorm
-    im = ax.imshow(velx[:,:,64], aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(velx[:,:,64], aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'velx.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(p_arr[:,:,64]/kB), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(np.log10(p_arr[:,:,64]/kB), aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'pres.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64])), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(np.log10(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64])), aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'temp.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(rho_arr[:,:,64]), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(np.log10(rho_arr[:,:,64]), aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'dens.png')
     plt.clf()
@@ -458,6 +405,8 @@ if (infile is None):
     Eslp       = [-args.turb_exp]
     Tsph       = [args.sphere_temperature]
     T_amb      = [args.background_temperature]
+    musph      = [args.musph]
+    mu_amb     = [args.muamb]
     filename   = [args.filename]
     n0         = [args.number_density]
     Bmag       = [args.magnetic_field]
@@ -480,6 +429,7 @@ else: # load from the file
 for i in range(num_runs):
 
     make_data_cube(Msph[i], Rsph[i], box[i], n0[i], Tsph[i], T_amb[i],
+                   musph[i], mu_amb[i],
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
                    filename[i], write_data)
 
