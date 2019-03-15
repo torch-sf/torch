@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(description='Builds a data set in a cube \
                                  turbulent velocity spectrum. Note the default \
                                  background density and temperature assumes the \
                                  background is cool neutral medium (CNM).')
-                                 
+
 parser.add_argument("-m", "--mass", default=None, required=False, type=float,
                    help="Input the total mass of the sphere in MSun.")
 parser.add_argument("-mus", "--musph", default=2.3, required=False, type=float,
@@ -86,7 +86,7 @@ def create_spspace_box(kmin, kmax, NCD, Eslp):
     ssbox = zeros(NCD, dtype=complex)
 
     # first, create uniform complex random spectrum in whole array
-    # range of coeffs is (-sqrt(2)/2, sqrt(2)/2), it results in 
+    # range of coeffs is (-sqrt(2)/2, sqrt(2)/2), it results in
     # range (-1,1) for coeffiecient magnitudes
     ssbox.real = sqrt(2.)*(random.rand(NCD[0],NCD[1],NCD[2]) - 0.5)
     ssbox.imag = sqrt(2.)*(random.rand(NCD[0],NCD[1],NCD[2]) - 0.5)
@@ -113,7 +113,7 @@ def create_spspace_box(kmin, kmax, NCD, Eslp):
     #ssbox[63,63,63] = 1.0 + 0.0j
     #return ssbox
     return ssbox
-    
+
 
 def kolmogorov_vel(NCD, kmin, kmax, Eslp):
     # prepare fftw plan
@@ -126,7 +126,7 @@ def kolmogorov_vel(NCD, kmin, kmax, Eslp):
     vely  = zeros(NCD, dtype=float64)
     velz  = zeros(NCD, dtype=float64)
 
-    # create velocity field in spectral space (sp_vel[xyz]) 
+    # create velocity field in spectral space (sp_vel[xyz])
     # and FFT it to configuration space (vel[xyz])
     sp_velx = create_spspace_box(kmin, kmax, NCD, Eslp)
     inarr[:,:,:] = sp_velx
@@ -242,13 +242,13 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
     return (rarr, rho_arr, pot_arr)
 
 def window_avg(x,n):
-    
+
     from scipy.signal import convolve
-    
-    
+
+
     """
     A function that averages over the elements of an array x.
-    
+
     Attributes
     ----------
     x       : numpy array (float)
@@ -280,7 +280,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     mu_amb  = 1.3      # molecular mass of ambient gas
     rho_amb = n0*mH*mu_amb # Ambient density
     #T_amb   = 100.     # Ambient temperature
-    
+
     #box     = 7.0     # dist from center to edge of box in pc
     #box    = 12.5
     #box     = 55.0     # dist from center to edge of box in pc
@@ -288,7 +288,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     # energy spectrum
     #Eslp = -5./3.      # spectrum exponent (maybe also try Burger spectrum?)
     #vir_rat = 0.4      # virial ratio
-    # per M-MML 99 make kmax=2, kmin=1 
+    # per M-MML 99 make kmax=2, kmin=1
     #kmin = 1           # longest wave number of turbulence
     #kmax = 32          # shorest wave number of turbulence
 
@@ -313,7 +313,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     (r_rarr, rho_rarr) = gauss_dens_prof(Rsph, Msph, rho_rat, Nr)
     (rarr, rho_arr, pot_arr) = dens_pot_3darr(Rsph, Msph, r_rarr, rho_rarr, rho_amb, Nr, NCD, CD)
     mask = (rarr <= Rsph).astype(float)
-    
+
     # Lets just set the temperature initially from the density in the sphere
     # (which is likely in the unstable regime) directly from the equilibrium
     # cooling curve calculated previously.
@@ -323,11 +323,11 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
     #print (numdens_arr == numdens_cp.reshape(128,128,128)).all()
     #print shape(T_arr)
-    
-    # Wunsch's old method
-    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr 
 
-    p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr 
+    # Wunsch's old method
+    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
+
+    p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
 
 
     # My method where I pressure match at the boundary with the sphere. - JW
@@ -337,7 +337,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     #       equ with the surrounding, because its collapsing. If anything, its likely
     #       *accreting from the surroundings* (see Vazquez-Semadeni 2009).
     #       Therefore we're going back to separately setting the ambient and
-    #       core temps and pressures independently.  - JW 8/30/18 
+    #       core temps and pressures independently.  - JW 8/30/18
     #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
     # Invert to get the ambient density.
     rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
@@ -362,7 +362,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     dz = (CD[2][1] - CD[2][0]) / NCD[2]
     Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
     Epot = 0.5*(mask*rho_arr*pot_arr).sum()*dx*dy*dz
-    Emag = 0.5*(4.0/3.0*np.pi*Rsph**3.0*(Bmag**2.0/4.0/np.pi)) 
+    Emag = 0.5*(4.0/3.0*np.pi*Rsph**3.0*(Bmag**2.0/4.0/np.pi))
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
     print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
@@ -380,7 +380,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
     print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
-    print 'Msph, Rsph = ', Msph/MSun, Rsph/cmpc 
+    print 'Msph, Rsph = ', Msph/MSun, Rsph/cmpc
 
     # plot a slice of the velocity field
     import matplotlib.pyplot as plt
@@ -424,7 +424,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     fig.colorbar(im)
     plt.savefig(filename+'dens.png')
     plt.clf()
-    
+
     #print '# ', NCD[0], NCD[1], NCD[2]
     #for i in range(NCD[0]):
         #for j in range(NCD[1]):
@@ -463,13 +463,13 @@ def get_P_and_T_from_Eq_Cooling_Curve(numdens, data_file='hAc_b_2.0E-17_e_0.021_
 
     [time, ndens, temp, ei, pk, xHp, mu_mol, tdust] = np.loadtxt(
                                                    data_file, unpack=True)
-    
+
     p_from_n = ip1d(ndens, pk, kind='linear')
     T_from_n = ip1d(ndens, temp, kind='linear')
-    
+
     P = p_from_n(numdens)
     T = T_from_n(numdens)
-    
+
     return P, T
 
 ################################
@@ -499,9 +499,9 @@ if (infile is None):
     Bmag       = [args.magnetic_field]
     num_runs   = 1
 
-    
+
     if (Rsph is None and box is None): # Use default values for the box sizes.
-        
+
         print "Using the default factors for Rsph and box size."
         if   (Msph[0] == 1e3*MSun):
             Rsph    = [5*cmpc]
@@ -513,28 +513,28 @@ if (infile is None):
             Rsph    = [50.0*cmpc] # Sphere radius
             box     = [55.0]
 
-    
+
     if (Rsph is None or Msph is None or vir_rat is None or filename is None):
         print "Error: You must either pass sphere radius, mass, virial ratio and \
                output filename or you must pass in an input file with the proper \
                values specified!"
-               
+
 else: # load from the file
-    
+
     #print np.shape(np.genfromtxt(infile, dtype=None, skip_header=2, usecols=range(8), unpack=True))
-    
+
     Msph, Rsph, box, vir_rat, n0, Tsph, T_amb, kmin, kmax, Eslp, Bmag = np.loadtxt(
             infile, dtype=np.float, skiprows=2, usecols=range(11), unpack=True)
     filename = np.loadtxt(infile, dtype=np.str, skiprows=2, usecols=11, unpack=True)
-            
+
     num_runs = len(Msph)
     Rsph *= cmpc
     Msph *= MSun
 
 
 for i in range(num_runs):
-    
-    make_data_cube(Msph[i], Rsph[i], box[i], n0[i], Tsph[i], T_amb[i], 
+
+    make_data_cube(Msph[i], Rsph[i], box[i], n0[i], Tsph[i], T_amb[i],
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
                    filename[i], write_data)
 
