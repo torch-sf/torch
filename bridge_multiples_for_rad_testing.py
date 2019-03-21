@@ -2201,7 +2201,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 # Number of processors for each code.
 ##########################
-default_hy_procs = 188 #210 #128
+default_hy_procs = 4
 num_grav_workers = 1
 
 try:
