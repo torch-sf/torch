@@ -159,7 +159,7 @@ def calc_sphsym_pot(r_arr, rho_arr):
     return (pot_arr, Mrmid_arr, Frmid_arr)
 
 def gauss_dens_prof(Rsph, Msph, rho_rat, Nr):
-    rarr   = arange(0.0, Rsph+Rsph/Nr, Rsph/Nr)
+    rarr   = np.linspace(0.0, Rsph+Rsph/Nr, Nr+1)
     sig_R  = Rsph / sqrt(-log(rho_rat)) # characteristic radius
     rho_rarr = exp(-rarr*rarr/(sig_R*sig_R))
     # calculate mass of the sphere with temporary density profile
@@ -283,49 +283,77 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     from matplotlib import cm
     from matplotlib import colors
 
+    def symshow(ax, x, vbnd=None, **kwargs):
+        """mpl.plt.imshow wrapper, force vmin/vmax symmetric about zero"""
+        assert 'vmin' not in kwargs
+        assert 'vmax' not in kwargs
+        if vbnd is None:
+            filt = np.isfinite(x)
+            vbnd = np.max(np.abs(x[filt]))
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'RdBu_r'
+        return ax.imshow(x, vmin=-vbnd, vmax=+vbnd, **kwargs)
+
     fig, ax = plt.subplots()
-    im = ax.imshow(velx[:,:,64], aspect='auto')
+    im = symshow(ax, velx[:,:,64], aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'velx.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.log10(p_arr[:,:,64]/kB), aspect='auto')
+    im = ax.imshow(p_arr[:,:,64]/kB, aspect='auto', cmap='viridis',
+                   norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'pres.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.log10(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64])), aspect='auto')
+    im = ax.imshow(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64]),
+                   aspect='auto', cmap='viridis', norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'temp.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np.log10(rho_arr[:,:,64]), aspect='auto')
+    im = ax.imshow(rho_arr[:,:,64], aspect='auto', cmap='viridis',
+                   norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'dens.png')
     plt.clf()
 
-    #print '# ', NCD[0], NCD[1], NCD[2]
-    #for i in range(NCD[0]):
-        #for j in range(NCD[1]):
-            #for k in range(NCD[2]):
-                #print '%3d %3d %3d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e' \
-                #% (i,j,k, rho_arr[i,j,k], p_arr[i,j,k]\
-                #, velx[i,j,k], vely[i,j,k], velz[i,j,k], pot_arr[i,j,k])
-            #print
-        #print
-
-    # Write info about what was set when making this data cube.
-    f = open(filename+'.dat', 'w')
-    f.write("{:<9} {:<35}  \n \n".format('filename:', filename))
-    f.write("{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} \n".format('Msph', 'Rsph', 'x/y/z max', 'Ekin', 'Epot', 'Emag', 'Qvir', 'B0', 'n0'))
-    f.write("{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} \n".format('(M)', '(pc)', '(pc)', '(ergs)', '(ergs)', '(ergs)', ' ', '(Gauss)', '(cm^-3)'))
-    f.write("{:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} \n".format(Msph/MSun, Rsph/cmpc, box, Ekin, Epot, Emag, Qvir, Bmag))
-    f.close()
-
     if (write_data):
+
+        print "writing metadata to "+filename+".dat"
+        with open(filename+'.dat', 'w') as f:
+
+            f.write("# {:<9} {:<35}\n\n".format('filename:', filename))
+
+            def write_pars(key, unit, val):
+                assert len(key) == len(unit)
+                assert len(key) == len(val)
+                # construct format strings
+                # hdr: "# {:>8} {:>10} {:>10} . . ."
+                # val: "{:>10.2E} {:>10.2E} {:>10.2E} . . ."
+                hdrfmt = "# {:>8}" + " {:>10}"*(len(key)-1) + "\n"
+                valfmt = " ".join(["{:>10.2E}"]*len(key)) + "\n"
+                f.write(hdrfmt.format(*key))
+                f.write(hdrfmt.format(*unit))
+                f.write(valfmt.format(*val))
+
+            write_pars(
+                ['Msph', 'Rsph', 'x/y/z max', 'Ekin', 'Epot', 'Emag', 'Qvir', 'B0', 'n0'],
+                ['(Msun)', '(pc)', '(pc)', '(erg)', '(erg)', '(erg)', '(-)', '(Gauss)', '(cm^-3)'],
+                [Msph/MSun, Rsph/cmpc, box/cmpc, Ekin, Epot, Emag, Qvir, Bmag, n0],
+            )
+
+            f.write('\n')
+
+            write_pars(
+                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'kmin', 'kmax', 'turb_exp'],
+                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(-)', '(-)', '(-)'],
+                [Bmag, n0, Tsph, T_amb, musph, mu_amb, kmin, kmax, Eslp],
+            )
+
         # Write out the initial conditions file.
         print "writing data file."
         f = open(filename, 'w')
