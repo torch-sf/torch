@@ -69,6 +69,9 @@ parser.add_argument("-Ts", "--sphere_temperature", default=30., required=False, 
 parser.add_argument("-Tb", "--background_temperature", default=8e3, required=False, type=float,
                    help="Background gas temperature in Kelvin. \
                          Default is 8e3 Kelvin.")
+parser.add_argument("--Ts_from_cool_curve", action='store_true',
+                   help="Compute Ts for given density from equilibrium \
+                         cooling curve. Overrides input sphere temperature.")
 
 parser.add_argument("-f", "--filename", default=None, required=False,
                    help="Output filename.")
@@ -225,7 +228,8 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
 
 # The actual code to make the data file.
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
-                   kmin, kmax, Eslp, Bmag, filename, write_data):
+                   kmin, kmax, Eslp, Bmag, filename, write_data,
+                   Ts_from_cool_curve=False):
 
     rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
@@ -241,15 +245,16 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     (rarr, rho_arr, pot_arr) = dens_pot_3darr(Rsph, Msph, r_rarr, rho_rarr, rho_amb, Nr, NCD, CD)
     mask = (rarr <= Rsph).astype(float)
 
-    # Lets just set the temperature initially from the density in the sphere
-    # (which is likely in the unstable regime) directly from the equilibrium
-    # cooling curve calculated previously.
-    #numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
-    #data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
-    #p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
-
-    # Wunsch's old method
-    p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
+    if Ts_from_cool_curve:
+        # Lets just set the temperature initially from the density in the sphere
+        # (which is likely in the unstable regime) directly from the equilibrium
+        # cooling curve calculated previously.
+        numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
+        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
+        p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
+    else:
+        # Wunsch's old method
+        p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
 
     rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
@@ -445,6 +450,8 @@ else: # load from the file
 
     #print np.shape(np.genfromtxt(infile, dtype=None, skip_header=2, usecols=range(8), unpack=True))
 
+    # Not tested/working currently. 2019 Mar 22, AT
+
     Msph, Rsph, box, vir_rat, n0, Tsph, T_amb, kmin, kmax, Eslp, Bmag = np.loadtxt(
             infile, dtype=np.float, skiprows=2, usecols=range(11), unpack=True)
     filename = np.loadtxt(infile, dtype=np.str, skiprows=2, usecols=11, unpack=True)
@@ -459,5 +466,6 @@ for i in range(num_runs):
     make_data_cube(Msph[i], Rsph[i], box[i], n0[i], Tsph[i], T_amb[i],
                    musph[i], mu_amb[i],
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
-                   filename[i], write_data)
+                   filename[i], write_data,
+                   Ts_from_cool_curve=args.Ts_from_cool_curve)
 
