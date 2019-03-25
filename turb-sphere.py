@@ -229,7 +229,8 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
 # The actual code to make the data file.
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                    kmin, kmax, Eslp, Bmag, filename, write_data,
-                   Ts_from_cool_curve=False):
+                   Ts_from_cool_curve=False,
+                   cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
 
     rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
@@ -250,7 +251,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         # (which is likely in the unstable regime) directly from the equilibrium
         # cooling curve calculated previously.
         numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
-        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
+        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr, data_file=cool_curve)
         p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
     else:
         # Wunsch's old method
@@ -332,6 +333,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         with open(filename+'.dat', 'w') as f:
 
             f.write("# {:<9} {:<35}\n\n".format('filename:', filename))
+            if Ts_from_cool_curve:
+                f.write("# cooling curve for Tsph: {}".format(cool_curve))
 
             def write_pars(key, unit, val):
                 assert len(key) == len(unit)
@@ -354,9 +357,9 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
             f.write('\n')
 
             write_pars(
-                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'kmin', 'kmax', 'turb_exp'],
-                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(-)', '(-)', '(-)'],
-                [Bmag, n0, Tsph, T_amb, musph, mu_amb, kmin, kmax, Eslp],
+                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'cool_curve', 'kmin', 'kmax', 'turb_exp'],
+                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(boolean)', '(-)', '(-)', '(-)'],
+                [Bmag, n0, Tsph, T_amb, musph, mu_amb, int(Ts_from_cool_curve), kmin, kmax, Eslp],
             )
 
         # Write out the initial conditions file.
