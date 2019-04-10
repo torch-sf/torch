@@ -177,10 +177,10 @@ gr_bhTreeLimAngle        = 0.5    # when Grav walks the tree. - JW
 gr_bhTreeSafeBox         = 1.2
 # WARNING! Using unified tree walk results in LARGE errors
 # # after a refinement! - JW
-gr_bhUseUnifiedTW        = .false ###### MAKE IT FALSE! .true.
+gr_bhUseUnifiedTW        = .false. ###### MAKE IT FALSE! .true.
 gr_bhTWMaxQueueSize      = 10000
-#gr_bhAcceptAccurateOld   = .false #.true. # False is faster. This is ABU in Wunsch paper
-#gr_bhLoadBalancing       = .false #.true. # Note neither of these is in my ver of BHTree
+#gr_bhAcceptAccurateOld   = .false. #.true. # False is faster. This is ABU in Wunsch paper
+#gr_bhLoadBalancing       = .false. #.true. # Note neither of these is in my ver of BHTree
 gr_bhMaxBlkWeight        = 10.0
 
 # Here's the fastest from Wunsch's paper. 
@@ -494,12 +494,12 @@ diff_eleFlCoef = 5.0 # Draine pg 386 citing Cowie and McKee 77
 # 0.0 Explict, 0.5 Crank-Nicolson, 1.0 Implicit
 diff_thetaImplct = 1.0
 
-diff_eleXlBoundaryType = “outflow”
-diff_eleXrBoundaryType = “outflow”
-diff_eleYlBoundaryType = “outflow”
-diff_eleYrBoundaryType = “outflow”
-diff_eleZlBoundaryType = “outflow”
-diff_eleZrBoundaryType = “outflow”
+diff_eleXlBoundaryType = "outflow"
+diff_eleXrBoundaryType = "outflow"
+diff_eleYlBoundaryType = "outflow"
+diff_eleYrBoundaryType = "outflow"
+diff_eleZlBoundaryType = "outflow"
+diff_eleZrBoundaryType = "outflow"
 
 ########################################################
 

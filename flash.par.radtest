@@ -518,12 +518,12 @@ diff_eleFlCoef = 5.0 # Draine pg 386 citing Cowie and McKee 77
 # 0.0 Explict, 0.5 Crank-Nicolson, 1.0 Implicit
 diff_thetaImplct = 1.0
 
-diff_eleXlBoundaryType = “outflow”
-diff_eleXrBoundaryType = “outflow”
-diff_eleYlBoundaryType = “outflow”
-diff_eleYrBoundaryType = “outflow”
-diff_eleZlBoundaryType = “outflow”
-diff_eleZrBoundaryType = “outflow”
+diff_eleXlBoundaryType = "outflow"
+diff_eleXrBoundaryType = "outflow"
+diff_eleYlBoundaryType = "outflow"
+diff_eleYrBoundaryType = "outflow"
+diff_eleZlBoundaryType = "outflow"
+diff_eleZrBoundaryType = "outflow"
 
 ########################################################
 
