@@ -392,7 +392,7 @@ ph_CommCheckInterval = 20
 ph_radPressure  = T
 early_term_FUV  = T
 sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
-dust_gas_ratio  = 0.02  # 1% dust
+dust_gas_ratio  = 0.01  # 1% dust
 ph_EUVonDust    = T     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
 
 #///////////////////////////
