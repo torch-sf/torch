@@ -3709,36 +3709,30 @@ try:
                                         # in multiples and the gravity code using the proper root mass
                                         # if that didn't happen automatically.
 
-                                    # Update the new root com and root vel.
-                                    update_roots_from_leaves(mult_grav, grav) # If works, move outside se loop!
-                                    if (debug_multiples and debug_se):
-                                        print "Star evolve time =", stars.age[part]
-                                        print "After update from multiples leaves to root."
-                                        print "Stars mass =", stars[part].mass.in_(units.MSun)
-                                        print "SE returned mass =", star_mass[part].in_(units.MSun)
-                                        print "Leaf mass =", leaves.mass.in_(units.MSun)
-                                        print "Root mass =", root.mass.in_(units.MSun)
-                                        print "Star pos =", stars[part].position.in_(units.cm)
-                                        print "Leaf pos =", leaves.position.in_(units.cm)
-                                        print "Root pos =", root.position.in_(units.cm)
-                                        print "Star vel =", stars[part].velocity.in_(units.km/units.s)
-                                        print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
-                                        print "Root vel =", root.velocity.in_(units.km/units.s)
-                                        sys.stdout.flush()
-                                    #stars_to_mult.copy()
-                                    #if (debug_multiples):
-                                    #    print "After stars_to_mult.copy()."
-                                    #    print "Stars mass =", stars[part].mass.in_(units.MSun)
-                                    #    print "SE returned mass =", star_mass[part].in_(units.MSun)
-                                    #    print "Leaf mass =", leaves.mass.in_(units.MSun)
-                                    #    print "Root mass =", root.mass.in_(units.MSun)
-                                    #    sys.stdout.flush()
-
-                    # Now check the changed particles.
-                    if (debug_multiples): check_root_and_leaves(mult_grav, grav, stars)
-
                     # If the leaf mass changed, so does the com particle's properties.
-                    update_roots_from_leaves(mult_grav, grav) # If works, move outside se loop!
+                    if (with_multiples):
+                        update_roots_from_leaves(mult_grav, grav)
+                        if (debug_multiples):
+                            # Now check the changed particles.
+                            check_root_and_leaves(mult_grav, grav, stars)
+                            if (debug_se):
+                                for st, st_mass in zip(stars, star_mass):  # reusing st_mass...
+                                    for root, tree in mult_grav.root_to_tree.iteritems():
+                                        leaves = tree.get_leafs_subset()
+                                        if st in leaves:
+                                            print "Star evolve time =", st.age
+                                            print "After update from multiples leaves to root."
+                                            print "Stars mass =", st.mass.in_(units.MSun)  # beware st.mass != st_mass
+                                            print "SE returned mass =", st_mass.in_(units.MSun)
+                                            print "Leaf mass =", leaves.mass.in_(units.MSun)
+                                            print "Root mass =", root.mass.in_(units.MSun)
+                                            print "Star pos =", st.position.in_(units.cm)
+                                            print "Leaf pos =", leaves.position.in_(units.cm)
+                                            print "Root pos =", root.position.in_(units.cm)
+                                            print "Star vel =", st.velocity.in_(units.km/units.s)
+                                            print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
+                                            print "Root vel =", root.velocity.in_(units.km/units.s)
+                                            sys.stdout.flush()
 
                     # Are there any massive stars?
 
