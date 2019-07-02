@@ -3463,7 +3463,7 @@ try:
                             print "this star lum after seba =", star_lum
 
                         if (with_massloss and (massloss_method == 'seba' or st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun))):
-                            if (debug_se): "using seba method"
+                            if (debug_se): print "using seba method"
                             dm_dt[part] = ((stars.mass[part]-st_mass)/st_time).in_(units.g / units.s)
                             # If below the mass cutoff for feedback, no wind present.
                             if (st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun)):
@@ -3476,21 +3476,25 @@ try:
                         # Shouldn't Lietherer and Puls calculations use the old mass (stars[part].mass)?
                         elif (with_massloss and massloss_method == 'leit'):
                             # From Leitherer et. al. 1992.
-                            if (debug_se): "using Leither method"
+                            if (debug_se): print "using Leither method"
                             dm_dt[part] = 10**(-24.06 + 2.45 * np.log10(star_lum.value_in(units.LSun))
                                         -1.10*np.log10(stars[part].mass.value_in(units.MSun))
                                         + 1.31*np.log10(star_temp.value_in(units.K))) | units.MSun/units.yr
                             vterm[part] = 10**(1.23 - 0.30 * np.log10(star_lum.value_in(units.LSun))
                                         + 0.55*np.log10(stars[part].mass.value_in(units.MSun))
                                         + 0.64*np.log10(star_temp.value_in(units.K))) | units.km/units.s
-                        elif (with_massloss and (massloss_method == 'puls' or st_mass.value_in(units.MSun) >= min_mass.value_in(units.MSun))):
+                        elif (with_massloss and massloss_method == 'puls'):
                             # Kudritzki and Puls winds, see Kudritzki & Puls 2000, Markova & Puls 2004, 2008 and Vink 2000
-                            if (debug_se): "using Kudritzki method"
+                            if (debug_se): print "using Kudritzki method"
                             star_wind   = stellar_wind(star_temp, stars[part].mass, star_lum, star_radius)
                             dm_dt[part] = star_wind.dm_dt.as_quantity_in(units.g / units.s)
                             vterm[part] = star_wind.vterm.as_quantity_in(units.cm / units.s)
+                        elif (with_massloss and (massloss_method == 'test')):
+                            if (debug_se): print "using constant wind mass loss and velocity from Weaver."
+                            dm_dt[part] = 1e-6 | units.MSun / units.yr
+                            vterm[part] = 2e3 | units.km / units.s
                         else:
-                            if (debug_se): "error: no method selected"
+                            if (debug_se): print "error: no method selected"
                             dm_dt[part] = 0.0 | units.g / units.s
                             vterm[part] = 0.0 | units.cm / units.s
 
