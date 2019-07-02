@@ -23,7 +23,7 @@ allflash_obj =  $(wildcard $(drive_loc)/*.o)
 ignore_obj = $(drive_loc)/Flash.o $(drive_loc)/UNIT_TEST.o
 flash_obj = $(filter-out  $(ignore_obj), $(allflash_obj))
 
-all: flash_worker 
+all: flash_worker
 
 
 debug: FCFLAGS = -O0 -ggdb -Wall -Wsurprising -Wfatal-errors -pedantic -fimplicit-none -fcheck=all -fbacktrace \

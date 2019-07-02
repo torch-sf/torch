@@ -6,7 +6,7 @@ implicit none
 #include "Flash.h"
 #include "constants.h"
 
-#ifndef MPI_INCLUDED 
+#ifndef MPI_INCLUDED
 #include "Flash_mpi.h"
 #define MPI_INCLUDED
 #endif
@@ -20,13 +20,13 @@ contains
 ! Sets the internal energy of a block/grid.
 ! Note here I assumed you set the density properly first!
 FUNCTION set_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
-  
+
   INTEGER :: n, m, myProc
 ! cell indices, block index on local proc, proc #
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: en, rho, enrho(n)
   INTEGER :: set_grid_energy_density
-  
+
 call Driver_getMype(GLOBAL_COMM, myProc)
 
 do m=1, n
@@ -34,9 +34,9 @@ do m=1, n
 
         !call Grid_putBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k],en)
         call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
-        
+
         en = enrho(m) / rho
-        
+
         call Grid_putPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
 
   end if
@@ -47,7 +47,7 @@ END FUNCTION
 
 ! Gets the internal energy of a block/grid.
 FUNCTION get_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
-  
+
   INTEGER :: n, m, myProc, communicator, ierr
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: en, rho, enrho(n)
@@ -58,15 +58,15 @@ enrho=0.0
 
 call Driver_getComm(GLOBAL_COMM, communicator)
 call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
 do m=1, n
-  
+
   if (myProc == nproc(m)) then
-  
+
     !call Grid_getBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k], en)
     call Grid_getPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
     call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
-    
+
     enrho(n)=en*rho
 
   end if
@@ -74,11 +74,11 @@ do m=1, n
 end do
 
   if (myProc == 0) then
-  
+
     call MPI_Reduce(MPI_IN_PLACE, enrho, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   else
-  
+
     call MPI_Reduce(enrho, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   end if
@@ -88,9 +88,9 @@ end do
 END FUNCTION
 
 
-FUNCTION get_grid_momentum_density(i, j, k, index_of_grid, nproc, & 
+FUNCTION get_grid_momentum_density(i, j, k, index_of_grid, nproc, &
                                    rhovx, rhovy, rhovz, n)
-  
+
   INTEGER :: n, m, myProc, communicator, ierr
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: rhovx(n), rhovy(n), rhovz(n), vx, vy, vz, rho
@@ -104,28 +104,28 @@ vx=0.0; vy=0.0; vz=0.0; rho=0.0
 call Driver_getMype(GLOBAL_COMM, myProc)
 call Driver_getComm(GLOBAL_COMM, communicator)
 
-do m=1, n 
-  
+do m=1, n
+
   if (myProc == nproc(m)) then
 
       call Grid_getPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, [i(m),j(m),k(m)], vx)
       call Grid_getPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, [i(m),j(m),k(m)], vy)
       call Grid_getPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, [i(m),j(m),k(m)], vz)
       call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
-      
+
       print*, "vx =", vx, "rho =", rho
       print*, "vy =", vy, "rho =", rho
-      
+
       rhovx(m) = rho*vx
       rhovy(m) = rho*vy
       rhovz(m) = rho*vz
-  
+
   end if
 
 end do
 
   if (myProc == 0) then
-  
+
     call MPI_Reduce(MPI_IN_PLACE, rhovx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, rhovy, n, &
@@ -133,7 +133,7 @@ end do
     call MPI_Reduce(MPI_IN_PLACE, rhovz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   else
-  
+
     call MPI_Reduce(rhovx, 0.0, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(rhovy, 0.0, n, &
@@ -141,7 +141,7 @@ end do
     call MPI_Reduce(rhovz, 0.0, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   end if
-  
+
 
 
   get_grid_momentum_density=0
@@ -149,7 +149,7 @@ END FUNCTION
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Note this function currently sets the velocity field NOT 
+!!! Note this function currently sets the velocity field NOT
 !!! the momentum density. Flash stores velocity not momentum.
 !!! Work in progress!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -158,7 +158,7 @@ END FUNCTION
 
 FUNCTION set_grid_momentum_density(i, j, k, index_of_grid, nproc, &
                                    rhovx, rhovy, rhovz, n)
-  
+
   INTEGER :: n, m, myProc
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION, dimension(n) :: rhovx, rhovy, rhovz
@@ -168,9 +168,9 @@ FUNCTION set_grid_momentum_density(i, j, k, index_of_grid, nproc, &
 do m=1, n
 
   call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
   if (myProc == nproc(m)) then
-  
+
       call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
 
       vx = rhovx(m) / rho
@@ -180,9 +180,9 @@ do m=1, n
       call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, [i(m),j(m),k(m)], vx)
       call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, [i(m),j(m),k(m)], vy)
       call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, [i(m),j(m),k(m)], vz)
-  
+
   end if
-  
+
 end do
 
   set_grid_momentum_density=0
@@ -190,7 +190,7 @@ END FUNCTION
 
 FUNCTION get_grid_velocity(i, j, k, index_of_grid, nproc, &
                            vx, vy, vz, n)
-  
+
   INTEGER :: n, m
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION, dimension(n) :: vx, vy, vz
@@ -199,8 +199,8 @@ FUNCTION get_grid_velocity(i, j, k, index_of_grid, nproc, &
 call Driver_getMype(GLOBAL_COMM, myProc)
 call Driver_getComm(GLOBAL_COMM, communicator)
 
-do m=1, n  
-  
+do m=1, n
+
   if (myProc == nproc(m)) then
 
       call Grid_getPointData(index_of_grid(m), CENTER, VELX_VAR, &
@@ -211,11 +211,11 @@ do m=1, n
                              INTERIOR, [i(m),j(m),k(m)], vz(m))
 
   end if
-  
+
 end do
-  
+
 if (myProc == 0) then
-  
+
     call MPI_Reduce(MPI_IN_PLACE, vx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, vy, n, &
@@ -223,7 +223,7 @@ if (myProc == 0) then
     call MPI_Reduce(MPI_IN_PLACE, vz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
 else
-  
+
     call MPI_Reduce(vx, 0.0, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(vy, 0.0, n, &
@@ -237,25 +237,25 @@ END FUNCTION
 
 
 FUNCTION set_grid_velocity(i, j, k, index_of_grid, nproc, vx, vy, vz, n)
-  
+
   INTEGER :: n, m
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION, dimension(n) :: vx, vy, vz
   INTEGER :: set_grid_velocity, myProc
 
 call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
 do m=1, n
-  
+
   if (myProc == nproc(m)) then
 
-      call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, & 
+      call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vx(m))
       call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vy(m))
       call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vz(m))
-  
+
   end if
 
 end do
@@ -264,30 +264,30 @@ END FUNCTION
 
 
 FUNCTION set_grid_density(i, j, k, index_of_grid, nproc, rho, n)
-  
-  INTEGER :: n, m, myProc 
+
+  INTEGER :: n, m, myProc
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: rho(n)
   INTEGER :: set_grid_density
-  
+
 do m=1, n
-  
+
   call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
   if (myProc == nproc(m)) then
-  
+
     call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
-  
+
   end if
-  
+
 end do
-  
+
   set_grid_density=0
 END FUNCTION
 
 
 FUNCTION get_grid_density(i, j, k, index_of_grid, nproc, rho, n)
-  
+
   INTEGER :: get_grid_density, n, m
   INTEGER :: myProc, communicator, ierr
   DOUBLE PRECISION :: rho(n)
@@ -309,7 +309,7 @@ do m=1, n
   end if
 
 end do
-  
+
 if (myProc == 0) then
 
   call MPI_Reduce(MPI_IN_PLACE, rho, 1, MPI_DOUBLE_PRECISION, &
@@ -325,22 +325,22 @@ END FUNCTION
 
 
 FUNCTION set_grid_state(i, j, k, index_of_grid, nproc, rho, rhovx, rhovy, rhovz, rhoen, n)
-  
+
   INTEGER :: n, m, myProc
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION, dimension(n) :: rho, rhovx, rhovy, rhovz, rhoen
   DOUBLE PRECISION :: vx, vy, vz, en
   INTEGER :: set_grid_state
-  
+
 do m=1, n
-  
+
   call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
   if (myProc == nproc(m)) then
-  
+
       vx = rhovx(m) / rho(m); vy = rhovy(m) / rho(m); vz = rhovz(m) / rho(m)
       en = rhoen(m) / rho(m)
-      
+
       call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, &
                             [i(m),j(m),k(m)], rho(m))
       call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, &
@@ -353,16 +353,16 @@ do m=1, n
                             [i(m),j(m),k(m)], en)
 
   end if
-  
+
 end do
-  
+
   set_grid_state=0
 END FUNCTION
 
 !!! TODO TODO TODO
 FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
                         rho, rhovx, rhovy, rhovz, rhoen, n)
-  
+
   INTEGER :: n, m
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION, dimension(n) :: rho, rhovx, rhovy, rhovz, rhoen
@@ -391,24 +391,24 @@ do m=1, n
                             [i(m),j(m),k(m)], vz)
       call Grid_getPointData(index_of_grid(m), CENTER, ENER_VAR, INTERIOR, &
                             [i(m),j(m),k(m)], en)
-      
+
       rhovx(m)=vx*rho(m); rhovy(m)=rho(m)*vy; rhovz(m)=rho(m)*vz
       rhoen(m)=rho(m)*en
 
   end if
 end do
 
-  
+
   if (myProc == 0) then
-  
+
     call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   else
-  
+
     call MPI_Reduce([rhovx, rhovy, rhovz, rhoen, rho], [0.0, 0.0, 0.0, 0.0, 0.0], 5, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   end if
-  
+
   get_grid_state=0
 END FUNCTION
 
@@ -418,11 +418,11 @@ FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
   INTEGER :: nx, ny, nz, nproc, myProc
   INTEGER :: index_of_grid, blkLimits(2,MDIM), blkLimitsGC(2,MDIM)
   INTEGER :: get_grid_range
-  
+
   call Driver_getMype(GLOBAL_COMM, myProc)
-  
+
   if (myProc == nproc) then
-      
+
       call Grid_getBlkIndexLimits(index_of_grid, blkLimits, blkLimitsGC)
       nx = blkLimits(HIGH,IAXIS) - blkLimits(LOW,IAXIS) +1  !Note +1 here bc I am
       ny = blkLimits(HIGH,JAXIS) - blkLimits(LOW,JAXIS) +1 !assuming indexing
@@ -457,17 +457,17 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   INTEGER :: get_index_of_position, blockID, blkLimits(2,MDIM), &
              blkLimitsGC(2,MDIM), Proc_ID, myProc, communicator
   INTEGER :: ii, ierr
-             
+
   loc(1) = x; loc(2) = y; loc(3) = z
   i=0; j=0; k=0; local_pos=0.0; stride=0; cornerID=0; cornerIDMax=0
   blockID=0; delta=0.0; blockSize=0.0; blockCenter=0.0;
   blkLimits=0; blkLimitsGC=0;! Proc_ID=0; communicator=0
   index_of_grid = 0
-  
+
   call Driver_getComm(GLOBAL_COMM, communicator)
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Grid_getBlkIDFromPos(loc, blockID, Proc_ID, communicator)
-  
+
   print*, "Comm = ", communicator
   print*, "MyProc = ", myProc
   print*, "Proc_ID = ", Proc_ID
@@ -483,15 +483,15 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
     !write(*,*) MDIM
 
     do ii=1, MDIM
-      
+
     !  delta(ii) = blockSize(ii)/(blkLimits(HIGH,ii) - blkLimits(LOW,ii))
       local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
-      
+
     end do
-      
+
     !  write(*,*) loc, '\n', blockCenter, '\n', blockSize
     !  write(*,*) local_pos, '\n', delta
-     
+
       i = ceiling(local_pos(1)/delta(1))
 
       if (MDIM .gt. 1) then
@@ -507,32 +507,32 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
       end if
 
       index_of_grid = blockID
-      
+
     !    write(*,*) i,j,k, index_of_grid
 
   end if
-  
+
   if (myProc == 0) then
-  
+
     call MPI_Reduce(MPI_IN_PLACE, i, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, j, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, k, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, index_of_grid, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-  
+
   else
-  
+
     call MPI_Reduce(i, i, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(j, j, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(k, k, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(index_of_grid, index_of_grid, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    
+
   end if
 
   get_index_of_position=0
 END FUNCTION
 
 FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z)
-  
+
   INTEGER :: i, j, k, index_of_grid, Proc_ID, myProc, ierr, communicator
   DOUBLE PRECISION :: x, y, z , loc(3)
   INTEGER :: get_position_of_index , indices(3)
@@ -543,21 +543,21 @@ FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z)
   if (myProc == Proc_ID) then
     call Grid_getSingleCellCoords(indices, index_of_grid, CENTER, INTERIOR, loc)
   end if
-  
+
   if (MyProc == 0) then
     call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   else
     call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   end if
-  
+
   x=loc(1); y=loc(2); z=loc(3)
   get_position_of_index=0
 END FUNCTION
 
 FUNCTION get_leaf_indices(dummy,ind,ret_cnt,num_of_blks,nparts)
-  
+
   use Driver_data, only : dr_globalNumProcs
-  
+
   integer :: get_leaf_indices, nparts, num_of_blks, ret_num_blks
   integer :: myProc, ierr, comm, i
   integer, dimension(nparts) :: ind, ret_ind, ret_cnt, dummy
@@ -575,55 +575,55 @@ FUNCTION get_leaf_indices(dummy,ind,ret_cnt,num_of_blks,nparts)
   !print*, "numblks = ", num_of_blks, myProc
 ! Gather the array on the root process. Note that we require the
   ! user to pass the proper length of the final array.
-  
+
   ! Make an array of the # of leaf grids from each processor.
   call MPI_Gather(num_of_blks, 1, MPI_INTEGER, &
                   rec_count, 1, MPI_INTEGER, &
                   0, comm, ierr)
-  ret_cnt(:dr_globalNumProcs) = rec_count                
+  ret_cnt(:dr_globalNumProcs) = rec_count
   ! Set the displacement for the incoming data based on how many
   ! particles are coming in from each processor. Note the displacement
   ! for the root process is zero, for rank 1 disp = num on root,
-  ! for rank 2 disp = num on root + num on 1, etc etc.              
-  
+  ! for rank 2 disp = num on root + num on 1, etc etc.
+
   do i=1, dr_globalNumProcs-1
-  
+
     disp(i+1) = disp(i) + rec_count(i)
-    
+
   end do
   !print*, "dr_globalNumProcs =", dr_globalNumProcs
   !print*, "rec_count = ", rec_count
   !print*, "disp = ", disp
-  
+
   ! Now actually gather the leaf grids using the variable length array
   ! gather command in MPI.
 
   call MPI_Gatherv(ind, num_of_blks, MPI_INTEGER, &
                    ret_ind, rec_count, disp, MPI_INTEGER, &
                    0, comm, ierr)
-  
+
   ind = ret_ind
-  
+
   !print*, "ind =", ind, myProc
-  
+
   !call MPI_Reduce(ret_num_blks,num_of_blks, 1, MPI_INTEGER, MPI_SUM, 0, comm, ierr)
-  
+
   num_of_blks = sum(rec_count)
   !print*, "numblks =", num_of_blks, myProc
-  
+
   get_leaf_indices=0
 END FUNCTION
 
 FUNCTION get_max_refinement(max_refine)
-  
+
   use Grid_interface, only : Grid_getMaxRefinement
-  
+
   INTEGER :: max_refine, get_max_refinement
 !  INTEGER, PARAMETER :: mode=4 ! Mode 4 looks at the actual refinement level of the existing blocks.
 !  INTEGER, PARAMETER :: scope=4 ! Makes comm=MPI_WORLD_COMM
-  
+
   call Grid_getMaxRefinement(max_refine)
-  
+
   get_max_refinement=0
 END FUNCTION
 

@@ -27,11 +27,11 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
 
     def __init__(self, **keyword_arguments):
         CodeInterface.__init__(self, name_of_the_worker="flash_worker", **keyword_arguments)
-    
+
 
     @legacy_function
     def initialize_code():
-        function = LegacyFunctionSpecification()  
+        function = LegacyFunctionSpecification()
         function.result_type = 'int32'
         return function
 
@@ -44,7 +44,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
 
     @legacy_function
     def cleanup_code():
-        function = LegacyFunctionSpecification()  
+        function = LegacyFunctionSpecification()
         function.result_type = 'int32'
         return function
 
@@ -102,7 +102,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
-        
+
     @legacy_function
     def get_grid_velocity():
         function = LegacyFunctionSpecification()
@@ -170,7 +170,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
-        
+
     @legacy_function
     def get_potential():
         function = LegacyFunctionSpecification()
@@ -180,7 +180,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('potential', dtype='d', direction=function.OUT)
         function.result_type='int32'
         return function
-        
+
     @legacy_function
     def get_potential_at_point():
         function = LegacyFunctionSpecification()
@@ -191,7 +191,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
-        
+
     #@legacy_function
     #def get_gravity_at_point():
     #    function = LegacyFunctionSpecification()
@@ -222,14 +222,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.result_type='int32'
         return function
 
-    @legacy_function    
+    @legacy_function
     def get_position_of_index():
         """
         Retrieves the x, y and z position of the center of
         the cell with coordinates i, j, k in the grid specified
         by the index_of_grid
         """
-        function = LegacyFunctionSpecification()  
+        function = LegacyFunctionSpecification()
         for x in ['i','j','k']:
             function.addParameter(x, dtype='i', direction=function.IN)
         function.addParameter('index_of_grid', dtype='i', direction=function.IN, default = 1)
@@ -239,14 +239,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.result_type = 'i'
         return function
 
-    @legacy_function    
+    @legacy_function
     def get_index_of_position():
         """
         Retrieves the i,j and k index of the grid cell containing the
         given x, y and z position, the index of the grid and the local
         processor number on which this grid resides.
         """
-        function = LegacyFunctionSpecification()  
+        function = LegacyFunctionSpecification()
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.IN)
         for x in ['i','j','k']:
@@ -255,7 +255,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('Proc_ID', dtype='i', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_leaf_indices():
         function = LegacyFunctionSpecification()
@@ -267,13 +267,13 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i', direction=function.LENGTH)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def get_max_refinement():
         function = LegacyFunctionSpecification()
         function.addParameter('max_refine', dtype='int32', direction=function.OUT)
         function.result_type='i'
-        return function        
+        return function
 
     @legacy_function
     def set_timestep():
@@ -344,47 +344,47 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('value', dtype='int32', direction=function.OUT)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def initialize_restart():
         function = LegacyFunctionSpecification()
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def get_restart():
         function = LegacyFunctionSpecification()
         function.addParameter('value', dtype='b', direction=function.OUT)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def set_restart():
         function = LegacyFunctionSpecification()
         function.addParameter('value', dtype='b', direction=function.IN)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def grid_update_refinement():
         function = LegacyFunctionSpecification()
         function.addParameter('gridChanged', dtype='b', direction=function.OUT)
         function.result_type='i'
         return function
-        
-    @legacy_function    
+
+    @legacy_function
     def get_hydro_state_at_point():
-        function = LegacyFunctionSpecification()  
+        function = LegacyFunctionSpecification()
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.IN)
         for x in ['vx','vy','vz']:
             function.addParameter(x, dtype='d', direction=function.IN, default = 0)
         for x in ['rho','rhovx','rhovy','rhovz','rhoen']:
             function.addParameter(x, dtype='d', direction=function.OUT)
-        function.result_type = 'i' 
+        function.result_type = 'i'
         return function
-    
-    # This needs to look like "get_grid_density" etc etc.    
+
+    # This needs to look like "get_grid_density" etc etc.
     @legacy_function
     def get_cell_volume():
         function = LegacyFunctionSpecification()
@@ -393,14 +393,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('vol', dtype='d', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_number_of_procs():
         function = LegacyFunctionSpecification()
         function.addParameter('n', dtype='i', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_all_local_num_grids():
         function = LegacyFunctionSpecification()
@@ -409,8 +409,8 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nprocs', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
-    
-    # WORK IN PROGRESS!!!!    
+
+    # WORK IN PROGRESS!!!!
     #@legacy_function
     #def get_data_all_local_blks():
         #function = LegacyFunctionSpecification()
@@ -419,7 +419,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         #function.addParameter('numcells', dtype='i', direction=function.LENGTH)
         #function.result_type = 'i'
         #return function
-        
+
     @legacy_function
     def get_1blk_cell_coords():
         function = LegacyFunctionSpecification()
@@ -431,14 +431,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def kick_grid():
         function = LegacyFunctionSpecification()
         function.addParameter('dt', dtype='d', direction=function.IN)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def kick_block():
         function = LegacyFunctionSpecification()
@@ -452,7 +452,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def get_gravity_gas_on_particles():
         function = LegacyFunctionSpecification()
@@ -460,7 +460,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('kick_number', dtype='i', direction=function.IN)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def get_gravity_particles_on_gas():
         function = LegacyFunctionSpecification()
@@ -479,7 +479,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         #function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     #@legacy_function
     #def wind_injection():
         #function = LegacyFunctionSpecification()
@@ -494,14 +494,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
 ########################################
 # Particle Stuff
 ########################################
-    
+
     @legacy_function
     def get_number_of_particles():
         function = LegacyFunctionSpecification()
         function.addParameter('n', dtype='int32', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_accel_gas_on_particles():
         function = LegacyFunctionSpecification()
@@ -514,14 +514,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_num_part_prop():
         function = LegacyFunctionSpecification()
         function.addParameter('n', dtype='int32', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_particle_position_array():
         function = LegacyFunctionSpecification()
@@ -532,7 +532,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_position():
         function = LegacyFunctionSpecification()
@@ -543,7 +543,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_velocity():
         function = LegacyFunctionSpecification()
@@ -565,7 +565,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_sink_mean_vel_array():
         function = LegacyFunctionSpecification()
@@ -609,7 +609,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_ang_mom():
         function = LegacyFunctionSpecification()
@@ -620,7 +620,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-                
+
     @legacy_function
     def make_sink():
         function = LegacyFunctionSpecification()
@@ -651,20 +651,20 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type='i'
         return function
-    
+
     @legacy_function
     def remove_all_particles():
         function = LegacyFunctionSpecification()
         function.addParameter('clear_local_tag', dtype='b', default='False', direction=function.IN)
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def set_starting_local_tag_numbers():
         function = LegacyFunctionSpecification()
         function.result_type='i'
         return function
-        
+
     @legacy_function
     def set_particle_mass():
         function = LegacyFunctionSpecification()
@@ -674,7 +674,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_oldmass():
         function = LegacyFunctionSpecification()
@@ -694,7 +694,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_eion():
         function = LegacyFunctionSpecification()
@@ -704,7 +704,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
@@ -724,7 +724,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_epep():
         function = LegacyFunctionSpecification()
@@ -734,7 +734,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_sigd():
         function = LegacyFunctionSpecification()
@@ -744,7 +744,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_wind_mass():
         function = LegacyFunctionSpecification()
@@ -753,8 +753,8 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('dmdt', dtype='d', direction=function.IN)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
-        return function 
-                
+        return function
+
     @legacy_function
     def set_particle_wind_vel():
         function = LegacyFunctionSpecification()
@@ -763,8 +763,8 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('velw', dtype='d', direction=function.IN)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
-        return function 
-                
+        return function
+
     @legacy_function
     def get_sink_mean_cs():
         function = LegacyFunctionSpecification()
@@ -804,7 +804,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-       
+
     @legacy_function
     def get_particle_mass():
         function = LegacyFunctionSpecification()
@@ -814,7 +814,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-       
+
     @legacy_function
     def get_particle_oldmass():
         function = LegacyFunctionSpecification()
@@ -824,7 +824,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_particle_creation_time():
         function = LegacyFunctionSpecification()
@@ -834,7 +834,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_creation_time():
         function = LegacyFunctionSpecification()
@@ -844,7 +844,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-         
+
     @legacy_function
     def get_particle_gpot():
         function = LegacyFunctionSpecification()
@@ -854,7 +854,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def set_particle_gpot():
         function = LegacyFunctionSpecification()
@@ -863,8 +863,8 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('gpot', dtype='d', direction=function.IN)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
-        return function    
-        
+        return function
+
     @legacy_function
     def get_particle_tags():
         function = LegacyFunctionSpecification()
@@ -884,7 +884,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_particle_block():
         function = LegacyFunctionSpecification()
@@ -894,7 +894,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_new_tags():
         function = LegacyFunctionSpecification()
@@ -904,46 +904,46 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts', dtype = 'i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_number_of_new_tags():
         function = LegacyFunctionSpecification()
         function.addParameter('new_tag_num', dtype = 'int32', direction=function.OUT)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def clear_new_tags():
         function = LegacyFunctionSpecification()
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def particles_gather():
         function = LegacyFunctionSpecification()
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def make_stars():
         function = LegacyFunctionSpecification()
         function.addParameter('dt', dtype='d', direction=function.IN)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def particles_sort():
         function = LegacyFunctionSpecification()
         function.result_type = 'i'
         return function
-        
+
 #    @legacy_function
 #    def make_particle_tree():
 #        function = LegacyFunctionSpecification()
 #        function.result_type = 'i'
 #        return function
-        
-        
+
+
 ########################
 # IO Stuff
 ########################
@@ -960,7 +960,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('output_type', dtype='s', direction=function.IN)
         function.result_type = 'i'
         return function
-        
+
     @legacy_function
     def get_output_dir_wrapped():
         function = LegacyFunctionSpecification()
@@ -998,130 +998,130 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
 #####################################################
 
 class Flash(CommonCode):
-    
-        
-        
+
+
+
     def __init__(self, unit_converter = None, **options):
         self.unit_converter = unit_converter
         self.stopping_conditions = StoppingConditions(self)
-        
+
         CommonCode.__init__(self,  FlashInterface(**options), **options)
-        
+
 #        self.set_parameters_filename(self.default_parameters_filename)
-        
+
     def define_converter(self, object):
         if self.unit_converter is None:
             return
-        
+
         object.set_converter(self.unit_converter.as_converter_from_si_to_generic())
 
 
     def get_index_range_inclusive(self, index_of_grid = 1, nproc=0):
         nx, ny, nz = self.get_grid_range(index_of_grid, nproc)
-        
+
         return (0, nx-1, 0, ny-1, 0, nz-1)
-    
+
     # I think all of these should start with a numpy array like:
     # three_vector = np.zeros((n,3))
     # even if n = 1, so that the returned shape is always the same
     # regardless of n and therefore the loop behavior is always the same
     # when looping over these. -JW
     def get_particle_position(self, tags):
-        
+
         [x, y, z] = self.get_particle_position_array(tags)
-        
-        pos_array = np.array([x.value_in(units.cm), y.value_in(units.cm), 
+
+        pos_array = np.array([x.value_in(units.cm), y.value_in(units.cm),
                   z.value_in(units.cm)]).transpose() | units.cm
-        
+
         if (hasattr(x,"__len__") == False):
-        
+
             pos_array = pos_array.flatten()
 
         return pos_array
 
     def get_particle_velocity(self, tags):
-        
+
         [x, y, z] = self.get_particle_velocity_array(tags)
-        
-        vel_array = np.array([x.value_in(units.cm / units.s), y.value_in(units.cm / units.s), 
+
+        vel_array = np.array([x.value_in(units.cm / units.s), y.value_in(units.cm / units.s),
                   z.value_in(units.cm / units.s)]).transpose() | units.cm / units.s
-        
+
         if (hasattr(x,"__len__") == False):
-        
+
             vel_array = vel_array.flatten()
 
         return vel_array
-        
+
     def get_particle_acceleration(self, tags):
-        
+
         [x, y, z] = self.get_particle_acceleration_array(tags)
-        
-        acc_array = np.array([x.value_in(units.cm / (units.s**2.0)), y.value_in(units.cm / (units.s**2.0)), 
+
+        acc_array = np.array([x.value_in(units.cm / (units.s**2.0)), y.value_in(units.cm / (units.s**2.0)),
                   z.value_in(units.cm / (units.s**2.0))]).transpose() | units.cm / (units.s**2.0)
-        
+
         if (hasattr(x,"__len__") == False):
-        
+
             acc_array = acc_array.flatten()
 
         return acc_array
-        
+
     def get_sink_gas_mean_velocity(self, tags):
-        
+
         [x, y, z] = self.get_sink_mean_vel_array(tags)
-        
-        vel_array = np.array([x.value_in(units.cm / units.s), y.value_in(units.cm / units.s), 
+
+        vel_array = np.array([x.value_in(units.cm / units.s), y.value_in(units.cm / units.s),
                   z.value_in(units.cm / units.s)]).transpose() | units.cm / units.s
-        
+
         if (hasattr(x,"__len__") == False):
-        
+
             vel_array = vel_array.flatten()
 
         return vel_array
 
     def get_sink_gas_var_velocity(self, tags):
-        
+
         [x, y, z] = self.get_sink_var_vel_array(tags)
-        
-        vel_array = np.array([x.value_in(units.cm**2.0 / units.s**2.0), y.value_in(units.cm**2.0 / units.s**2.0), 
+
+        vel_array = np.array([x.value_in(units.cm**2.0 / units.s**2.0), y.value_in(units.cm**2.0 / units.s**2.0),
                   z.value_in(units.cm**2.0 / units.s**2.0)]).transpose() | units.cm**2.0 / units.s**2.0
-        
+
         if (hasattr(x,"__len__") == False):
-        
+
             vel_array = vel_array.flatten()
 
         return vel_array
 
     def get_sink_ang_mom(self, tags):
-        
+
         [lx, ly, lz] = self.get_sink_ang_mom_array(tags)
-        
+
         #print "In get_sink_ang_mom"
         #print lx, ly, lz
-        
-        ang_mom_array = np.array([lx.value_in(units.cm**2.0 * units.g / units.s), ly.value_in(units.cm**2.0 * units.g / units.s), 
+
+        ang_mom_array = np.array([lx.value_in(units.cm**2.0 * units.g / units.s), ly.value_in(units.cm**2.0 * units.g / units.s),
                   lz.value_in(units.cm**2.0 * units.g / units.s)]).transpose() | units.cm**2.0 * units.g / units.s
-        
+
         #print ang_mom_array
-        
+
         #print "array has len attr?", hasattr(lx,"__len__")
-        
+
         if (hasattr(lx,"__len__") == False):
-        
+
             ang_mom_array = ang_mom_array.flatten()
-            
+
         #print ang_mom_array
         #print "Leaving get_sink_ang_mom"
 
         return ang_mom_array
-        
+
     def get_output_dir(self):
         output_dir = self.get_output_dir_wrapped()
         output_dir = output_dir.strip()
-        
+
         return output_dir
 
     def define_methods(self, object):
-        
+
         #length = units.cm
         #time = units.s
         #mass = units.g
@@ -1140,20 +1140,20 @@ class Flash(CommonCode):
             #(),
             #(object.ERROR_CODE)
         #)
-                
-        
+
+
         #object.add_method(
             #'cleanup_code',
             #(),
             #(object.ERROR_CODE)
         #)
-        
+
         object.add_method(
             'set_particle_pointers',
             object.NO_UNIT,
             object.ERROR_CODE
         )
-        
+
         object.add_method(
             'evolve_model',
             (time,),
@@ -1165,7 +1165,7 @@ class Flash(CommonCode):
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
             (length, length, length, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_index_of_position',
             (length, length, length),
@@ -1178,7 +1178,7 @@ class Flash(CommonCode):
             (),
             (object.NO_UNIT, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_grid_state',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
@@ -1224,85 +1224,85 @@ class Flash(CommonCode):
         object.add_method(
             'get_grid_momentum_density',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
-            (momentum, momentum, momentum, 
+            (momentum, momentum, momentum,
             object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'set_grid_momentum_density',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX,
-            momentum, momentum, momentum), 
+            momentum, momentum, momentum),
             (object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_grid_velocity',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
-            (speed, speed, speed, 
+            (speed, speed, speed,
             object.ERROR_CODE,)
         )
 
         object.add_method(
             'set_grid_velocity',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX,
-            speed, speed, speed), 
+            speed, speed, speed),
             (object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_potential',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX),
             (potential, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_potential_at_point',
             (length, length, length, length),
             (potential, object.ERROR_CODE,)
         )
-        
+
         #object.add_method(
         #    'get_gravity_at_point',
         #    (length, length, length, length),
         #    (acc, acc, acc, object.ERROR_CODE,)
         #)
-        
+
         object.add_method(
             'get_cell_volume',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX),
             (length**3, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_number_of_procs',
             (),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_all_local_num_grids',
             (object.INDEX),
             (object.INDEX, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_data_all_local_blks',
             (object.NO_UNIT),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_1blk_cell_coords',
             (object.NO_UNIT,object.NO_UNIT,object.NO_UNIT),
             (length, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_leaf_indices',
             (object.NO_UNIT),
             (object.NO_UNIT, object.INDEX, object.INDEX, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'kick_grid',
             (time),
@@ -1313,13 +1313,13 @@ class Flash(CommonCode):
             (acc, acc, acc, object.INDEX, object.INDEX, object.NO_UNIT, time),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_gravity_gas_on_particles',
             (time, object.NO_UNIT),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_gravity_particles_on_gas',
             (time, object.NO_UNIT),
@@ -1337,7 +1337,7 @@ class Flash(CommonCode):
             (),
             (time, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             "set_timestep",
             (time),
@@ -1349,7 +1349,7 @@ class Flash(CommonCode):
             (),
             (time, object.ERROR_CODE,)
         )
-    
+
         object.add_method(
             "set_end_time",
             (time, ),
@@ -1361,104 +1361,104 @@ class Flash(CommonCode):
             (),
             (time, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_max_num_steps',
             (),
             (object.NO_UNIT, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'set_max_num_steps',
             (object.NO_UNIT,),
             (object.ERROR_CODE,)
         )
-         
+
         object.add_method(
             'get_current_step',
             (),
             (object.NO_UNIT, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_restart',
             (),
             (object.NO_UNIT, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'set_restart',
             (object.NO_UNIT,),
             (object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_hydro_state_at_point',
             (length, length, length,
                 speed, speed, speed),
-            (density, momentum, momentum, 
+            (density, momentum, momentum,
                 momentum, energy, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'energy_injection',
             (generic_unit_system.energy, object.NO_UNIT,
              mass, length, length, length),
             (time, object.ERROR_CODE)
         )
-        
+
         #object.add_method(
             #'wind_injection',
             #(mass, mass, length, length, length),
             #(time, object.ERROR_CODE)
         #)
-        
+
 ###################################
 ######### Particles
 ###################################
-        
+
         object.add_method(
             'get_number_of_particles',
             (),
             (object.NO_UNIT,object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_accel_gas_on_particles',
             (length,length,length,length),
             (acc,acc,acc, object.ERROR_CODE,)
         )
-        
+
         object.add_method(
             'get_num_part_prop',
             (),
             (object.NO_UNIT,object.ERROR_CODE)
         )
-        
+
         ### I'm implementing this with my own defined function
         ### so that the structure of the array return looks
         ### right.
-        
+
         #object.add_method(
             #'get_particle_position',
             #(object.NO_UNIT),
-            #(length, length, length, object.ERROR_CODE) 
+            #(length, length, length, object.ERROR_CODE)
         #)
-        
+
         object.add_method(
             'set_particle_position',
             (object.NO_UNIT, length, length, length),
             (object.ERROR_CODE)
         )
-        
+
         ### Same as above.
-        
+
         #object.add_method(
             #'get_particle_velocity',
             #(object.NO_UNIT),
             #(speed, speed, speed, object.ERROR_CODE)
         #)
-        
+
         object.add_method(
             'set_particle_velocity',
             (object.NO_UNIT, speed, speed, speed),
@@ -1473,43 +1473,43 @@ class Flash(CommonCode):
              units.cm**2.0 * units.g / units.s),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'make_sink',
             (length, length, length),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'add_particles',
             (length, length, length),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-             
+
         object.add_method(
             'remove_particles',
             (object.NO_UNIT),
             (object.ERROR_CODE)
         )
- 
+
         object.add_method(
             'remove_all_particles',
             (object.NO_UNIT),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_starting_local_tag_numbers',
             (),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_mass',
             (object.INDEX),
             (mass, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_oldmass',
             (object.INDEX),
@@ -1545,19 +1545,19 @@ class Flash(CommonCode):
             (object.INDEX),
             (length*length, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_mass',
             (object.INDEX, mass),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_oldmass',
             (object.INDEX, mass),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_nion',
             (object.INDEX, (time**-1.0)),
@@ -1575,7 +1575,7 @@ class Flash(CommonCode):
             (object.INDEX, length*length),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_npep',
             (object.INDEX, (time**-1.0)),
@@ -1599,19 +1599,19 @@ class Flash(CommonCode):
             (object.INDEX, mass/time),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_wind_vel',
             (object.INDEX, length/time),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_sink_mean_cs',
             (object.INDEX),
             (length/time, object.ERROR_CODE)
         )
-          
+
         object.add_method(
             'get_particle_gpot',
             (object.INDEX),
@@ -1623,43 +1623,43 @@ class Flash(CommonCode):
             (object.NO_UNIT, potential),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_tags',
             (object.INDEX),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_proc',
             (object.INDEX),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_block',
             (object.INDEX),
             (object.INDEX, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'write_chpt',
             (),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'IO_out',
             (object.NO_UNIT),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_output_dir',
             (),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_runtime_parameter',
             (object.NO_UNIT),
@@ -1671,43 +1671,43 @@ class Flash(CommonCode):
             (),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_new_tags',
             (object.NO_UNIT),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_number_of_new_tags',
             (),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'clear_new_tags',
             (),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'particles_gather',
             (),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'make_stars',
             (time),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'particles_sort',
             (),
             (object.ERROR_CODE)
         )
-        
+
 #        object.add_method(
 #            'make_particle_tree',
 #            (),
@@ -1716,35 +1716,35 @@ class Flash(CommonCode):
 
     def specify_grid(self, definition, index_of_grid = 1, nproc=0):
         definition.set_grid_range('get_index_range_inclusive')
-        
+
         definition.add_getter('get_position_of_index', names=('x','y','z'))
-        
+
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-        
+
         definition.add_getter('get_grid_density', names=('rho'))
         definition.add_setter('set_grid_density', names=('rho'))
-        
+
 #       if self.mode == self.MODE_SCALAR:
 #           definition.add_getter('get_grid_scalar', names=('scalar',))
 #           definition.add_setter('set_grid_scalar', names=('scalar',))
-            
+
         definition.add_getter('get_grid_momentum_density', names=('rhovx','rhovy','rhovz'))
         definition.add_setter('set_grid_momentum_density', names=('rhovx','rhovy','rhovz'))
-        
+
         #definition.add_getter('get_grid_velocity', names=('vx','vy','vz'))
         #definition.add_setter('set_grid_velocity', names=('vx','vy','vz'))
-        
+
         definition.add_getter('get_grid_energy_density', names=('energy',))
         definition.add_setter('set_grid_energy_density', names=('energy',))
-        
-        
+
+
 #       definition.add_getter('get_grid_gravitational_potential', names=('gravitational_potential',))
 #       definition.add_getter('get_grid_gravitational_acceleration', names=('gravitational_acceleration_x','gravitational_acceleration_y','gravitational_acceleration_z',))
-        
+
 #        definition.add_getter('get_grid_acceleration', names=('ax','ay','az'))
 #        definition.add_setter('set_grid_acceleration', names=('ax','ay','az'))
-        
+
         definition.define_extra_keywords({'index_of_grid':index_of_grid,'nproc':nproc})
 
     @property
@@ -1757,7 +1757,7 @@ class Flash(CommonCode):
     # This iterates over all processors and then loops over the blocks on the local processors.
     def itergrids(self):
         m = self.get_number_of_procs()
-        
+
         for x in range(m): # Loop over processors.
             n = self.get_number_of_grids(x)
             #n = max(num_grids)
@@ -1782,28 +1782,28 @@ class Flash(CommonCode):
         #object.add_getter('particles', 'get_radius')
         #object.add_query('particles', 'get_indices_of_colliding_particles', public_name = 'select_colliding_particles')
 
-    def define_state(self, object): 
-        CommonCode.define_state(self, object)   
+    def define_state(self, object):
+        CommonCode.define_state(self, object)
         object.add_transition('END', 'INITIALIZED', 'initialize_code', False)
-        
+
         object.add_transition('INITIALIZED','EDIT','commit_parameters')
         object.add_transition('RUN','CHANGE_PARAMETERS_RUN','before_set_parameter', False)
         object.add_transition('EDIT','CHANGE_PARAMETERS_EDIT','before_set_parameter', False)
         object.add_transition('CHANGE_PARAMETERS_RUN','RUN','recommit_parameters')
         object.add_transition('CHANGE_PARAMETERS_EDIT','EDIT','recommit_parameters')
-        
+
         object.add_method('CHANGE_PARAMETERS_RUN', 'before_set_parameter')
         object.add_method('CHANGE_PARAMETERS_EDIT', 'before_set_parameter')
-        
+
         object.add_method('CHANGE_PARAMETERS_RUN', 'before_get_parameter')
         object.add_method('CHANGE_PARAMETERS_EDIT', 'before_get_parameter')
         object.add_method('RUN', 'before_get_parameter')
         object.add_method('EDIT', 'before_get_parameter')
-        
+
         object.add_transition('EDIT', 'RUN', 'initialize_grid')
         object.add_method('RUN', 'evolve_model')
         object.add_method('RUN', 'get_hydro_state_at_point')
-        
+
         for state in ['EDIT', 'RUN']:
             for methodname in [
                     'set_particle_pointers',
@@ -1820,7 +1820,7 @@ class Flash(CommonCode):
                     'get_grid_momentum_density',
                     'set_grid_momentum_density',
                     'get_grid_velocity',
-                    'set_grid_velocity', 
+                    'set_grid_velocity',
                     'get_position_of_index',
                     'get_index_of_position',
                     'get_max_refinement',

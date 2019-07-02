@@ -73,59 +73,59 @@ class logfile:
         self.write(120*"-")
         self.write("\n")
 
-# Function to determine the stellar luminosity at a particular wavelength, temperature and cross section. 
+# Function to determine the stellar luminosity at a particular wavelength, temperature and cross section.
 # Uses the standard blackbody curve and incorporates the cross section as a function of wavelength.
 # Note I left out sig0 here b/c we divide this by lum_wl_cs_per_ph that would
 # also have sig0 in it.
 def lum_wl_cs(l, l_max, T):
-    
+
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-    
+
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0)
-    
+
     return L
 # Function to determine the number count of photons at a particular wavelength, temperature and cross section.
 # Uses the standard blackbody curve and incorporates the cross section as a function of wavelength.
 def lum_wl_cs_per_ph(l, l_max, T):
-    
+
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-    
+
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
-    
+
     return L
 
 
 # Function to determine the stellar luminosity at a particular wavelength and temp.
 # Uses the standard blackbody curve.
 def lum_wl(l, l_max, T):
-    
+
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-    
+
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0)
-    
+
     return L
 # Function to determine the number count of photons at a particular wavelength and temp.
 # Uses the standard blackbody curve.
 def lum_wl_per_ph(l, l_max, T):
-    
+
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-    
+
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
-    
+
     return L
 
 ### A function to move particles from Flash to AMUSE.
 
 def load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart):
-    
+
     global all_masses
     # If this is a restart, shouldn't we load the random number state?
 
@@ -143,18 +143,18 @@ def load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart):
                 rnd_state = pickle.load(f)
             np.random.set_state(rnd_state)
             print "Random state set with file # "+rstatefile
-            
+
             massesfile = output_dir+'/all_masses'+current_chpt_file+'.pickle'
             print massesfile
             with open(massesfile, 'r') as f:
-                all_masses = pickle.load(f)    
+                all_masses = pickle.load(f)
             print "Loaded all_masses dictionary from file # "+massesfile
             print "all_masses =", all_masses
 
 
             #except:
             #    print "WARNING! We tried to load random state for restart but it failed."
-    
+
     else: print "WARNING: Refreshing random state with a new seed."
 
 
@@ -165,16 +165,16 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     global all_masses
     global old_sink_tags
     global mult_grav
-    
+
     # How to add stars.id from multiples test?!
     global stars_current_id_num
-    
+
     add_parts_restart = False
-    
+
     if (newtags is None):
-        
+
         num_new_parts = hydro.get_number_of_new_tags()
-        
+
         print "[add_particles_to_grav]: Number of new tags =", num_new_parts
 
         if (num_new_parts == 0):
@@ -200,7 +200,7 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     newtags.sort()
     # Check the newtags to make sure they don't already exist in the tags array.
     if (np.shape(tags_keys)[0] > 0 and (not add_parts_restart)): test_tags(tags_keys, check_tags=newtags)
-    
+
     position = hydro.get_particle_position(newtags)          # Get properties from hydro.
     velocity = hydro.get_particle_velocity(newtags)
     mass     = hydro.get_particle_mass(newtags)
@@ -236,7 +236,7 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
             add_star[kk].initial_mass = initMass[kk] # record the initial mass of the star for SE/SN uses.
         stars_current_id_num += 1
         add_star[kk].id = stars_current_id_num
-       
+
         if (debug_aptg):
             print "New star:"
             print "pos  =", add_star[kk].position.in_(units.cm)
@@ -285,12 +285,12 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
 
     #grav.particles.remove_particles(stars)
     stars.add_particles(add_star)
-    
+
     # Sort tags_keys so that we always have the tags in order.
     tags_keys = tags_keys[tags_keys[:,0].argsort()]
     # Sort the stars to be in the same order as the tags.
     stars = stars.sorted_by_attribute('tag')
-   
+
     print "Stars.id =", stars.id
 
     # Okay, I think I finally sorted this out. stars.sorted_by_attribute
@@ -361,15 +361,15 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     # If this is a restart, clear all the hydro tags and reinitialize.
     # This fixes any problems with tags from using a different number
     # of processors on a restart.
-    
+
     # Actually lets just try and sort out the proper local_tag_number
     # on each processor (the integer that keeps up with how many particles
     # each proc has made so far).
 
     if (add_parts_restart): hydro.set_starting_local_tag_numbers()
 
-    if (add_parts_restart and clear_particles_on_restart): reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys) 
-    
+    if (add_parts_restart and clear_particles_on_restart): reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys)
+
     # Clear any stored new tags in FLASH now that we've successfully added the particles
     # to the gravity code.
     hydro.clear_new_tags()
@@ -393,7 +393,7 @@ def reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys):
     # it reinitializes the particles in grav and stars
     # hydro with the new ones in hydro.
 
-    
+
     # First lets deal with the sink particles
     hydro.set_particle_pointers('sink')
     # Record all the relevant sink info into a particle set.
@@ -437,7 +437,7 @@ def reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys):
     # new tag for each star that is in stars in correct order.
 
     print len(tags_keys[:,0])
-    
+
     t_hy = hydro.get_time()
     for i, star in enumerate(stars):
 
@@ -500,7 +500,7 @@ def update_psetA_from_psetB(setA, setB, debug=False):
             setA[A_ind].vx = p.vx
             setA[A_ind].vy = p.vy
             setA[A_ind].vz = p.vz
-                
+
     if (debug): print "Cycled", numBcycled, "in setB."
     if (debug): print "Found", numAupdated, "in setA"
     return
@@ -736,12 +736,12 @@ def stellar_properties(stellar_mass = 1.0|units.MSun, metallicity = 0.02):
     #print "Clean up code."
     #stellar_evolution.cleanup_code()
     return radius, temperature, luminosity
-    
+
 ### Make a fractal cluster that is contained within a bounding box
 ### (generally the hydro box size) with an AMUSE particle set.
 
 def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False, eq_mass=1.0 | units.MSun):
-    
+
     from amuse.community.fractalcluster.interface import new_fractal_cluster_model
 
     stars_out=True
@@ -750,7 +750,7 @@ def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False,
     while (stars_out==True):
 
         n=n+1
-        
+
         if (fractal):
             print "Making star cluster using fractal model."
             cluster = new_kroupa_mass_distribution(nm_part, mass_max = (100.0 |units.MSun))
@@ -764,7 +764,7 @@ def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False,
         else:
             #cluster.mass = new_kroupa_mass_distribution(nm_part, mass_max = (100.0 |units.MSun))
             cluster.mass = new_salpeter_mass_distribution(nm_part, mass_min = (0.1 | units.MSun), mass_max = (100.0 |units.MSun))
-        
+
         remove_stars = cluster.select(lambda r: bndbox < max(abs(r)), ["position"])
 
         if (len(remove_stars) > 0):
@@ -777,7 +777,7 @@ def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False,
 
     print "This took", n, "runs."
     print cluster.mass[np.where(cluster.mass.value_in(units.MSun) > 7.0)].value_in(units.MSun)
-    
+
     return cluster
 
 ### Place a single star into the hydro simulation.
@@ -798,13 +798,13 @@ def make_single_star_in_hydro(x, y, z, mass, initMass = 0.0 | units.MSun, age = 
 ### made in AMUSE.
 
 def make_cluster_in_hydro(cluster, initial_x=0.0 | units.cm, initial_y=0.0 | units.cm, initial_z=0.0 | units.cm):
-    
+
     x = cluster.x + initial_x; y = cluster.y + initial_y; z = cluster.z + initial_z
 
     print "Are stars outside the bndbox?"
 
     print np.where(np.any(x>bndbox)), np.where(np.any(y>bndbox)), np.where(np.any(z>bndbox))
-    
+
     tag = hydro.add_particles(x,y,z)
     print "Length of tag =", len(tag)
     print "tag =", tag
@@ -813,7 +813,7 @@ def make_cluster_in_hydro(cluster, initial_x=0.0 | units.cm, initial_y=0.0 | uni
     #print hydro.get_particle_mass(tag)
 
     #hydro.particles_gather()
-    
+
     return tag
 
 def test_tags(tk, check_tags=None):
@@ -837,7 +837,7 @@ def test_tags(tk, check_tags=None):
     else:
         print "Checking tags_keys for the following tags:"
         #print check_tags
-        tags_from_tk = tk[:,0] 
+        tags_from_tk = tk[:,0]
         for tag in check_tags:
 
             if ((np.equal(tag, tags_from_tk)).any()):
@@ -853,11 +853,11 @@ def test_tags(tk, check_tags=None):
         print tk.astype(int)
         sys.stdout.flush()
         sys.exit()
-    
+
     return
-    
+
 def kroupa(m,a):
-    
+
     if (0.001 <= m < 0.08):
         k = a*m**(-0.3)
     elif (0.08 <= m < 0.5):
@@ -868,9 +868,9 @@ def kroupa(m,a):
         print "Invalid mass range!"
         k=0
     return k
-    
+
 def mkroupa(m,a):
-    
+
     if (0.001 <= m < 0.08):
         k = m*a*m**(-0.3)
     elif (0.08 <= m < 0.5):
@@ -885,19 +885,19 @@ def mkroupa(m,a):
 #def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
     #'''Return a poisson random sampling from the Kroupa IMF of sink total
        #mass from M_min to M_max separated into num_bins in logspace.
-       
+
        #Returns:
                #n_stars: Number of stars in each logarithmic bin
                #binsL:   The bin edges, including the right most bin edge
                #lam:     The average number of stars in each bin that the
                         #Poisson sample is centered around.'''
-    
+
     #from scipy.integrate import quad
-    
+
     #norm_inv = quad(kroupa,M_min,M_max,args=(1))[0]
 
     #norm = 1/norm_inv
-    
+
     #binsL = np.logspace(np.log10(M_min),np.log10(M_max),num_bins+1)
     #mass_per_bin = []
     #frac_per_bin = []
@@ -925,11 +925,11 @@ def mkroupa(m,a):
 
     ##print frac_per_bin
     ##print sum(frac_per_bin)
-    
+
     #lam = sink_mass*frac_per_bin/mass_per_bin
-    
+
     #n_stars = np.random.poisson(lam=lam)
-    
+
     #return n_stars, binsL, lam #frac_per_bin
 
 ## remaining_mass needs to survive from call to call
@@ -939,34 +939,34 @@ def mkroupa(m,a):
 
 
 #def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, max_samp_mass=150.0, eff=1.0):
-    
+
     #'''Return a random sampling of an IMF from a Mass_min to Mass_max
     #using a Poisson method to sample the number of stars in each bin and a
     #Salpeter distribution to choose the exact stellar masses in each bin
     #of the individual stars.'''
-    
+
     ## Get some number of stars given a total mass and some number of bins.
     #num_bins = 10
     #eff = 1.0
-    #[n_stars, bins, lam] = sample_stars_poisson(eff*sample_imf_mass.value_in(units.MSun), 
+    #[n_stars, bins, lam] = sample_stars_poisson(eff*sample_imf_mass.value_in(units.MSun),
                                                 #min_samp_mass, max_samp_mass, num_bins)
     ## Now use that to sample the IMF.
-    
+
     ## Now fill out the masses of the stars in each bin.
 
     #mass_in_each_bin = np.zeros((num_bins-1, np.max(n_stars)))
 
     #for b in range(num_bins-1):
-    
+
         #if (n_stars[b] > 0):
-    
+
             #mass_in_each_bin[b,0:n_stars[b]] = new_salpeter_mass_distribution(n_stars[b],
                            #mass_min= (bins[b]   | units.MSun),
                            #mass_max= (bins[b+1] | units.MSun), alpha=-2.3).value_in(units.MSun)
-    
+
     #all_samp_masses = np.ravel(mass_in_each_bin)
     #all_samp_masses = all_samp_masses[all_samp_masses!=0.0]
-    
+
     ## Here we move all the stars smaller than 1 MSun into particles
     ## that are at least 1 MSun. To do this we do a bit of fancy
     ## footwork with the arrays.
@@ -977,9 +977,9 @@ def mkroupa(m,a):
     #b = 0
     ## If there are any left smaller than 1.0 MSun, sum with others
     ## that are smaller than 1.0 MSun until there are none left.
-    
+
     #if (len(small_masses) > 1):
-        #while(small_masses[b] < 1.0 and len(small_masses[b:])>=1): 
+        #while(small_masses[b] < 1.0 and len(small_masses[b:])>=1):
 
             #small_masses[b] = small_masses[b]+small_masses[b+1]
             #b = np.delete(small_masses, b+1)
@@ -995,24 +995,24 @@ def mkroupa(m,a):
             ##small_masses = np.delete(small_masses, -1)
 
     #all_samp_masses = np.append(all_samp_masses, small_masses)
-    
+
     ## Now randomly shuffle all the masses in the array.
     #np.random.shuffle(all_samp_masses)
-    
+
 
     ##print all_samp_masses
-    
+
     #all_stars_mass = np.sum(all_samp_masses)
-    
+
     #print "Stars made are:", all_samp_masses
     #print "Total stellar mass is:", all_stars_mass
-    
+
     #return all_samp_masses
 
 def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
     '''Return a poisson random sampling from the Kroupa IMF of sink total
        mass from M_min to M_max separated into num_bins in logspace.
-       
+
        Returns:
                n_stars: Number of stars in each logarithmic bin
                binsL:   The bin edges, including the right most bin edge
@@ -1020,13 +1020,13 @@ def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
                         Poisson sample is centered around.
                norm:    Norm to be used to sample the Kroupa IMF
                         using the n_stars array.'''
-    
+
     from scipy.integrate import quad
-    
+
     norm_inv = quad(kroupa,M_min,M_max,args=(1))[0]
 
     norm = 1/norm_inv
-    
+
     binsL = np.logspace(np.log10(M_min),np.log10(M_max),num_bins+1)
     mass_per_bin = []
     frac_per_bin = []
@@ -1054,18 +1054,18 @@ def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
 
     #print frac_per_bin
     #print sum(frac_per_bin)
-    
+
     lam = sink_mass*frac_per_bin/mass_per_bin
-    
+
     n_stars = np.random.poisson(lam=lam)
-    
+
     print "Mass from N stars ~", np.sum(n_stars*mass_per_bin)
 
-    
+
     return n_stars, binsL, lam, norm #frac_per_bin
 
 def collect_small_stars_mass(all_samp_masses):
-    
+
     # Here we move all the stars smaller than 1 MSun into particles
     # that are at least 1 MSun. To do this we do a bit of fancy
     # footwork with the arrays.
@@ -1076,12 +1076,12 @@ def collect_small_stars_mass(all_samp_masses):
     b = 0
     # If there are any left smaller than 1.0 MSun, sum with others
     # that are smaller than 1.0 MSun until there are none left.
-    
+
     #print "small_masses"
     #print small_masses
-    
+
     if (len(small_masses) > 1):
-        while(small_masses[-1] < 1.0 and len(small_masses[b:])>1): 
+        while(small_masses[-1] < 1.0 and len(small_masses[b:])>1):
 
             small_masses[b] = small_masses[b]+small_masses[-1]
             small_masses = np.delete(small_masses, -1)
@@ -1094,18 +1094,18 @@ def collect_small_stars_mass(all_samp_masses):
         if (small_masses[-1] < 1.0):
             small_masses[-2] = small_masses[-2] + small_masses[-1]
             small_masses = np.delete(small_masses, -1)
-    
+
     #print "small_masses"
-    #print small_masses       
-    
+    #print small_masses
+
     all_samp_masses = np.append(all_samp_masses, small_masses)
 
     return all_samp_masses
-    
+
 def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, max_samp_mass=150.0, eff=1.0, sum_small=True):
-    
-    
-    [n_stars, bins, lam, norm] = sample_stars_poisson(eff*sample_imf_mass.value_in(units.MSun), 
+
+
+    [n_stars, bins, lam, norm] = sample_stars_poisson(eff*sample_imf_mass.value_in(units.MSun),
                                                 min_samp_mass, max_samp_mass, num_bins)
 
     print bins
@@ -1115,39 +1115,39 @@ def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, m
     k = 0
     counter = 0
     for i,n in enumerate(n_stars):
-        
+
         print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]
         print "counter =", counter
         counter = 0
         for j in range(n):
-            
+
             while (masses[k] == 0):
-                
+
                 m = np.random.uniform(low=bins[i], high=bins[i+1])
                 r = np.random.uniform()
                 p = mkroupa(m, norm)
-                
+
                 if (p/r > 1.0): masses[k] = m
-                    
+
             k+=1
             counter+=1
-                    
+
     print "Masses =", masses
     print "Number of stars =", len(masses)
     print "Total mass =", masses.sum()
-    
+
     # Sum all stars < 1 MSun into stars > 1 MSun.
     if (sum_small): masses = collect_small_stars_mass(masses)
-    
-        
+
+
     print "masses before shuffle."
     print masses
-    
+
     np.random.shuffle(masses)
 
     print "masses after shuffle."
     print masses
-    
+
     return masses
 
 def make_stars_from_sinks(hydro, min_imf_mass):
@@ -1157,58 +1157,58 @@ def make_stars_from_sinks(hydro, min_imf_mass):
     formed_stars = False
     use_ang_mom  = False
     # Get the total mass in sink particles in the simulation
-    
+
     # Note this requires us to move the particles pointer over to
     # the sink array, then MOVE IT BACK to the particles array.
-    
+
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
-    
+
     print "Num sinks =", num_sinks
 
     if (num_sinks < 1):
         hydro.set_particle_pointers('mass')
         return
-    
+
     sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))
     sink_tags.sort()
     print "sink_tags = ", sink_tags
     sink_masses = hydro.get_particle_mass(sink_tags)
     total_sink_mass = sink_masses.sum()
-    
+
     # Efficiency (effective mass left over) assuming jets remove some mass.
-    
+
     eff = 1.0
-    
+
     eff_total_sink_mass = eff*total_sink_mass
-    
+
     print "sink masses", sink_masses.as_quantity_in(units.MSun)
 
     print "total sink mass", total_sink_mass.as_quantity_in(units.MSun)
-    
+
     if (eff_total_sink_mass.value_in(units.MSun) > min_imf_mass):
-        
+
         #sink_mass_fractions = np.divide(sink_masses,total_sink_mass)
         #sink_mean_vel       = hydro.get_sink_gas_mean_velocity(sink_tags)
         #sink_var_vel        = hydro.get_sink_gas_var_velocity(sink_tags)
         sink_positions      = hydro.get_particle_position(sink_tags)
         sink_vel            = hydro.get_particle_velocity(sink_tags)
-        
+
         if (use_ang_mom):
             sink_ang_mom        = hydro.get_sink_ang_mom(sink_tags)
-        
+
         # This makes the loop work even in the case of a single sink.
         if (num_sinks == 1):
-            
+
             #sink_mean_vel  = [sink_mean_vel]
             #sink_var_vel   = [sink_var_vel]
             sink_positions = [sink_positions]
             sink_vel       = [sink_vel]
             sink_tags      = [sink_tags]
-            
+
             if (use_ang_mom):
                 sink_ang_mom   = [sink_ang_mom]
-        
+
         # Now lets randomize the sink tags indices so that we can start with
         # a different, random sink each time.
 
@@ -1216,7 +1216,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
         #sink_ind = np.where(sink_tags > 0.0)[0] # Get the indices for the tags array.
 
         np.random.shuffle(sink_ind) # Randomize them.
-        
+
         print sink_ind
         print sink_masses[sink_ind[0]]
         print (sink_masses[sink_ind[0]]).value_in(units.MSun)
@@ -1224,9 +1224,9 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
 
         num_bins = 10 #50
-        
+
         all_stars_mass = 0.0
-        
+
         for s in range(num_sinks):
             # If this sink has less than needed mass, cycle to the next sink.
             if (sink_masses[sink_ind[s]].value_in(units.MSun) < 1.0): continue
@@ -1235,24 +1235,24 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             #print "sink position =", sink_positions
             print "sink position s =", sink_positions[sink_ind[s]]
             [n_stars, bins, lam] = sample_stars_poisson(eff*sink_masses[sink_ind[s]].value_in(units.MSun), 1.0, 150.0, num_bins)
-        
+
             if (np.sum(n_stars) == 0): continue
 
         # Now fill out the masses of the stars in each bin.
-        
+
             mass_in_each_bin = np.zeros((num_bins-1, np.max(n_stars)))
 
             for b in range(num_bins-1):
-            
+
                 if (n_stars[b] > 0):
-            
+
                     mass_in_each_bin[b,0:n_stars[b]] = new_salpeter_mass_distribution(n_stars[b],
                                    mass_min= (bins[b]   | units.MSun),
                                    mass_max= (bins[b+1] | units.MSun), alpha=-2.3).value_in(units.MSun)
-            
+
             all_masses = np.ravel(mass_in_each_bin)
             all_masses = all_masses[all_masses!=0.0]
-            
+
             # Here we move all the stars smaller than 1 MSun into particles
             # that are at least 1 MSun. To do this we do a bit of fancy
             # footwork with the arrays.
@@ -1263,10 +1263,10 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             b = 0
             # If there are any left smaller than 1.0 MSun, sum with others
             # that are smaller than 1.0 MSun until there is at most one left.
-            
+
             if (len(small_masses) > 1):
-                while(small_masses[b] < 1.0 and len(small_masses[b:])>1): 
-     
+                while(small_masses[b] < 1.0 and len(small_masses[b:])>1):
+
                     small_masses[b] = small_masses[b]+small_masses[b+1]
                     b = np.delete(small_masses, b+1)
                     if (len(small_masses[b:]) > 1):
@@ -1281,15 +1281,15 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                     small_masses = np.delete(small_masses, -1)
 
             all_masses = np.append(all_masses, small_masses)
- 
+
             #print all_masses
-            
+
             all_stars_mass = np.sum(all_masses)
             remaining_mass = sink_masses[sink_ind[s]].value_in(units.MSun) - all_stars_mass
-            
+
             print "Sum of all masses", all_stars_mass
             print "remaining mass", remaining_mass
-        
+
             # If we pulled too much mass, we'll delete stars until its correct.
             #if (remaining_mass < 0.0):
                 # Randomly shuffle all the stellar masses.
@@ -1299,7 +1299,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             #        all_masses = np.delete(all_masses, 0)
             #        all_stars_mass = np.sum(all_masses)
             #        remaining_mass = sink_masses[sink_ind[s]].value_in(units.MSun) - all_stars_mass
-           
+
             # Update this sink mass to remove what we used to make stars.
             if (remaining_mass < 0.0):
                 hydro.set_particle_mass(sink_tags[sink_ind[s]], (0.0 | units.MSun))
@@ -1312,7 +1312,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             # If we make it through all the sinks, we'll borrow forward from the next accretion onto sinks.
             # Note this is why we randomize the order that sinks are sampled from.
             while (remaining_mass < 0.0 and s1 < (num_sinks-1)):
-                
+
                 # Take mass from each sink we have left until either we meet the mass requirement or we run out of sinks.
                 s1 = s1 + 1
                 next_sink_mass = sink_masses[sink_ind[s1]].value_in(units.MSun)
@@ -1336,53 +1336,53 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                 hydro.set_particle_mass(sink_tags[sink_ind[s1]], sink_masses[sink_ind[s1]])
                 if (use_ang_mom):
                     hydro.set_particle_ang_mom(sink_tags[sink_ind[s1]], sink_ang_mom[sink_ind[s1]][0], sink_ang_mom[sink_ind[s1]][1], sink_ang_mom[sink_ind[s1]][2])
-            
+
             print "After removal total stars mass", all_stars_mass
-            
+
             if (all_stars_mass <= 0.0): continue
 
             n_stars = len(all_masses)
             sum_mr2 = 0.0 | units.g*units.cm**2.0
             new_stars = Particles(n_stars)
             new_stars.mass = all_masses | units.MSun
-            
+
             print "Total number of stars made =", n_stars
             print "Star masses =", new_stars.mass
             #for st in range(len(all_masses)):
-                
+
                 #print (random_three_vector()*(np.random.rand())**(1.0/3.0)*sink_rad).in_(units.cm) + sink_positions[sink_ind[s]]
-                
+
             # Uniform distribution in the sink radius.
             #new_stars[:].position = (random_three_vector(n_stars)[:,:]*(np.random.rand(n_stars)**(1.0/3.0))[:,None]*sink_rad).in_(units.cm) + sink_positions[sink_ind[s]]
-            
+
             # Singular isothermal spherical distribution.
-            stars_rvec = (random_three_vector(n_stars)[:,:]*(np.random.rand(n_stars))[:,None]*sink_rad) 
+            stars_rvec = (random_three_vector(n_stars)[:,:]*(np.random.rand(n_stars))[:,None]*sink_rad)
             print "stars_rvec=", stars_rvec
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
-            print "rx, ry, rz =", rx, ry, rz      
+            print "rx, ry, rz =", rx, ry, rz
             r2           = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_stars[:].position = np.add(stars_rvec.value_in(units.cm),sink_positions[sink_ind[s]].value_in(units.cm)) | units.cm
-            
+
             #print "star positions=",new_stars[:].position
             #print "star 1 position =",new_stars[0].position
             #print "star 1 x, y, z =", new_stars[0].x, new_stars[0].y, new_stars[0].z
-            
+
             #print "sink position=", sink_positions[sink_ind[s]]
-            
-                
+
+
                 # Plummer / BE sphere distribution in the sink radius.
                 #u_vec = (np.array(random_three_vector())*(np.random.rand(3))*sink_rad) | units.cm + sink_positions[sink_ind[s]]
-                
+
                 #print sink_var_vel[sink_ind[s]]
-                
+
                 #v_vec = np.random.normal(loc=sink_mean_vel[sink_ind[s]], scale=sink_var_vel[sink_ind[s]])
             # There is an implicit assumption here that the velocity of the gas that is collapsing resembles the velocity of the gas
             # that is in the surrounding cells. I'm not too sure about this assumption actually...
-                
+
             #print np.random.normal(loc=sink_vel[sink_ind[s]].value_in(units.cm/units.s), scale=np.sqrt(sink_var_vel[sink_ind[s]]).value_in(units.cm/units.s))
-            
+
             new_stars[:].vx = sink_vel[sink_ind[s]][0].as_quantity_in(units.cm / units.s)
             new_stars[:].vy = sink_vel[sink_ind[s]][1].as_quantity_in(units.cm / units.s)
             new_stars[:].vz = sink_vel[sink_ind[s]][2].as_quantity_in(units.cm / units.s)
@@ -1390,7 +1390,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             print "new stars vx = ", new_stars[:].vx
             print "new stars vy = ", new_stars[:].vy
             print "new stars vz = ", new_stars[:].vz
-           
+
             #new_stars[:].vx = 0.0 | units.cm / units.s
             #new_stars[:].vy = 0.0 | units.cm / units.s
             #new_stars[:].vz = 0.0 | units.cm / units.s
@@ -1398,51 +1398,51 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             #print "new stars vx = ", new_stars[:].vx
             #print "new stars vy = ", new_stars[:].vy
             #print "new stars vz = ", new_stars[:].vz
-            #new_stars[:].vx = np.random.normal(loc=sink_vel[sink_ind[s]][0].value_in(units.cm/units.s), 
+            #new_stars[:].vx = np.random.normal(loc=sink_vel[sink_ind[s]][0].value_in(units.cm/units.s),
             #                           scale=np.sqrt(sink_var_vel[sink_ind[s]][0].value_in(units.cm**2.0/units.s**2.0)),
             #                           size=n_stars) | units.cm / units.s
-            #new_stars[:].vy = np.random.normal(loc=sink_vel[sink_ind[s]][1].value_in(units.cm/units.s), 
+            #new_stars[:].vy = np.random.normal(loc=sink_vel[sink_ind[s]][1].value_in(units.cm/units.s),
             #                           scale=np.sqrt(sink_var_vel[sink_ind[s]][1].value_in(units.cm**2.0/units.s**2.0)),
             #                           size=n_stars) | units.cm / units.s
-            #new_stars[:].vz = np.random.normal(loc=sink_vel[sink_ind[s]][2].value_in(units.cm/units.s), 
+            #new_stars[:].vz = np.random.normal(loc=sink_vel[sink_ind[s]][2].value_in(units.cm/units.s),
             #                           scale=np.sqrt(sink_var_vel[sink_ind[s]][2].value_in(units.cm**2.0/units.s**2.0)),
             #                           size=n_stars) | units.cm / units.s
-                        
-            
+
+
             # Calculate the rotational velocity omega from the original angular momentum of the sink (which came from the
             # infalling gas), reduced by the mass ratio of the new stars and the original sink.
-           
+
             # Sum up the moments of inertia.
-                
+
             if (use_ang_mom):
                 sum_mr2 = (np.sum(new_stars[:].mass.in_(units.g) * r2)).as_quantity_in(units.g*units.cm**2.0)
-            
+
                 print "Stellar inertia =", sum_mr2
                 mass_ratio = (np.sum(new_stars.mass.value_in(units.g)) / sink_masses[sink_ind[s]].value_in(units.g))
 
-                print "sink ang mom =", sink_ang_mom[sink_ind[s]] * mass_ratio 
+                print "sink ang mom =", sink_ang_mom[sink_ind[s]] * mass_ratio
                 sink_ang_mag = (sink_ang_mom[sink_ind[s]].norm()).as_quantity_in(units.cm**2.0*units.g/units.s)
-                print "mag of ang mom =", sink_ang_mag 
-            
+                print "mag of ang mom =", sink_ang_mag
+
                 omega = (sink_ang_mom[sink_ind[s]] * mass_ratio / sum_mr2).as_quantity_in(units.s**-1)
-            
+
                 print "omega =", omega
-            
-            # Now add the velocity from r (x) omega to the velocity of each star. 
-            
+
+            # Now add the velocity from r (x) omega to the velocity of each star.
+
                 new_stars[:].vx = new_stars[:].vx + ry*omega[2] - rz*omega[1]
                 new_stars[:].vy = new_stars[:].vy + rz*omega[0] - rx*omega[2]
                 new_stars[:].vz = new_stars[:].vz + rx*omega[1] - ry*omega[0]
-            
+
             #print "Star 0 has mass, position and velocity="
-            
+
             #print new_stars[0].mass
             #print new_stars[0].position
             #print new_stars[0].velocity
-            
+
             #print new_stars[:].y-sink_positions[sink_ind[s]][1]
-            #print new_stars[:].vz - sink_vel[sink_ind[s]][2] 
-            
+            #print new_stars[:].vz - sink_vel[sink_ind[s]][2]
+
                 lx = (np.sum(new_stars[:].mass.in_(units.g)*((ry).in_(units.cm)*(-new_stars[:].vz + sink_vel[sink_ind[s]][2]).in_(units.cm/units.s)
                                          - (rz).in_(units.cm)
                                          *(-new_stars[:].vy + sink_vel[sink_ind[s]][1]).in_(units.cm/units.s)))).as_quantity_in(units.cm**2.0*units.g/units.s)
@@ -1452,64 +1452,64 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                 lz = (np.sum(new_stars[:].mass.in_(units.g)*((rx).in_(units.cm)*(-new_stars[:].vy + sink_vel[sink_ind[s]][1]).in_(units.cm/units.s)
                                          - (ry).in_(units.cm)
                                          *(-new_stars[:].vx + sink_vel[sink_ind[s]][0]).in_(units.cm/units.s)))).as_quantity_in(units.cm**2.0*units.g/units.s)
-            
+
                 print "lx, ly, lz =", lx, ly, lz
-            
+
                 star_ang_mag = (np.sqrt(lx**2.0 + ly**2.0 + lz**2.0)).as_quantity_in(units.cm**2.0*units.g/units.s)
-            
+
                 print "Star total ang momentum from sink = ", star_ang_mag
-            
+
                 #ang_norm_factor = star_ang_mag / sink_ang_mag
                 #lx = lx*ang_norm_factor
                 #ly = ly*ang_norm_factor
                 #lz = lz*ang_norm_factor
                 #star_ang_mag = (np.sqrt(lx**2.0 + ly**2.0 + lz**2.0)).as_quantity_in(units.cm**2.0*units.g/units.s)
-            
+
                 print "Star total ang momentum from sink = ", star_ang_mag
-            
+
                 print "Before removing ang mom, sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]])
-            
+
             # Don't forget to remove this angular momentum from the sink particle!
 
                 hydro.set_particle_ang_mom(sink_tags[sink_ind[s]], sink_ang_mom[sink_ind[s]][0]-lx, sink_ang_mom[sink_ind[s]][1]-ly, sink_ang_mom[sink_ind[s]][2]-lz)
-           
+
                 print "Now sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]])
 
-            
+
                 #print "After adding angular momentum star 0 has velocity="
-            
+
                 #print new_stars[0].velocity
-                        
+
             print "new stars vx = ", new_stars[:].vx
             print "new stars vy = ", new_stars[:].vy
             print "new stars vz = ", new_stars[:].vz
-            
+
             # Switch to massive particles to set properties.
             hydro.set_particle_pointers('mass')
-            
+
             # Now all the stars have mass, position and velocity. So add them to the code.
-            
+
             new_star_tags = hydro.add_particles(new_stars.x,new_stars.y,new_stars.z)
-            
+
             print "new_star_tags =", new_star_tags
 
             new_star_tags.sort()
-            
+
             print "new_star_tags =", new_star_tags
 
             hydro.set_particle_mass(new_star_tags, new_stars.mass)
             hydro.set_particle_velocity(new_star_tags,new_stars.vx,new_stars.vy,new_stars.vz)
-            
+
             #print "New star tags are ", new_star_tags
-            
+
             # Switch back to sinks to remove them if needed.
             #hydro.set_particle_pointers('sink')
-        
+
             # If this sink is empty, get rid of it.
             #if (remaining_mass < 1.0):
             #    print "[make_stars_from_sink]: Removing sink", sink_tags[sink_ind[s]]
             #    hydro.remove_particles(sink_tags[sink_ind[s]])
-                
+
             formed_stars = True
 
             # Save random number state.
@@ -1520,58 +1520,58 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
     # We're done, so now switch back to massive star particles.
     hydro.set_particle_pointers('mass')
-        
+
     return formed_stars
 
 
 def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MSun):
-    
+
     # Given an initial sampling of the IMF, distribute the stars randomly
     # as sinks accrete the required mass to form them.
-    
+
     global first_call_for_stars
     global all_masses
     global old_sink_tags
-    
+
     formed_stars = False
     formed_massive_star = False
-    
+
     if (first_call_for_stars == True):
-        
+
         print "Initializing all_masses and old_sink_tags arrays."
         all_masses = {} # emtpy dict. get_stellar_mass_sampling(sample_imf_mass)
-        
+
         #star_ind = {} #0
-        
+
         old_sink_tags = []
-        
+
         first_call_for_stars = False
-        
+
     # Now that we have a set of stars to pull from
     # we can check to see if a star should be formed.
-    
+
     # Note this requires us to move the particles pointer over to
     # the sink array, then MOVE IT BACK to the particles array.
 
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
-    
+
     print "Num sinks =", num_sinks
 
     if (num_sinks < 1):
         hydro.set_particle_pointers('mass')
         return (formed_stars, formed_massive_star)
-    
+
     sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))
     sink_tags.sort()
     print "sink_tags = ", sink_tags
     print "len sink tags =", len(sink_tags)
     print "len old_sink_tags =", len(old_sink_tags)
-    
-    if (len(sink_tags) > len(old_sink_tags)): 
+
+    if (len(sink_tags) > len(old_sink_tags)):
         # Then we need to make a new list of star masses.
         #print "Inside setup for getting masses."
-        
+
         if (len(old_sink_tags) > 0):
             tags_mask  = np.ones_like(sink_tags, dtype=bool)
             search_ind = np.searchsorted(sink_tags, old_sink_tags)
@@ -1579,7 +1579,7 @@ def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MS
             new_tags   = sink_tags[tags_mask]
         else:
             new_tags = sink_tags
-        
+
         for new_tag in new_tags:
             #print "inside new_tag loop"
             # Make a new list of star masses for each using a dictionary.
@@ -1590,13 +1590,13 @@ def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MS
             # Instead of keeping up with the index, we could just pop / delete
             # the star from the list once we use it...
             #star_ind[new_tag]   = 0
-            
+
         # make both dicts sorted
         #all_masses = collections.OrderedDict(sorted(all_masses.items()))
         #star_ind   = collections.OrderedDict(sorted(star_ind.items()))
-    
+
         old_sink_tags = sink_tags
-            
+
     sink_masses = hydro.get_particle_mass(sink_tags)
     print "sink_masses", sink_masses.as_quantity_in(units.MSun)
     #print "star_ind", star_ind
@@ -1604,21 +1604,21 @@ def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MS
 
     # Check the mass in each sink and if enough to make stars
     # then make some.
-    
+
     for s,sink_mass in enumerate(sink_masses.value_in(units.MSun)):
         print "current star up for assignment:", \
               all_masses[sink_tags[s]][0], \
               "for sink with mass:", sink_mass
         # Does this sink have enough mass to make a star? If so, party on.
         while(sink_mass > all_masses[sink_tags[s]][0]):
-            
+
             sink_position      = hydro.get_particle_position(sink_tags[s])
             sink_vel           = hydro.get_particle_velocity(sink_tags[s]).value_in(units.cm/units.s)
             sink_cs            = hydro.get_sink_mean_cs(sink_tags[s]).value_in(units.cm/units.s)
-            
+
             print "Sink vel =", sink_vel
             print "Sink mean gas sound speed =", sink_cs
-            
+
             # Check before pop.
             #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
             new_star_mass     = all_masses[sink_tags[s]][0]
@@ -1627,30 +1627,30 @@ def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MS
             #print "new_star_mass =", new_star_mass
             # Check that it deleted properly.
             #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
-            
+
             new_star          = Particles(1)
             new_star.mass     = new_star_mass  | units.MSun
             new_star.velocity = np.random.uniform(sink_vel, np.ones(3)*sink_cs) | units.cm/units.s
-            
-            sink_mass         = sink_mass  - new_star_mass 
-    
+
+            sink_mass         = sink_mass  - new_star_mass
+
             # Singular isothermal spherical distribution.
-            stars_rvec = (random_three_vector(1)[:,:]*(np.random.rand(1))[:,None]*sink_rad) 
+            stars_rvec = (random_three_vector(1)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
             #print "stars_rvec=", stars_rvec
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
-            #print "rx, ry, rz =", rx, ry, rz      
+            #print "rx, ry, rz =", rx, ry, rz
             r2 = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_star.position = np.add(stars_rvec.value_in(units.cm),sink_position.value_in(units.cm)) | units.cm
-            
+
             #print "new star position =", new_star.position.as_quantity_in(units.parsec)
             #print "new star velocity =", new_star.velocity.as_quantity_in(units.km/units.s)
             #print "new star mass =" , new_star.mass.as_quantity_in(units.MSun)
 
             # Remove the mass from the sink.
             hydro.set_particle_mass(sink_tags[s], (sink_mass | units.MSun))
-            
+
             # Make the new star particle.
             hydro.set_particle_pointers('mass')
             new_star_tag = hydro.add_particles(new_star.x, new_star.y, new_star.z)
@@ -1659,14 +1659,14 @@ def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MS
             hydro.set_particle_oldmass(new_star_tag, new_star.mass) # Save initial stellar mass for SE code.
             # Switch back to sinks to continue the loop.
             hydro.set_particle_pointers('sink')
-            
+
             # Tell the main code we made a star.
             if (formed_stars == False): formed_stars = True
             if (new_star_mass > min_mass.value_in(units.MSun)): formed_massive_star = True
-    
+
     # Last thing is to ensure we are pointing back at massive particles.
     hydro.set_particle_pointers('mass')
-    
+
     return (formed_stars, formed_massive_star)
 
 def random_three_vector(n=1):
@@ -1675,9 +1675,9 @@ def random_three_vector(n=1):
     Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
     :return:
     """
-    
+
     three_vector = np.zeros((n,3))
-    
+
     phi = np.random.uniform(0,np.pi*2,n)
     costheta = np.random.uniform(-1,1,n)
 
@@ -1687,11 +1687,11 @@ def random_three_vector(n=1):
     three_vector[:,2] = np.cos( theta )
     return three_vector
 
-def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU , 
-                              min_vel_diff = 1.0e-2 | units.km / units.s, 
-                              min_mass_diff = 0.01 | units.MSun, 
+def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU ,
+                              min_vel_diff = 1.0e-2 | units.km / units.s,
+                              min_mass_diff = 0.01 | units.MSun,
                               kill=True, with_multiples=False):
-    
+
     print "Num in grav = ", len(grav.particles)
     if (with_multiples):
          print "Num in multiples._inmemory_particles = ", len(mult_grav._inmemory_particles)
@@ -1701,29 +1701,29 @@ def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU ,
     print "Num in stars = ", len(stars)
 
     if (with_multiples):
-        pos_diff     = (hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.m) 
+        pos_diff     = (hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.m)
                      - stars.position.as_quantity_in(units.m))
-        vel_diff     = (hydro.get_particle_velocity(tags_keys[:,0]).as_quantity_in(units.m*units.s**(-1)) 
+        vel_diff     = (hydro.get_particle_velocity(tags_keys[:,0]).as_quantity_in(units.m*units.s**(-1))
                      - stars.velocity.as_quantity_in(units.m*units.s**(-1)))
-        mass_diff    = (hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun) 
+        mass_diff    = (hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun)
                      - stars.mass.in_(units.MSun))
     else:
         pos_diff     = hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.m) - grav.particles.position
         vel_diff     = hydro.get_particle_velocity(tags_keys[:,0]).as_quantity_in(units.m*units.s**(-1)) - grav.particles.velocity
         mass_diff    = hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun) - grav.particles.mass.in_(units.MSun)
-        
+
     pos_diff_max = np.abs(pos_diff.value_in(units.cm)).max() | units.cm
     print "Max Position diff = "
     print pos_diff_max.in_(units.AU)
-    
+
     vel_diff_max = np.abs(vel_diff.value_in(units.cm*(units.s**-1))).max() | units.cm/units.s
     print "Max Velocity diff = "
     print vel_diff_max.in_(units.km/units.s)
-    
+
     mass_diff_max =  np.abs(mass_diff.value_in(units.MSun)).max() | units.MSun
     print "Max Mass diff = "
     print mass_diff_max.in_(units.MSun)
-    
+
     repeat_pos = False
     if (with_multiples):
         print "Checking stars for repeat position."
@@ -1734,9 +1734,9 @@ def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU ,
         print "Mult mem id =", mult_grav._inmemory_particles.id
         print "Multiples stars id =", mult_grav.stars.id
     if (repeat_pos): sys.exit()
-    
+
     if (kill):
-        if (pos_diff_max.value_in(units.cm)  > min_pos_diff.value_in(units.cm) 
+        if (pos_diff_max.value_in(units.cm)  > min_pos_diff.value_in(units.cm)
             or vel_diff_max.value_in(units.cm*(units.s**-1)) > min_vel_diff.value_in(units.cm*(units.s**-1))
             or mass_diff_max.value_in(units.MSun) > min_mass_diff.value_in(units.MSun)):
 
@@ -1787,13 +1787,13 @@ def check_repeat_position(stars):
         print c[np.where(c>1)[0]], "repeated z position found in stars."
         print "Pos =", stars.z[np.where(stars.z.number==x[np.where(c>1)[0]])[0]]
         repeat_pos=True
-        
+
     return repeat_pos
 
 def oldvnew_position(stars, oldstars):
     repeat_pos     = False
     repeat_pos_any = False
-    
+
     x_check = np.equal(oldstars.x.number, stars.x.number)
     y_check = np.equal(oldstars.y.number, stars.y.number)
     z_check = np.equal(oldstars.z.number, stars.z.number)
@@ -1810,11 +1810,11 @@ def oldvnew_position(stars, oldstars):
     if (repeat_pos):
         print "Repeated z position found at:", stars.z[z_check]
         repeat_pos_any=True
-    
+
     return repeat_pos_any
 
 def check_stellar_type(stars):
-    
+
     for star in stars:
         print "Star mass, type=", star.mass.in_(units.MSun), star.stellar_type, star.stellar_type.value_in(units.stellar_type)
     return
@@ -1836,7 +1836,7 @@ class stellar_wind(object):
         self.vesc()
         self.vterm()
         self.dm_dt()
-        
+
         return
 
 
@@ -1853,31 +1853,31 @@ class stellar_wind(object):
     def thom_Gam(self):
 
         self.thom_Gam = 7.66e-5*self.thom_sig/self.mass.value_in(units.MSun)*self.lum.value_in(units.LSun)
-        
+
         #print "thom_Gam=", self.thom_Gam
-        
+
         return
 
     def vesc(self):
 
         self.vesc = np.sqrt(2.0*units.constants.G*self.mass*(1-self.thom_Gam)
                             /(self.radius)).as_quantity_in(units.km / units.s)
-        
+
         #print self.vesc
-        
+
         return
-    
+
     def vterm(self):
-        
+
         if (self.teff.value_in(units.K) <= 1.0e4):
             self.vterm = (self.vesc)
         elif (1.0e4 < self.teff.value_in(units.K) < 2.1e4):
             self.vterm = (1.4*self.vesc)
         else:
             self.vterm = (2.65*self.vesc)
-            
+
         #print self.vterm.value_in(units.km / units.s)
-            
+
         return
 
     def dm_dt(self):
@@ -1895,7 +1895,7 @@ class stellar_wind(object):
 
             xp = np.array([2.25e4, 2.75e4])
             fp = np.array([self.mass_loss2(2.25e4), self.mass_loss1(2.75e4)])
-            
+
             self.dm_dt = 10**(np.interp(self.teff.value_in(units.K), xp, fp))  | units.MSun / units.yr
 
         return
@@ -1905,7 +1905,7 @@ class stellar_wind(object):
 
     # Above the bi-stability jump (larger than B1).
     def mass_loss1(self, teff=None):
-        
+
         if (teff is None):
             teff = self.teff.value_in(units.K)
 
@@ -1918,7 +1918,7 @@ class stellar_wind(object):
 
     # Below the bi-stability jump (smaller than B1).
     def mass_loss2(self, teff=None):
-        
+
         if (teff is None):
             teff = self.teff.value_in(units.K)
 
@@ -1930,7 +1930,7 @@ class stellar_wind(object):
 
 
 def get_np_from_run_script():
-    np = -1 
+    np = -1
     with open("run.sh") as f:
         for i, line in enumerate(f):
             words = line.split()
@@ -1989,13 +1989,13 @@ def initialize_multiples(stars, grav, conv, mult_debug_level=1, kep=None, new_sm
         kep = Kepler(unit_converter=conv)
         print "Initializing Kepler."
         kep.initialize_code()
-    
+
     print "Starting multiples."
     multiples_code = multiples.Multiples(grav, new_smalln, kep,
                                          constants.G)
-                                         
+
     multiples_code.global_debug = mult_debug_level
-    
+
     multiples_code.neighbor_veto               = True
     multiples_code.check_tidal_perturbation    = True
     multiples_code.neighbor_perturbation_limit = 0.05
@@ -2015,7 +2015,7 @@ def cleanup_multiples(multiples_code, kep_code):
 
 def initialize_gravity_codes(convert, stars = None, start_time = None,
                              num_grav_workers = 1,
-                             eps = 15.0 | units.RSun, 
+                             eps = 15.0 | units.RSun,
                              with_ph4 = True, tree_exists = False,
                              with_multiples = False):
     print "Starting gravity code."
@@ -2039,7 +2039,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
         #grav.parameters.stopping_conditions_minimum_internal_energy = -1e99 | units.m**2 * units.s**-2
         #grav.parameters.stopping_conditions_maximum_internal_energy =  1e99 | units.m**2 * units.s**-2
         print "Hermite started."
-    
+
 # N-body softening radius is the actual radius of a large massive star here.
     if (with_multiples):
         grav.parameters.epsilon_squared = 0.0 | units.cm**2.0
@@ -2049,7 +2049,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
     #    tree = Fi(convert)
     #    tree.parameters.epsilon_squared = (eps/2.5)**2.0
 
-    if (start_time is not None): 
+    if (start_time is not None):
         if (with_ph4):
             grav.parameters.begin_time=start_time
             grav.parameters.sync_time=start_time
@@ -2089,9 +2089,9 @@ def cleanup_gravity_codes(grav, tree_exists=False, with_multiples=False):
         stop_smalln()
     return
 
-                                    
+
 def update_roots_from_leaves(mult_grav, grav):
-    
+
     '''
     Update the center of mass particles from
     the leaves properties.
@@ -2100,7 +2100,7 @@ def update_roots_from_leaves(mult_grav, grav):
         leaves = tree.get_leafs_subset()
         com     = 0.0
         com_vel = 0.0
-        
+
         for leaf in leaves:
             com += (leaf.mass.value_in(units.MSun)*leaf.position.value_in(units.cm))
             com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
@@ -2232,7 +2232,7 @@ profile = True
 start_with_cluster     = False #True
 read_cluster_from_file = True
 nm_part=10
-start_with_star = True #False 
+start_with_star = True #False
 
 stars_current_id_num = 0
 
@@ -2292,7 +2292,7 @@ if (with_se):
     se.initialize_code()
 #else:
 #    se = SeBa()
- 
+
 
 print "Starting hydro code."
 
@@ -2318,24 +2318,24 @@ smallest_dx = (2.0*bndbox)/(8.0*2.0**(float(max_ref)-1.0))
 
 
 if (start_with_cluster):
-    
+
     from amuse.io import write_set_to_file, read_set_from_file
-    
+
     if (read_cluster_from_file):
-        
+
         print "Reading initial cluster from file."
-        
+
         initial_cluster = read_set_from_file('stars.hdf5', 'hdf5')
-        
+
     else:
-    
+
     #make_single_star_in_hydro(x = -6.999e17 | units.cm, y = 0.0 | units.cm, z = 0.0 | units.cm,
                               #mass = 30.0 | units.MSun,
                               #vx = -2e8 | units.cm/units.s, vy = 0.0 | units.cm/units.s, vz = 0.0 | units.cm/units.s)
-    
+
     #Converter for the initial cluster distribution, if there is one.
         conv_cluster = nbody_system.nbody_to_si(3.0 | units.parsec, 300.0 | units.MSun)
-    
+
     # Build a plummer sphere with a Kroupa IMF
     #initial_cluster = make_cluster(conv_cluster, bndbox, fractal=False,  equal_mass=True, eq_mass=50.0 | units.MSun)
         initial_cluster = make_cluster(conv_cluster, nm_part, bndbox,
@@ -2345,18 +2345,18 @@ if (start_with_cluster):
         print "Writing initial cluster to file."
         write_set_to_file(initial_cluster, 'starting_cluster.hdf5', 'hdf5')
         print "Done."
-    
+
     #num_sub_clusters = 3
-    
+
     #num_sub_stars = len(initial_cluster) // num_sub_clusters
-    
+
     #posx1 = -3.086e18 | units.cm
     #posx2 =  3.086e18 | units.cm
-    
-    
-    
+
+
+
     # Now lets distribute the stars as subclusters at several locations.
-    
+
     print "Setting up initial cluster in hydro."
     make_cluster_in_hydro(initial_cluster)
     #make_cluster_in_hydro(initial_cluster[num_sub_stars:num_sub_stars*2], initial_x=posx2)
@@ -2365,7 +2365,7 @@ if (start_with_cluster):
 
 
 if (start_with_star):
-    
+
     x  = 0.0 | units.cm #(0.5*smallest_dx)
     y  = 0.0 | units.cm #(0.5*smallest_dx)
     z  = 0.0 | units.cm #(0.5*smallest_dx)
@@ -2373,13 +2373,13 @@ if (start_with_star):
     vy = 0.0 | units.km/units.s
     vz = 0.0 | units.km/units.s
     m  = 30. | units.MSun
-    
+
     print x
-    
+
     make_single_star_in_hydro(x = x, y = y, z = z,
                               mass = m, initMass = m, age = 0.0 | units.Myr,
                               vx = vx, vy = vy, vz = vz)
-                              
+
     #make_single_star_in_hydro(x = 25.0 | units.parsec, y = 0.0 | units.cm, z = 0.0 | units.cm,
                               #mass = 60.0 | units.MSun,
                               #vx = 0.0 | units.cm/units.s, vy = 0.0 | units.cm/units.s, vz = 0.0 | units.cm/units.s)
@@ -2413,7 +2413,7 @@ stars = None
 stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
          convert, stars = stars, start_time = hydro_time,
          num_grav_workers = num_grav_workers,
-         eps = eps, 
+         eps = eps,
          with_ph4 = with_ph4,
          with_multiples = with_multiples)
 
@@ -2478,7 +2478,7 @@ try:
 
 
             i = i + 1
-    
+
         ### Check for proper bridge timestep based on hydro timestep and crossing time.
         ### Have to write a proper routine to get timestep from hydro.
             #print "Checking dt. Current dt is :", dt
@@ -2494,11 +2494,11 @@ try:
                     first_particle = True
                     print "Evolving grav to current hydro time."
                     hydro_time = hydro.get_time()
-                    
+
                     #stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
                              #convert, stars = stars, start_time = hydro_time,
                              #num_grav_workers = num_grav_workers,
-                             #eps = eps, 
+                             #eps = eps,
                              #with_ph4 = with_ph4,
                              #with_multiples = False)
 
@@ -2524,12 +2524,12 @@ try:
             else:
                 dt = min(dtmax, 0.99*hy_dt, (tmax-t), 1.5*dt_old)
             #dt = 2.0*hy_dt
-    
+
             print "dt is now :", "{:.2e}".format(dt.value_in(units.s))
             dt_old = dt
             t_old  = t
             #t = t + dt
-    
+
             print "Starting step ", i
             print "Number of stars = ", num_particles
             print "Num in grav = ", len(grav.particles)
@@ -2542,13 +2542,13 @@ try:
 
             #if (tree_exists):
             #    print "Num in tree = ", len(tree.particles)
-            
+
             made_stars,made_massive_star = make_stars_from_sinks2(hydro, min_imf_mass)
             sys.stdout.flush()
             print "Did we make stars?", made_stars
-            
+
             if (made_stars):
-                    
+
                 gridChanged = True
                 if (first_particle == True):
                 #    first_particle = True
@@ -2558,49 +2558,49 @@ try:
                 #        grav.evolve_model(hydro_time)
                     tags_keys, stars = add_particles_to_grav(tags_keys, stars, tree_exists)
                     num_particles = hydro.get_number_of_particles()
-        
+
         ### Wait for the first star to form.
-    
+
             if (first_particle == False):
-    
+
                 check_particles = hydro.get_number_of_particles()
-    
+
                 print "Number of stars =", check_particles
-    
+
                 if check_particles != 0:
-    
+
                     with Timer(verbose=True) as loop_timer:
                         first_particle = True
                         print "We got our first star!"
                         #print "Setting its mass = 90 MSun FOR THIS TEST CASE!!!"
-                        
+
                         print "Current simulation time:", t
                         hydro_time = hydro.get_time()
-                        
+
                         #stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
                              #convert, stars = stars, start_time = hydro_time,
                              #num_grav_workers = num_grav_workers,
-                             #eps = eps, 
+                             #eps = eps,
                              #with_ph4 = with_ph4,
                              #with_multiples = False)
-                        
+
                         grav_time  = grav.get_time()
                         print "Hydro time:", hydro_time
                         print "Grav time:", grav_time
-                        
+
                     # Try to evolve grav to the current time.
                         #print "Evolving grav to current hydro time."
                         #with Timer(verbose=True) as grav_timer:
                         #    #hydro_time = hydro.get_time()
                         #    if (with_ph4):
-                        #        grav.parameters.begin_time=hydro_time 
+                        #        grav.parameters.begin_time=hydro_time
                         #        grav.parameters.sync_time=hydro_time
                         #        grav.parameters.force_sync=1
                         #    else:
                         #        grav.evolve_model(hydro_time)
-    
+
                         print "Num particles in grav:", len(grav.particles)
-    
+
                         tags_keys, stars = add_particles_to_grav(tags_keys, stars, tree_exists)
                         if (with_multiples):
                             mult_grav, mult_to_stars, stars_to_mult = initialize_multiples(stars, grav, convert,
@@ -2612,12 +2612,12 @@ try:
                             test_tags(tags_keys)
 
                         print "Num particles in grav:", len(grav.particles)
-    
+
                         if (tree_exists):
                             print "Num particles in tree:", len(tree.particles)
-    
+
                         num_particles = check_particles
-                        
+
                         #hydro.set_particle_mass(tags_keys[0,0], 90 | units.MSun)
                         #stars.mass[0] = 90 | units.MSun
                         #stars_to_grav.copy()
@@ -2645,10 +2645,10 @@ try:
                         grav_time  = grav.get_time()
                         print "Hydro time:", hydro_time
                         print "Grav time:", grav_time
-                        
 
-                    # Lets just try to evolve it before we add any particles above ^^^^    
-    
+
+                    # Lets just try to evolve it before we add any particles above ^^^^
+
                     # Note this is important b/c if the gas isn't set up on the
                     # grid yet, the stars don't get kicked properly on the very first
                     # bridge step, since there is no gas gravity until Grid_solvePoisson is
@@ -2657,17 +2657,17 @@ try:
                             #hydro.evolve_model(1.0e5 | units.s)  # Just set up, don't evolve.
                             #hydro.set_timestep(1.0e8 | units.s)
                             #first_loop = False
-    
-    
+
+
                 else:
-    
+
                     ### Global timer for one loop
-    
+
                     with Timer(verbose=True) as loop_timer:
                         t = t + dt
-                        
+
                         if (do_sn_once and not first_loop):
-                            
+
                             inj_x = 0.0 | units.cm
                             inj_y = 0.0 | units.cm
                             inj_z = 0.0 | units.cm
@@ -2695,15 +2695,15 @@ try:
                         #hydro.IO_out('all')
                         hydro.IO_out('pltpart')
                         hydro.IO_out('chk')
-                        
+
                         # Check if a checkpoint file was written,
                         # if yes, then store the list of stars up for
                         # creation.
-                        
+
                         new_chpt_file = glob.glob(output_dir+'/*_chk_*')
                         new_chpt_file.sort()
                         new_chpt_file = new_chpt_file[-1][-4:]
-                        
+
                         #print "new_chk, old_chk =", new_chpt_file, old_chpt_file
                         if (new_chpt_file > old_chpt_file):
                             print "Writing out all masses to all_masses.pickle"
@@ -2714,29 +2714,29 @@ try:
                             rnd_state = np.random.get_state()
                             with open(output_dir+'/rnd_state'+new_chpt_file+'.pickle', 'wb') as f:
                                 pickle.dump(rnd_state, f)
-    
+
                     print "Current simulation time:", t
                     hydro_time = hydro.get_time()
                     grav_time  = grav.get_time()
                     print "Hydro time:", hydro_time
                     print "Grav time:", grav_time
-    
+
                     #hydro.make_stars(made_stars)
-    
+
                     if (first_loop): first_loop=False
                     time_in_hydro = time_in_hydro + hydro_timer.secs
                     #time_in_grav  = time_in_grav + grav_timer.secs
                     total_time    = total_time + loop_timer.secs
-    
+
                     print "Total time in Flash = %f s" %time_in_hydro
                     print "Total time in N-body = %f s" %time_in_grav
                     print "Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro)
-                    
+
                     log.write(`i`+"\t \t"+"{0:.2e}".format(total_time)+
                       "\t \t"+"{0:.2e}".format(time_in_hydro)+
                       "\t \t" +"{0:.2e}".format(time_in_grav)
                       + "\t \t" + "{0:.2e}".format(total_time - time_in_grav - time_in_hydro))
-                    
+
                     continue
                     #if (first_loop): first_loop=False
 
@@ -2746,7 +2746,7 @@ try:
         ### Global timer for one loop
 
             with Timer(verbose=True) as loop_timer:
-                
+
                 print "Starting the gravity bridge."
 
                 if (insane):
@@ -2773,7 +2773,7 @@ try:
                     npe       = np.zeros(num_particles) | units.s**-1.0
                     epe       = np.zeros(num_particles) | units.erg
                     sigpe     = np.zeros(num_particles) | units.cm**2.0
-                    
+
                     part_inds = []
 
                     #timing_1 = time.time()
@@ -2782,7 +2782,7 @@ try:
                     #timing_2 = time.time()
                     #print "max star mass = ", star_mass.max().in_(units.MSun)
                     #print "getting mass took ", timing_2 - timing_1, "secs."
-                    
+
                     # Note creation time will be wrong if you do anything wacky like take a cluster from
                     # a different run or something weird.
 
@@ -2795,12 +2795,12 @@ try:
                     #    stars.age = star_age
                     #    print "Using star_age instead of stars.age array."
                     #stars.age = star_age
-                        
+
                     print "Doing stellar evolution."
                     if (debug_se): print "min star age = ", star_age.min()
 
                     #print "Number of particles reported before SE stuff =", num_particles
-                    
+
                     for part in range(num_particles):
 
                         #print "Star age is", star_age.in_(units.Myr)
@@ -2812,7 +2812,7 @@ try:
                             print "this star mass before seba =", stars.mass[part].in_(units.MSun)
                             print "this star type before seba =", stars.stellar_type[part], stars.stellar_type[part].value_in(units.stellar_type)
                             print "this star age =", star_age[part].value_in(units.Myr)
- 
+
                         # Do stellar evolution unless I already went SN, in which case skip me.
                         if (13 <=  stars.stellar_type[part].value_in(units.stellar_type) <= 15):
                             print "Skipping this star that already went SN, current stellar type =", stars.stellar_type[part]
@@ -2829,7 +2829,7 @@ try:
                             print "this star evolve time in seba =", star_age[part].value_in(units.Myr), st_evol_time
                             print "this star temp after seba =", star_temp
                             print "this star lum after seba =", star_lum
-                                                
+
                         if (with_massloss and (massloss_method == 'seba' or st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun))):
                             if (debug_se): print "using seba method"
                             dm_dt[part] = ((stars.mass[part]-st_mass)/st_time).in_(units.g / units.s)
@@ -2845,13 +2845,13 @@ try:
                         elif (with_massloss and massloss_method == 'leit'):
                             # From Leitherer et. al. 1992.
                             if (debug_se): print "using Leither method"
-                            dm_dt[part] = 10**(-24.06 + 2.45 * np.log10(star_lum.value_in(units.LSun)) 
-                                        -1.10*np.log10(stars[part].mass.value_in(units.MSun)) 
+                            dm_dt[part] = 10**(-24.06 + 2.45 * np.log10(star_lum.value_in(units.LSun))
+                                        -1.10*np.log10(stars[part].mass.value_in(units.MSun))
                                         + 1.31*np.log10(star_temp.value_in(units.K))) | units.MSun/units.yr
-                            vterm[part] = 10**(1.23 - 0.30 * np.log10(star_lum.value_in(units.LSun)) 
-                                        + 0.55*np.log10(stars[part].mass.value_in(units.MSun)) 
+                            vterm[part] = 10**(1.23 - 0.30 * np.log10(star_lum.value_in(units.LSun))
+                                        + 0.55*np.log10(stars[part].mass.value_in(units.MSun))
                                         + 0.64*np.log10(star_temp.value_in(units.K))) | units.km/units.s
-                        elif (with_massloss and massloss_method == 'puls'):    
+                        elif (with_massloss and massloss_method == 'puls'):
                             # Kudritzki and Puls winds, see Kudritzki & Puls 2000, Markova & Puls 2004, 2008 and Vink 2000
                             if (debug_se): print "using Kudritzki method"
                             star_wind   = stellar_wind(star_temp, stars[part].mass, star_lum, star_radius)
@@ -2867,15 +2867,15 @@ try:
                             vterm[part] = 0.0 | units.cm / units.s
                             st_time, st_mass, star_radius, star_lum, star_temp, st_evol_time, st_type = se.evolve_star(stars.initial_mass[part], 0.001 | units.yr, 0.02)
                             star_type[part] = st_type
-                            
+
                         # If with energy injection, check to see if anything went supernova. If so, inject 10^51 ergs of
                         # energy into the grid
 
                         if (13 <=  st_type.value_in(units.stellar_type) <= 15):
-                            print "A star just went SN on you. Should be calling that SN code now!" 
+                            print "A star just went SN on you. Should be calling that SN code now!"
 
                         if (with_sn):
-                            
+
                             if (do_sn_once and not first_loop):
 
                                 inj_x = 0.0 | units.cm
@@ -2892,17 +2892,17 @@ try:
                                 print "Now evolving until t =", t+dt
                                 do_sn_once = False
                                 #hydro.IO_out('pltpart')
-                                    
+
                             else:
-                                
+
                                 #for part in range(num_particles):
-                                    
+
                                 #print "Stellar type =", stars.stellar_type[part]
-                                    
+
                                 if (13 <=  st_type.value_in(units.stellar_type) <= 15):
-                                        
+
                                     print "Going supernova at", stars.x[part], stars.y[part], stars.z[part]
-                                    
+
                                     inj_x = stars.x[part]
                                     inj_y = stars.y[part]
                                     inj_z = stars.z[part]
@@ -2916,12 +2916,12 @@ try:
                                         print "[bridge:SN]: WARNING! SN MASS > 10 MSun!"
                                         inj_mass = 10.0 | units.MSun
                                     print "Injection mass is", inj_mass.in_(units.MSun)
-                                    
+
                                     dt =  min(dt.value_in(units.s), hydro.energy_injection(tot_e, fracKin, inj_mass, inj_x, inj_y, inj_z).value_in(units.s)) | units.s
                                     print "Timestep after SN is =", dt
                                     #t = t_old + dt
                                     print "Now evolving until t =", t + dt
-                                    
+
                                     # Set proper mass for remnant (SeBa does fine for this).
                                     star_mass[part] = st_mass
                                     # Set proper remnant stellar type so that we don't get any feedback from remnants.
@@ -2932,7 +2932,7 @@ try:
                                     eion[part]  = 0.0 | units.erg
                                     if (use_radiation):
                                         hydro.set_particle_nion(tags_keys[part,0], nphot[part])
-                                        hydro.set_particle_eion(tags_keys[part,0], eion[part])                       
+                                        hydro.set_particle_eion(tags_keys[part,0], eion[part])
                                     npe[part] = 0.0 | units.s**-1
                                     epe[part] = 0.0 | units.eV
                                     if (pe_heat):
@@ -2949,11 +2949,11 @@ try:
                                         #print "mass loss should be ", dm_dt[part_inds].in_(units.MSun/units.s)*dt.in_(units.s), "for star of mass ", stars.mass[part_inds]
                                     # Do nothing else with this star, just jump to the next one.
                                     continue
-                       
+
                         if ((star_mass[part].in_(units.MSun) >= min_mass) and not (13 <=  st_type.value_in(units.stellar_type) <= 15)):
 
                             print "Found massive star, star mass =", star_mass[part].in_(units.MSun)
-                            
+
                             part_inds.append(part)
 
 
@@ -2962,9 +2962,9 @@ try:
                                 #print "Entering radiation calculation."
 
                                 flux = ion.ionizing_photon_flux(st_mass, star_radius, star_temp)
-                                
+
                                 # Calculate the average ionizing photon energy based on the blackbody curve.
-                                
+
                                 # First integrate the power from the BB curve at this stars temp.
                                 # l_min=1e-7 (small enough), min wavelength, l_max=9.116e-6 cm, wavelength of 13.6 eV photons.
                                 [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, star_temp.value_in(units.K)))
@@ -2987,14 +2987,14 @@ try:
                                 # use it to calculate the frequency!
                                 sig = sig0*(avg_nu/nu_min)**(-3.0)
                                 #print "The cross section for these photons is:"
-                                #print sig 
+                                #print sig
                                 eion[part] = (avg_E | units.eV) - (13.6 |units.eV) #2.0 | units.eV #6.0 | units.eV
                                 sigh[part] = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
-                                nphot[part] = (flux*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0) 
-                                            
-                                
+                                nphot[part] = (flux*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
+
+
                                 if (pe_heat):
-                                    
+
                                     # First integrate the power from the BB curve at this stars temp.
                                     # l_min=1e-7 (small enough), min wavelength, l_max=9.116e-6 cm, wavelength of 13.6 eV photons.
                                     l_min_dust = h*c / E_min # wavelength at 13.6 eV
@@ -3007,7 +3007,7 @@ try:
                                     #print "The average ionizing photon number flux and error for this star is:"
                                     #print per_ph, err
                                     #print "The average energy per ionizing photon for this star is:"
-                                    
+
                                     avg_E = power/per_ph / E_ev
                                     #print "Avg PE energy (eV) =", avg_E
                                     # Calculate the average frequency of an ionizing photon for this star
@@ -3019,16 +3019,16 @@ try:
                                     # Value = tau / N_H where tau = gamma * Av (Draine and Bertoli 96)
                                     # Av = N_H,tot / (1.87e21 cm^2) (Bohlin et al 78)
                                     # gamma = 2.5 (Bergin et al 2004)
-                                    sigpe[part] = sigDust 
+                                    sigpe[part] = sigDust
                                     #print "The cross section for these photons is:"
-                                    #print sig 
+                                    #print sig
                                     # Eion is the actual average energy of the photons WITH the ionizing potential still in there!
                                     epe[part] = avg_E | units.eV # should be around 8 eV
                                     #sigh = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
                                     # Calculate total number of photons from stellar surface with stellar radius.
-                                    npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0) 
-                                                
-                        
+                                    npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
+
+
                         if (with_massloss):
                             if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
                                 if (st_type.value_in(units.stellar_type) == 1):
@@ -3040,7 +3040,7 @@ try:
                                 star_mass[part] = st_mass
                         else:
                             star_mass[part] = stars.mass[part]
-                            
+
                         if (with_multiples):
                             # Cycle through the leaves and check if this particular star
                             # is in the leaves in multiples.
@@ -3061,7 +3061,7 @@ try:
                                     stars[part].as_particle_in_set(leaves).mass = star_mass[part]
                                     # If the leaf mass changed, so does the com particle's properties.
                                     update_roots_from_leaves(mult_grav, grav) # If works, move outside se loop!
-                                    
+
                                     if (debug_multiples and debug_se):
                                         print "After update from stars to multiples leaves."
                                         print "Stars mass =", stars[part].mass.in_(units.MSun)
@@ -3072,7 +3072,7 @@ try:
                                     # Don't forget at the end of this we need to update the masses
                                     # in multiples and the gravity code using the proper root mass
                                     # if that didn't happen automatically.
-                                    
+
                                     #stars_to_mult.copy()
                                     #if (debug_multiples):
                                     #    print "After stars_to_mult.copy()."
@@ -3082,18 +3082,18 @@ try:
                                     #    print "Root mass =", root.mass.in_(units.MSun)
                                     #    sys.stdout.flush()
                     # Are there any massive stars?
-                    
+
                     if not (part_inds==[]):
-                        
+
                         if (use_radiation):
-                            
+
                             print  tags_keys[part_inds,0]
                             print "Stellar Mass and N photons=", star_mass[part_inds], nphot[part_inds]
                             print "Eion (eV), SigH=", eion[part_inds], sigh[part_inds]
-                            hydro.set_particle_nion(tags_keys[part_inds,0], nphot[part_inds])                            
+                            hydro.set_particle_nion(tags_keys[part_inds,0], nphot[part_inds])
                             hydro.set_particle_eion(tags_keys[part_inds,0], eion[part_inds].as_quantity_in(units.erg))
                             hydro.set_particle_sigh(tags_keys[part_inds,0], sigh[part_inds])
-     
+
 
                         if (pe_heat):
                             print "Npe photons=", npe[part_inds]
@@ -3104,7 +3104,7 @@ try:
                             hydro.set_particle_epep(tags_keys[part_inds,0], epe[part_inds].as_quantity_in(units.erg))
                             # Set cross section of dust to PE photons.
                             hydro.set_particle_sigd(tags_keys[part_inds,0], sigpe[part_inds])
-                                            
+
 
                         if (with_winds): # and (star_mass.in_(units.MSun) >= 10.0 | units.MSun)):
 
@@ -3113,7 +3113,7 @@ try:
                             hydro.set_particle_wind_mass(tags_keys[part_inds,0], dm_dt[part_inds])
                             hydro.set_particle_wind_vel(tags_keys[part_inds,0], vterm[part_inds])
                             #print "mass loss should be ", dm_dt[part_inds].in_(units.MSun/units.s)*dt.in_(units.s), "for star of mass ", stars.mass[part_inds]
-                    
+
                 #if (made_massive_star):
                     #print "Massive star made, checking if dt should be reduced. Current dt is", dt
                     #dt = min(dt.value_in(units.s), 0.3*smallest_dx.value_in(units.cm)/np.max(vterm.value_in(units.cm/units.s))) | units.s
@@ -3122,7 +3122,7 @@ try:
                 # Remove any mass loss due to winds and update to this
                 # mass. Note this assumes steps are relatively small
                 # in the mass loss rate of stars, so that graviationally
-                # we can use the mass after all the wind mass loss 
+                # we can use the mass after all the wind mass loss
                 # has occcured. Otherwise we'd have to average
                 # mass loss and keep up with old and new masses and
                 # it just gets ugly.
@@ -3130,7 +3130,7 @@ try:
                 stars.age  = stars.age + dt
                 stars.stellar_type = star_type
                 #print "new star mass = ", stars.mass
-                
+
                 # Note when using the multiples module we can't copy stars to grav
                 # because the stars are all the particles (including leaves) and only
                 # the roots are in grav.
@@ -3147,19 +3147,19 @@ try:
                     stars_to_grav.copy()
                 #stars_to_grav.copy_attributes(["mass"])
                 hydro.set_particle_mass(tags_keys[:,0], stars.mass)
-                
+
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
                         check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
-                
-                
+
+
                 # Set the bridge timestep.
                 t = t + dt
                 print "I'm about to evolve hydro and grav for :" , dt, "to evolve to t =", t
-                
+
                 #if (np.abs(hydro.get_particle_mass(tags_keys[:,0]).value_in(units.MSun) - grav.particles.mass.value_in(units.MSun)).any() > 1.0):
 
                     #print "Masses not equal at end of SE, stopping code."
@@ -3179,20 +3179,20 @@ try:
 
                 #print "Saving hydro positions"
                 #old_pos = hydro.get_particle_position(tags_keys[:,0]).in_(units.m)
-                
+
                 #print "Before first kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
                 print "First kick."
-                
+
                 step = 1
-                
+
                 if (gridChanged):
-                    
+
                     step = 2
                     gridChanged = False
 
                 bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
-                
+
                 #print "Grav vel before update."
                 #print grav.particles.velocity
 
@@ -3235,7 +3235,7 @@ try:
                                 # Don't forget at the end of this we need to update the velocity
                                 # in multiples and the gravity code using the proper root mass
                                 # if that didn't happen automatically.
-                    
+
                     update_roots_from_leaves(mult_grav, grav)
                     mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
                     mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
@@ -3245,12 +3245,12 @@ try:
 
                 print "Grav updated."
                 #print grav.particles.velocity
-                
+
                 #print "After first kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
                 #print "Checking hydro positions"
-                #print old_pos - hydro.get_particle_position(tags_keys[:,0]).in_(units.m) 
-                
+                #print old_pos - hydro.get_particle_position(tags_keys[:,0]).in_(units.m)
+
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
@@ -3370,9 +3370,9 @@ try:
                         mult_grav.evolve_model(t)
                     else:
                         grav.evolve_model(t)
-                    
+
                 grav_evolve_time = grav.get_time()
-                
+
                 if (t > grav_evolve_time):
                     print "WARNING: grav didn't evolve properly. Try again?"
                     print "Calling grav."
@@ -3387,14 +3387,14 @@ try:
                     hydro.evolve_model(t)
 
                 if (first_step): first_step = False
-                
+
                 hydro_time = hydro.get_time()
                 grav_time  = grav.get_time()
-                
+
                 time_diff = (hydro_time - grav_time).value_in(units.s)
-                
+
                 if (time_diff > 1e4):
-                    
+
                     print "Warning: Grav is behind Hydro by:", time_diff
                     print "Trying again to evolve Grav to Hydro time."
                     with Timer(verbose=True) as grav_timer:
@@ -3416,7 +3416,7 @@ try:
                 print "After evolve / before update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
                 if (with_multiples):
                     print "After evolve / before update, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s)
-       
+
                 ### Update the positions and velocities in stars from gravity.
                 #grav_to_stars.copy()
                 if (with_multiples):
@@ -3427,7 +3427,7 @@ try:
                     mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
                 else:
                     grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
-                
+
                 print "After evolve / after update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s)
                 print "After evolve / after update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
                 if (with_multiples):
@@ -3447,7 +3447,7 @@ try:
 
                 #dx    = np.subtract(hy_r, old_r)
                 #dv    = np.subtract(hy_v, old_v)
-                
+
 
             ### Accretion occured in Flash, so get the new mass of the stars to the gravity code.
             ### Note it is important to do this now, because the mass has been removed from the gas
@@ -3473,7 +3473,7 @@ try:
             ### in hydro here before we kick again??? (Note PM bridge uses star
             ### positions to map the mass of the stars to the grid).
             ### DONE A FEW MORE LINES BELOW.
-                
+
                 # Can't set grav.particles = stars, it just makes
                 # grav.particles a pointer to stars (and not a Hermite code instance).
                 # since copy() doesn't preserve sorting by tag.
@@ -3528,7 +3528,7 @@ try:
                 #else:
 
                     #print "No particles created during step ", i
-                    
+
 
             ### Check: Are the particles in sync across the two codes?
 
@@ -3558,13 +3558,13 @@ try:
                     else:
                         check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
-                
+
                 if (test_unique_tags):
                     test_tags(tags_keys)
-                
+
                 # Remove any particles that have left the simulation domain.
                 #stars_removed = remove_particles_outside_bndbox(hydro, grav, stars, tags_keys, bndbox, debug=True)
-                
+
             ### Remove any particles that have left the simulation.
 
                 #print "Grav pos", grav.particles.x.value_in(units.cm), \
@@ -3575,7 +3575,7 @@ try:
 
                 stars_removed = False
                 rem_index = 0
-                num_particles = len(stars)    
+                num_particles = len(stars)
 
                 if (num_particles > 0):
                    # rem_index = np.where(np.abs(grav.particles.x.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
@@ -3626,9 +3626,9 @@ try:
                     #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
                     #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
                     grav_rem_part.add_particles(grav.particles[grav_rem_index])
-                        
+
                     for st in grav_rem_part:
-                        
+
                         if st in stars:
                             st_index = np.where(stars.key == st.key)[0]
                             stars_rem_part.add_particles(stars[st_index])
@@ -3665,10 +3665,10 @@ try:
                                 del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
                                 #rem_part.remove_particles(st)
                                 #rem_size -= 1
-                    
+
                     rem_tag.append(stars_rem_part.tag)
                     if (debug_remove): print "Tags for removal are now", rem_tag
-                                
+
                     rem_tag = np.array(rem_tag).flatten()
                     rem_tag.sort()
                     if (debug_remove): print "Tags for removal are now", rem_tag
@@ -3678,7 +3678,7 @@ try:
                     stars.remove_particles(stars_rem_part)
                     for rt in rem_tag:
                         tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-                        
+
                     num_particles = len(stars)
                     #if (with_se):
                         #se.particles.remove_particles(rem_part)
@@ -3741,9 +3741,9 @@ try:
                     #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
                     #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
                     grav_rem_part.add_particles(grav.particles[grav_rem_index])
-                        
+
                     for st in grav_rem_part:
-                        
+
                         if st in stars:
                             st_index = np.where(stars.key == st.key)[0]
                             stars_rem_part.add_particles(stars[st_index])
@@ -3780,10 +3780,10 @@ try:
                                 del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
                                 #rem_part.remove_particles(st)
                                 #rem_size -= 1
-                    
+
                     rem_tag.append(stars_rem_part.tag)
                     if (debug_remove): print "Tags for removal are now", rem_tag
-                                
+
                     rem_tag = np.array(rem_tag).flatten()
                     rem_tag.sort()
                     if (debug_remove): print "Tags for removal are now", rem_tag
@@ -3793,7 +3793,7 @@ try:
                     stars.remove_particles(stars_rem_part)
                     for rt in rem_tag:
                         tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-                        
+
                     num_particles = len(stars)
                     #if (with_se):
                         #se.particles.remove_particles(rem_part)
@@ -3856,9 +3856,9 @@ try:
                     #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
                     #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
                     grav_rem_part.add_particles(grav.particles[grav_rem_index])
-                        
+
                     for st in grav_rem_part:
-                        
+
                         if st in stars:
                             st_index = np.where(stars.key == st.key)[0]
                             stars_rem_part.add_particles(stars[st_index])
@@ -3895,10 +3895,10 @@ try:
                                 del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
                                 #rem_part.remove_particles(st)
                                 #rem_size -= 1
-                    
+
                     rem_tag.append(stars_rem_part.tag)
                     if (debug_remove): print "Tags for removal are now", rem_tag
-                                
+
                     rem_tag = np.array(rem_tag).flatten()
                     rem_tag.sort()
                     if (debug_remove): print "Tags for removal are now", rem_tag
@@ -3908,7 +3908,7 @@ try:
                     stars.remove_particles(stars_rem_part)
                     for rt in rem_tag:
                         tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-                        
+
                     num_particles = len(stars)
                     #if (with_se):
                         #se.particles.remove_particles(rem_part)
@@ -3925,11 +3925,11 @@ try:
                         mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
                     else:
                         grav.particles.synchronize_to(stars)
-                            
+
 
                     if (test_unique_tags):
                         test_tags(tags_keys)
-                
+
                 # If stars were removed, resort particles and check if we need to return to hydro only.
                 # NOTE: I think this is important to include here and not in the actual particle removal
                 # from hydro. This is because the following steps can occur:
@@ -3959,7 +3959,7 @@ try:
                     test_tags(tags_keys)
                 # Lets look for differences in the particle positions or velocities
                 # in the two codes.
-                
+
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
@@ -3979,7 +3979,7 @@ try:
                 step = 2
 
                 bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
-                
+
                 #print "Grav vel before update."
                 #print grav.particles.velocity
 
@@ -4022,7 +4022,7 @@ try:
                                 # Don't forget at the end of this we need to update the velocity
                                 # in multiples and the gravity code using the proper root mass
                                 # if that didn't happen automatically.
-                    
+
                     update_roots_from_leaves(mult_grav, grav)
                     mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
                 else:
@@ -4031,12 +4031,12 @@ try:
 
                 print "Grav updated."
                 #print grav.particles.velocity
-                
+
                 #print "After second kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
                 #print "Checking hydro positions"
                 #print old_pos - hydro.get_particle_position(tags_keys[:,0]).in_(units.m)
-                
+
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
@@ -4053,16 +4053,16 @@ try:
                         check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
-                
+
                 print "Checking for plot."
 
                 # Check if a checkpoint file was written,
                 # if yes, then store the list of stars up for
                 # creation.
-                
+
                 hydro.IO_out('pltpart')
                 hydro.IO_out('chk')
-                
+
                 #new_chpt_file = max(glob.glob(output_dir+'/*_chk_????'),'0000')
                 #print "new_chk, old_chk =", new_chpt_file, current_chpt_file
                 #if (new_chpt_file > current_chpt_file):
@@ -4070,7 +4070,7 @@ try:
                     #with open(output_dir+'/all_masses'+new_chpt_file[-4:]+'.pickle', 'wb') as f:
                         #pickle.dump(all_masses, f)
                     #current_chpt_file = new_chpt_file
-                
+
                     #rnd_state = np.random.get_state()
                     #with open(output_dir+'/rnd_state.pickle', 'wb') as f:
                         #pickle.dump(rnd_state, f)
@@ -4078,7 +4078,7 @@ try:
                 new_chpt_file = glob.glob(output_dir+'/*_chk_*')
                 new_chpt_file.sort()
                 new_chpt_file = new_chpt_file[-1][-4:]
-                
+
                 #print "new_chk, old_chk =", new_chpt_file, old_chpt_file
                 if (new_chpt_file > old_chpt_file):
                     print "Writing out all masses to all_masses.pickle"
@@ -4089,7 +4089,7 @@ try:
                     rnd_state = np.random.get_state()
                     with open(output_dir+'/rnd_state'+new_chpt_file+'.pickle', 'wb') as f:
                         pickle.dump(rnd_state, f)
- 
+
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
@@ -4106,7 +4106,7 @@ try:
                 time_diff = (hydro_time - grav_time).value_in(units.s)
 
                 print "Hydro time between initial hydro and grav bridge:", time_diff
-                
+
                 if (first_loop): first_loop=False
 
 
@@ -4149,7 +4149,7 @@ try:
                 break
 
                 hydro.timer_summary()
-            
+
             if (profile):
                 hydro.timer_summary()
 

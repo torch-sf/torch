@@ -27,8 +27,8 @@ def energy_flux(T, lowfreq=0.|units.s**-1, N=100000):
 
 temp=map(lambda x: float( 27500 + x*2500 ), range(12)  ) # temperature [K]
 
-tempmin=27500. 
-tempmax=55000. 
+tempmin=27500.
+tempmax=55000.
 dtemp=2500.
 imintemp=0
 imaxtemp=11
@@ -65,7 +65,7 @@ ionflux=numpy.array([[ 23.21      ,  22.93      ,  22.7       ,  22.52      ,
                      [ 24.98812331,  24.98812331,  24.98812331,  24.98812331,
                        25.01      ,  24.99      ,  24.98      ,  24.97      ]])
 # from  OSTAR2002 Model Atmospheres
-# solar metallicity     
+# solar metallicity
 # Number of ionizing photons in H I Lyman continuum
 #               (log number per sec per cm2 at stellar surface)
 # missing values in original table are calculated from blackbody
@@ -77,11 +77,11 @@ def interpolate_ionizing_flux( logg, t):
         return photon_flux( t | units.K, lowfreq=(c*Ry))/40.
     if t >= tempmax:
         return photon_flux( t | units.K, lowfreq=(c*Ry))
-  
+
     ilogg_=(logg-loggmin)/dlogg
     ilogg=numpy.long( numpy.floor(ilogg_) )
     dl=ilogg_-ilogg
-  
+
     itemp_=(t-tempmin)/dtemp
     itemp=numpy.long( numpy.floor(itemp_) )
     dt=itemp_-itemp
@@ -121,7 +121,7 @@ if __name__=="__main__":
     flux = ionizing_photon_flux(Mstar, Rstar, Teff)
     print 'ionizing photon flux =', flux.in_(units.cm**-2*units.s**-1)
     print 'log(flux)            =', \
-      		numpy.log10(flux.value_in(units.cm**-2*units.s**-1))
+                numpy.log10(flux.value_in(units.cm**-2*units.s**-1))
     lump = ionizing_photon_luminosity(Mstar, Rstar, Teff)
     print 'ionizing photon lum  =', lump
     print 'ionizing photon lum  =', lump.in_(units.s**-1)

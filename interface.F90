@@ -16,10 +16,10 @@ use Driver_interface, ONLY : Driver_initFlash, &
     Driver_getSimTime, Driver_init, Driver_getMype, Driver_abortFlash
 
 use Driver_data, ONLY : dr_nbegin, dr_nend, dr_dtInit, dr_tmax, &
-    dr_globalMe, dr_globalNumProcs, dr_globalComm, dr_dt, dr_dtOld, & 
+    dr_globalMe, dr_globalNumProcs, dr_globalComm, dr_dt, dr_dtOld, &
     dr_dtAdvect, dr_restart, dr_shortenLastStepBeforeTMax, & ! This last one is important to keep code synced!
     dr_nstep, dr_nbegin, dr_simTime, dr_dtMin, dr_initialSimTime
-    
+
 use Grid_interface, ONLY : Grid_getBlkData, Grid_getPointData, &
     Grid_getBlkIDFromPos, Grid_getCellCoords, Grid_getBlkIndexLimits, &
     Grid_getListOfBlocks, Grid_getBlkCenterCoords, Grid_getBlkPhysicalSize, &
@@ -27,14 +27,14 @@ use Grid_interface, ONLY : Grid_getBlkData, Grid_getPointData, &
     Grid_getBlkBoundBox, Grid_releaseBlkPtr, Grid_sortParticles, &
     Grid_getSingleCellVol, Grid_getLocalNumBlks, Grid_getMaxRefinement, &
     Grid_notifySolnDataUpdate, Grid_mapMeshToParticles, Grid_updateRefinement
-    
+
 use Grid_data, ONLY : gr_eosMode
 
 #ifdef GRAVITY
 use Gravity_interface, ONLY: Gravity_accelOneBlock, Gravity_getAccelAtPoint, &
     Gravity_getPotentialAtPoint, Gravity_potentialListOfBlocksPDENonly, &
     Gravity_potentialListOfBlocks, Gravity_accelListOfBlocks
-    
+
 use Gravity_data, ONLY : useGravity
 #endif
 
@@ -57,17 +57,17 @@ use ut_qsortInterface, ONLY : ut_qsort
 
 !use Particles_interface, ONLY : Particles_wind
 
-    
+
 use ut_interpolationInterface, ONLY: ut_polint
 
-    
+
 use RuntimeParameters_interface, ONLY : RuntimeParameters_set, &
     RuntimeParameters_get
 
-#ifdef SINK_PART_TYPE    
+#ifdef SINK_PART_TYPE
     use pt_sinkInterface, ONLY : pt_sinkCreateParticle, &
     pt_sinkGatherGlobal
-    
+
     use pt_sinkSort
 #endif
 
@@ -76,7 +76,7 @@ use RuntimeParameters_interface, ONLY : RuntimeParameters_set, &
     use Particles_sinkdata
 #endif
 
-#if defined (ACTIVE_PART_TYPE) || defined (SINK_PART_TYPE) 
+#if defined (ACTIVE_PART_TYPE) || defined (SINK_PART_TYPE)
     use Particles_data
 #endif
 
@@ -89,7 +89,7 @@ implicit none
 ! with Flash here. This assures that we don't have an MPI mismatch.
 
 
-!#ifndef MPI_INCLUDED 
+!#ifndef MPI_INCLUDED
 !#include "Flash_mpi.h"
 !#define MPI_INCLUDED
 !#endif
@@ -102,7 +102,7 @@ real*8, save :: force_SoG_x, force_SoG_y, force_SoG_z
 
 
 ! Pointer to particles array which can be massive or sink particles in Flash
- 
+
 real*8, pointer, save, dimension(:,:) :: particles_pointer
 integer, pointer :: num_part_local_ptr
 
@@ -120,19 +120,19 @@ contains
 FUNCTION set_particle_pointers(part_type_in)
 
 use Driver_data, only : dr_globalComm
-#ifdef ACTIVE_PART_TYPE 
+#ifdef ACTIVE_PART_TYPE
     use Particles_data, only : particles, pt_numLocal, new_massive_tags, number_new_massive
 #endif
-#ifdef SINK_PART_TYPE 
+#ifdef SINK_PART_TYPE
     use Particles_sinkData, only : particles_local, localnp, new_sink_tags, number_new_sinks
 #endif
 
 integer   :: set_particle_pointers, ierr
 character(len=4), intent(in) :: part_type_in
 
-#if defined (ACTIVE_PART_TYPE) || defined (SINK_PART_TYPE) 
+#if defined (ACTIVE_PART_TYPE) || defined (SINK_PART_TYPE)
 ! Here we check if the simulation contains massive particles.
-! If yes, it assumes if we are also using sinks they are to gather gas 
+! If yes, it assumes if we are also using sinks they are to gather gas
 ! and make massive particles and that the massive particles are the ones
 ! that contribute feedback.
 
@@ -153,7 +153,7 @@ if (part_type_in == 'mass') then
     number_new_particles => number_new_massive
 
     part_type = "mass"
-    
+
     !if (dr_globalMe == 0) print*, "[set_particle_pointers]: Particle pointers are set to ACTIVE_PART_TYPE!"
 #else
 
@@ -164,7 +164,7 @@ if (part_type_in == 'mass') then
 
 else if (part_type_in == 'sink') then
 
-#if defined (SINK_PART_TYPE) 
+#if defined (SINK_PART_TYPE)
 ! Point at sink particles.
     particles_pointer => particles_local
     num_part_local_ptr => localnp
@@ -173,7 +173,7 @@ else if (part_type_in == 'sink') then
     number_new_particles => number_new_sinks
 
     part_type = "sink"
-    
+
     !if (dr_globalMe == 0) print*, "[set_particle_pointers]: Particle pointers are set to SINK_PART_TYPE!"
 
 #else
@@ -207,7 +207,7 @@ integer internal_particle_integration_off
 if (dr_globalMe == 0) print*, "[initialize_particle_pointers]: Warning, &
                       switching off all Flash internal integrators for &
                       the particles array."
-                      
+
 pt_typeInfo(PART_ADVMETHOD,:) = PT_ADVMETH_NONE
 #endif
 internal_particle_integration_off=0
@@ -224,7 +224,7 @@ subroutine get_particle_type_bounds(part_type_in, type_begin, type_end, type_cou
 #if defined (ACTIVE_PART_TYPE) || (SINK_PART_TYPE)
     use Particles_data, only : pt_numLocal, pt_typeInfo
 #endif
-#ifdef SINK_PART_TYPE 
+#ifdef SINK_PART_TYPE
     use Particles_sinkData, only : localnp
 #endif
 
@@ -286,14 +286,14 @@ end subroutine
 
 
 FUNCTION initialize_restart()
-  
+
   INTEGER :: initialize_restart
   restart = .false.
   initialize_restart=0
 END FUNCTION
 
 FUNCTION get_restart(value)
-  
+
   INTEGER :: get_restart
   LOGICAL :: value
   call RuntimeParameters_get('restart',value)
@@ -301,16 +301,16 @@ FUNCTION get_restart(value)
 END FUNCTION
 
 FUNCTION set_restart(value)
-  
+
   INTEGER :: set_restart
   LOGICAL :: value
   call RuntimeParameters_set('restart',value)
   restart=value
   set_restart=0
 END FUNCTION
-  
+
 FUNCTION get_begin_iter_step(value)
-  
+
   INTEGER :: value
   INTEGER :: get_begin_iter_step
   value = dr_nbegin
@@ -318,7 +318,7 @@ FUNCTION get_begin_iter_step(value)
 END FUNCTION
 
 FUNCTION set_begin_iter_step(value)
-  
+
   INTEGER :: value
   INTEGER :: set_begin_iter_step
   dr_nbegin = value
@@ -326,7 +326,7 @@ FUNCTION set_begin_iter_step(value)
 END FUNCTION
 
 FUNCTION get_max_num_steps(value)
-  
+
   INTEGER :: value
   INTEGER :: get_max_num_steps
   value = dr_nend
@@ -334,7 +334,7 @@ FUNCTION get_max_num_steps(value)
 END FUNCTION
 
 FUNCTION set_max_num_steps(value)
-  
+
   INTEGER :: value
   INTEGER :: set_max_num_steps
   dr_nend = value
@@ -342,7 +342,7 @@ FUNCTION set_max_num_steps(value)
 END FUNCTION
 
 FUNCTION get_current_step(value)
-  
+
   INTEGER :: value
   INTEGER :: get_current_step
   value = dr_nstep
@@ -350,7 +350,7 @@ FUNCTION get_current_step(value)
 END FUNCTION
 
 FUNCTION get_time(value)
-  
+
   DOUBLE PRECISION :: value
   INTEGER :: get_time
   call Driver_getSimTime(value)
@@ -358,7 +358,7 @@ FUNCTION get_time(value)
 END FUNCTION
 
 FUNCTION get_end_time(value)
-  
+
   DOUBLE PRECISION :: value
   INTEGER :: get_end_time
   value = dr_tmax
@@ -366,7 +366,7 @@ FUNCTION get_end_time(value)
 END FUNCTION
 
 FUNCTION get_timestep(value)
-  
+
   DOUBLE PRECISION :: value
   INTEGER :: get_timestep
 !  call RuntimeParameters_get("dtinit",value)
@@ -379,7 +379,7 @@ FUNCTION get_timestep(value)
 END FUNCTION
 
 FUNCTION set_timestep(value)
-  
+
   DOUBLE PRECISION :: value
   INTEGER :: set_timestep
   !call RuntimeParameters_set("dtinit",value)
@@ -392,7 +392,7 @@ FUNCTION set_timestep(value)
 END FUNCTION
 
 FUNCTION set_end_time(value)
-  
+
   DOUBLE PRECISION :: value
   INTEGER :: set_end_time
   call RuntimeParameters_set('tmax',value)
@@ -437,7 +437,7 @@ END FUNCTION
 !!! after is a restart for the loop.
 
 FUNCTION evolve_model(value)
-  
+
   DOUBLE PRECISION, INTENT(IN) :: value
   INTEGER :: evolve_model, num_procs, myID, ierr
 
@@ -453,7 +453,7 @@ FUNCTION evolve_model(value)
 !    !call RuntimeParameters_set('restart',restart)
 !    !call RuntimeParameters_get('restart',dr_restart)
 !  end if
-  
+
   dr_nbegin = dr_nstep + 1
   dr_initialSimTime = dr_simTime
 
@@ -466,10 +466,10 @@ END FUNCTION
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 FUNCTION get_cell_volume(block, i, j, k, vol)
-  
+
   INTEGER :: block, i, j, k, get_cell_volume
   REAL*8  :: vol
-  
+
   call Grid_getSingleCellVol(block, INTERIOR, [i,j,k], vol)
 
 get_cell_volume=0
@@ -477,7 +477,7 @@ END FUNCTION
 
 ! Get the number of processors which have blocks on them.
 FUNCTION get_number_of_procs(n)
-  
+
   integer :: n, get_number_of_procs
   ! Note MESH_COMM is a Flash defined constant.
   call Driver_getNumProcs(MESH_COMM, n)
@@ -485,7 +485,7 @@ FUNCTION get_number_of_procs(n)
 END FUNCTION
 
 FUNCTION get_all_local_num_grids(num_grid_array, nprocs)
-  
+
   integer :: nprocs, get_all_local_num_grids
   integer :: communicator, myProc, ierr, i
   integer, dimension(nprocs) :: num_grid_array
@@ -494,28 +494,28 @@ FUNCTION get_all_local_num_grids(num_grid_array, nprocs)
   call Driver_getMype(GLOBAL_COMM, myProc)
 
   do i=0, nprocs-1
-  
+
     if (myProc == i) &
 
       call Grid_getLocalNumBlks(num_grid_array(i+1))
-      
+
   end do
-  
+
   if (myProc == 0) then
-  
-    call MPI_REDUCE(MPI_IN_PLACE, num_grid_array, nprocs, MPI_INTEGER, & 
+
+    call MPI_REDUCE(MPI_IN_PLACE, num_grid_array, nprocs, MPI_INTEGER, &
                MPI_SUM, 0, communicator, ierr)
   else
-  
+
     call MPI_REDUCE(num_grid_array, num_grid_array, nprocs, MPI_INTEGER, &
                    MPI_SUM, 0, communicator, ierr)
   end if
-  
+
   get_all_local_num_grids=0
 END FUNCTION
 
 FUNCTION get_number_of_grids(nproc, n)
-  
+
   INTEGER :: n, local_n, nproc, myProc, ierr, communicator
   INTEGER :: get_number_of_grids
   INTEGER, DIMENSION(MAXBLOCKS) :: list_of_blocks
@@ -575,7 +575,7 @@ END FUNCTION
 
 FUNCTION get_hydro_state_at_point(x, y, z, vx, vy, vz, &
                          rho, rhovx, rhovy, rhovz, rhoen)
-  
+
   REAL*8 :: x, y, z, vx, vy, vz
   REAL*8 :: x1(3), x2(3), x3(3)
   REAL*8, DIMENSION(MDIM) :: delta, blockCenter, &
@@ -591,30 +591,30 @@ FUNCTION get_hydro_state_at_point(x, y, z, vx, vy, vz, &
   loc(1)=x; loc(2)=y; loc(3)=z
   x1=0.0; x2=0.0; x3=0.0
   weight=1.0; local_pos=0.0; pos_in_cell=0.0
-  
-  
-! Find the i,j,k index of the cell for the queried point x,y,z. 
-  
+
+
+! Find the i,j,k index of the cell for the queried point x,y,z.
+
   call Driver_getComm(GLOBAL_COMM, communicator)
   call Grid_getBlkIDFromPos([x,y,z], blockID, Proc_ID, communicator)
   call Grid_getBlkCenterCoords(blockID, blockCenter)
   call Grid_getBlkIndexLimits(blockID, blkLimits, blkLimitsGC, CENTER)
   call Grid_getBlkPhysicalSize(blockID, blockSize)
   call Grid_getDeltas(blockID, delta)
-  
+
 ! Make sure that the guard cells in the 1st layer around the whole block
 ! are filled with centered values that have been checked against the EOS
 ! to be self consistent. Note eosMode is set to be the default mode
 ! already being used from Grid_data.
 
-  call Grid_fillGuardCells(CENTER, ALLDIR, minlayers=1, eosMode=gr_eosMode, doEos=.true.) 
+  call Grid_fillGuardCells(CENTER, ALLDIR, minlayers=1, eosMode=gr_eosMode, doEos=.true.)
 
 do ii=1, MDIM
   local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0 ! Position in the block.
 end do
-  
+
 ! Index of the cell at the local position in the block, including guard cells.
- 
+
   i = ceiling(local_pos(1)/delta(1)) + (blkLimits(LOW,IAXIS)-blkLimitsGC(LOW,IAXIS))
 
   if (MDIM .gt. 1) then
@@ -633,7 +633,7 @@ end do
 ! is normed to 1 in each dimension and the origin is in the center.
 
   pos_in_cell =  mod(local_pos,delta)/delta - 0.5
-  
+
 ! Weighting towards the inner and outer boundaries of the cell on each
 ! axis for every cell that borders the cell containing the point. Note that
 ! if the point is closer to one side, the cells on the opposite side give no
@@ -646,19 +646,19 @@ end do
       x1(ii) = 0.0
       x2(ii) = 1.0 - pos_in_cell(ii)
       x3(ii) = pos_in_cell(ii)
-    
+
     else if (pos_in_cell(ii) < 0.0) then
       x1(ii) = -pos_in_cell(ii)
       x2(ii) = 1.0 + pos_in_cell(ii)
       x3(ii) = 0.0
-    
+
     else
       x1(ii) = 0.0
       x2(ii) = 1.0
       x3(ii) = 0.0
-    
+
     end if
-  
+
   end do
 
   weight(1,:,:) = weight(1,:,:)*x1(1)
@@ -675,18 +675,18 @@ end do
 !  do ii=1,3
 !    do jj=1,3
 !      do kk=1,3
-    
+
 !        weight(ii,jj,kk) = x1(ii)*x2(jj)*x3(kk)
-    
+
 !      end do
 !    end do
 !  end do
 
-  
+
   do ii=1, 3
     do jj=1, 3
       do kk=1, 3
-      
+
         call Grid_getPointData(blockID,CENTER,DENS_VAR,EXTERIOR,[i-2+ii,j-2+jj,k-2+kk],rho_cell)
         rho  = rho + weight(ii,jj,kk)*rho_cell
         call Grid_getPointData(blockID,CENTER,VELX_VAR,EXTERIOR,[i-2+ii,j-2+jj,k-2+kk],rhovx_cell)
@@ -697,7 +697,7 @@ end do
         rhovz = rhovz + weight(ii,jj,kk)*rhovz_cell
         call Grid_getPointData(blockID,CENTER,ENER_VAR,EXTERIOR,[i-2+ii,j-2+jj,k-2+kk],en_cell)
         rhoen = rhoen + weight(ii,jj,kk)*en_cell
-        
+
       end do
     end do
   end do
@@ -705,7 +705,7 @@ end do
 END FUNCTION
 
 FUNCTION get_potential(i, j, k, index_of_grid, potential)
-  
+
   integer :: i, j, k, index_of_grid, get_potential
   real*8  :: potential
 #ifdef GRAVITY
@@ -743,7 +743,7 @@ END FUNCTION get_potential
 !  call Particles_mapFromMesh(1, 1, attrib, loc, bndbox, &
 !                               deltas, solndata, potential)
 !  call Grid_releaseBlkPtr(blockID,solndata)
-  
+
 
 !get_potential_at_point=0
 !END FUNCTION
@@ -767,7 +767,7 @@ END FUNCTION get_potential
 !real*8    :: eps, error
 !real*8, dimension(nparts,MDIM) :: gravity
 !real*8, dimension(MDIM)  :: loc, deltas, blockSize, blockCenter, local_pos
-!real*8, dimension(MDIM)  :: cell_loc 
+!real*8, dimension(MDIM)  :: cell_loc
 !real*8, dimension(MDIM,2):: grav_cell, cell_locs
 !real*8, dimension(2)     :: x_cell, y_cell, z_cell
 !real*8, dimension(MDIM, GRID_IHI_GC, GRID_JHI_GC, GRID_KHI_GC) :: gvec
@@ -777,7 +777,7 @@ END FUNCTION get_potential
 !!!!!! NOTE: This function REQUIRES the user to define the variable for
 !!!!!! graviational acceleration in each direction on the grid as
 !!!!!! GACX, GACY, and GACZ in the Config file. Note this is done if using
-!!!!!! BHTree gravity and you do bhtreeAcc=1 on setup line. See Flash 
+!!!!!! BHTree gravity and you do bhtreeAcc=1 on setup line. See Flash
 !!!!!! users guide for how to define variables for other gravity solvers.
 !
 !!!!!! ALSO NOTE: The Multigrid gravity solver will give you nonsense back
@@ -792,7 +792,7 @@ END FUNCTION get_potential
 !
 !call Grid_fillGuardCells(CENTER, ALLDIR, minLayers=NGUARD, &
 !                         eosMode=gr_eosMode, doEos=.false.)
-!                     
+!
 !attrib(1,1) = ACCX_PART_PROP
 !attrib(2,1) = GACX_VAR
 !attrib(1,2) = ACCY_PART_PROP
@@ -803,8 +803,8 @@ END FUNCTION get_potential
 !gravity = 0.0
 !
 ! do  i=1, nparts
-!  
-!  
+!
+!
 !
 !  loc = (/x(i), y(i), z(i)/)
 !
@@ -816,19 +816,19 @@ END FUNCTION get_potential
 !  call Driver_getMype(GLOBAL_COMM, myProc)
 !  call Driver_getComm(GLOBAL_COMM, communicator)
 !  call Grid_getBlkIDFromPos(loc, blockID, ProcID, communicator)
-!  
+!
 !  if (myProc .eq. ProcID) then
 !
 !!!!! This method uses finite differencing on the grid potential.
-!  
+!
 !!    print*, "blockID = ", blockID
 !
-!!!!! This line likely only needs to be called for the Multigrid solver.    
+!!!!! This line likely only needs to be called for the Multigrid solver.
 !!    call Gravity_accelOneBlock(blockID,NGUARD,gvec)
 !
 !
 !!!    call Grid_getBlkPtr(blockID,solndata,CENTER)
-!    
+!
 !!!    solndata(GRAX_VAR,:,:,:) = gvec(1,:,:,:)
 !!!    solndata(GRAY_VAR,:,:,:) = gvec(2,:,:,:)
 !!!    solndata(GRAZ_VAR,:,:,:) = gvec(3,:,:,:)
@@ -836,45 +836,45 @@ END FUNCTION get_potential
 !!!!! This method assumes we already calculated g accel when we
 !!!!! called Grid_solvePoisson sometime earlier. Note we might have to
 !!!!! now call Grid_solvePoisson during driver_init. - JW
-!    
-!    call Grid_getBlkPtr(blockID,solndata,CENTER)    
+!
+!    call Grid_getBlkPtr(blockID,solndata,CENTER)
 !    call Grid_getBlkBoundBox(blockID,bndbox)
 !    call Grid_getDeltas(blockID,deltas)
-!    
-!         
+!
+!
 !!!    print*, "Cell gravity for block is: ", solndata(GACX_VAR,:,:,:) &
 !!!            , solndata(GACY_VAR,:,:,:), solndata(GACZ_VAR,:,:,:)
-!    
+!
 !    call Particles_mapFromMesh(1, 3, attrib, loc, bndbox, &
 !                                 deltas, solndata, gravity(i,:))
 !
-!    
+!
 !!!    Grid_mapMeshToParticles (particles, part_props,&
 !!!                                    numParticles,posAttrib,&
 !!!                                    numAttrib, attrib,&
 !!!                                    mapType,gridDataStruct)
-!    
-!    
+!
+!
 !    call Grid_releaseBlkPtr(blockID,solndata)
-!    
+!
 !!    call Grid_getBlkCenterCoords(blockID, blockCenter)
 !!    call Grid_getBlkIndexLimits(blockID, blkLimits, blkLimitsGC, CENTER)
 !!    call Grid_getBlkPhysicalSize(blockID, blockSize)
 !!    call Grid_getDeltas(blockID, deltas)
-!    
-!    
-!    
-! 
+!
+!
+!
+!
 !
 !
 !!    ! Position in the block.
 !!    do iii=1, MDIM
 !!      local_pos(iii) = loc(iii) - blockCenter(iii) + blockSize(iii)/2.0
 !!    end do
-!    
+!
 !!  ! Find the cell the loc is in. We use the local pos in the block including
 !!  ! guard cells.
-!   
+!
 !!    ii = ceiling(local_pos(1)/deltas(1))  &
 !!       + (blkLimits(LOW,IAXIS)-blkLimitsGC(LOW,IAXIS))
 !
@@ -891,13 +891,13 @@ END FUNCTION get_potential
 !!    else
 !!        kk = 0
 !!    end if
-!    
+!
 !!    ! Now we determine if the point is to the left or right of the
 !!    ! cell center of the cell it resides in. Then we get the cell centers
 !!    ! to the left and right of the point for linear interpolation and
 !!    ! the gravity to the left and right of the point in each
 !!    ! dimension.
-!    
+!
 !!    if (nint(mod(local_pos(1),deltas(1))) .eq. 1) then
 !
 !!        call Grid_getSingleCellCoords([ii, jj, kk],blockID,CENTER, &
@@ -906,13 +906,13 @@ END FUNCTION get_potential
 !!        call Grid_getSingleCellCoords([ii+1, jj, kk],blockID,CENTER, &
 !!                                      EXTERIOR, cell_loc)
 !!        cell_locs(1,2) = cell_loc(1)
-!         
+!
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj, kk],grav_cell(1,1))
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii+1, jj, kk],grav_cell(1,2))
 !!    else
-!    
+!
 !!        call Grid_getSingleCellCoords([ii-1, jj, kk],blockID,CENTER, &
 !!                                      EXTERIOR, cell_loc)
 !!        cell_locs(1,1) = cell_loc(1)
@@ -924,7 +924,7 @@ END FUNCTION get_potential
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj, kk],grav_cell(1,2))
 !!    end if
-!    
+!
 !!    if (nint(mod(local_pos(2),deltas(2))) .eq. 1) then
 !
 !!        call Grid_getSingleCellCoords([ii, jj, kk],blockID,CENTER, &
@@ -938,7 +938,7 @@ END FUNCTION get_potential
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj+1, kk],grav_cell(2,2))
 !!    else
-!    
+!
 !!        call Grid_getSingleCellCoords([ii, jj-1, kk],blockID,CENTER, &
 !!                                      EXTERIOR, cell_loc)
 !!        cell_locs(2,1) = cell_loc(2)
@@ -950,7 +950,7 @@ END FUNCTION get_potential
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj, kk],grav_cell(2,2))
 !!    end if
-!    
+!
 !!    if (nint(mod(local_pos(3),deltas(3))) .eq. 1) then
 !
 !!        call Grid_getSingleCellCoords([ii, jj, kk],blockID,CENTER, &
@@ -964,7 +964,7 @@ END FUNCTION get_potential
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj, kk+1],grav_cell(3,2))
 !!    else
-!    
+!
 !!        call Grid_getSingleCellCoords([ii, jj, kk-1],blockID,CENTER, &
 !!                                      EXTERIOR, cell_loc)
 !!        cell_locs(3,1) = cell_loc(3)
@@ -976,7 +976,7 @@ END FUNCTION get_potential
 !!        call Grid_getPointData(blockID,CENTER,GACX_VAR,EXTERIOR, &
 !!                               [ii, jj, kk],grav_cell(3,2))
 !!    end if
-!    
+!
 !!!    call Grid_getBlkPtr(blockID,solndata,CENTER)
 !
 !!!    grav_cell(1,iii) = solndata(GACX_VAR,ii,jj,kk)
@@ -996,51 +996,51 @@ END FUNCTION get_potential
 !!!                                  EXTERIOR, cell_locs(3,1))
 !!!    call Grid_getSingleCellCoords([ii, jj, kk+1],blockID,CENTER, &
 !!!                                  EXTERIOR, cell_locs(3,2))
-!                                  
+!
 !!!    call Grid_releaseBlkPtr(blockID, solndata)
-!    
+!
 !!    ! Finally we linearly interpolate the gravity between the values.
-!    
+!
 !!    do iii=1,MDIM
-!    
+!
 !!        call ut_polint(cell_locs(iii,:), grav_cell(iii,:), 2, &
 !!                       loc(iii), gravity(iii), error)
-!                       
+!
 !!    end do
-!    
+!
 !!    gax(i) = gravity(1); gay(i) = gravity(2); gax(i) = gravity(3)
-!         
+!
 !!    print*, "Local cell gravity:"
 !!    print*, grav_cell
 !!    print*, "Interpolated gravity:"
 !!    print*, gravity
-!    
+!
 !!    if (MyProc .ne. 0) then
-!    
+!
 !!      call MPI_SEND(gravity, 3, MPI_DOUBLE_PRECISION, 0, 1, communicator, ierr)
-!      
+!
 !!      print*, "Sent ", gravity
-!      
+!
 !!    end if
 !
 !  end if
-!    
+!
 !!  if (myProc .ne. ProcID .and. myProc .eq. 0) then
-!  
+!
 !!    call MPI_RECV(gravity, 3, MPI_DOUBLE_PRECISION, ProcID, MPI_ANY_TAG, communicator, sts, ierr)
-!    
+!
 !!    print*, "Recieved ", gravity
-!  
+!
 !!  end if
-!  
+!
 !!  if (myProc .eq. 0) then
-!  
+!
 !!    print*, "I'm zero and grav is ", gravity
-!    
+!
 !!  end if
-!  
+!
 !!  gax(i) = gravity(1); gay(i) = gravity(2); gaz(i) = gravity(3)
-!  
+!
 !end do
 !
 !!print*, "Out of loop."
@@ -1082,7 +1082,7 @@ do i=1, nparts
   if (MyPe .eq. ProcID) then
 
     call Gravity_getPotentialAtPoint(x(i), y(i), z(i), locpot(i))
-!   has_data = .true.    
+!   has_data = .true.
 !    print*, "Local potential = ", locpot(i)
 
   end if
@@ -1100,7 +1100,7 @@ end do
 do i=1, nparts
 
   call Gravity_getPotentialAtPoint(x(i), y(i), z(i), gpot(i))
-  
+
 end do
 
 #endif
@@ -1125,7 +1125,7 @@ LOGICAL, PARAMETER :: Debug=.false.
 
 #ifdef GRAVITY
 
-if (.not. useGravity) return 
+if (.not. useGravity) return
 
 !has_data = .false.
 local_gx=0.0; local_gy=0.0; local_gz=0.0
@@ -1139,7 +1139,7 @@ force_GoS_x=0.0; force_GoS_y=0.0; force_GoS_z=0.0
 ! But multigrid only has local blocks on each proc so its run on all
 ! and then internally returns the summed gravity.
 
-#ifdef TREE 
+#ifdef TREE
 call Driver_getMype(GLOBAL_COMM, MyPe)
 call Driver_getComm(GLOBAL_COMM, communicator)
 
@@ -1148,12 +1148,12 @@ do i=1, nparts
   call Grid_getBlkIDFromPos([x(i),y(i),z(i)], blockID, ProcID, communicator)
 
   if (MyPe .eq. ProcID) then
- 
+
     call Gravity_getAccelAtPoint(x(i), y(i), z(i), local_gx(i), local_gy(i), local_gz(i))
 !    has_data = .true.
-    
+
   end if
-    
+
 end do
 
 
@@ -1161,7 +1161,7 @@ end do
 !print*, "On proc ", MyPe, "grav is", local_gx, local_gy, local_gz
 
 !if (has_data) then
-                  
+
 !call MPI_Reduce(local_gx, gax, nparts, MPI_DOUBLE_PRECISION, &
 !                  MPI_SUM, 0, communicator, ierror)
 !call MPI_Reduce(local_gy, gay, nparts, MPI_DOUBLE_PRECISION, &
@@ -1266,7 +1266,7 @@ end if
 !#endif
 
 !    call Particles_longRangeForce(particles_local, localnp, WEIGHTED)
-      
+
 !    do p=1, localnp
 
 !    !  print*, particles_local(ACCX_PART_PROP,p), particles_local(ACCY_PART_PROP,p), &
@@ -1283,7 +1283,7 @@ end if
 
 
 !    !  print*, particles_local(ACCX_PART_PROP,p), particles_local(ACCY_PART_PROP,p), &
-!    !          particles_local(ACCZ_PART_PROP,p)                            
+!    !          particles_local(ACCZ_PART_PROP,p)
 !    end do
 !    call pt_sinkGatherGlobal()
 !#endif
@@ -1298,7 +1298,7 @@ end if
 !#endif
 
 !    call Particles_longRangeForce(particles, pt_numLocal, WEIGHTED)
-      
+
 !    do p=1, pt_numLocal
 
 
@@ -1310,7 +1310,7 @@ end if
 
 !      particles(VELZ_PART_PROP,p) = particles(VELZ_PART_PROP,p) &
 !                                + particles(ACCZ_PART_PROP,p)*dt
-                                
+
 !    end do
 !#endif
 !#endif
@@ -1333,17 +1333,17 @@ if (dr_globalMe .eq. MASTER_PE) &
 
   ! This is the acceleration of the gas on the massive particles.
   ! Also now includes the sinks acceleration, since I added that
-  ! back in Grid_getAccelOneRow in 
+  ! back in Grid_getAccelOneRow in
   ! Gravity/Poisson/BHTree43/Couple_AMUSE_Sinks_and_Stars.
-  
+
   ! Now the particles array has both sinks and massive particles, but
   ! we only want to kick with the massive particles. So have to pass
   ! only that info. Note that we must have updated the pt_typeInfo structure
-  ! here before we call to get the numbers for the arrays. 
+  ! here before we call to get the numbers for the arrays.
   ! This should be done at the end of Particles_advance. - JW
-  
+
     call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
-    
+
     !print*, "Particles count in gravity_gas_on_particles = ", type_count
 
     call Particles_longRangeForce(particles_pointer(:,type_begin:type_end), type_count, WEIGHTED)
@@ -1358,7 +1358,7 @@ if (sink_separate) then
     accx = particles_pointer(ACCX_PART_PROP,type_begin:type_end)
     accy = particles_pointer(ACCY_PART_PROP,type_begin:type_end)
     accz = particles_pointer(ACCZ_PART_PROP,type_begin:type_end)
-    
+
     !print*, "accx(1) = ", accx(1), dr_globalMe
 
 ! Map the gravitational acceleration of the sinks accelerating
@@ -1408,17 +1408,17 @@ if (sink_separate) then
       particles_pointer(VELZ_PART_PROP,p) = particles_pointer(VELZ_PART_PROP,p) &
                                 + (accz(p)+particles_pointer(ACCZ_PART_PROP,p))*dt
     end do
-    
+
     !print*, "particles accx(1) =", particles(ACCX_PART_PROP,1), dr_globalMe
-    
+
     deallocate(accx)
     deallocate(accy)
     deallocate(accz)
 
-else 
+else
 
     do p=type_begin, type_end
-    
+
       !print*, "For", p, "particles accx =", particles(ACCX_PART_PROP,p), dr_globalMe
     ! Kick massive particles with the gravity of the gas+sinks.
       particles_pointer(VELX_PART_PROP,p) = particles_pointer(VELX_PART_PROP,p) &
@@ -1494,11 +1494,11 @@ end if
 
 sum_force_norm = sqrt((abs(force_GoS_x) + abs(force_SoG_x)/ 2.0)**2.0 + &
                       (abs(force_GoS_y) + abs(force_SoG_y)/ 2.0)**2.0 + &
-                      (abs(force_GoS_z) + abs(force_SoG_z)/ 2.0)**2.0) 
+                      (abs(force_GoS_z) + abs(force_SoG_z)/ 2.0)**2.0)
 
 write(12,'(4(1X,E22.15))') dr_simTime, force_GoS_x,force_GoS_y,force_GoS_z
 write(13,'(4(1X,E22.15))') dr_simTime, force_SoG_x,force_SoG_y,force_SoG_z
-write(14,'(4(1X,E22.15))') dr_simTime, & 
+write(14,'(4(1X,E22.15))') dr_simTime, &
                              (force_GoS_x+force_SoG_x) / sum_force_norm, &
                              (force_GoS_y+force_SoG_y) / sum_force_norm, &
                              (force_GoS_z+force_SoG_z) / sum_force_norm
@@ -1623,14 +1623,14 @@ call Grid_getListOfBlocks(LEAF, blocks, blockCount)
 
 !#ifdef debug
 !    call Grid_getBlkPtr(blocks(1),solndata,CENTER)
-    
+
 !    print*, "Grav potential from particles is:"
 !    print*, solndata(SGPT_VAR,5,5,5)
 !    print*, "Max grav accelx from particles on gas is:"
 !    print*, maxval(solndata(SGAX_VAR,:,:,:))
 
 !    call Grid_releaseBlkPtr(blocks(1),solndata)
-!#endif    
+!#endif
 ! Now solve the potential everywhere on the Grid.
 ! Also, for safety we should probably pass a different potential index
 ! to represent the potential of the particles->gas on the grid.
@@ -1673,13 +1673,13 @@ if (dr_globalMe .eq. MASTER_PE) &
   ! sense if we formed star particles.
   ! It may make sense to not call the grid solver itself here, and just call
   ! the sink routines only. We can try this later.
- 
+
   call Gravity_potentialListOfBlocks(blockCount, blocks, GPOT_VAR)
 
 #ifdef debug_force
 if (dr_globalMe .eq. MASTER_PE) &
   print*, "Called Gravity_potGas."
-#endif 
+#endif
 
 ! Then calculate the potential of the gas + particles, and subtract the gas
 ! potential.
@@ -1690,7 +1690,7 @@ if (dr_globalMe .eq. MASTER_PE) &
 #ifndef ACTIVE_PART_TYPE
 
   call Gravity_potentialListOfBlocksPDENonly(blockCount, blocks, BGPT_VAR, SINK_PART_TYPE)
-  
+
 #ifdef debug_force
 if (dr_globalMe .eq. MASTER_PE) &
   print*, "Called sink only version of Gravity_potentialListOfBlocksPDENonly."
@@ -1766,7 +1766,7 @@ do blockID=1, blockCount
 
     call Grid_getBlkIndexLimits(blocks(blockID), blkLimits, blkLimitsGC, CENTER)
     call Grid_getBlkPtr(blocks(blockID),solndata,CENTER)
-    
+
 !#ifdef debug
 !    if (blockID==1) then
 !    print*, "Grav potential from particles is:"
@@ -1781,38 +1781,38 @@ do blockID=1, blockCount
     solndata(VELX_VAR,:,:,:) = solndata(VELX_VAR,:,:,:) + solndata(BGAX_VAR,:,:,:)*dt
     solndata(VELY_VAR,:,:,:) = solndata(VELY_VAR,:,:,:) + solndata(BGAY_VAR,:,:,:)*dt
     solndata(VELZ_VAR,:,:,:) = solndata(VELZ_VAR,:,:,:) + solndata(BGAZ_VAR,:,:,:)*dt
-            
-    ! For debugging purposes only.        
+
+    ! For debugging purposes only.
 #ifdef debug_force
     call Grid_getDeltas(blocks(blockID), del)
     dVol = del(1)*del(2)*del(3)
-    
+
     !if (dr_globalMe .eq. MASTER_PE) then
-            
+
         do ii = blkLimits(LOW,IAXIS), blkLimits(HIGH,IAXIS)
             do jj = blkLimits(LOW,JAXIS), blkLimits(HIGH,JAXIS)
                 do kk = blkLimits(LOW,KAXIS), blkLimits(HIGH,KAXIS)
-            
+
               force_SoG_x = force_SoG_x + solndata(BGAX_VAR,ii,jj,kk)*solndata(DENS_VAR,ii,jj,kk)*dVol
               force_SoG_y = force_SoG_y + solndata(BGAY_VAR,ii,jj,kk)*solndata(DENS_VAR,ii,jj,kk)*dVol
               force_SoG_z = force_SoG_z + solndata(BGAZ_VAR,ii,jj,kk)*solndata(DENS_VAR,ii,jj,kk)*dVol
-                
+
                 end do
             end do
-        end do  
+        end do
     !end if
 
 #endif
     ! Zero out the accelerations so they don't get added during the
     ! normal hydro solution.
-    
+
     if (kick_number == 1) then
         solndata(BGAX_VAR,:,:,:) = 0.0
         solndata(BGAY_VAR,:,:,:) = 0.0
         solndata(BGAZ_VAR,:,:,:) = 0.0
     end if
-         
-    
+
+
     call Grid_releaseBlkPtr(blocks(blockID),solndata)
 
 end do
@@ -1852,7 +1852,7 @@ do p=1, localnp
 
 
 !  print*, particles_local(ACCX_PART_PROP,p), particles_local(ACCY_PART_PROP,p), &
-!          particles_local(ACCZ_PART_PROP,p)                            
+!          particles_local(ACCZ_PART_PROP,p)
 end do
 call pt_sinkGatherGlobal()
 #endif
@@ -1900,19 +1900,19 @@ END FUNCTION
 
 
 FUNCTION initialize_grid()
-  
+
   INTEGER :: initialize_grid
   initialize_grid=0
 END FUNCTION
 
 FUNCTION initialize_code()
-  
+
   INTEGER :: initialize_code, part_init
   call Driver_initParallel()
   call Driver_initFlash()
   ! Make sure that when we exit an evolve step, Flash actually only
   ! evolves to the end time given.
-  
+
   call RuntimeParameters_set("dr_shortenLastStepBeforeTMax",.true.)
   call RuntimeParameters_get("dr_shortenLastStepBeforeTMax",dr_shortenLastStepBeforeTMax)
   !call Driver_init()
@@ -1927,26 +1927,26 @@ FUNCTION initialize_code()
 END FUNCTION
 
 FUNCTION cleanup_code()
-  
+
   INTEGER :: cleanup_code
   call Driver_finalizeFlash()
   cleanup_code=0
 END FUNCTION
 
 FUNCTION recommit_parameters()
-  
+
   INTEGER :: recommit_parameters
   recommit_parameters=0
 END FUNCTION
 
 FUNCTION commit_parameters()
-  
+
   INTEGER :: commit_parameters
   commit_parameters=0
 END FUNCTION
 
 FUNCTION get_global_grid_index_limits(global_indices)
-  
+
   INTEGER :: global_indices(MDIM)
   INTEGER :: get_global_grid_index_limits
   call Grid_getGlobalIndexLimits(global_indices)
@@ -1960,7 +1960,7 @@ END FUNCTION
 
 
 FUNCTION get_number_of_particles(n)
-  
+
   INTEGER :: n, get_number_of_particles, ierr
   INTEGER :: type_begin, type_end
   n = 0
@@ -1972,7 +1972,7 @@ call get_particle_type_bounds(part_type, type_begin, type_end, n)
 !print*, "part_type =", part_type, dr_globalMe
 !print*, "n =", n, dr_globalMe
 
-! I'm suspicious that the other MPI_REDUCE was returning too quickly on the 
+! I'm suspicious that the other MPI_REDUCE was returning too quickly on the
 ! root node. - JW
 
 call MPI_ALLREDUCE(MPI_IN_PLACE, n, 1, MPI_INTEGER, MPI_SUM, dr_globalComm, ierr)
@@ -1986,7 +1986,7 @@ call MPI_ALLREDUCE(MPI_IN_PLACE, n, 1, MPI_INTEGER, MPI_SUM, dr_globalComm, ierr
 !end if
 !  n = localnp
 !  n = localnpf
-  
+
 !!! Note, according to Klaus this function will sync sinks to the particle
 !!! file. If needed in the future (would we run with a mix of sink and
 !!! non-sink?).
@@ -2001,7 +2001,7 @@ get_number_of_particles=0
 END FUNCTION
 
 FUNCTION get_particle_position_array(tags, x, y, z, nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: x, y, z, tags
   integer :: get_particle_position_array, i, j, p, oldj, ierr
@@ -2048,11 +2048,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             x(i) = particles_pointer(POSX_PART_PROP, QSindex(j))
             y(i) = particles_pointer(POSY_PART_PROP, QSindex(j))
@@ -2064,7 +2064,7 @@ if (type_count .ge. 1) then
             y(i) = 0.0
             z(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2105,7 +2105,7 @@ if (MyPe .eq. 0) then
   call NewQsort_IN(id_sorted, QSindex)
 
   ! Are we updating every particle in the simulation?
-    
+
   if (nparts .eq. localnpf) then ! Yes, then lets do them all at once.
 
     do i=1, localnpf
@@ -2113,17 +2113,17 @@ if (MyPe .eq. 0) then
       x(i) = particles_global(POSX_PART_PROP, QSindex(i))
       y(i) = particles_global(POSY_PART_PROP, QSindex(i))
       z(i) = particles_global(POSZ_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
       do j=1, nparts
-      
+
         do i=1, localnpf
-    
+
           if (particles_global(iptag,i) .eq. tags(j)) then
 !          if (id_sorted(QSindex(i)) .eq. tags(j)) then ! Check for matching tag.
 
@@ -2133,13 +2133,13 @@ if (MyPe .eq. 0) then
             x(j) = particles_global(POSX_PART_PROP, i)
             y(j) = particles_global(POSY_PART_PROP, i)
             z(j) = particles_global(POSZ_PART_PROP, i)
-            
+
           end if
-          
+
         end do
-      
+
     end do
-    
+
   end if
 
   deallocate(QSindex)
@@ -2147,12 +2147,12 @@ if (MyPe .eq. 0) then
 
 end if
 #endif
-#endif  
+#endif
 get_particle_position_array=0
 END FUNCTION
 
 FUNCTION get_particle_velocity_array(tags,vx,vy,vz,nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_particle_velocity_array, i, j, p, oldj, ierr
@@ -2199,11 +2199,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             vx(i) = particles_pointer(VELX_PART_PROP, QSindex(j))
             vy(i) = particles_pointer(VELY_PART_PROP, QSindex(j))
@@ -2215,7 +2215,7 @@ if (type_count .ge. 1) then
             vy(i) = 0.0
             vz(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2265,47 +2265,47 @@ if (MyPe .eq. 0) then
       vx(i) = particles_global(VELX_PART_PROP, QSindex(i))
       vy(i) = particles_global(VELY_PART_PROP, QSindex(i))
       vz(i) = particles_global(VELZ_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
     do j=1, nparts
-    
+
       do i=1, localnpf
 
         if (particles_global(iptag,i) .eq. tags(j)) then
 
 !        if (id_sorted(QSindex(i)) .eq. tags(j)) then
-        
+
 !          vx(j) = particles_global(VELX_PART_PROP, QSindex(i))
 !          vy(j) = particles_global(VELY_PART_PROP, QSindex(i))
 !          vz(j) = particles_global(VELZ_PART_PROP, QSindex(i))
           vx(j) = particles_global(VELX_PART_PROP, i)
           vy(j) = particles_global(VELY_PART_PROP, i)
           vz(j) = particles_global(VELZ_PART_PROP, i)
-          
+
         end if
-        
+
       end do
-      
+
     end do
 
   end if
 
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
 end if
 #endif
-#endif  
+#endif
 get_particle_velocity_array=0
 END FUNCTION
 
 FUNCTION get_particle_acceleration_array(tags, ax, ay, az, nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: ax, ay, az, tags
   integer :: get_particle_acceleration_array, i, j, p, oldj, ierr
@@ -2352,11 +2352,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             ax(i) = particles_pointer(ACCX_PART_PROP, QSindex(j))
             ay(i) = particles_pointer(ACCY_PART_PROP, QSindex(j))
@@ -2368,7 +2368,7 @@ if (type_count .ge. 1) then
             ay(i) = 0.0
             az(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2409,7 +2409,7 @@ if (MyPe .eq. 0) then
   call NewQsort_IN(id_sorted, QSindex)
 
   ! Are we updating every particle in the simulation?
-    
+
   if (nparts .eq. localnpf) then ! Yes, then lets do them all at once.
 
     do i=1, localnpf
@@ -2417,17 +2417,17 @@ if (MyPe .eq. 0) then
       ax(i) = particles_global(ACCX_PART_PROP, QSindex(i))
       ay(i) = particles_global(ACCY_PART_PROP, QSindex(i))
       az(i) = particles_global(ACCZ_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
       do j=1, nparts
-      
+
         do i=1, localnpf
-    
+
           if (particles_global(iptag,i) .eq. tags(j)) then
 !          if (id_sorted(QSindex(i)) .eq. tags(j)) then ! Check for matching tag.
 
@@ -2437,13 +2437,13 @@ if (MyPe .eq. 0) then
             ax(j) = particles_global(ACCX_PART_PROP, i)
             ay(j) = particles_global(ACCY_PART_PROP, i)
             az(j) = particles_global(ACCZ_PART_PROP, i)
-            
+
           end if
-          
+
         end do
-      
+
     end do
-    
+
   end if
 
   deallocate(QSindex)
@@ -2451,12 +2451,12 @@ if (MyPe .eq. 0) then
 
 end if
 #endif
-#endif  
+#endif
 get_particle_acceleration_array=0
 END FUNCTION
 
 FUNCTION get_particle_mass(tags,mass,nparts)
-  
+
   integer :: nparts, MyPe
   integer :: get_particle_mass, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: mass, tags
@@ -2473,7 +2473,7 @@ if (type_count .ge. 1) then
 
 ! Sort by particle tag. Note that input array should also be
 ! ordered by tag number then.
-    
+
     ! Offset for particles location in particles array possibly not starting at
     ! first index.
     offset = 0
@@ -2499,9 +2499,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             mass(i) = particles_pointer(MASS_PART_PROP, QSindex(j))
 
@@ -2509,7 +2509,7 @@ if (type_count .ge. 1) then
             j = oldj
             mass(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2524,12 +2524,12 @@ endif
 call MPI_AllReduce(MPI_IN_PLACE, mass, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 
-#endif  
+#endif
 get_particle_mass=0
 END FUNCTION
 
 FUNCTION get_particle_oldmass(tags,mass,nparts)
-  
+
   integer :: nparts, MyPe
   integer :: get_particle_oldmass, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: mass, tags
@@ -2546,7 +2546,7 @@ if (type_count .ge. 1) then
 
 ! Sort by particle tag. Note that input array should also be
 ! ordered by tag number then.
-    
+
     ! Offset for particles location in particles array possibly not starting at
     ! first index.
     offset = 0
@@ -2572,9 +2572,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             mass(i) = particles_pointer(OLD_PMASS_PART_PROP, QSindex(j))
 
@@ -2582,7 +2582,7 @@ if (type_count .ge. 1) then
             j = oldj
             mass(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2597,12 +2597,12 @@ endif
 call MPI_AllReduce(MPI_IN_PLACE, mass, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 
-#endif  
+#endif
 get_particle_oldmass=0
 END FUNCTION
 
 FUNCTION get_particle_creation_time(tags,creation_time,nparts)
-  
+
   integer :: nparts, MyPe
   integer :: get_particle_creation_time, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: creation_time, tags
@@ -2637,9 +2637,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             creation_time(i) = particles_pointer(CREATION_TIME_PART_PROP, QSindex(j))
 
@@ -2647,7 +2647,7 @@ if (type_count .ge. 1) then
             j = oldj
             creation_time(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2662,12 +2662,12 @@ endif
 call MPI_AllReduce(MPI_IN_PLACE, creation_time, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 
-#endif  
+#endif
 get_particle_creation_time=0
 END FUNCTION
 
 FUNCTION set_particle_creation_time(tags,creation_time,nparts)
-  
+
   integer :: nparts
   double precision :: creation_time(nparts), tags(nparts)
   integer :: set_particle_creation_time, i, p, j, myProc, local_index, local_tag, oldj
@@ -2702,18 +2702,18 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(CREATION_TIME_PART_PROP, QSindex(j)) = creation_time(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -2748,12 +2748,12 @@ integer set_starting_local_tag_numbers, lp
            local_tag_number = max(local_tag_number, get_pno(int(allproc_particles(TAG_PART_PROP,lp))))
         endif
     enddo
-    
+
 set_starting_local_tag_numbers=0
 END FUNCTION
 
 FUNCTION get_sink_mean_cs(tags,cs,nparts)
-  
+
   integer :: nparts, MyPe
   integer :: get_sink_mean_cs, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: cs, tags
@@ -2770,7 +2770,7 @@ if (type_count .ge. 1) then
 
 ! Sort by particle tag. Note that input array should also be
 ! ordered by tag number then.
-    
+
     ! Offset for particles location in particles array possibly not starting at
     ! first index.
     offset = 0
@@ -2796,9 +2796,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             cs(i) = particles_pointer(CSGM_PART_PROP, QSindex(j))
 
@@ -2806,7 +2806,7 @@ if (type_count .ge. 1) then
             j = oldj
             cs(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2826,7 +2826,7 @@ return
 END FUNCTION get_sink_mean_cs
 
 FUNCTION get_sink_mean_vel_array(tags,vx,vy,vz,nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_sink_mean_vel_array, i, j, p, oldj, ierr
@@ -2863,11 +2863,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             vx(i) = particles_local(VXGM_PART_PROP, QSindex(j))
             vy(i) = particles_local(VYGM_PART_PROP, QSindex(j))
@@ -2879,7 +2879,7 @@ if (type_count .ge. 1) then
             vy(i) = 0.0
             vz(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2897,7 +2897,7 @@ call MPI_AllReduce(MPI_IN_PLACE, vy, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 call MPI_AllReduce(MPI_IN_PLACE, vz, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
-                   
+
 #else
 call Driver_abortFlash('[get_sink_mean_vel_array]: Not using bisect!')
 #endif
@@ -2909,7 +2909,7 @@ get_sink_mean_vel_array=0
 END FUNCTION
 
 FUNCTION get_sink_var_vel_array(tags,vx,vy,vz,nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_sink_var_vel_array, i, j, p, oldj, ierr
@@ -2946,11 +2946,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             vx(i) = particles_local(VXGV_PART_PROP, QSindex(j))
             vy(i) = particles_local(VYGV_PART_PROP, QSindex(j))
@@ -2962,7 +2962,7 @@ if (type_count .ge. 1) then
             vy(i) = 0.0
             vz(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -2982,7 +2982,7 @@ call MPI_AllReduce(MPI_IN_PLACE, vy, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 call MPI_AllReduce(MPI_IN_PLACE, vz, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
-                   
+
 #else
 call Driver_abortFlash('[get_sink_var_vel_array]: Not using bisect!')
 #endif
@@ -2994,7 +2994,7 @@ get_sink_var_vel_array=0
 END FUNCTION
 
 FUNCTION get_sink_ang_mom_array(tags,lx,ly,lz,nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: lx, ly, lz, tags
   integer :: get_sink_ang_mom_array, i, j, p, oldj, ierr
@@ -3031,11 +3031,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
         ! Note that since the inputs are sorted by tag, the last tag found
         ! becomes the new lower bound for the next search.
-        
+
         if (j .ne. -1) then
             lx(i) = particles_local(X_ANG_PART_PROP, QSindex(j))
             ly(i) = particles_local(Y_ANG_PART_PROP, QSindex(j))
@@ -3047,7 +3047,7 @@ if (type_count .ge. 1) then
             ly(i) = 0.0
             lz(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -3065,7 +3065,7 @@ call MPI_AllReduce(MPI_IN_PLACE, ly, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 call MPI_AllReduce(MPI_IN_PLACE, lz, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
-                   
+
 #else
 call Driver_abortFlash('[get_sink_ang_mom_array]: Not using bisect!')
 #endif
@@ -3082,7 +3082,7 @@ END FUNCTION
 
 
 FUNCTION get_particle_nion(tags,nion,nparts)
-! Get the number of ionizing photons from the particle by tag.  
+! Get the number of ionizing photons from the particle by tag.
   integer :: nparts, MyPe
   integer :: get_particle_nion, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: nion, tags
@@ -3119,9 +3119,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             nion(i) = particles_pointer(MASS_PART_PROP, QSindex(j))
 
@@ -3129,12 +3129,12 @@ if (type_count .ge. 1) then
             j = oldj
             nion(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
     deallocate(id_sorted)
-    
+
 else
 
     nion = 0.0
@@ -3175,43 +3175,43 @@ if (MyPe .eq. 0) then
     do i=1, localnpf
 
       nion(i) = particles_global(NION_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
     do j=1, nparts
-    
+
       do i=1, localnpf
 
         if (particles_global(iptag,i) .eq. tags(j)) then
 !        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
-          
+
           nion(j) = particles_global(NION_PART_PROP, i)
 !          mass(j) = particles_global(ipm, QSindex(i))
-          
+
         end if
-        
+
       end do
-      
+
     end do
 
   end if
 
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
 end if
 #endif
-#endif  
+#endif
 get_particle_nion=0
 END FUNCTION
 
 FUNCTION get_particle_eion(tags,eion,nparts)
 ! Get the energy of ionizing photons OVER 13.6 eV
-! (how much actually heats the gas) from the particle by tag.  
+! (how much actually heats the gas) from the particle by tag.
   integer :: nparts, MyPe
   integer :: get_particle_eion, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: eion, tags
@@ -3248,9 +3248,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             eion(i) = particles_pointer(MASS_PART_PROP, QSindex(j))
 
@@ -3258,12 +3258,12 @@ if (type_count .ge. 1) then
             j = oldj
             eion(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
     deallocate(id_sorted)
-    
+
 else
 
     eion = 0.0
@@ -3304,42 +3304,42 @@ if (MyPe .eq. 0) then
     do i=1, localnpf
 
       eion(i) = particles_global(EION_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
     do j=1, nparts
-    
+
       do i=1, localnpf
 
         if (particles_global(iptag,i) .eq. tags(j)) then
 !        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
-          
+
           eion(j) = particles_global(EION_PART_PROP, i)
 !          mass(j) = particles_global(ipm, QSindex(i))
-          
+
         end if
-        
+
       end do
-      
+
     end do
 
   end if
 
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
 end if
 #endif
-#endif  
+#endif
 get_particle_eion=0
 END FUNCTION
 
 FUNCTION get_particle_sigh(tags,sigh,nparts)
-! Get the Lyman cross section of ionizing photons from the particle by tag.  
+! Get the Lyman cross section of ionizing photons from the particle by tag.
   integer :: nparts, MyPe
   integer :: get_particle_sigh, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: sigh, tags
@@ -3376,9 +3376,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             sigh(i) = particles_pointer(SIGH_PART_PROP, QSindex(j))
             !print*, "Set a local particle attrib on proc ", dr_globalMe
@@ -3386,7 +3386,7 @@ if (type_count .ge. 1) then
             j = oldj
             sigh(i) = 0.0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -3433,44 +3433,44 @@ if (MyPe .eq. 0) then
     do i=1, localnpf
 
       sigh(i) = particles_global(SIGH_PART_PROP, QSindex(i))
-      
+
     end do
-    
+
   else
 
   ! If not doing them all, have to do it by tag number.
-    
+
     do j=1, nparts
-    
+
       do i=1, localnpf
 
         if (particles_global(iptag,i) .eq. tags(j)) then
 !        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
-          
+
           sigh(j) = particles_global(SIGH_PART_PROP, i)
 !          mass(j) = particles_global(ipm, QSindex(i))
-          
+
         end if
-        
+
       end do
-      
+
     end do
 
   end if
-  
+
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
 end if
 
 #endif
 
-#endif  
+#endif
 get_particle_sigh=0
 END FUNCTION
 
 FUNCTION set_particle_position(tags,x,y,z,nparts)
-  
+
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: x, y, z, tags
   integer :: set_particle_position, i, j, p, oldj
@@ -3507,11 +3507,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(POSX_PART_PROP, QSindex(j)) = x(i)
             particles_pointer(POSY_PART_PROP, QSindex(j)) = y(i)
@@ -3520,7 +3520,7 @@ if (type_count .ge. 1) then
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -3546,7 +3546,7 @@ end do
 call NewQsort_IN(id_sorted, QSindex)
 
 ! Are we updating every particle in the simulation?
-  
+
 if (nparts .eq. localnpf) then ! Yes, then lets do them all at once.
 
   do i=1, localnpf
@@ -3554,17 +3554,17 @@ if (nparts .eq. localnpf) then ! Yes, then lets do them all at once.
     particles_global(POSX_PART_PROP, QSindex(i)) = x(i)
     particles_global(POSY_PART_PROP, QSindex(i)) = y(i)
     particles_global(POSZ_PART_PROP, QSindex(i)) = z(i)
-    
+
   end do
-  
+
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
     do j=1, nparts
-    
+
       do i=1, localnpf
-  
+
         if (particles_global(iptag,i) .eq. tags(j)) then
 
 !        if (id_sorted(QSindex(i)) .eq. tags(j)) then ! Check for matching tag.
@@ -3575,13 +3575,13 @@ else
           particles_global(POSX_PART_PROP, i) = x(j)
           particles_global(POSY_PART_PROP, i) = y(j)
           particles_global(POSZ_PART_PROP, i) = z(j)
-          
+
         end if
-        
+
       end do
-    
+
   end do
-  
+
 end if
 
 
@@ -3589,7 +3589,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(POSX_PART_PROP,i) = particles_global(POSX_PART_PROP, i)
     particles_local(POSY_PART_PROP,i) = particles_global(POSY_PART_PROP, i)
     particles_local(POSZ_PART_PROP,i) = particles_global(POSZ_PART_PROP, i)
@@ -3600,12 +3600,12 @@ deallocate(id_sorted)
 end do
 #endif
 
-#endif  
+#endif
 set_particle_position=0
 END FUNCTION
 
 FUNCTION set_particle_velocity(tags,vx,vy,vz,nparts)
-  
+
   integer :: nparts
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: set_particle_velocity, i, p, j, oldj
@@ -3642,11 +3642,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(VELX_PART_PROP, QSindex(j)) = vx(i)
             particles_pointer(VELY_PART_PROP, QSindex(j)) = vy(i)
@@ -3655,7 +3655,7 @@ if (type_count .ge. 1) then
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -3691,32 +3691,32 @@ if (nparts .eq. localnpf) then
     particles_global(VELX_PART_PROP, QSindex(i)) = vx(i)
     particles_global(VELY_PART_PROP, QSindex(i)) = vy(i)
     particles_global(VELZ_PART_PROP, QSindex(i)) = vz(i)
-    
+
   end do
-  
+
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
 
        if (particles_global(iptag,i) .eq. tags(j)) then
 
 !      if (id_sorted(QSindex(i)) .eq. tags(j)) then
-      
+
 !        particles_global(VELX_PART_PROP, QSindex(i)) = vx(j)
 !        particles_global(VELY_PART_PROP, QSindex(i)) = vy(j)
 !        particles_global(VELZ_PART_PROP, QSindex(i)) = vz(j)
         particles_global(VELX_PART_PROP, i) = vx(j)
         particles_global(VELY_PART_PROP, i) = vy(j)
         particles_global(VELZ_PART_PROP, i) = vz(j)
-        
+
       end if
-      
+
     end do
-    
+
   end do
 
 end if
@@ -3725,7 +3725,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(VELX_PART_PROP,i) = particles_global(VELX_PART_PROP, i)
     particles_local(VELY_PART_PROP,i) = particles_global(VELY_PART_PROP, i)
     particles_local(VELZ_PART_PROP,i) = particles_global(VELZ_PART_PROP, i)
@@ -3736,12 +3736,12 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif  
+#endif
 set_particle_velocity=0
 END FUNCTION
 
 FUNCTION set_particle_mass(tags,mass, nparts)
-  
+
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
   integer :: set_particle_mass, i, p, j, myProc, local_index, local_tag, oldj
@@ -3776,18 +3776,18 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(MASS_PART_PROP, QSindex(j)) = mass(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -3799,7 +3799,7 @@ set_particle_mass=0
 END FUNCTION
 
 FUNCTION set_particle_oldmass(tags,mass, nparts)
-  
+
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
   integer :: set_particle_oldmass, i, p, j, myProc, local_index, local_tag, oldj
@@ -3834,18 +3834,18 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(OLD_PMASS_PART_PROP, QSindex(j)) = mass(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -3857,7 +3857,7 @@ set_particle_oldmass=0
 END FUNCTION
 
 FUNCTION set_particle_ang_mom(tags,lx,ly,lz,nparts)
-  
+
   integer :: nparts
   double precision, dimension(nparts) :: lx, ly, lz, tags
   integer :: set_particle_ang_mom, i, p, j, oldj
@@ -3894,11 +3894,11 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
     ! Note that since the inputs are sorted by tag, the last tag found
     ! becomes the new lower bound for the next search.
-    
+
         if (j .ne. -1) then
             particles_pointer(X_ANG_PART_PROP, QSindex(j)) = lx(i)
             particles_pointer(Y_ANG_PART_PROP, QSindex(j)) = ly(i)
@@ -3907,7 +3907,7 @@ if (type_count .ge. 1) then
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
 
     deallocate(QSindex)
@@ -3943,32 +3943,32 @@ if (nparts .eq. localnpf) then
     particles_global(X_ANG_PART_PROP, QSindex(i)) = lx(i)
     particles_global(Y_ANG_PART_PROP, QSindex(i)) = ly(i)
     particles_global(Z_ANG_PART_PROP, QSindex(i)) = lz(i)
-    
+
   end do
-  
+
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
 
        if (particles_global(iptag,i) .eq. tags(j)) then
 
 !      if (id_sorted(QSindex(i)) .eq. tags(j)) then
-      
+
 !        particles_global(VELX_PART_PROP, QSindex(i)) = vx(j)
 !        particles_global(VELY_PART_PROP, QSindex(i)) = vy(j)
 !        particles_global(VELZ_PART_PROP, QSindex(i)) = vz(j)
         particles_global(X_ANG_PART_PROP, i) = lx(j)
         particles_global(Y_ANG_PART_PROP, i) = ly(j)
         particles_global(Z_ANG_PART_PROP, i) = lz(j)
-        
+
       end if
-      
+
     end do
-    
+
   end do
 
 end if
@@ -3977,7 +3977,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(X_ANG_PART_PROP,i) = particles_global(X_ANG_PART_PROP, i)
     particles_local(Y_ANG_PART_PROP,i) = particles_global(Y_ANG_PART_PROP, i)
     particles_local(Z_ANG_PART_PROP,i) = particles_global(Z_ANG_PART_PROP, i)
@@ -3988,12 +3988,12 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif  
+#endif
 set_particle_ang_mom=0
 END FUNCTION
 
 FUNCTION set_particle_nion(tags, nion, nparts)
-! Set the particle's number of ionizing photons by tag number.  
+! Set the particle's number of ionizing photons by tag number.
   integer :: nparts
   double precision :: nion(nparts), tags(nparts)
   integer :: set_particle_nion, i, p, j, myProc, local_index, local_tag, oldj
@@ -4030,16 +4030,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
         if (j .ne. -1) then
             particles_pointer(NION_PART_PROP, QSindex(j)) = nion(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
     deallocate(QSindex)
     deallocate(id_sorted)
@@ -4071,45 +4071,45 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(NION_PART_PROP, QSindex(i)) = nion(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(NION_PART_PROP, i) = nion(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 ! The first localnp particles on a processor in particles_global are
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(NION_PART_PROP,i) = particles_global(NION_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4127,14 +4127,14 @@ set_particle_nion=0
 !do i=1, localnp
 
 !    if (particles_local(NION_PART_PROP, i) .ne. 0.0) print*, particles_local(NION_PART_PROP, i)
-    
+
 !end do
 
 END FUNCTION
 
 FUNCTION set_particle_eion(tags, eion, nparts)
 ! Set the particle's energy of ionizing photons OVER 13.6 eV
-! (the energy heating the gas) by tag number.  
+! (the energy heating the gas) by tag number.
   integer :: nparts
   double precision :: eion(nparts), tags(nparts)
   integer :: set_particle_eion, i, p, j, myProc, local_index, local_tag, oldj
@@ -4171,16 +4171,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
         if (j .ne. -1) then
             particles_pointer(EION_PART_PROP, QSindex(j)) = eion(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
     deallocate(QSindex)
     deallocate(id_sorted)
@@ -4212,38 +4212,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(EION_PART_PROP, QSindex(i)) = eion(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(EION_PART_PROP, i) = eion(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4251,7 +4251,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(EION_PART_PROP,i) = particles_global(EION_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4261,7 +4261,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #endif
 
 set_particle_eion=0
@@ -4270,7 +4270,7 @@ set_particle_eion=0
 END FUNCTION
 
 FUNCTION set_particle_sigh(tags, sigh, nparts)
-! Set the particle's Lyman cross section for ionizing photons by tag number.  
+! Set the particle's Lyman cross section for ionizing photons by tag number.
   integer :: nparts
   double precision :: sigh(nparts), tags(nparts)
   integer :: set_particle_sigh, i, p, j, myProc, local_index, local_tag, oldj
@@ -4307,16 +4307,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
         if (j .ne. -1) then
             particles_pointer(SIGH_PART_PROP, QSindex(j)) = sigh(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
     deallocate(QSindex)
     deallocate(id_sorted)
@@ -4348,38 +4348,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(SIGH_PART_PROP, QSindex(i)) = sigh(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(SIGH_PART_PROP, i) = sigh(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4387,7 +4387,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(SIGH_PART_PROP,i) = particles_global(SIGH_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4405,7 +4405,7 @@ END FUNCTION
 
 
 FUNCTION set_particle_npep(tags, nion, nparts)
-! Set the particle's number of photoelectric photons by tag number.  
+! Set the particle's number of photoelectric photons by tag number.
   integer :: nparts
   double precision :: nion(nparts), tags(nparts)
   integer :: set_particle_npep, i, p, j, myProc, local_index, local_tag, oldj
@@ -4444,16 +4444,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
     if (j .ne. -1) then
         particles_pointer(NPEP_PART_PROP, QSindex(j)) = nion(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
     else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
     end if
-    
+
 end do
 deallocate(QSindex)
 deallocate(id_sorted)
@@ -4485,38 +4485,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(NPEP_PART_PROP, QSindex(i)) = nion(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(NPEP_PART_PROP, i) = nion(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4524,7 +4524,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(NPEP_PART_PROP,i) = particles_global(NPEP_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4534,7 +4534,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #endif
 #endif
 
@@ -4544,7 +4544,7 @@ END FUNCTION
 
 FUNCTION set_particle_epep(tags, eion, nparts)
 ! Set the particle's average energy of photoelectric photons from 5.6-13.6 eV
-! (the energy heating the gas) by tag number.  
+! (the energy heating the gas) by tag number.
   integer :: nparts
   double precision :: eion(nparts), tags(nparts)
   integer :: set_particle_epep, i, p, j, myProc, local_index, local_tag, oldj
@@ -4583,16 +4583,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
         if (j .ne. -1) then
             particles_pointer(EPEP_PART_PROP, QSindex(j)) = eion(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
     deallocate(QSindex)
     deallocate(id_sorted)
@@ -4624,38 +4624,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(EPEP_PART_PROP, QSindex(i)) = eion(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(EPEP_PART_PROP, i) = eion(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4663,7 +4663,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(EPEP_PART_PROP,i) = particles_global(EPEP_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4673,7 +4673,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #endif
 #endif
 
@@ -4682,7 +4682,7 @@ set_particle_epep=0
 END FUNCTION
 
 FUNCTION set_particle_sigd(tags, sigh, nparts)
-! Set the particle's Lyman cross section for dust for photoelectric photons by tag number.  
+! Set the particle's Lyman cross section for dust for photoelectric photons by tag number.
   integer :: nparts
   double precision :: sigh(nparts), tags(nparts)
   integer :: set_particle_sigd, i, p, j, myProc, local_index, local_tag, oldj
@@ -4721,16 +4721,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
         if (j .ne. -1) then
             particles_pointer(SPEP_PART_PROP, QSindex(j)) = sigh(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
         end if
-    
+
     end do
     deallocate(QSindex)
     deallocate(id_sorted)
@@ -4762,38 +4762,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(SPEP_PART_PROP, QSindex(i)) = sigh(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(SPEP_PART_PROP, i) = sigh(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4801,7 +4801,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(SPEP_PART_PROP,i) = particles_global(SPEP_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4811,7 +4811,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #endif
 #endif
 
@@ -4820,7 +4820,7 @@ set_particle_sigd=0
 END FUNCTION
 
 FUNCTION set_particle_wind_mass(tags, dmdt, nparts)
-! Set the particle's wind dM/dt by tag number.  
+! Set the particle's wind dM/dt by tag number.
   integer :: nparts
   double precision :: dmdt(nparts), tags(nparts)
   integer :: set_particle_wind_mass, i, p, j, myProc, local_index, local_tag, oldj
@@ -4859,16 +4859,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
     if (j .ne. -1) then
         particles_pointer(DMDT_PART_PROP, QSindex(j)) = dmdt(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
     else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
     end if
-    
+
 end do
 deallocate(QSindex)
 deallocate(id_sorted)
@@ -4900,38 +4900,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(DMDT_PART_PROP, QSindex(i)) = dmdt(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(DMDT_PART_PROP, i) = dmdt(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -4939,7 +4939,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(DMDT_PART_PROP,i) = particles_global(DMDT_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -4949,7 +4949,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #else
 
 print*, "[interface.F90]: WARNING! Called particles_set_wind_dmdt but &
@@ -4963,7 +4963,7 @@ set_particle_wind_mass=0
 END FUNCTION
 
 FUNCTION set_particle_wind_vel(tags, velw, nparts)
-! Set the particle's wind dM/dt by tag number.  
+! Set the particle's wind dM/dt by tag number.
   integer :: nparts
   double precision :: velw(nparts), tags(nparts)
   integer :: set_particle_wind_vel, i, p, j, myProc, local_index, local_tag, oldj
@@ -5002,16 +5002,16 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-    
+
     ! If found, set particle attribute accordingly.
-    
+
     if (j .ne. -1) then
         particles_pointer(VELW_PART_PROP, QSindex(j)) = velw(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
     else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
     end if
-    
+
 end do
 deallocate(QSindex)
 deallocate(id_sorted)
@@ -5043,38 +5043,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(VELW_PART_PROP, QSindex(i)) = velw(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
        if (particles_global(iptag,i) .eq. tags(j)) then
-       
+
 !        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(ipm, QSindex(i)) , myProc
 !        print*, "tags and submitted mass", tags(j), mass(j), myProc
-      
+
         !particles_global(ipm, QSindex(i)) = mass(j)
         particles_global(VELW_PART_PROP, i) = velw(j)
 !        print*, particles_global(ipm, i)
-        
+
        end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 
@@ -5082,7 +5082,7 @@ end if
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(VELW_PART_PROP,i) = particles_global(VELW_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -5092,7 +5092,7 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-  
+
 #else
 
 print*, "[interface.F90]: WARNING! Called particles_set_wind_dmdt but &
@@ -5106,7 +5106,7 @@ set_particle_wind_vel=0
 END FUNCTION
 
 FUNCTION set_particle_gpot(tags,gpot,nparts)
-  
+
   integer :: nparts
   double precision :: gpot(nparts), tags(nparts)
   integer :: set_particle_gpot, i, p, j, myProc, local_index, local_tag
@@ -5139,38 +5139,38 @@ if (nparts .eq. localnpf) then
   do i=1, localnpf
 
     particles_global(GPOT_PART_PROP, QSindex(i)) = gpot(i)
-    
+
   end do
 
 else
 
 ! If not doing them all, have to do it by tag number.
-  
+
   do j=1, nparts
-  
+
     do i=1, localnpf
-        
+
 !      local_index = id_sorted(QSindex(i))
-!      local_tag   = int(tags(j))  
+!      local_tag   = int(tags(j))
 
       !if (local_index == local_tag) then
 !      if (id_sorted(QSindex(i)) == int(tags(j))) then
       if (particles_global(iptag,i) .eq. tags(j)) then
-      
+
 !        print*, "id_sorted and global gpot", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
 !                             & particles_global(GPOT_PART_PROP, QSindex(i)) , myProc
 !        print*, "tags and submitted gpot", tags(j), gpot(j), myProc
-      
+
         !particles_global(GPOT_PART_PROP, QSindex(i)) = gpot(j)
         particles_global(GPOT_PART_PROP, i) = gpot(j)
         !print*, particles_global(GPOT_PART_PROP, i)
-        
+
       end if
-      
+
     end do
-    
+
   end do
-  
+
 end if
 
 deallocate(QSindex)
@@ -5180,7 +5180,7 @@ deallocate(id_sorted)
 ! the local particle arrays in order.
 
 do i=1, localnp
-      
+
     particles_local(GPOT_PART_PROP,i) = particles_global(GPOT_PART_PROP, i)
 !    print*, "Final local and global mass."
 !    print*, particles_local(ipm,i), myProc
@@ -5188,38 +5188,38 @@ do i=1, localnp
 
 end do
 
-      
+
 !do i=1, nparts
-      
+
 !    particles_local(GPOT_PART_PROP,n(i)) = gpot(i)
 
 !end do
 call pt_sinkGatherGlobal()
-#endif  
+#endif
 set_particle_gpot=0
 END FUNCTION
 
 FUNCTION get_particle_gpot(n,gpot,nparts)
-  
+
   integer :: nparts
   double precision, dimension(nparts) :: gpot
   integer :: n(nparts), get_particle_gpot, i
-  
+
 #ifdef SINK_PART_TYPE
-      
+
 do i=1, nparts
-      
+
     gpot(i) = particles_local(GPOT_PART_PROP,n(i))
 
 end do
 
-#endif  
+#endif
 get_particle_gpot=0
 END FUNCTION
 
 !FUNCTION set_particle_prop(tags, prop, nparts)
 !! Set any particular particle property by tag number.
-!! TAGS MUST BE PASSED IN ASCENDING ORDER.  
+!! TAGS MUST BE PASSED IN ASCENDING ORDER.
 !  integer :: nparts
 !  double precision :: prop(nparts), tags(nparts)
 !  integer :: set_particle_prop, i, p, j, oldj
@@ -5251,16 +5251,16 @@ END FUNCTION
 
 !    oldj = j
 !    j = bisect_search(tags(i), j, localnp, localnp, real(id_sorted,8))
-    
+
 !    ! If found, set particle attribute accordingly.
-    
+
 !    if (j .ne. -1) then
 !        particles_local(EION_PART_PROP, QSindex(j)) = eion(i)
 !        !print*, "Set a local particle attrib on proc ", dr_globalMe
 !    else ! If not found (j=-1), the particle is not on this proc. Skip.
 !        j = oldj
 !    end if
-    
+
 !end do
 
 !END FUNCTION
@@ -5277,20 +5277,20 @@ END FUNCTION
 
 !FUNCTION get_gravity_at_point(eps, x, y, z, gax, gay, gaz, nparts)
 !!FUNCTION get_accel_gas_on_particles(eps, x, y, z, gax, gay, gaz, nparts)
-!  
+!
 !  INTEGER :: nparts
 !  DOUBLE PRECISION :: eps
 !  DOUBLE PRECISION, DIMENSION(nparts) :: x, y, z, gax, gay, gaz
 !!  LOGICAL :: usePart, useSinkPart
 !  LOGICAL :: correct_location
-!  INTEGER :: i, n(nparts) !, get_accel_gas_on_particles 
-!  INTEGER :: get_gravity_at_point 
-  
+!  INTEGER :: i, n(nparts) !, get_accel_gas_on_particles
+!  INTEGER :: get_gravity_at_point
+
 
 !#ifdef SINK_PART_TYPE
 !!call Particles_sinkAccelGasOnSinks() ! Calculate the accel from the gas on sinks.
 
-!call pt_sinkGatherGlobal()    
+!call pt_sinkGatherGlobal()
 
 !gax=0.0; gay=0.0; gaz=0.0
 
@@ -5301,12 +5301,12 @@ END FUNCTION
 !  if (x(i) .ne. particles_local(POSX_PART_PROP, i) .or. &
 !      y(i) .ne. particles_local(POSY_PART_PROP, i) .or. &
 !      z(i) .ne. particles_local(POSZ_PART_PROP, i)) then
-      
+
 !      correct_location = .false.
 !      exit check_pos
-      
+
 !  end if
-  
+
 !end do check_pos
 
 !if (correct_location) then
@@ -5316,7 +5316,7 @@ END FUNCTION
 !  do i=1, nparts
 
 !!    gax(i)=0.0; gay(i)=0.0; gaz(i)=0.0
-    
+
 !    gax(i) = particles_local(ACCX_PART_PROP,i)
 !    gay(i) = particles_local(ACCY_PART_PROP,i)
 !    gaz(i) = particles_local(ACCZ_PART_PROP,i)
@@ -5324,7 +5324,7 @@ END FUNCTION
 !  end do
 
 !!  return
-  
+
 !else
 
 !  write(*,*) "Updating particle positions."
@@ -5338,12 +5338,12 @@ END FUNCTION
 !  do i=1, nparts
 
 !!    gax(i)=0.0; gay(i)=0.0; gaz(i)=0.0
-    
+
 !    gax(i) = particles_local(ACCX_PART_PROP,i)
 !    gay(i) = particles_local(ACCY_PART_PROP,i)
 !    gaz(i) = particles_local(ACCZ_PART_PROP,i)
 
-!  end do  
+!  end do
 
 !end if
 
@@ -5363,9 +5363,9 @@ END FUNCTION
 !END FUNCTION
 
 FUNCTION get_num_part_prop(n)
-  
+
   integer :: n, get_num_part_prop
-  
+
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
   n = NPART_PROPS
@@ -5378,7 +5378,7 @@ FUNCTION make_sink(x, y, z, tags, nparts)
 
 integer :: nparts, n_created
 real*8, dimension(nparts)   :: x, y, z, tags, local_tags
-real*8, dimension(NPART_PROPS, nparts) :: part_copy 
+real*8, dimension(NPART_PROPS, nparts) :: part_copy
 integer, dimension(MAXBLOCKS, NPART_TYPES) :: particlesPerBlk
 real*8   :: time
 integer :: block, Proc_ID, myProc, make_sink, part_num, &
@@ -5400,12 +5400,12 @@ do i=1, nparts
 
   Proc_ID = 0
   block = 0
-  
+
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Driver_getComm(GLOBAL_COMM, communicator)
   call Grid_getBlkIDFromPos([x(i),y(i),z(i)], block, Proc_ID, communicator)
   call Driver_getSimTime(time)
-  
+
   if (myProc .eq. Proc_ID) then
 
     part_num = pt_sinkCreateParticle(x(i), y(i), z(i), time, block, Proc_ID)
@@ -5437,7 +5437,7 @@ FUNCTION add_particles(x, y, z, tags, nparts)
 
 integer :: nparts, n_created
 real*8, dimension(nparts)   :: x, y, z, tags, local_tags
-real*8, dimension(NPART_PROPS, nparts) :: part_copy 
+real*8, dimension(NPART_PROPS, nparts) :: part_copy
 integer, dimension(MAXBLOCKS, NPART_TYPES) :: particlesPerBlk
 real*8   :: time(nparts)
 integer :: block(nparts), Proc_ID(nparts), myProc, add_particles, &
@@ -5530,27 +5530,27 @@ call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
   rank_minus_one = dr_globalNumProcs - 1
   call Driver_getComm(GLOBAL_COMM, communicator)
   !call Driver_getMype(GLOBAL_COMM, MyPe)
-  
+
   ! Gather the array on the root process. Note that we require the
   ! user to pass the proper length of the final array. This can be
   ! gotten from get_number_of_new_tags.
-  
+
   ! Make an array of the # of incoming particles from each processor.
   call MPI_Gather(type_count, 1, MPI_INTEGER, &
                   num_array, 1, MPI_INTEGER, &
                   0, communicator, ierr)
-                  
+
   ! Set the displacement for the incoming data based on how many
   ! particles are coming in from each processor. Note the displacement
   ! for the root process is zero, for rank 1 disp = num on root,
-  ! for rank 2 disp = num on root + num on 1, etc etc.              
-  
+  ! for rank 2 disp = num on root + num on 1, etc etc.
+
   do i=1, dr_globalNumProcs-1
-  
+
     disp(i+1) = disp(i) + num_array(i)
-    
+
   end do
- 
+
 !print*, int(particles_pointer(TAG_PART_PROP,type_begin:type_begin+1)), dr_globalMe
 !print*, type_count, dr_globalMe
 !print*, new_tags_array(1), dr_globalMe
@@ -5559,7 +5559,7 @@ call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 !print*, communicator, dr_globalMe
 !print*, ierr, dr_globalMe
 !call flush(6)
- 
+
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
   call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end)), &
@@ -5584,12 +5584,12 @@ allocate(id_sorted(nparts))
   do i=1, nparts
 ! implicit type conversion from int to real here!
     tags(i) = real(new_tags_array(QSindex(i)),8)
-    
+
   end do
 
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
   !print*, "Tags on MasterPE =", tags
 
 end if
@@ -5637,9 +5637,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             procs(i) = int(particles_pointer(PROC_PART_PROP, QSindex(j)))
 
@@ -5647,7 +5647,7 @@ if (type_count .ge. 1) then
             j = oldj
             procs(i) = 0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -5705,9 +5705,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, set particle attribute accordingly.
-        
+
         if (j .ne. -1) then
             blocks(i) = int(particles_pointer(MASS_PART_PROP, QSindex(j)))
 
@@ -5715,7 +5715,7 @@ if (type_count .ge. 1) then
             j = oldj
             blocks(i) = 0
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -5759,33 +5759,33 @@ integer, dimension(:), allocatable :: QSindex, id_sorted
   rank_minus_one = dr_globalNumProcs - 1
   call Driver_getComm(GLOBAL_COMM, communicator)
   !call Driver_getMype(GLOBAL_COMM, MyPe)
-  
+
   ! Gather the array on the root process. Note that we require the
   ! user to pass the proper length of the final array. This can be
   ! gotten from get_number_of_new_tags.
-  
+
   ! Make an array of the # of incoming particles from each processor.
   call MPI_Gather(number_new_particles, 1, MPI_INTEGER, &
                   num_array, 1, MPI_INTEGER, &
                   0, communicator, ierr)
-                  
+
   ! Set the displacement for the incoming data based on how many
   ! particles are coming in from each processor. Note the displacement
   ! for the root process is zero, for rank 1 disp = num on root,
-  ! for rank 2 disp = num on root + num on 1, etc etc.              
-  
+  ! for rank 2 disp = num on root + num on 1, etc etc.
+
   do i=1, dr_globalNumProcs-1
-  
+
     disp(i+1) = disp(i) + num_array(i)
-    
+
   end do
-  
+
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
   call MPI_Gatherv(new_particles_tags, number_new_particles, MPI_INTEGER, &
                   new_tags_array, num_array, disp, MPI_INTEGER, &
                   0, communicator, ierr)
- 
+
 ! I only need one proc to do this.
 
 if (dr_globalMe .eq. 0) then
@@ -5804,23 +5804,23 @@ allocate(id_sorted(nparts))
   do i=1, nparts
 ! implicit type conversion from int to real here!
     tags(i) = real(new_tags_array(QSindex(i)),8)
-    
+
   end do
 
   deallocate(QSindex)
   deallocate(id_sorted)
-  
+
   !print*, "[get_new_tags]: Tags on MasterPE =", tags
 
 end if
 
-                 
+
   !print*, "Reals are ", real_tags
-                  
+
   !new_tags_array = floor(real_tags)
-                  
+
   !print*, "Gathered tags are ", new_tags_array(1:sum(num_array))
-  
+
   !print*, "Ierr =", ierr
 
 !new_tags_array  = new_tags(1:new_tags_length)
@@ -5835,10 +5835,10 @@ integer :: communicator, ierr
 
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
   call Driver_getComm(GLOBAL_COMM, communicator)
-  
+
   ! Number_new_sinks is the local processor number that have
   ! been created. We combine these to give back to the interface.
-  
+
   call MPI_Reduce(number_new_particles, new_tag_num, 1, MPI_INTEGER, &
                 MPI_SUM, 0, communicator, ierr)
 
@@ -5850,7 +5850,7 @@ END FUNCTION
 FUNCTION clear_new_tags()
 
 integer :: clear_new_tags
-#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE) 
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 number_new_particles = 0
 new_particles_tags = 0.0
 #endif
@@ -5871,9 +5871,9 @@ FUNCTION particles_sort()
 
 !use Particles_interface, ONLY : Particles_advanceNoCreate
 !
-integer :: particles_sort  
+integer :: particles_sort
 !real*8 :: dummy_dtOld, dummy_dtNew
-#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE) 
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 #ifdef SINK_PART_TYPE
 call pt_sinkGatherGlobal()
 #endif
@@ -5895,7 +5895,7 @@ END FUNCTION
 !!! subroutine Particles_sinkRemove
 !!!
 !!! Remove sink particles from the simulation by tag number.
-!!! Note it takes the particle out of: particles_local, 
+!!! Note it takes the particle out of: particles_local,
 !!! particles_global and particles arrays.
 !!! Also note it assumes tags are passed in ascending order!!!!!!**!!*!
 !!!
@@ -5940,9 +5940,9 @@ if (type_count .ge. 1) then
 
         oldj = j
         j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
-        
+
         ! If found, add the index to the remove array.
-        
+
         if (j .ne. -1) then
             remove_index(i) = QSindex(j)
 
@@ -5950,7 +5950,7 @@ if (type_count .ge. 1) then
             j = oldj
             !remove_index(i) = -1
         end if
-        
+
     end do
 
     deallocate(QSindex)
@@ -5966,20 +5966,20 @@ call ut_qsort(remove_index, nparts, .false.)
 do i=1, nparts
 
     if (remove_index(i) .gt. 0) then
- 
+
 ! If both types are defined, we have to deal with massive and sink
-! differently.    
+! differently.
 #if defined (SINK_PART_TYPE) && defined (ACTIVE_PART_TYPE)
         if (part_type .eq. 'mass') then
-        
+
             ! Remove from the particles array.
             particles_pointer(:,remove_index(i):pt_numLocal) = particles_pointer(:,remove_index(i)+1:pt_numLocal+1)
             ! Correct the counts of all particles in this array and the count for massive type.
             pt_numLocal = pt_numLocal - 1
             pt_typeInfo(PART_LOCAL, ACTIVE_PART_TYPE) = pt_typeInfo(PART_LOCAL, ACTIVE_PART_TYPE) - 1
-            
+
         else if (part_type .eq. 'sink') then
-        
+
             ! Remove from the particles_local array and the particles array.
             particles_pointer(:,remove_index(i):localnp) = particles_pointer(:,remove_index(i)+1:localnp+1)
             type_begin = pt_typeInfo(PART_TYPE_BEGIN,SINK_PART_TYPE)
@@ -5988,11 +5988,11 @@ do i=1, nparts
             pt_numLocal = pt_numLocal - 1
             localnp     = localnp - 1
             pt_typeInfo(PART_LOCAL, SINK_PART_TYPE) = pt_typeInfo(PART_LOCAL, SINK_PART_TYPE) - 1
-            
+
         else
-        
+
             print*, "[remove_particles]: Unrecognized part type given."
-            
+
         end if
 
 #elif defined (SINK_PART_TYPE) && !defined (ACTIVE_PART_TYPE)
@@ -6004,28 +6004,28 @@ do i=1, nparts
             ! Correct the counts of all particles in both arrays.
             pt_numLocal = pt_numLocal - 1
             localnp     = localnp - 1
-            
+
         else
-        
+
             print*, "[remove_particles]: Part type not sink and should be."
-            
+
         end if
-        
+
 #elif !defined (SINK_PART_TYPE) && defined (ACTIVE_PART_TYPE)
 
         if (part_type .eq. 'mass') then
-        
+
             ! Remove from the particles array.
             particles_pointer(:,remove_index(i):pt_numLocal) = particles_pointer(:,remove_index(i)+1:pt_numLocal+1)
             ! Correct the counts of all particles in this array.
             pt_numLocal = pt_numLocal - 1
-            
+
         else
-        
+
             print*, "[remove_particles]: Part type not mass and should be."
-            
+
         end if
-#endif        
+#endif
     end if
 
 end do
@@ -6059,7 +6059,7 @@ num_part_local_ptr = 0
 if (clear_local_tag) then
     ! Also reset all tags.
     local_tag_number = 0
-end if 
+end if
 
 remove_all_particles = 0
 return
@@ -6161,39 +6161,39 @@ real*8, pointer, dimension(:,:,:,:) :: solndata
 !              stop
 !            end if
 !            !print*, "Updating soln in block ", blockID(ii), myProc
-            
+
 !            l1 = blkLimitsGC(LOW,IAXIS)+NGUARD
 !            h1 = blkLimitsGC(HIGH,IAXIS)-NGUARD
 !            l2 = blkLimitsGC(LOW,JAXIS)+NGUARD
 !            h2 = blkLimitsGC(HIGH,JAXIS)- NGUARD
 !            l3 = blkLimitsGC(LOW,KAXIS)+NGUARD
 !            h3 = blkLimitsGC(HIGH,KAXIS)- NGUARD
-            
+
 !        !    start_ind = (ii-1)*(nparts/numBlocks)+1
 !        !    end_ind   = ii*(nparts/numBlocks)
-            
+
 !        !    print*, "Start_ind = ", start_ind, "End_ind =", end_ind
 
 !        !    print*, acc3x(1,2,3)
 
-!            !stop            
+!            !stop
 !            ! Now actually update the velocity of the gas from the kick.
 !            ! Note that we only kick the interior cells, not the guard cells.
 !            call Grid_getBlkPtr(blockID(ii),solndata,CENTER)
-            
+
 !            !print*, "Random soln velx before = ", solndata(VELX_VAR,6,6,6)
-            
+
 !            !print*, "acc3x =", acc3x(ii,2,2,2)*dt
 !            !print*, shape(acc3x(ii,:,:,:))
 !            !print*, shape(solndata(VELX_VAR,l1:h1,l2:h2,l3:h3))
 !            !print*, shape(ovx)
 !            !print*, "dt = ", dt
-            
+
 !            !ovx = solndata(VELX_VAR,l1:h1,l2:h2,l3:h3)
 !            !ovy = solndata(VELY_VAR,l1:h1,l2:h2,l3:h3)
 !            !ovz = solndata(VELZ_VAR,l1:h1,l2:h2,l3:h3)
-            
-            
+
+
 !            solndata(VELX_VAR,l1:h1,l2:h2,l3:h3) = &
 !            solndata(VELX_VAR,l1:h1,l2:h2,l3:h3) + acc3x(ii,:,:,:)*dt
 !            solndata(VELY_VAR,l1:h1,l2:h2,l3:h3) = &
@@ -6202,9 +6202,9 @@ real*8, pointer, dimension(:,:,:,:) :: solndata
 !            solndata(VELZ_VAR,l1:h1,l2:h2,l3:h3) + acc3z(ii,:,:,:)*dt
 
 !            !print*, "Random soln velx after = ", solndata(VELX_VAR,6,6,6)
-            
+
 !            call Grid_releaseBlkPtr(blockID(ii),solndata)
-            
+
 !        end do
 
 !    end if
@@ -6259,22 +6259,22 @@ print*, "[kick_grid]: I do nothing now!"
 !    solndata(VELX_VAR,:,:,:) = solndata(VELX_VAR,:,:,:) + solndata(SGAX_VAR,:,:,:)*dt
 !    solndata(VELY_VAR,:,:,:) = solndata(VELY_VAR,:,:,:) + solndata(SGAY_VAR,:,:,:)*dt
 !    solndata(VELZ_VAR,:,:,:) = solndata(VELZ_VAR,:,:,:) + solndata(SGAZ_VAR,:,:,:)*dt
-    
+
 !    ! Zero out the accelerations so they don't get added during the
 !    ! normal hydro solution.
-    
+
 !    solndata(SGAX_VAR,:,:,:) = 0.0
 !    solndata(SGAY_VAR,:,:,:) = 0.0
 !    solndata(SGAZ_VAR,:,:,:) = 0.0
-    
+
 !    solndata(SGXO_VAR,:,:,:) = 0.0
 !    solndata(SGYO_VAR,:,:,:) = 0.0
 !    solndata(SGZO_VAR,:,:,:) = 0.0
-    
-!    call Grid_releaseBlkPtr(blockID,solndata)
-    
 
-    
+!    call Grid_releaseBlkPtr(blockID,solndata)
+
+
+
 !end do
 
 !call Grid_notifySolnDataUpdate( (/SGAX_VAR,SGAY_VAR,SGAZ_VAR,SGXO_VAR,SGYO_VAR,SGZO_VAR/) )
@@ -6303,11 +6303,11 @@ print*, "[kick_grid]: I do nothing now!"
 
 !sum_force_norm = sqrt((abs(force_GoS_x) + abs(force_SoG_x)/ 2.0)**2.0 + &
 !                      (abs(force_GoS_y) + abs(force_SoG_y)/ 2.0)**2.0 + &
-!                      (abs(force_GoS_z) + abs(force_SoG_z)/ 2.0)**2.0) 
+!                      (abs(force_GoS_z) + abs(force_SoG_z)/ 2.0)**2.0)
 
 !write(12,'(4(1X,E22.15))') dr_simTime, force_GoS_x,force_GoS_y,force_GoS_z
 !write(13,'(4(1X,E22.15))') dr_simTime, force_SoG_x,force_SoG_y,force_SoG_z
-!write(14,'(4(1X,E22.15))') dr_simTime, & 
+!write(14,'(4(1X,E22.15))') dr_simTime, &
 !                             abs(force_GoS_x+force_SoG_x) / sum_force_norm, &
 !                             abs(force_GoS_y+force_SoG_y) / sum_force_norm, &
 !                             abs(force_GoS_z+force_SoG_z) / sum_force_norm
@@ -6337,7 +6337,7 @@ call create_particle_tree(particles_local(POSX_PART_PROP,1:localnp), &
                           particles_local(POSZ_PART_PROP,1:localnp), &
                           particles_local(MASS_PART_PROP,1:localnp), &
                           localnp)
-                          
+
 make_particle_tree=0
 END FUNCTION
 #endif
@@ -6432,12 +6432,12 @@ else if (trim(output_type)=='pltpart') then
   call IO_output(dr_simTime,dr_dt,dr_nstep+1,dr_nbegin, &
                  endRun, PLOTFILE_AND_PARTICLEFILE)
   call Particles_moveAndSort(.true.)
-  
-!else if (trim(output_type)=='all') then 
+
+!else if (trim(output_type)=='all') then
 
 !  call IO_output(dr_simTime,dr_dt,dr_nstep+1,dr_nbegin, &
 !                 endRun)
-     
+
 else
 
   print*, "interface:IO_output :: output filetype ", trim(output_type), " not recognized!"
@@ -6513,7 +6513,7 @@ ascend = array(n-1) >= array(1)
 do while ((jh - jl) > 1)
 
     jm = SHIFTR( (jh+jl), 1) ! Midpoint
-     
+
     if ( (x >= array(jm)) .eqv. ascend) then
         jl = jm
     else
@@ -6529,7 +6529,7 @@ else
     bisect_search = -1
 end if
 
-return 
+return
 
 END FUNCTION
 
@@ -6557,7 +6557,7 @@ END FUNCTION
 !!  ARGUMENTS
 !!    myPE : current processor
 !!    numProcs : number of processors
-!!  
+!!
 !!
 !!
 !!***
@@ -6577,8 +6577,8 @@ subroutine Driver_initParallel ()
   use Driver_data, ONLY : dr_globalMe, dr_globalNumProcs, dr_globalComm, &
        dr_mpiThreadSupport
   !$ use omp_lib
-  
-               
+
+
 
   include "Flash_mpi.h"
   integer :: error, iprovided, errcode
@@ -6614,7 +6614,7 @@ subroutine Driver_initParallel ()
   !                      make MPI calls, but threads cannot execute MPI
   !                      calls concurrently (MPI calls are serialized).
   !MPI_THREAD_MULTIPLE   Multiple threads may call MPI, no restrictions.
-   
+
   !The MPI standard says that "a call to MPI_INIT has the same effect as
   !a call to MPI_INIT_THREAD with a required = MPI_THREAD_SINGLE".
 
