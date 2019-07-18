@@ -176,7 +176,6 @@ particle_1_z = 0.0
 ###########################
 # Sink particles! Yeah!
 ###########################
-useParticles              = .true.
 useSinkParticles          = .true.
 sink_density_thresh       = 1e99 #4.6288411e-17 # for a Jeans mass of 0.1 M_sol
 #sink_accretion_radius     = 1.5625e21
@@ -194,7 +193,7 @@ sink_potentialMinCheck    = .true.
 sink_jeansCheck           = .true.
 sink_negativeEtotCheck    = .true.
 sink_GasAccretionChecks   = .true.
-pt_maxPerProc             = 500
+#pt_maxPerProc             = 500  # set in raytracing options
 
 #//////////////////////////
 # big physics switches
@@ -441,7 +440,7 @@ dr_posdefdtfactor = 0.9 #1.0
 dr_posdefvar_1    = "eint"
 dr_posdefvar_2    = "ener"
 dr_posdefvar_3    = "dens"
-dr_posdefvar_3    = "pres"
+dr_posdefvar_4    = "pres"
 
 hy_fallbackLowerCFL = .false. #.true.
 hy_cflFallbackFactor = 0.25
@@ -529,7 +528,6 @@ diff_eleZrBoundaryType = "outflow"
 
 
 # tree solver
-useGravity               = .false. #.true.
 updateGravity            = .true.
 gr_bhPhysMACTW           = .true.
 gr_bhPhysMACComm         = .true. #.false. #

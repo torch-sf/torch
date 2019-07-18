@@ -131,7 +131,6 @@ smlrho = 1.67e-28 # floor at 1e-4 n_H #1.0d-99 #1e-30from smallp=1e-20 and Tmin=
 #st_freq              = 1
 
 # Sink particles
-useParticles              = .true.
 useSinkParticles          = .true.
 
 # For -+7pc box
@@ -169,7 +168,6 @@ mg_maxresidualnorm = 1e-6
 mg_printNorm       = .false.
 
 # tree solver
-useGravity               = .true.
 updateGravity            = .true.
 gr_bhPhysMACTW           = .true. # These two should always be true,
 gr_bhPhysMACComm         = .true. # means gravity unit uses the gravity opening criterion
