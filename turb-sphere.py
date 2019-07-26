@@ -235,7 +235,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
 
-    rho_amb = n0*mH*mu_amb # Ambient gas density
+    rho_amb = n0*mH*mu_amb # Ambient density
 
     # computational domain
     CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)
@@ -254,8 +254,20 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr, data_file=cool_curve)
         p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
     else:
+
         # Wunsch's old method
         p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
+
+        # My method where I pressure match at the boundary with the sphere. - JW
+        # NOTE: This just doesn't matter. Anything more massive than a few 100 solar masses
+        #       is just Jeans unstable and collapsing, its not in "pressure equ" with the
+        #       surrounding medium. And adding any amount of density doesn't make it in
+        #       equ with the surrounding, because its collapsing. If anything, its likely
+        #       *accreting from the surroundings* (see Vazquez-Semadeni 2009).
+        #       Therefore we're going back to separately setting the ambient and
+        #       core temps and pressures independently.  - JW 8/30/18
+        #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
+        # Invert to get the ambient density.
 
     rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
