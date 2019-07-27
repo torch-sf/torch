@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
+import matplotlib as mpl
+mpl.use('Agg')
+
 from numpy import *
 import yt
-import fftw3
 import sys
 import argparse
 import numpy as np
 import os
 from scipy.interpolate import interp1d as ip1d
-
-
-#filename = 'clouds/cubeM3V04E'
 
 ########################
 ### Units
@@ -33,49 +32,55 @@ parser = argparse.ArgumentParser(description='Builds a data set in a cube \
                                  background is cool neutral medium (CNM).')
 
 parser.add_argument("-m", "--mass", default=None, required=False, type=float,
-                   help="Input the total mass of the sphere in MSun.")
-parser.add_argument("-mus", "--musph", default=2.3, required=False, type=float,
-                   help="Atomic mass of gas in the sphere.")
+                   help="Total mass of the sphere in MSun.")
 parser.add_argument("-B", "--magnetic_field", default=0.0, required=False, type=float,
-                   help="Input the background magnetic field magnitude in Gauss.")
+                   help="Background magnetic field magnitude in Gauss.")
 parser.add_argument("-n", "--number_density", default=1.25, required=False, type=float,
-                   help="Input the background number density of H in cm^-3.")
-parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
-                   help="Atomic mass of gas in the sphere.")
+                   help="Background number density of H in cm^-3.")
 parser.add_argument("-r", "--radius", default=None, required=False, type=float,
-                   help="Input the radius of the sphere in parsecs.")
+                   help="Radius of the sphere in parsecs.")
 parser.add_argument("-v", "--virial_ratio", default=0.4, required=False, type=float,
-                   help="Input the virial ratio of the sphere. CUrrently only \
+                   help="Virial ratio of the sphere. CUrrently only \
                          calculates virial ratio using kinetic and gravitational \
                          energy. NOTE: equilibrium is v=0.5!")
 parser.add_argument("-b", "--box_side", default=None, required=False, type=float,
-                   help="Input the distance from the center of the cube to the \
+                   help="Distance from the center of the cube to the \
                          edge of the cube (half the length of a side). \
                          If not specified, is Rsph*1.25 by default.")
-parser.add_argument("-f", "--filename", default=None, required=False,
-                   help="Output filename.")
+
 parser.add_argument("-kmin", "--kmin", default=1, required=False, type=int,
-                   help="Input the smallest wavenumber of the turbulence. \
+                   help="Smallest wavenumber of the turbulence. \
                          Default is 1.")
 parser.add_argument("-kmax", "--kmax", default=32, required=False, type=int,
-                   help="Input the largest wavenumber of the turbulence. \
+                   help="Largest wavenumber of the turbulence. \
                          Default is 32.")
 parser.add_argument("-e", "--turb_exp", default=5./3., required=False, type=float,
-                   help="Input the exponent of the energy spectrum for the turbulence. \
+                   help="Exponent of the energy spectrum for the turbulence. \
                          Default is Kolmogorov (-5/3). Note that you pass the positive \
                          value and the code tacks on the negative sign.")
+
+parser.add_argument("-mus", "--musph", default=1.3, required=False, type=float,
+                   help="Mean particle mass of sphere gas in mH.")
+parser.add_argument("-mua", "--muamb", default=1.3, required=False, type=float,
+                   help="Mean particle mass of ambient gas in mH.")
 parser.add_argument("-Ts", "--sphere_temperature", default=30., required=False, type=float,
-                   help="Input the sphere temperature of the gas in Kelvin. \
+                   help="Sphere gas temperature in Kelvin. \
                          Default is 30 Kelvin.")
 parser.add_argument("-Tb", "--background_temperature", default=8e3, required=False, type=float,
-                   help="Input the background temperature of the gas in Kelvin. \
+                   help="Background gas temperature in Kelvin. \
                          Default is 8e3 Kelvin.")
+parser.add_argument("--Ts_from_cool_curve", action='store_true',
+                   help="Compute Ts for given density from equilibrium \
+                         cooling curve. Overrides input sphere temperature.")
+
+parser.add_argument("-f", "--filename", default=None, required=False,
+                   help="Output filename.")
 parser.add_argument('-nd','--no_data', action='store_true', default=False,
                     help="Don't write a data output file, just do the calculations. \
                           Default is false (write data).")
 parser.add_argument('-rf','--read_file', default=None,
                     help="Read all input data from file, formatted in the following order: \
-                          Mass	Radius	box	virial ratio	NumDensSph	Tsph	Tamb	filename \
+                          Mass	Radius	box	virial_ratio	NumDensSph	Tsph	Tamb	kmin	kmax	Eslp	Bmag	filename \
                           Pass in the input filename.")
 
 #############################
@@ -106,41 +111,21 @@ def create_spspace_box(kmin, kmax, NCD, Eslp):
     # v ~ sqrt(E) => 0.5*Eslp-1, k^2 is in mask => 0.25*Eslp-0.5
     mask[where(mask>0)] = mask[where(mask>0)]**(0.25*Eslp-0.5)
 
-    # multiply random coefficients with mask
     ssbox *= mask
 
-    #ssbox = zeros(NCD, dtype=complex)
-    #ssbox[63,63,63] = 1.0 + 0.0j
-    #return ssbox
     return ssbox
 
 
 def kolmogorov_vel(NCD, kmin, kmax, Eslp):
-    # prepare fftw plan
-    inarr  = zeros(NCD, dtype=complex)
-    outarr = zeros(NCD, dtype=complex)
-    fft = fftw3.Plan(inarr, outarr, direction='backward', flags=['measure'])
-
-    # arrays for velocity field
-    velx  = zeros(NCD, dtype=float64)
-    vely  = zeros(NCD, dtype=float64)
-    velz  = zeros(NCD, dtype=float64)
-
     # create velocity field in spectral space (sp_vel[xyz])
     # and FFT it to configuration space (vel[xyz])
     sp_velx = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_velx
-    fft.execute()
-    velx[:,:,:] = outarr.real
     sp_vely = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_vely
-    fft.execute()
-    vely[:,:,:] = outarr.real
     sp_velz = create_spspace_box(kmin, kmax, NCD, Eslp)
-    inarr[:,:,:] = sp_velz
-    fft.execute()
-    velz[:,:,:] = outarr.real
 
+    velx = fft.ifftn(sp_velx).real
+    vely = fft.ifftn(sp_vely).real
+    velz = fft.ifftn(sp_velz).real
 
     return (velx, vely, velz)
 
@@ -177,9 +162,8 @@ def calc_sphsym_pot(r_arr, rho_arr):
     return (pot_arr, Mrmid_arr, Frmid_arr)
 
 def gauss_dens_prof(Rsph, Msph, rho_rat, Nr):
-    rarr   = arange(0.0, Rsph+Rsph/Nr, Rsph/Nr)
+    rarr   = np.linspace(0.0, Rsph+Rsph/Nr, Nr+1)
     sig_R  = Rsph / sqrt(-log(rho_rat)) # characteristic radius
-    #print '# sigma_r = ', sig_R
     rho_rarr = exp(-rarr*rarr/(sig_R*sig_R))
     # calculate mass of the sphere with temporary density profile
     (pot_rarr, Mrmid_rarr, Frmid_rarr) = calc_sphsym_pot(rarr, rho_rarr)
@@ -241,120 +225,54 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
 
     return (rarr, rho_arr, pot_arr)
 
-def window_avg(x,n):
-
-    from scipy.signal import convolve
-
-
-    """
-    A function that averages over the elements of an array x.
-
-    Attributes
-    ----------
-    x       : numpy array (float)
-              Array that you want to average over.
-    n       : iteger
-              Number of elements that you want to average over (window radius).
-    avg_all : Whether you want to average over all elements within the window (True)
-              or only those at either end of the window boundary (False). Default is True.
-    """
-
-    # Numpy version does 1 d arrays only.
-    #return np.convolve(x, np.ones(n)*1.0/float(n), 'full') #[(n-1):-(n-1)]
-    # Scipy version can do any d array. Nice.
-    return convolve(x, np.ones((n,n,n))*1.0/float(n**3.0), mode='same')
 
 # The actual code to make the data file.
-def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, Bmag, filename, write_data):
+def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
+                   kmin, kmax, Eslp, Bmag, filename, write_data,
+                   Ts_from_cool_curve=False,
+                   cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
 
-    if (box == None): box = Rsph*1.25
-
-
-    #Msph    = 1e4*MSun # Sphere mass
-    #Tsph    = 30.      # Sphere temperature
-    musph   = 1.3 #2.3      # molecular mass inside sphere
-    rho_rat = 1.0/3.0  # density ratio between centre and border
+    rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
 
-    # ambient gas
-    mu_amb  = 1.3      # molecular mass of ambient gas
     rho_amb = n0*mH*mu_amb # Ambient density
-    #T_amb   = 100.     # Ambient temperature
-
-    #box     = 7.0     # dist from center to edge of box in pc
-    #box    = 12.5
-    #box     = 55.0     # dist from center to edge of box in pc
-
-    # energy spectrum
-    #Eslp = -5./3.      # spectrum exponent (maybe also try Burger spectrum?)
-    #vir_rat = 0.4      # virial ratio
-    # per M-MML 99 make kmax=2, kmin=1
-    #kmin = 1           # longest wave number of turbulence
-    #kmax = 32          # shorest wave number of turbulence
 
     # computational domain
-    #CD   = ((0.0, 10*cmpc), (0.0, 10*cmpc), (0.0, 10*cmpc))
-    CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)*cmpc
+    CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)
     NCD  = (128,128,128)
-
-
-    #rarr = arange(11, dtype=float64)
-    #rhoarr = ones(11, dtype=float64)
-    #phi_arr = calc_sphsym_pot(rarr, rhoarr)
-    #R = 10
-    #M = 4*pi*R**3/3.0
-    #for i in range(len(rarr)):
-    #    print '% 20.10e % 20.10e % 20.10e' \
-    #    % (rarr[i], phi_arr[i], -G*M*(3*R*R-rarr[i]**2)/(2*R**3))
-    #sys.exit()
-    #
 
     # calculate density, pressure and potential fields
     (r_rarr, rho_rarr) = gauss_dens_prof(Rsph, Msph, rho_rat, Nr)
     (rarr, rho_arr, pot_arr) = dens_pot_3darr(Rsph, Msph, r_rarr, rho_rarr, rho_amb, Nr, NCD, CD)
     mask = (rarr <= Rsph).astype(float)
 
-    # Lets just set the temperature initially from the density in the sphere
-    # (which is likely in the unstable regime) directly from the equilibrium
-    # cooling curve calculated previously.
-    numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
-    #print shape(numdens_arr)
-    #numdens_cp = (numdens_arr.copy()).flatten()
-    data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr)
-    #print (numdens_arr == numdens_cp.reshape(128,128,128)).all()
-    #print shape(T_arr)
+    if Ts_from_cool_curve:
+        # Lets just set the temperature initially from the density in the sphere
+        # (which is likely in the unstable regime) directly from the equilibrium
+        # cooling curve calculated previously.
+        numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
+        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr, data_file=cool_curve)
+        p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
+    else:
 
-    # Wunsch's old method
-    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
+        # Wunsch's old method
+        p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*T_amb/mu_amb/mH)*(1.0-mask)*rho_arr
 
-    p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
+        # My method where I pressure match at the boundary with the sphere. - JW
+        # NOTE: This just doesn't matter. Anything more massive than a few 100 solar masses
+        #       is just Jeans unstable and collapsing, its not in "pressure equ" with the
+        #       surrounding medium. And adding any amount of density doesn't make it in
+        #       equ with the surrounding, because its collapsing. If anything, its likely
+        #       *accreting from the surroundings* (see Vazquez-Semadeni 2009).
+        #       Therefore we're going back to separately setting the ambient and
+        #       core temps and pressures independently.  - JW 8/30/18
+        #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
+        # Invert to get the ambient density.
 
-
-    # My method where I pressure match at the boundary with the sphere. - JW
-    # NOTE: This just doesn't matter. Anything more massive than a few 100 solar masses
-    #       is just Jeans unstable and collapsing, its not in "pressure equ" with the
-    #       surrounding medium. And adding any amount of density doesn't make it in
-    #       equ with the surrounding, because its collapsing. If anything, its likely
-    #       *accreting from the surroundings* (see Vazquez-Semadeni 2009).
-    #       Therefore we're going back to separately setting the ambient and
-    #       core temps and pressures independently.  - JW 8/30/18
-    #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
-    # Invert to get the ambient density.
     rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
     # calculate turbulent velocity field
     (velx, vely, velz) = kolmogorov_vel(NCD, kmin, kmax, Eslp)
-
-
-    # smooth the velocity field on the smallest scales. - JW
-
-    #velx = window_avg(velx,3)
-    #vely = window_avg(vely,3)
-    #velz = window_avg(velz,3)
-
-    #plt.imshow(velx[:,:,64])
-    #plt.savefig('extra_crispy_velocity.png')
-
 
     # calculate total kinetic and potential energy
     dx = (CD[0][1] - CD[0][0]) / NCD[0]
@@ -371,10 +289,6 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     vely *= sqrt(vir_rat / Qvir)*mask
     velz *= sqrt(vir_rat / Qvir)*mask
 
-    #velx *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-    #vely *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-    #velz *= sqrt((vir_rat*np.abs(Epot)-Emag*0.5)/Ekin)*mask
-
     # recalculate kinetic energy
     Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
     Qvir = (Ekin) / np.abs(Epot)
@@ -387,63 +301,80 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, vir_rat, kmin, kmax, Eslp, 
     from matplotlib import cm
     from matplotlib import colors
 
+    def symshow(ax, x, vbnd=None, **kwargs):
+        """mpl.plt.imshow wrapper, force vmin/vmax symmetric about zero"""
+        assert 'vmin' not in kwargs
+        assert 'vmax' not in kwargs
+        if vbnd is None:
+            filt = np.isfinite(x)
+            vbnd = np.max(np.abs(x[filt]))
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'RdBu_r'
+        return ax.imshow(x, vmin=-vbnd, vmax=+vbnd, **kwargs)
+
     fig, ax = plt.subplots()
-    cmap = plt.get_cmap('viridis')
-    #bounds = [velx.min(), velx.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(velx[:,:,64], cmap.N)
-    #print cNorm
-    im = ax.imshow(velx[:,:,64], aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = symshow(ax, velx[:,:,64], aspect='auto')
     fig.colorbar(im)
     plt.savefig(filename+'velx.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(p_arr[:,:,64]/kB), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(p_arr[:,:,64]/kB, aspect='auto', cmap='viridis',
+                   norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'pres.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64])), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64]),
+                   aspect='auto', cmap='viridis', norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'temp.png')
     plt.clf()
 
     fig, ax = plt.subplots()
-    #bounds = [rho_arr[np.where(rho_arr > 0.0)[0]].min(), rho_arr.max()]
-    #print "bounds", bounds
-    #cNorm = colors.BoundaryNorm(rho_arr[:,:,64], cmap.N)
-    im = ax.imshow(np.log10(rho_arr[:,:,64]), aspect='auto', cmap=cmap) #, norm=cNorm)
+    im = ax.imshow(rho_arr[:,:,64], aspect='auto', cmap='viridis',
+                   norm=mpl.colors.LogNorm())
     fig.colorbar(im)
     plt.savefig(filename+'dens.png')
     plt.clf()
 
-    #print '# ', NCD[0], NCD[1], NCD[2]
-    #for i in range(NCD[0]):
-        #for j in range(NCD[1]):
-            #for k in range(NCD[2]):
-                #print '%3d %3d %3d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e' \
-                #% (i,j,k, rho_arr[i,j,k], p_arr[i,j,k]\
-                #, velx[i,j,k], vely[i,j,k], velz[i,j,k], pot_arr[i,j,k])
-            #print
-        #print
-
-    # Write info about what was set when making this data cube.
-    f = open(filename+'.dat', 'w')
-    f.write("{:<9} {:<35}  \n \n".format('filename:', filename))
-    f.write("{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} \n".format('Msph', 'Rsph', 'x/y/z max', 'Ekin', 'Epot', 'Emag', 'Qvir', 'B0', 'n0'))
-    f.write("{:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} \n".format('(M)', '(pc)', '(pc)', '(ergs)', '(ergs)', '(ergs)', ' ', '(Gauss)', '(cm^-3)'))
-    f.write("{:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} {:>10.2E} \n".format(Msph/MSun, Rsph/cmpc, box, Ekin, Epot, Emag, Qvir, Bmag))
-    f.close()
-
     if (write_data):
+
+        print "writing metadata to "+filename+".dat"
+        with open(filename+'.dat', 'w') as f:
+
+            f.write("# {:<9} {:<35}\n".format('filename:', filename))
+            if Ts_from_cool_curve:
+                f.write("# cooling curve for Tsph: {}\n".format(cool_curve))
+            f.write("\n")
+
+            def write_pars(key, unit, val):
+                assert len(key) == len(unit)
+                assert len(key) == len(val)
+                # construct format strings
+                # hdr: "# {:>8} {:>10} {:>10} . . ."
+                # val: "{:>10.2E} {:>10.2E} {:>10.2E} . . ."
+                hdrfmt = "# {:>8}" + " {:>10}"*(len(key)-1) + "\n"
+                valfmt = " ".join(["{:>10.2E}"]*len(key)) + "\n"
+                f.write(hdrfmt.format(*key))
+                f.write(hdrfmt.format(*unit))
+                f.write(valfmt.format(*val))
+
+            write_pars(
+                ['Msph', 'Rsph', 'x/y/z max', 'Ekin', 'Epot', 'Emag', 'Qvir', 'B0', 'n0'],
+                ['(Msun)', '(pc)', '(pc)', '(erg)', '(erg)', '(erg)', '(-)', '(Gauss)', '(cm^-3)'],
+                [Msph/MSun, Rsph/cmpc, box/cmpc, Ekin, Epot, Emag, Qvir, Bmag, n0],
+            )
+
+            f.write('\n')
+
+            write_pars(
+                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'kmin', 'kmax', 'turb_exp'],
+                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(-)', '(-)', '(-)'],
+                [Bmag, n0, Tsph, T_amb, musph, mu_amb, kmin, kmax, Eslp],
+            )
+
         # Write out the initial conditions file.
         print "writing data file."
         f = open(filename, 'w')
@@ -484,44 +415,58 @@ write_data = not args.no_data
 if (infile is None):
 
 
+    if (args.radius is None and args.box_side is None):
+
+        if   (args.mass == 1e3):
+            args.radius     =  5.0
+            args.box_side   =  7.0
+        elif (args.mass == 1e4):
+            args.radius     = 10.0
+            args.box_side   = 12.5
+        elif (args.mass == 1e5):
+            args.radius     = 50.0
+            args.box_side   = 55.0
+
+        print "Using the default factors for Rsph and box size:"
+        print "--radius", args.radius, "--box_size", args.box_side
+
+    elif (args.radius is not None and args.box_side is None):
+
+        args.box_side = args.radius * 1.25
+
+        print "Using default box size +/-(1.25x Rsph):"
+        print "--box_size", args.box_side
+
+
+    if (args.radius is None or args.mass is None or args.virial_ratio is None or args.filename is None):
+        raise Exception("Error: You must either pass sphere radius, mass,"
+                        + " virial ratio and output filename or you must pass"
+                        + " in an input file with the proper values specified!")
+
+
     # sphere params
-    Rsph       = [args.radius*cmpc] #5*cmpc
-    Msph       = [args.mass*MSun]   #1e3*MSun # Sphere mass
-    box        = [args.box_side]
+    Rsph       = [args.radius*cmpc]
+    Msph       = [args.mass*MSun]
+    box        = [args.box_side*cmpc]
     vir_rat    = [args.virial_ratio]
     kmin       = [args.kmin]
     kmax       = [args.kmax]
     Eslp       = [-args.turb_exp]
     Tsph       = [args.sphere_temperature]
     T_amb      = [args.background_temperature]
+    musph      = [args.musph]
+    mu_amb     = [args.muamb]
     filename   = [args.filename]
     n0         = [args.number_density]
     Bmag       = [args.magnetic_field]
     num_runs   = 1
 
 
-    if (Rsph is None and box is None): # Use default values for the box sizes.
-
-        print "Using the default factors for Rsph and box size."
-        if   (Msph[0] == 1e3*MSun):
-            Rsph    = [5*cmpc]
-            box     = [7.0]
-        elif (Msph[0] == 1e4*MSun):
-            Rsph    = [10.0*cmpc] # Sphere radius
-            box     = [12.5]
-        elif (Msph[0] == 1e5*MSun):
-            Rsph    = [50.0*cmpc] # Sphere radius
-            box     = [55.0]
-
-
-    if (Rsph is None or Msph is None or vir_rat is None or filename is None):
-        print "Error: You must either pass sphere radius, mass, virial ratio and \
-               output filename or you must pass in an input file with the proper \
-               values specified!"
-
 else: # load from the file
 
     #print np.shape(np.genfromtxt(infile, dtype=None, skip_header=2, usecols=range(8), unpack=True))
+
+    # Not tested/working currently. 2019 Mar 22, AT
 
     Msph, Rsph, box, vir_rat, n0, Tsph, T_amb, kmin, kmax, Eslp, Bmag = np.loadtxt(
             infile, dtype=np.float, skiprows=2, usecols=range(11), unpack=True)
@@ -535,6 +480,8 @@ else: # load from the file
 for i in range(num_runs):
 
     make_data_cube(Msph[i], Rsph[i], box[i], n0[i], Tsph[i], T_amb[i],
+                   musph[i], mu_amb[i],
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
-                   filename[i], write_data)
+                   filename[i], write_data,
+                   Ts_from_cool_curve=args.Ts_from_cool_curve)
 
