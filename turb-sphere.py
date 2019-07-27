@@ -344,9 +344,10 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         print "writing metadata to "+filename+".dat"
         with open(filename+'.dat', 'w') as f:
 
-            f.write("# {:<9} {:<35}\n\n".format('filename:', filename))
+            f.write("# {:<9} {:<35}\n".format('filename:', filename))
             if Ts_from_cool_curve:
-                f.write("# cooling curve for Tsph: {}".format(cool_curve))
+                f.write("# cooling curve for Tsph: {}\n".format(cool_curve))
+            f.write("\n")
 
             def write_pars(key, unit, val):
                 assert len(key) == len(unit)
@@ -369,9 +370,9 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
             f.write('\n')
 
             write_pars(
-                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'cool_curve', 'kmin', 'kmax', 'turb_exp'],
-                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(boolean)', '(-)', '(-)', '(-)'],
-                [Bmag, n0, Tsph, T_amb, musph, mu_amb, int(Ts_from_cool_curve), kmin, kmax, Eslp],
+                ['B0', 'n0', 'Tsph', 'Tamb', 'musph', 'muamb', 'kmin', 'kmax', 'turb_exp'],
+                ['(Gauss)', '(cm^-3)', '(K)', '(K)', '(mH)', '(mH)', '(-)', '(-)', '(-)'],
+                [Bmag, n0, Tsph, T_amb, musph, mu_amb, kmin, kmax, Eslp],
             )
 
         # Write out the initial conditions file.
