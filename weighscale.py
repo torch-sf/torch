@@ -26,15 +26,16 @@ fname = sys.argv[1]
 if not fname:
     fname = 'cube128'
 
-if path.exists(fname+".dat"):
+#if path.exists(fname+".dat"):
+try:
     meta = np.loadtxt(fname+".dat")
     Msph, Rsph, box = meta[0,:3]
     print("from metadata: Msph = {:e} Msun, Rsph = {:g} pc, box = {:g} pc".format(
             Msph, Rsph, box))
     r0_vals = np.array([Rsph, 5, 10, 50, 500]) * cmpc  # values pc, store as cm
     box_sizes = np.array([box, 7, 12.5, 55, 600]) * cmpc  # values pc, store as cm
-else:
-    print("Couldn't get target mass, size from .dat file")
+except Exception as e:
+    print("Couldn't get target mass, size from .dat file, exception:", e)
     r0_vals = np.array([5, 10, 50, 500]) * cmpc  # values pc, store as cm
     box_sizes = np.array([7, 12.5, 55, 600]) * cmpc  # values pc, store as cm
 
