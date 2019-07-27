@@ -49,10 +49,14 @@ __Example:__ create a 1e3 Msun sphere with radius 5 pc, virial ratio 0.2, T =
 
     ./turb-sphere.py --mass 1e3 --radius 5 --box_side 7 -v 0.2 -Ts 10 -n 0.1 --filename cube.m1e3.r5
 
-This will output two files:
+This will output several files:
 
     cube.m1e3.r5        // Data array, ~200 MB
     cube.m1e3.r5.dat    // Metadata w/ input parameters, sphere properties
+    cube.m1e3.r5velx.png    // x-y slice plot of x-velocity
+    cube.m1e3.r5pres.png    // x-y slice plot of pressure
+    cube.m1e3.r5temp.png    // x-y slice plot of temperature
+    cube.m1e3.r5dens.png    // x-y slice plot of mass density
 
 __Example:__ create a 128^3 cube of turbulent velocities.
 

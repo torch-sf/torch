@@ -78,6 +78,8 @@ parser.add_argument("-f", "--filename", default=None, required=False,
 parser.add_argument('-nd','--no_data', action='store_true', default=False,
                     help="Don't write a data output file, just do the calculations. \
                           Default is false (write data).")
+parser.add_argument('-wp','--with_plots', action='store_true', default=True,
+                    help="Make slice plots of velx, pres, temp, dens")
 parser.add_argument('-rf','--read_file', default=None,
                     help="Read all input data from file, formatted in the following order: \
                           Mass	Radius	box	virial_ratio	NumDensSph	Tsph	Tamb	kmin	kmax	Eslp	Bmag	filename \
@@ -230,7 +232,8 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                    kmin, kmax, Eslp, Bmag, filename, write_data,
                    Ts_from_cool_curve=False,
-                   cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
+                   cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat',
+                   with_plots=True):
 
     rho_rat = 1.0/3.0  # density ratio between border and centre
     Nr      = 1000     # Number of points in 1-D
@@ -296,48 +299,50 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
     print 'Msph, Rsph = ', Msph/MSun, Rsph/cmpc
 
-    # plot a slice of the velocity field
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
-    from matplotlib import colors
+    if (with_plots):
 
-    def symshow(ax, x, vbnd=None, **kwargs):
-        """mpl.plt.imshow wrapper, force vmin/vmax symmetric about zero"""
-        assert 'vmin' not in kwargs
-        assert 'vmax' not in kwargs
-        if vbnd is None:
-            filt = np.isfinite(x)
-            vbnd = np.max(np.abs(x[filt]))
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'RdBu_r'
-        return ax.imshow(x, vmin=-vbnd, vmax=+vbnd, **kwargs)
+        # plot a slice of the velocity field
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
+        from matplotlib import colors
 
-    fig, ax = plt.subplots()
-    im = symshow(ax, velx[:,:,64], aspect='auto')
-    fig.colorbar(im)
-    plt.savefig(filename+'velx.png')
-    plt.clf()
+        def symshow(ax, x, vbnd=None, **kwargs):
+            """mpl.plt.imshow wrapper, force vmin/vmax symmetric about zero"""
+            assert 'vmin' not in kwargs
+            assert 'vmax' not in kwargs
+            if vbnd is None:
+                filt = np.isfinite(x)
+                vbnd = np.max(np.abs(x[filt]))
+            if 'cmap' not in kwargs:
+                kwargs['cmap'] = 'RdBu_r'
+            return ax.imshow(x, vmin=-vbnd, vmax=+vbnd, **kwargs)
 
-    fig, ax = plt.subplots()
-    im = ax.imshow(p_arr[:,:,64]/kB, aspect='auto', cmap='viridis',
-                   norm=mpl.colors.LogNorm())
-    fig.colorbar(im)
-    plt.savefig(filename+'pres.png')
-    plt.clf()
+        fig, ax = plt.subplots()
+        im = symshow(ax, velx[:,:,64], aspect='auto')
+        fig.colorbar(im)
+        plt.savefig(filename+'velx.png')
+        plt.clf()
 
-    fig, ax = plt.subplots()
-    im = ax.imshow(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64]),
-                   aspect='auto', cmap='viridis', norm=mpl.colors.LogNorm())
-    fig.colorbar(im)
-    plt.savefig(filename+'temp.png')
-    plt.clf()
+        fig, ax = plt.subplots()
+        im = ax.imshow(p_arr[:,:,64]/kB, aspect='auto', cmap='viridis',
+                       norm=mpl.colors.LogNorm())
+        fig.colorbar(im)
+        plt.savefig(filename+'pres.png')
+        plt.clf()
 
-    fig, ax = plt.subplots()
-    im = ax.imshow(rho_arr[:,:,64], aspect='auto', cmap='viridis',
-                   norm=mpl.colors.LogNorm())
-    fig.colorbar(im)
-    plt.savefig(filename+'dens.png')
-    plt.clf()
+        fig, ax = plt.subplots()
+        im = ax.imshow(p_arr[:,:,64]/(((kB/musph/mH)*mask[:,:,64] + (kB/mu_amb/mH)*(1.0-mask[:,:,64]))*rho_arr[:,:,64]),
+                       aspect='auto', cmap='viridis', norm=mpl.colors.LogNorm())
+        fig.colorbar(im)
+        plt.savefig(filename+'temp.png')
+        plt.clf()
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(rho_arr[:,:,64], aspect='auto', cmap='viridis',
+                       norm=mpl.colors.LogNorm())
+        fig.colorbar(im)
+        plt.savefig(filename+'dens.png')
+        plt.clf()
 
     if (write_data):
 
@@ -483,5 +488,6 @@ for i in range(num_runs):
                    musph[i], mu_amb[i],
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
                    filename[i], write_data,
-                   Ts_from_cool_curve=args.Ts_from_cool_curve)
+                   Ts_from_cool_curve=args.Ts_from_cool_curve,
+                   with_plots=args.with_plots)
 
