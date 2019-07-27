@@ -1,0 +1,76 @@
+README
+======
+
+Quick-start
+-----------
+
+FLASH/AMUSE interface files: place in `$AMUSE_DIR/src/amuse/community/flash`
+
+    base_grid_interface.F90
+    interface.F90
+    interface.py
+    josh_multiples.py
+    Makefile.prototype
+    src/*
+
+FLASH/AMUSE bridge code to perform simulations:
+
+    bridge_multiples_for_rad_testing.py
+    bridge_multiples.py
+    cool.dat
+    cube128
+    flash.par.radtest
+    flash.par.turbsph_standard
+    ionizingflux.py
+
+Create initial conditions (dens, pres, vel, etc) for your simulations:
+
+    hAc_b_2.0E-17_e_0.021_FUV_1.69.dat
+    turb-sphere.py
+    turb-velbox.py
+    weighscale.py
+
+Simulation init condition setup
+-------------------------------
+
+`turb-sphere.py` creates a turbulent sphere in a 128^3 array for use with the
+FLASH simulation `setup-cube-USM`.
+
+`turb-velbox.py` creates a turbulent box (just velocity data) in a 128^3 array
+for use with the FLASH simulation `Cube_AT` -- this is mostly for testing
+purposes, and may be removed in the future.
+
+`weighscale.py` reports useful information about the 128^3 plaintext arrays
+output by `turb-sphere.py`.
+
+__Example:__ create a 1e3 Msun sphere with radius 5 pc, virial ratio 0.2, T =
+10 K, and ambient density 0.1 cm^-3 in a box of size 7^3 pc.
+
+    ./turb-sphere.py --mass 1e3 --radius 5 --box_side 7 -v 0.2 -Ts 10 -n 0.1 --filename cube.m1e3.r5
+
+This will output two files:
+
+    cube.m1e3.r5        // Data array, ~200 MB
+    cube.m1e3.r5.dat    // Metadata w/ input parameters, sphere properties
+
+__Example:__ create a 128^3 cube of turbulent velocities.
+
+    ./velbox.py -f vel128 --clobber
+
+This will output the data array `vel128`, overwriting any existing file.
+
+__Example:__ report some information about the cube array file.
+
+    ./weighscale.py cube.m1e3.r5
+
+This reports to STDOUT something like:
+
+    from metadata: Msph = 1.000000e+03 Msun, Rsph = 5 pc, box = 7 pc
+    loading cube.m1e3.r5
+    done loading! elapsed: 0:02:43.201788
+    Rsph (pc) [  5.   5.  10.  50. 500.]
+    box halfwidth (pc) [  7.    7.   12.5  55.  600. ]
+    Total mass (Msun): [1.005e+03 1.005e+03 5.723e+03 4.875e+05 6.329e+08]
+    Ambient mass (Msun): [7.138e+00 7.138e+00 3.677e+01 2.596e+03 3.872e+06]
+    Total - ambient mass (Msun): [9.978e+02 9.978e+02 5.686e+03 4.849e+05 6.290e+08]
+    t_freefall (Myr): [2.865 2.865 3.394 4.109 3.608]
