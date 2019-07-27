@@ -34,7 +34,8 @@ Simulation init condition setup
 -------------------------------
 
 `turb-sphere.py` creates a turbulent sphere in a 128^3 array for use with the
-FLASH simulation `setup-cube-USM`.
+FLASH simulation `setup-cube-USM`.  Originally by Richard Wuensch (Astron.
+Inst., Czech Acad. Sci.), with updates by J. Wall (Drexel; Lockheed Martin).
 
 `turb-velbox.py` creates a turbulent box (just velocity data) in a 128^3 array
 for use with the FLASH simulation `Cube_AT` -- this is mostly for testing
