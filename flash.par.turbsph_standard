@@ -17,7 +17,7 @@ output_directory= "./data_multiples"
 sim_cubeFile        ="./M5V02B/cubeM5V02B" # "./cubefile"
 
 # ionised gas fraction
-sim_init_Hp = 1e-8
+sim_init_Hp = 1e-4
 sim_tdust   = 18.0 # ISM 6.0 # dust initial temperature
 
 sim_A_n                   =  1.2784 #-1.0
@@ -120,6 +120,15 @@ particleFileNumber          = 0 #610 #161 #70
 particleFileIntervalStep    = 0
 particleFileIntervalTime    = 3.1556926e9
 
+# Time step limiting for positive definiteness
+# New in FLASH4.5, see Sec 7.1.5.1 of Flash User's Guide
+dr_usePosdefComputeDt   = .true.
+dr_numPosdefVars        = 4
+dr_posdefVar_1          = "ener"
+dr_posdefVar_2          = "eint"
+dr_posdefVar_3          = "dens"
+dr_posdefVar_4          = "pres"
+
 # variables in plotfile
 plot_var_1 = "dens"
 plot_var_2 = "pres"
@@ -161,6 +170,13 @@ smallx = 1.0d-99
 smalle = 1.0d-99 #1.24015e9 # E per particle per gram at 1e-4 and T=10 K #1.0d-99
 smlrho = 1.67e-28 # floor at 1e-4 n_H #1.0d-99 #1e-30from smallp=1e-20 and Tmin=10 K 1.e-99
 
+# ----------------
+# split/ppm solver
+# ----------------
+#igodu   = 0
+#iplm    = 0
+#nriem   = 10
+
 ## -------------------------------------------------------------##
 ##  SWITCHES SPECIFIC TO THE UNSPLIT STAGGERED MESH MHD SOLVER  ##
 #	I. INTERPOLATION SCHEME:
@@ -199,7 +215,7 @@ entropy         = .false.     # Entropy fix for the Roe solver
 EOSforRiemann	= .false.     # Call EOS in Riemann flux calculations
 
 #	IV. STRONG SHOCK HANDELING SCHEME:
-shockDetect	= .true. #.false.     # Shock Detect for numerical stability
+shockDetect	= .false.     # Shock Detect for numerical stability
 ## -------------------------------------------------------------##
 
 ## ---------------------------------------------------------------##
@@ -420,6 +436,9 @@ dust_sputter_temp = 3e5 # See fig 25.4 in Draine's book
 # without radiation from point sources
 useRadTrans    = T
 rt_rayTrace    = T
+
+# NOTE: useRadTrans and useRadTransfer do distinct things
+useRadTransfer = T
 
 rt_maxHchange = 0.1
 
