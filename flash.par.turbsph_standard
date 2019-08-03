@@ -143,15 +143,6 @@ smallx = 1.0d-99
 smalle = 1.0d-99 #1.24015e9 # E per particle per gram at 1e-4 and T=10 K #1.0d-99
 smlrho = 1.67e-28 # floor at 1e-4 n_H #1.0d-99 #1e-30from smallp=1e-20 and Tmin=10 K 1.e-99
 
-# Stirring
-#useStir              = .false.
-#st_stirmax           =  6.108725e-19  # 6 pi / 10 pc
-#st_stirmin           =  2.0362417e-19 # 2 pi / 10 pc
-##st_energy            =  0 # 0.00010423936 # (50 km/s)^2/10Myr = 0.079221912 ; _/76 = 0.0010423936
-#st_energy            = 1.0423936e-06 # (10 km)^2 / 10 Myr / 76 (number of modes) / 10 (no idea why)
-#st_decay             =  3.0856776e13 # Tdecay
-#st_freq              = 1
-
 useParticles   = T
 
 # Sink particles
@@ -245,25 +236,6 @@ grv_bhEwaldNPer           = 32
 #grv_bhEwaldFieldNzV42     = 64
 #grv_bhEwaldNRefV42        = -1
 #grv_bhLinearInterpolOnlyV42 = .true.
-
-
-# Cooling - Larson EoS
-useCool        = .false. #.true.
-#co_lsRho1      = 5.5e-19
-#co_lsRho2      = 5.5e-15
-#co_lsRho3      = 2.0e-13
-#co_lsGamma1    = 0.75
-#co_lsGamma2    = 1.00
-#co_lsGamma3    = 1.40
-#co_lsGamma4    = 1.00
-#co_lsRhoRef    = 3.9e-18 
-#co_lsPresRef   = 1.3806488e-09
-
-# Radiation stuff
-
-#//////////////////////////
-# big physics switches
-#//////////////////////////
 
 
 # ===================================================
@@ -471,30 +443,3 @@ useSTS                  = .false.
 nstepTotalSTS           = 5
 nuSTS                   = 0.2
 ## ---------------------------------------------------------------##
-
-########################################################
-## Want to try thermal conduction? Maybe break physics?
-## There be monsters here!
-
-useConductivity = .false. #.true.
-useDiffuse      = .false. #.true.
-diff_useEleCond = .false. #.true.
-
-# Flux Limiter to use. 
-diff_eleFlMode = "fl_larsen"
-
-# Thermal conduction "saturation" FL coeff.
-diff_eleFlCoef = 5.0 # Draine pg 386 citing Cowie and McKee 77
-
-# 0.0 Explict, 0.5 Crank-Nicolson, 1.0 Implicit
-diff_thetaImplct = 1.0
-
-diff_eleXlBoundaryType = "outflow"
-diff_eleXrBoundaryType = "outflow"
-diff_eleYlBoundaryType = "outflow"
-diff_eleYrBoundaryType = "outflow"
-diff_eleZlBoundaryType = "outflow"
-diff_eleZrBoundaryType = "outflow"
-
-########################################################
-
