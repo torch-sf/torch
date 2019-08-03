@@ -42,6 +42,7 @@ zmax            =  1.6973e+20
 zmin            = -1.6973e+20
 
 
+# remember to update grav boundaries if you change this
 xl_boundary_type      = "outflow" #"diode"
 xr_boundary_type      = "outflow" #"diode"
 yl_boundary_type      = "outflow" #"diode"
@@ -160,15 +161,34 @@ sink_jeansCheck           = .true.
 sink_negativeEtotCheck    = .true. 
 sink_GasAccretionChecks   = .true.
 
+# =============================================
+# Gravity
+# Grid/GridSolvers/BHTree/Wunsch
+# physics/Gravity/GravityMain/Poisson/BHTree
+# physics/Gravity/GravityMain/Poisson/Multigrid
+# =============================================
 
+useGravity      = T #F
+updateGravity   = .true.
 
-# MG solver
+# remember to update grid boundary conditions if you change this
+grav_boundary_type      = "isolated"
+# different x,y,z BCs for BHTree only
+grav_boundary_type_x    = "isolated"
+grav_boundary_type_y    = "isolated"
+grav_boundary_type_z    = "isolated"
+
+# ----------------
+# Multigrid solver
+# ----------------
 mpole_lmax = 10
 mg_maxresidualnorm = 1e-6
 mg_printNorm       = .false.
 
-# tree solver
-updateGravity            = .true.
+# -------------
+# BHTree solver
+# -------------
+# grid solver
 gr_bhPhysMACTW           = .true. # These two should always be true,
 gr_bhPhysMACComm         = .true. # means gravity unit uses the gravity opening criterion
 gr_bhTreeLimAngle        = 0.5    # when Grav walks the tree. - JW
@@ -177,9 +197,6 @@ gr_bhTreeSafeBox         = 1.2
 # # after a refinement! - JW
 gr_bhUseUnifiedTW        = .false. ###### MAKE IT FALSE! .true.
 gr_bhTWMaxQueueSize      = 10000
-#gr_bhAcceptAccurateOld   = .false. #.true. # False is faster. This is ABU in Wunsch paper
-#gr_bhLoadBalancing       = .false. #.true. # Note neither of these is in my ver of BHTree
-gr_bhMaxBlkWeight        = 10.0
 
 # Here's the fastest from Wunsch's paper. 
 # gravity
@@ -188,20 +205,19 @@ grv_bhMAC               = "ApproxPartialErr" #"MaxPartialErr"
 grv_bhMPDegree          = 2
 grv_bhUseRelAccErr      = .false.
 grv_bhAccErr            = 1e-2
-
-grav_boundary_type      = "isolated"
-grav_boundary_type_x    = "isolated"
-grav_boundary_type_y    = "isolated"
-grav_boundary_type_z    = "isolated"
-
-grv_bhEwaldFieldNx        = 64
-grv_bhEwaldFieldNy        = 64
-grv_bhEwaldFieldNz        = 64
-grv_bhEwaldSeriesN        = 10
+# gravity, Ewald field
 grv_bhEwaldAlwaysGenerate = .true.
+grv_bhEwaldSeriesN        = 10
+# Wunsch's paper, Sec 2.2.5 "second approach"
 grv_bhEwaldFName          = "ewald_field"
-grv_bhEwaldNRef           = -1
-grv_bhLinearInterpolOnly  = .true.
+grv_bhEwaldNPer           = 32
+## Wunsch's paper, Sec 2.2.5 "first approach", toggled by setup variable
+#grv_bhEwaldFNameAccV42    = "ewald_field_V42"
+#grv_bhEwaldFieldNxV42     = 64
+#grv_bhEwaldFieldNyV42     = 64
+#grv_bhEwaldFieldNzV42     = 64
+#grv_bhEwaldNRefV42        = -1
+#grv_bhLinearInterpolOnlyV42 = .true.
 
 
 # Cooling - Larson EoS
@@ -223,7 +239,6 @@ useCool        = .false. #.true.
 #//////////////////////////
 
 useHydro       = T
-useGravity     = T #F
 # two switches, if ionisation state has to be calculated 
 # without radiation from point sources
 useRadTrans    = T
