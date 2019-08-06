@@ -2306,7 +2306,7 @@ def get_np_from_run_script():
         for i, line in enumerate(f):
             words = line.split()
             if (len(words) >= 3 and words[0] == '#SBATCH' and words[1] == '-n'):
-                np = words[2]
+                np = int(words[2])
                 break
     if (np == -1): print "WARNING! No proper number of procs found!"
     return np
@@ -2743,7 +2743,8 @@ default_hy_procs = 2
 num_grav_workers = 1
 
 try:
-    num_hy_workers= int(get_np_from_run_script()) - num_grav_workers - 4
+    num_hy_workers= get_np_from_run_script() - num_grav_workers - 4
+    # hydro + ph4 + 4 threads for amuse, smallN, kepler, seba
 except:
     print "WARNING: Setting num_hy_workers from script failed. Defaulting to {} procs.".format(default_hy_procs)
     num_hy_workers = default_hy_procs
