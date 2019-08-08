@@ -1,0 +1,12 @@
+# Config file for the SB module
+REQUIRES Particles/ParticlesMain/sb
+REQUIRES Particles/ParticlesMain/active/Sink/SNsink
+
+# additional stuff for
+PARAMETER useSNsink	BOOLEAN True
+PARAMETER accTracer	BOOLEAN False
+PARAMETER cloudMassPerStar REAL 3.9782E35
+PARAMETER outflowFrac REAL 0.95
+PARAMETER tracerAccFrac BOOLEAN False
+PARAMETER SFDelay REAL 1e12
+PARAMETER sinkBulkMotion BOOLEAN True

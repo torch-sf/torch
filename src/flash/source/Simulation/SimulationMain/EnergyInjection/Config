@@ -1,0 +1,67 @@
+REQUIRES Driver
+REQUIRES Grid
+REQUIRES Grid/GridParticles
+REQUIRES Multispecies
+#REQUIRES Particles/ParticlesMain/ray/MultiSourceSimple/Active
+#REQUIRES Particles/ParticlesMain/active/massive/
+# Sink Particles instead - JW
+#REQUIRES Particles/ParticlesMain/active/Sink
+#REQUESTS Particles/ParticlesMapping/NoMap
+# radiative transfer 
+#REQUIRES physics/RadTrans/RadTransMain/RayRad
+# heating and cooling
+#REQUIRES physics/sourceTerms/Heat/HeatMain/phenHeat
+REQUIRES physics/Eos/EosMain/Multigamma
+
+##VARIABLE eint TYPE: PER_MASS EOSMAPIN: EINT
+
+# average molecular weights, if negative, calculated from chemistry data
+PARAMETER sim_A_n      REAL    -1.0
+PARAMETER sim_A_i      REAL    -1.0
+
+PARAMETER sim_init_Hp  REAL    1.E-3
+
+PARAMETER sim_gamma_n  REAL    1.66667
+PARAMETER sim_gamma_i  REAL    1.66667
+
+REQUESTS Particles/ParticlesMapping/meshWeighting/CIC
+REQUESTS Particles/ParticlesMapping/meshWeighting/MapToMesh
+
+REQUESTS IO
+REQUESTS IO/IOParticles
+REQUESTS physics/Hydro
+REQUESTS PhysicalConstants
+
+# Initial mag field
+
+PARAMETER bx0 REAL 0.0d0
+PARAMETER by0 REAL 0.0d0
+PARAMETER bz0 REAL 0.0d0
+
+# source particle ### I do my own integrating round here, thanks! - JW
+#PARTICLETYPE active INITMETHOD custom  MAPMETHOD nomap ADVMETHOD custom
+
+PARAMETER ptmass        REAL    1.
+
+# num_particles  number of inital particles in this case sources
+PARAMETER num_sources   INTEGER 1
+
+PARAMETER particle_1_x  REAL    0.
+PARAMETER particle_1_y  REAL    0.
+PARAMETER particle_1_z  REAL    0.
+
+# effective temperature of the star
+PARAMETER sim_Eph REAL 1.0
+PARAMETER sim_Nph REAL 5e45
+
+PARAMETER amNumDens     REAL    0.
+PARAMETER amTemp        REAL    0.
+
+PARAMETER sim_tdust     REAL    18.0
+
+# For energy injection
+
+# Kinetic energy injection
+# Thermal energy injection
+PARTICLEPROP KINE REAL
+PARTICLEPROP THRE REAL

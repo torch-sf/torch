@@ -1,0 +1,17 @@
+#  Configuration file for the active particle subunit.  Active particles
+#  contribute to force fields and respond to them by accelerating.
+# [/source/Particles/timeIntegration/active]
+
+#needs HealPixModule for tracer particles 
+#REQUIRES Particles/ParticlesInitialization/WithHEALPix
+REQUIRES Particles/ParticlesMain/sb/RungeKuttaStatic
+REQUIRES Particles/ParticlesMapping/NoMap
+
+#number of SN in SB
+PARTICLEPROP NSN	REAL
+#explosion spacing
+PARTICLEPROP TSN	REAL
+#unique SB ID
+PARTICLEPROP SBID	REAL
+#creation time
+PARTICLEPROP TCRT	REAL

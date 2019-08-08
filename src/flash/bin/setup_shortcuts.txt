@@ -1,0 +1,264 @@
+# This file defines shortcuts for the setup script.
+# Each line starting with '#' is a comment line.
+
+# each line is of the form
+# shortcut:arg1:arg2:...:
+#
+# For example, the shortcut ug is defined as:
+# ug:--with-unit=Grid/GridMain/:Grid=UG:
+#
+# To use the ug shortcut ad +ug to the setup line ie: ./setup Sod -auto +ug
+# this is equivalent to typing in unit options with -unit=Grid/GridMain/UG 
+# -unit=IO/IOMain/hdf5/serial/UG (because the appropriate IO is included by default)
+# 
+# These shortcuts can refer to each other. 
+#
+# The name of this file is hard coded into the setup script. But dont worry.
+# You can define an environment variable SETUP_SHORTCUTS and set it to a
+# ":" delimited set of filenames. Then the setup script will process those
+# files (in that order) to define the shortcuts
+#
+
+# These options are always assumed to be given at beginning of command line,
+# most of these can be overridden later.
+default:--with-library=mpi:+io:+grid:-gridinterpolation=monotonic:FlashAvoidOrrery=True
+
+tryAltFiles:-unit=Simulation/SimulationMain/alternativeFiles:AllowAlternativeFiles=Yes:IncludeAlternativeFiles=Yes
+
+# io choices
+noio:--without-unit=physics/sourceTerms/EnergyDeposition/EnergyDepositionMain/Laser/LaserIO:--without-unit=IO:
+io:--with-unit=IO:
+serialIO:parallelIO=False:
+parallelIO:parallelIO=True:
+hdf5:IO=hdf5:
+pnetcdf:IO=pnetcdf:
+hdf5TypeIO:+io:+parallelIO:+hdf5:typeIO=True
+pnetTypeIO:+io:+parallelIO:+pnetcdf:typeIO=True
+
+# other optional but useful stuff
+nolog:-without-unit=monitors/Logfile:
+notimers:-without-unit=monitors/Timers
+
+# Choice of Grid
+grid:-unit=Grid:
+ug:+grid:Grid=UG:
+pm2:+grid:Grid=PM2:
+pm40:+grid:Grid=PM40:
+pm3:+pm40
+chombo_ug:-unit=Grid/GridMain/Chombo/UG:-index-reorder:Grid=Chombo:-maxblocks=1:-nofbs:-makefile=chombo:chomboCompatibleHydro=True
+chombo_amr:-unit=Grid/GridMain/Chombo/AMR:-index-reorder:Grid=Chombo:-nofbs:-makefile=chombo:chomboCompatibleHydro=True
+
+# pm4dev_clean indicates a version of Paramesh closer to the one
+# that can be downloaded from sourceforge.  pm4dev indicates a 
+# modified version of Paramesh that includes a more scalable way
+# of filling the surr_blks array.
+# Note that FlashAvoidOrrery=True may already be set by the
+# default entry established above.
+pm4dev_basic:+grid:Grid=PM4DEV
+pm4dev_clean:+pm4dev_basic:FlashAvoidOrrery=False
+pm4dev:+pm4dev_basic:FlashAvoidOrrery=True
+pm4dev_fixed:+pm4dev:ParameshLibraryMode=False
+
+# Choice of MHD solver
+# NOTE: The 8wave mhd solver only works with the native interpolation.
+8wave:--with-unit=physics/Hydro/HydroMain/split/MHD_8Wave:+grid:-gridinterpolation=native
+
+# NOTE: If pure hydro mode used with the USM solver, add +pureHydro in setup
+#default optimized codes
+usm:--with-unit=physics/Hydro/HydroMain/unsplit/MHD_StaggeredMesh:--without-unit=physics/Hydro/HydroMain/split/MHD_8Wave
+usmr:--with-unit=physics/Hydro/HydroMain/unsplit_rad/MHD_StaggeredMesh:--without-unit=physics/Hydro/HydroMain/split/MHD_8Wave
+pureHydro:physicsMode=hydro
+
+unsplitHydro:--with-unit=physics/Hydro/HydroMain/unsplit/Hydro_Unsplit:-without-unit=physics/Hydro/HydroMain/split
+uhd:--with-unit=physics/Hydro/HydroMain/unsplit/Hydro_Unsplit:-without-unit=physics/Hydro/HydroMain/split
+uhdr:--with-unit=physics/Hydro/HydroMain/unsplit_rad/Hydro_Unsplit:-without-unit=physics/Hydro/HydroMain/split
+#unoptimized codes
+
+splitHydro:--with-unit=physics/Hydro/HydroMain/split:-without-unit=physics/Hydro/HydroMain/unsplit:SplitDriver=True
+
+
+# Support specific Hydro methods, which require an increased number of guard cells.
+# Note that these may need to be combined with -nxb=... -nyb=... etc.,
+# where the specified blocksize is greater than or equal to 12 (==2*GUARDCELLS).
+supportPPMUpwind:SupportPpmUpwind=True
+
+cube64:-nxb=64:-nyb=64:-nzb=64:
+cube16:-nxb=16:-nyb=16:-nzb=16:
+cube32:-nxb=32:-nyb=32:-nzb=32:
+# include Particles and IO for uniform grid
+ptio:+ug:-with-unit=Particles:
+# The following shortcut is used for checking FLASH with rectangular block
+# sizes and non-fixed block size
+rnf:-3d:-nxb=8:-nyb=16:-nzb=32:-nofbs:+ug:
+nofbs:-nofbs:+ug:parallelIO=True:
+# PM40 with arrays allocated at runtime, compiled with LIBRARY defined.
+# Not officially supported. - KW
+dynamicmem-pm40:+pm40:ParameshLibraryMode=True
+dynamicmem-pm3:+dynamicmem-pm40
+
+
+###### Shortcuts to achieve setup script support for geometry-related
+###### choices.  These shortcut now translate directly to setup options
+###### newly created for curvilinear coordinate support in F3.0 alpha.
+curvilinear:-curvilinear
+cartesian:-geometry=cartesian
+spherical:-geometry=spherical
+polar:-geometry=polar
+cylindrical:-geometry=cylindrical
+
+
+# Some alternative combined shortcuts to request support for curvilinear coordinates.
+# These specify necessary directories
+# directly rather than relying on the -gridinterpolation=monotonic option. - KW
+curv-pm2:+pm2:-unit=Grid/GridMain/paramesh/Paramesh2:-with-unit=Grid/GridMain/paramesh/Paramesh2/monotonic:
+spherical-pm2:+pm2:+spherical
+
+# shortcut to get passive particles initialization with density
+ptdens:-without-unit=Particles/ParticlesInitialization/Lattice:-without-unit=Particles/ParticlesInitialization/WithDensity/CellMassBins:-unit=Particles/ParticlesMain:-unit=Particles/ParticlesInitialization/WithDensity:-particlemethods=TYPE=passive,INIT=With_Density
+
+# a shortcut for requesting NO_PERMANENT_GUARDCELLS mode
+npg:npg=True
+
+# shortcut to request multipole gravity
+mpole:-with-unit=physics/Gravity/GravityMain/Poisson/Multipole
+
+#shortcut to request longrange active particles
+longrange:-with-unit=Particles/ParticlesMain/active/longRange/gravity/ParticleMesh
+
+gravPfftNofbs:+ug:+nofbs:-with-unit=physics/Gravity/GravityMain/Poisson/Pfft:
+
+gravMgrid:+pm4dev:-with-unit=physics/Gravity/GravityMain/Poisson/Multigrid:
+
+#make sure that the new implementation of the multipole is included
+gravMpole:-with-unit=physics/Gravity/GravityMain/Poisson/Multipole:
+noDefaultMpole:-without-unit=Grid/GridSolvers/Multipole
+noMgrid:-without-unit=physics/Gravity/GravityMain/Poisson/Multigrid:
+newMpole:+noMgrid:+noDefaultMpole:+gravMpole:-with-unit=Grid/GridSolvers/Multipole_new
+
+mpi1:mpi1=True:-defines=FLASH_MPI1
+mpi2:mpi2=True:-defines=FLASH_MPI2
+mpi3:mpi3=True:-defines=FLASH_MPI3
+libnbc:--with-library=libNBC:useLibNBC=True:-defines=FLASH_LIBNBC:+mpi3
+
+# Threading shortcuts
+threadBL:threadWithinBlock=0:threadBlockList=True:-defines=FLASH_OPENMP=1
+threadwB:threadWithinBlock=True:threadBlockList=0:-defines=FLASH_OPENMP=1
+threadRT:threadRayTrace=True:-defines=FLASH_OPENMP=1
+threadPT:threadProtonTrace=True:-defines=FLASH_OPENMP=1
+
+# HEDP stuff
+3t:ThreeT=1:-defines=FLASH_3T
+# The Radiation-Flux-Limiter-Aware-Hydro variant of 3t
+3tr:+3t:RadFlahThreeT=True
+mtmmmt:-unit=physics/Eos/EosMain/multiTemp/Multitype:-unit=physics/Eos/EosMain/Tabulated:Mtmmmt=True
+# The following shortcut (+usm3t) is for 3T setups with Unsplit Staggered Mesh MHD.
+usm3t:+3t:-without-unit=physics/Hydro/HydroMain/split:+usm
+usm3tr:+3tr:-without-unit=physics/Hydro/HydroMain/split:+usmr
+uhd3t:+3t:+uhd
+uhd3tr:+3tr:+uhdr
+mgd:-unit=physics/materialProperties/Opacity:-unit=physics/RadTrans/RadTransMain/MGD
+#
+# Shortcut +laser                     -> ray tracing will use Kaiser Algorithm
+#                                        (Config default in LaserRayTracing directory)
+# Shortcut +laserCubicInterpolation   -> ray tracing will use Cubic Interpolation
+#                                        with Piecewise Parabolic Ray Tracing algorithm
+#                                        (Config default in Cubic Interpolation directory)
+# Shortcut +laserCubicInterpolationRK -> ray tracing will use Cubic Interpolation
+#                                        with Runge Kutta Ray Tracing algorithm
+# Shortcut +asyncLaser                -> For asynchronous communication in Laser ray tracing
+#                                        (experimental)
+#
+laser:-unit=physics/sourceTerms/EnergyDeposition/EnergyDepositionMain/Laser:-without-unit=Particles
+laserCubicInterpolation:+laser:-unit=physics/sourceTerms/EnergyDeposition/EnergyDepositionMain/Laser/LaserRayTrace/CubicInterpolation
+laserCubicInterpolationRK:+laser:-unit=physics/sourceTerms/EnergyDeposition/EnergyDepositionMain/Laser/LaserRayTrace/CubicInterpolation/RK
+asyncLaser:+laser:useAsyncLaser=True:--without-unit=physics/sourceTerms/EnergyDeposition/EnergyDepositionMain/Laser/LaserIO
+#
+# Shortcut +protonImaging             -> enables use of proton imaging diagnostics
+#          +protonEmission            -> enables use of proton emission diagnostics
+#
+protonImaging:-unit=diagnostics/ProtonImaging:-without-unit=Particles
+protonEmission:-unit=diagnostics/ProtonEmission:-without-unit=Particles
+#
+# Shortcut +pipeline                  -> enables use of pipeline(s) 
+#
+pipeline:-unit=multiprocessorTools/Pipeline
+
+#PIC stuff
+pic:+ug:-unit=Grid/GridParticles/GridParticlesMove:-without-unit=Grid/GridParticles/GridParticlesMove/UG:-without-unit=Grid/GridParticles/GridParticlesMove/UG/Directional
+
+#Memory debugging.  Only one option can be used at a time.
+mcheck:use_mcheck=True:--defines=MCHECK:--with-unit=source/monitors/Debugger/DebuggerMain/mcheck
+dmalloc:use_dmalloc=True:--defines=DMALLOC:--with-unit=source/monitors/Debugger/DebuggerMain/dmalloc
+ddt:use_ddt=True:--defines=DDT:--with-unit=source/monitors/Debugger/DebuggerMain/dmalloc
+
+
+###########################################
+# Shortcuts for AMUSE coupling modules
+###########################################
+
+
+# Use AMUSE Bridge coupling with split solver.
+amuseDriver:--with-unit=Driver/DriverMain/Split/Couple_AMUSE
+
+# This adds functions for AMUSE to calculate the sink on gas (Particles_sinkKickGas) and gas on sink gravity, as well as
+# turning off Flash integration of the sink motions and allowing AMUSE to remove mass from the sink particles.
+amuseSinks:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_Isothermal_Fix
+
+# Accretion which varies smoothly over the sink radius for ~50% SFE.
+amuseSinksRadAcc:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_radiusAccr
+
+# Make non-accreting star particles that can still use other sink functionality.
+amuseStars:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_noSinkCreation
+amuseSinksAndStars:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_Sinks_and_Stars
+
+#:--with-unit=Grid/GridSolvers/BHTree4.3/Wunsch:--with-unit=physics/Gravity/GravityMain/Poisson/BHTree4.3/Couple_AMUSE_Sinks_and_Stars:--with-unit=Grid/localAPI/BHTree4.3:--without-unit=physics/Gravity/#GravityMain/Poisson/Multigrid:--without-unit=physics/Gravity/GravityMain/Poisson/BHTree:--without-unit=Grid/GridSolvers/BHTree/Wunsch:useFortran2008=1
+
+amuseUnsplit:--with-unit=Driver/DriverMain/Unsplit/Couple_AMUSE
+
+amuseBouchut:--with-unit=Driver/DriverMain/Split/Couple_AMUSE:--with-unit=physics/Hydro/HydroMain/split/Bouchut/Bouchut3
+
+# With Hydro_computeDt called independently of the actual hydro solve step by Driver_computeDt.
+amuseBouchutDt:--with-unit=Driver/DriverMain/Split/Couple_AMUSE:--with-unit=physics/Hydro/HydroMain/split/Bouchut/Bouchut3/Hy_dt
+
+# AMUSE with the unsplit solver.
+amuseUHD:+amuseUnsplit:+uhd
+amuseUSM:+amuseUnsplit:+usm
+
+# Use the rectangle or spherical zoom routines
+zoom:--with-unit=Grid/GridMain/paramesh/Zoom
+
+# Use the gravity bridge with particles handled by AMUSE collisional N-body codes. 
+amuseMG::--with-unit=physics/Gravity/GravityMain/Poisson/Multigrid/Couple_AMUSE:--without-unit=physics/Gravity/GravityMain/Poisson/BHTree
+amuseHybrid::--with-unit=physics/Gravity/GravityMain/Poisson/Multigrid/Couple_AMUSE:--with-unit=Grid/GridSolvers/Multigrid/PfftTopLevelSolve:--without-unit=physics/Gravity/GravityMain/Poisson/BHTree
+# Original BHTree with AMUSE coupling.
+amuseBHTree:--with-unit=physics/Gravity/GravityMain/Poisson/BHTree/Couple_AMUSE:--with-unit=Grid/GridSolvers/BHTree:--without-unit=physics/Gravity/GravityMain/Poisson/Multigrid
+
+# Shortcut for ray tracing with sink particles
+raySink::--with-unit=Particles/ParticlesMain/ray/MultiSourceSimple/Active/Sink:--with-unit=physics/RadTrans/RadTransMain/RayRad/SinksRad
+#:--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
+
+rayPE::--with-unit=Particles/ParticlesMain/ray_pe/MultiSourceSimple/Active/Sink:--with-unit=physics/RadTrans/RadTransMain/RayRad/SinksRad
+#:--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
+
+# Dust and Molecular cooling
+dustcool::--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat/molecules+dust
+HandCnew::--with-unit=physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat/mol_and_dust/solver
+
+# Shortcut for the particles energy injection method
+enerInj::--with-unit=Particles/ParticlesMain/energyInjection
+
+# Winds for AMUSE
+amuseWinds:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind
+
+checkGridVar:--with-unit=Grid/Grid_checkVar
+
+# in development: grid injection unit to refactor SN, enerInj, and possibly
+# stellar wind code
+gridInj::--with-unit=physics/sourceTerms/GridInject
+
+###########################################
+# Shortcuts for gravity, no AMUSE coupling
+###########################################
+
+BHTree:--with-unit=physics/Gravity/GravityMain/Poisson/BHTree:useFortran2008=1:--without-unit=physics/Gravity/GravityMain/Poisson/Multigrid:--without-unit=Grid/GridSolvers/Multigrid/PfftTopLevelSolve
+MGHybrid:--with-unit=physics/Gravity/GravityMain/Poisson/Multigrid:--with-unit=Grid/GridSolvers/Multigrid/PfftTopLevelSolve:--without-unit=physics/Gravity/GravityMain/Poisson/BHTree

@@ -1,0 +1,4 @@
+## Ensure that this unit defines its own use, so
+## that other units can know if its here.
+
+PPDEFINE ENERGY_INJ

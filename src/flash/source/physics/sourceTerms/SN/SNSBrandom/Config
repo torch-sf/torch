@@ -1,0 +1,97 @@
+# Config file for the SNSBrandom module
+REQUIRES Particles/ParticlesMain/sb
+#REQUIRES physics/sourceTerms/Heat/phenHeat
+
+# Overall unit config
+
+D callRNG       call RNG at restart?
+D useSNrandom   Toggle SN explosions alone (separate from SB).
+D useSB         Toggle SB explosions alone (separate from SB).
+D useSBrandom   Toggle SB explosions alone - almost the same as useSB.
+D &             useSBrandom=F will still do some MPI stuff on SB buffers
+
+PARAMETER callRNG       INTEGER     -1
+PARAMETER useSNrandom   BOOLEAN     TRUE
+PARAMETER useSB         BOOLEAN     TRUE
+PARAMETER useSBrandom   BOOLEAN     TRUE
+
+# SB config
+
+D hstarb    Scale height of SB distribution (cm, 90pc); requires stratifySN=T
+D tsb       Avg time between SB (s; 901 kyr for 1 kpc^2 and 1.11 Myr^-1 kpc^-2)
+D &         Total SN II rate 27.4 Myr^-1 kpc^-2, 60% clustered 40% field.
+D &         SN II association rate: 16.4 / (14.79 SN/assocation) / (Myr kpc^2)
+D &         Update this value if your simulation domain size changes
+
+PARAMETER hstarb    REAL    2.7771e20
+PARAMETER tsb       REAL    2.84589595E13
+
+D nsnmax    maximum number of SN per SB
+D nsnmin    minimum number of SN per SB
+D sblife    SB lifetime (s; 40 Myr)
+D sbMaxV    SB max velocity (cm/s), OB association speed wrt ISM, from gas
+D sbTrackV  give SB velocity of underlying grid zone
+
+PARAMETER nsnmax        INTEGER     40
+PARAMETER nsnmin        INTEGER     7
+PARAMETER sblife        REAL        1.26227704e15
+PARAMETER sbMaxV        REAL        2e6
+PARAMETER sbTrackV      BOOLEAN     TRUE
+
+D SBmax     Maximum number of SB, used to allocate arrays
+D &         Exceeding this number means persistence not guaranteed
+PARAMETER SBmax         INTEGER     1000
+
+# SN config
+
+D erstar1       Scale radius of Type Ia SN distr (cm, 90pc); requires radialSN=T
+D erstar2       Scale radius of Type II SN distr (cm, 90pc); requires radialSN=T
+# erstar1,erstar2 = 90pc is arbitrary.  Default can be replaced w/ something
+# more physically motivated. - AT, 2019 May 02
+D hstar1        Scale height of Type Ia SN distr (cm, 325pc); requires stratifySN=T
+D hstar2        Scale height of Type II SN distr (cm, 90pc); requires stratifySN=T
+D radialSN      distribute SN in radial (x^2+y^2) exponential profile or uniformly
+D stratifySN    distribute SN in z-exponential profile or uniformly
+D tsn1          Avg time between Type Ia SNe (s; 152 kyr for 1 kpc^2 and 6.58 Myr^-1 kpc^-2)
+D &             Update this value if your simulation domain size changes
+D tsn2          Avg time between Type II SNe (s; 91 kyr for 1 kpc^2 and 10.96 Myr^-1 kpc^-2)
+D &             Total SN II rate 27.4 Myr^-1 kpc^-2, 60% clustered 40% field.
+D &             Update this value if your simulation domain size changes
+
+PARAMETER erstar1       REAL        2.7771e20
+PARAMETER erstar2       REAL        2.7771e20
+PARAMETER hstar1        REAL        1.0028e21
+PARAMETER hstar2        REAL        2.7771e20
+PARAMETER radialSN      BOOLEAN     FALSE
+PARAMETER stratifySN    BOOLEAN     FALSE
+PARAMETER tsn1          REAL        4.79588541E12
+PARAMETER tsn2          REAL        2.86881145E12
+
+D exp_energy    SN explosion energy (erg)
+D Mejc          ejecta mass per supernova (g, 60 Msun)
+D nms           number of mass shells, about 1 pc per shell
+D nsndt         allowed number of SN explosions per timestep
+D r_exp_max     SN maximum radius (cm, 50 pc)
+D r_init        SN initial radius (cm, 2pc)
+D sn_max_temp   maximum temperature if not enough mass is found, does nothing atm
+D SNmapToGrid   always explode in center of zone?
+D SNminstep     small dt limiter (s) to prevent overcooling
+
+PARAMETER exp_energy    REAL        1.0003E51
+PARAMETER Mejc          REAL        1.1934E35
+PARAMETER nms           INTEGER     50
+PARAMETER nsndt         INTEGER     20
+PARAMETER r_exp_max     REAL        1.54283879E20
+PARAMETER r_init        REAL        6.1714E18
+PARAMETER sn_max_temp   REAL        1e9
+PARAMETER SNmapToGrid   BOOLEAN     FALSE
+PARAMETER SNminstep     REAL        3.1556926E10
+
+# SN tracer config
+
+PARAMETER useSNTracer       BOOLEAN     FALSE
+PARAMETER MCTracerShellDis  REAL        1.0
+PARAMETER MCTracerMaxRad    REAL        3.08567758e19
+PARAMETER TracerPerSN       INTEGER     100
+# if false MC tracer are used instead
+PARAMETER veltracer         BOOLEAN     FALSE

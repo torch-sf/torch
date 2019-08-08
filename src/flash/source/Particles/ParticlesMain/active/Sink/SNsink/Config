@@ -1,0 +1,15 @@
+REQUIRES Particles/ParticlesMain/sb
+#REQUIRES physics/sourceTerms/SN/SNSBrandom
+REQUIRES physics/sourceTerms/SN/SNSBrandom/SNsink
+
+#D useSNsink switch that turns ON and OFF the implementation of sinks as SN sources.
+PARAMETER useSNsink		BOOLEAN FALSE
+
+#number of SN in SB
+#PARTICLEPROP NSN	REAL
+#explosion spacing
+#PARTICLEPROP TSN	REAL
+#unique SB ID
+#PARTICLEPROP SBID	REAL
+#creation time
+#PARTICLEPROP TCRT	REAL

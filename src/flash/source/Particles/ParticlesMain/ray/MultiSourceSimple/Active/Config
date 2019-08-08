@@ -1,0 +1,9 @@
+PPDEFINE NORECONSTRUCT
+PPDEFINE ACTIVE
+
+# define additional source particle properties
+PARTICLEPROP Nion REAL
+PARTICLEPROP sigh REAL
+PARTICLEPROP Eion REAL
+
+

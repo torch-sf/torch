@@ -1,0 +1,5 @@
+PARAMETER MassRatio			REAL 0.5
+PARAMETER shellThicky		REAL 3.08567758e18
+# MC should be same value as r_max-shellThicky to only inject in interior of discontinuity
+#PARAMETER selfConsistent REAL 3.08567758e18
+

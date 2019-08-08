@@ -1,0 +1,26 @@
+REQUIRES Particles/ParticlesMain/sb
+REQUIRES physics/sourceTerms/SN/SNSBrandom
+REQUIRES physics/sourceTerms/SN/SNSBrandom/Clustersink
+
+#D useSNsink switch that turns ON and OFF the implementation of sinks as SN sources.
+PARAMETER useSNsink		BOOLEAN FALSE
+
+# Random seed used the stochastically sample the cluster
+PARTICLEPROP CLUSTER_SEED	REAL
+
+# mass in stars when the cluster is created
+PARTICLEPROP CLUSTER_MASS	REAL
+
+# Cluster creation time.
+PARTICLEPROP CLUSTER_CRT    REAL
+
+# Number of stellar populations in this cluster
+PARTICLEPROP CLUSTER_POP	REAL 
+
+
+#############################################################
+############## Star Cluster sub-grid model ##################
+
+# Initializing the Cluster data
+PARAMETER SF_delay	REAL	1.5e13
+PARAMETER SFE		REAL	0.1

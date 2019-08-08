@@ -1,0 +1,197 @@
+#//////////////////////////
+# big physics switches
+#//////////////////////////
+
+useHydro       = T
+useGravity     = F
+# two switches, if ionisation state has to be calculated 
+# without radiation from point sources
+useRadTrans    = T
+rt_rayTrace    = T
+useParticles   = T
+useHeat        = F
+
+#//////////////////////////
+# source definition
+#//////////////////////////
+
+# num_particles  number of inital particles in this case sources
+num_sources = 1
+
+particle_1_x = 0.0
+particle_1_y = 0.0
+particle_1_z = 0.0
+
+# in eV
+sim_Eph = 2.0
+
+# number of photons, for 10 cc the Stromgrenradius is 11 pc 
+# for 1000 cc the Stromgrenradius is 0.5 pc 
+sim_Nph = 5e48
+
+#//////////////////////////
+# gas properties
+#//////////////////////////
+
+# ambient medium, Hydrogen number density
+# multiplied with abar to give actual density in g/cc
+amNumDens = 1000
+
+# Kelvin
+amTemp 	  = 1e2
+
+he_abundM = 0.0
+he_metal  = 4.
+
+gamma = 1.66666666666666667
+
+# ionised gas fraction
+sim_init_Hp = 0.0
+
+# set from chemistry
+sim_A_n                   = -1.0 # 1.2784
+sim_A_i                   = -1.0 # 0.6698
+
+#//////////////////////////
+# radiative transfer options
+#//////////////////////////
+
+rt_maxHchange = 0.1
+
+#//////////////////////////
+# heating and cooling
+#//////////////////////////
+
+# multiplier in front of cooling time, smaller means earlier switch to explicit dt > tcool
+# if subcyclecool is true, otherwise it means earlier switch to implicit dt < tcool
+subfactor       = 0.01 #0.1d0
+
+# photoelectric heating only [ergs]
+# this is for G_0 = 1.7, epsilon = 0.05 x 1e-24 ergs (from Hill et al 2012)
+statheat = 0.0 #8.5E-26
+peheat   = 0.0 #8.5E-26
+
+# heating and cooling thresholds
+# at which temperatures to apply heating
+theatmin        = 0.E0
+theatmax        = 2.0E4
+
+# at which temperatures to apply cooling
+tradmin         = 0.0
+tradmax         = 1.E15 # so always
+
+# absolut thresholds never goes below or above these temperatures
+absTmin = 10.
+absTmax = 1e9
+
+# electron number densities at which to apply cooling
+dradmin   = 0.0 #1e-8
+dradmax   = 1e6
+
+# scale height for uv heating [cm] default is 300 pc
+h_uv      = 9.25703274e20
+
+# heat in exponential profile or uniformely
+stratifyHeat = .false.
+
+
+#//////////////////////////
+# grid properties
+#//////////////////////////
+
+geometry    = "cartesian"
+
+lrefine_min = 5
+lrefine_max = 5
+
+#	maximum change of refinements per step
+nrefs       = 2
+
+xmin = -4e19
+xmax =  4e19
+ymin = -4e19
+ymax =  4e19
+zmin = -4e19
+zmax =  4e19
+
+# multiples of block for elongated box
+nblockX = 1
+nblockY = 1
+nblockZ = 1
+
+refine_var_1 = "dens"
+refine_var_2 = "temp"
+
+yl_boundary_type  = "outflow"
+yr_boundary_type  = "outflow"
+zl_boundary_type  = "outflow"
+zr_boundary_type  = "outflow"
+xl_boundary_type  = "outflow"
+xr_boundary_type  = "outflow"
+
+#//////////////////////////
+# output
+#//////////////////////////
+
+restart         = .false.
+
+checkPointFileNumber = 0
+plotFileNumber       = 0
+particleFileNumber   = 0
+
+checkpointFileIntervalTime  = 1e13
+plotfileintervaltime        = 1e12
+particlefileintervaltime   = 1e100
+
+useCollectiveHDF5  = .false.
+
+plot_var_1 = "dens"
+plot_var_2 = "pres"
+plot_var_3 = "temp"
+plot_var_4 = "velx"
+plot_var_5 = "vely"
+plot_var_6 = "velz"
+plot_var_7 = "ihp"
+plot_var_8 = "iha"
+
+dtinit = 1.0e8
+dtmax  = 1.0e11
+dtmin  = 1.0e6
+tplot  = 1.0e100
+tmax   = 5.0e13
+nend   = 1000
+
+
+#//////////////////////////
+# hydro solver options
+#//////////////////////////
+
+cfl		= 0.8
+
+convertToConsvdInMeshInterp = T
+killdivb	= T
+UnitSystem	= "CGS"
+
+# Small values
+smallp          = 1.0e-40
+smlrho          = 1.0e-40
+smallu          = 1.0e-40
+smallt          = 1.0e-40
+smalle          = 1.0e-40
+smallx          = 1.0e-40
+
+#//////////////////////////
+# raytracing options
+#//////////////////////////
+
+# maximum number of total particles, not just rays
+pt_maxPerProc   = 10
+
+ph_sampling     = 4.0
+ph_initHPlevel  = 4
+ph_inBlockSplit = T
+ph_rotRays     	= T
+ph_maxNRays     = 300000
+ph_raysToBundle = 5
+ph_CommCheckInterval = 20
+

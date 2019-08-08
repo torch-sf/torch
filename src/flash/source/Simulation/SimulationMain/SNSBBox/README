@@ -1,0 +1,18 @@
+README
+
+This is a Torch test problem of a simple uniform box.
+It descends from:
+
+    flash4.2.2-rad/source/Simulation/SimulationMain/
+        DoubleSN
+        SNSBBox
+
+A tampered SN.F90 is provided for default SN/SNSBrandom unit.
+
+    SN_SNSBrandom_SNejecta.F90
+
+to be used with unit:
+
+    SN/SNSBrandom/SNejecta/
+
+Otherwise, doubleSN setup is done via flash.par config to SN/Simple.

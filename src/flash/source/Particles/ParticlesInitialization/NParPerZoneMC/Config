@@ -1,0 +1,5 @@
+# Define a preprocessor symbol so code can check whether this implementation is compiled in.
+PPDEFINE PART_INITMETHOD_NPARPERZONEMC
+D Creates tracer particle cube with pt_parPerSide particles per side per zone in a block.
+
+PARAMETER pt_parPerSide INTEGER 1

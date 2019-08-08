@@ -1,0 +1,70 @@
+README
+2019 March 28, Aaron Tran
+
+Quick guide to provenance of different files.  Often, people modify FLASH
+source code to get the job done.  My goal is to take those pieces out and place
+in Simulation problem, to better elucidate code dependencies and structure, and
+to ward off possible conflicts / unexpected source code overrides (e.g.,
+conflicts between two units' different prescriptions of zoom-in refinement).
+
+~------------------------------------------------------------------------------
+
+Config
+flash.par
+Makefile
+README
+Simulation_init.F90
+Simulation_initBlock.F90
+Simulation_initSpecies.F90
+Simulation_data.F90
+
+    Standard problem setup
+
+Grid_markRefineDerefine.F90
+
+    Modify paramesh code to refine on (1) nested z layers, (2) active
+    (non-sink) particles that generate stellar winds and radiation.
+    Combines three files:
+        flash4.5-rad/source/Grid/GridMain/paramesh/Grid_markRefineDerefine.F90
+        flash4.5-rad/source/Particles/ParticlesMain/active/Sink/Couple_AMUSE/Grid_markRefineDerefine.F90
+        flash4.2.2-rad/source/Simulation/SimulationMain/StratBox_TracerParticles/Grid_markRefineDerefine.F90
+    2019 March 28, AT
+
+Grid_markRefineSpecialized.F90
+gr_markInZ.F90
+constants.h
+
+    Modify paramesh code to refine on nested z layers.
+    Refinement edits taken from:
+        flash4.2.2-rad/source/Grid/GridMain/paramesh/Grid_markRefineSpecialized.F90
+        flash4.2.2-rad/source/Grid/GridMain/paramesh/gr_markInZ.F90
+        flash4.2.2-rad/source/Simulation/constants.h
+    and manually verified up-to-date with FLASH4.5.
+    2019 March 28, AT
+    
+
+gr_sanitizeDataAfterInterp.F90
+
+    When cells go bad, report refinement level of the offending block.
+    Taken from:
+        flash4.2.2-rad/source/Grid/GridMain/paramesh/paramesh4/gr_sanitizeDataAfterInterp.F90
+    and manually verified up-to-date with FLASH4.5.
+    2019 March 28, AT
+
+Gravity_accelOneRow.F90.mg
+Particles_sinkAccelGasOnSinksAndSinksOnGas.F90
+Simulation_addStaticAcceleration.F90
+Simulation_interface.F90
+
+    STATIC GRAVITY IMPLEMENTATION.
+
+    Taken from:
+        flash4.5-rad/source/physics/Gravity/GravityMain/Poisson/Gravity_accelOneRow.F90
+        flash4.5-rad/source/Particles/ParticlesMain/active/Sink/Particles_sinkAccelGasOnSinksAndSinksOnGas.F90
+        flash4.5-rad/source/Simulation/Simulation_interface.F90
+        flash4.2.2-rad/source/Simulation/SimulationMain/StratBox_TracerParticles/grv_addStaticAcceleration.F90
+
+    Verified that first two are same between FLASH4.5 and flash4.5-rad.
+
+    WARNING: CURRENTLY ONLY COMPATIBLE WITH MULTIGRID.
+    FOR BHTREE, NEED A DIFFERENT VERSION OF GRAVITY_ACCELONEROW.F90

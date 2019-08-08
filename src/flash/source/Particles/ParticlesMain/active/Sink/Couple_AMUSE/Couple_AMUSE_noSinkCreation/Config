@@ -1,0 +1,39 @@
+D Note that here we don't allow Flash to create sinks
+D or for sinks to accrete. We will create "sinks" which
+D will represent MS stars without accretion, but it still
+D allows us to use all the bridging stuff I wrote for
+D sink particles already. - JW
+
+PPDEFINE AMUSE_STARS
+
+REQUIRES Particles/ParticlesMapping/Quadratic
+REQUIRES flashUtilities/sorting/quicksort
+
+D Here's a variable that holds the amount of time
+D passed since a star was formed in this cell.
+
+VARIABLE LSFT  TYPE: GENERIC
+
+D low_dens_thres  minimum density for gas to be removed 
+D                 (Default 10^4 n_H / cc)
+D high_dens_thres maximum density which triggers the 
+D                 removal of gas (Default 10^6 n_H /cc)
+D min_mass        minimum mass star which can be returned 
+D                 from the IMF sampling routine in MSun 
+D                 (Default 1.0 MSun)
+
+
+PARAMETER low_dens_thres        REAL   1.66e-20
+PARAMETER high_dens_thres       REAL   1.66e-18
+PARAMETER min_mass              REAL   1.0
+
+D gaussian_sigma The spread in the gaussian profile
+D                we use to smooth the gas density taken from cells
+D                around where the new star particle is made
+D                (using the sink particle functions).
+
+D sfe            Local star formation efficiency (usually around 20-30%,
+D                see Krumholz, Dekel and McKee 2011)
+
+PARAMETER gaussian_sigma        REAL   1.3367
+PARAMETER sfe                   REAL   0.3

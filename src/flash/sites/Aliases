@@ -1,0 +1,65 @@
+# for sites with hostnames other than what you expect
+# syntax:
+# <expected sitename> <regular expression matching actual hostname of login machine>
+
+datastar.sdsc.edu ds001
+datastar.sdsc.edu ds002
+alc.llnl.gov alc\d+
+hera.llnl.gov hera\d+
+mcr.llnl.gov mcr\d+
+frost.llnl.gov frost\d\d\d\.pacific\.llnl\.gov
+blue.llnl.gov blue\d\d\d\.pacific\.llnl\.gov
+chiba.mcs.anl.gov cclogin\d\.mcs\.anl\.gov 
+platinum.ncsa.uiuc.edu hn\d\d
+titan.ncsa.uiuc.edu user\d\d
+tungsten.ncsa.uiuc.edu tun\w
+copper.ncsa.uiuc.edu Cu\d\d.ncsa.uiuc.edu
+modi4.ncsa.uiuc.edu modi4
+bluehorizon.npaci.edu  tf\d\d\di\.sdsc\.edu
+qsc.lanl.gov  qsc[0-9]+
+flashviz.uchicago.edu flashviz(\.asci)?\.uchicago\.edu
+sphere.uchicago.edu sphere(\.asci)?\.uchicago\.edu
+cube.uchicago.edu cube(\.asci)?\.uchicago\.edu
+sipapu.astro.uiuc.edu sipapu
+spa.rzg.mpg.de psi\d\d\.rzg\.mpg\.de
+lemieux.psc.edu iam\d\d\d
+monsun monsun\.icm\.edu\.pl
+tajfun\.icm\.edu\.pl tajfun
+amr.uchicago.edu amr(\.asci)?\.uchicago\.edu
+ellipse.uchicago.edu ellipse[^\d]
+ellipse01.uchicago.edu ellipse01
+ellipse02.uchicago.edu ellipse02
+ellipse03.uchicago.edu ellipse03
+ellipse04.uchicago.edu ellipse04
+ellipse05.uchicago.edu ellipse05
+ellipse06.uchicago.edu ellipse06
+ellipse07.uchicago.edu ellipse07
+ellipse08.uchicago.edu ellipse08
+purple.llnl.gov up\d\d\d.llnl.gov
+zeus.llnl.gov zeus\d\d\d.llnl.gov
+coyote.lanl.gov cy-c\d.lanl.gov
+intrepid.alcf.anl.gov login\d\.intrepid\.alcf\.anl\.gov
+intrepid.alcf.anl.gov login\d\.challenger\.alcf\.anl\.gov
+bgl.sdsc.edu bg-login1
+ranger.tacc.utexas.edu login\d\.ranger\.tacc\.utexas\.edu
+saguaro.fulton.asu.edu saguaro\d\.local
+fenp.bluegene.bnl.gov fenp
+fen.bluegene.bnl.gov fen
+fusion.lcrc.anl.gov flogin\d
+mira.alcf.anl.gov miralac\d\.fst\.alcf\.anl\.gov
+mira.alcf.anl.gov cetuslac\d\.fst\.alcf\.anl\.gov
+edison.nersc.gov edison\d+
+hopper.nersc.gov hopper\d+
+babbage.nersc.gov bint\d+
+nagini.uchicago.edu hedwig
+macbro.uchicago.edu macbro
+asterix.asci.uchicago.edu asterix
+midway2.rcc.uchicago.edu midway2-login\d\.rcc\.local
+
+habanero.rcs.columbia.edu (watson|holmes)\.cm\.cluster
+habanero.rcs.columbia.edu node\d+\.cm\.cluster
+terremoto.rcs.columbia.edu (shake|bake)\.cm\.cluster
+terremoto.rcs.columbia.edu t\d+\.cm\.cluster
+
+cartesius.surfsara.nl int1.bullx
+cartesius.surfsara.nl int2.bullx

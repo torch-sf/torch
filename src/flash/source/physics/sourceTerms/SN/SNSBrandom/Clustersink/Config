@@ -1,0 +1,3 @@
+# Config file for the sub-grid Cluster module
+REQUIRES Particles/ParticlesMain/sb
+REQUIRES Particles/ParticlesMain/active/Sink/Clustersink

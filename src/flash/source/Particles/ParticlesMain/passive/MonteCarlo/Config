@@ -1,0 +1,12 @@
+# for gr_findNegh.F90
+REQUIRES Grid/GridParticles/GridParticlesMapToMesh/Paramesh/
+#needed to compile if only passive particles are declared 
+PARAMETER smearLen INTEGER 1
+
+#refinement of block the particle is in
+PARTICLEPROP LREF	REAL
+
+#fluxes from Hydro Solver
+VARIABLE xmflx	# mass flux in x direction
+VARIABLE ymflx  # mass flux in y direction
+VARIABLE zmflx  # mass flux in z direction

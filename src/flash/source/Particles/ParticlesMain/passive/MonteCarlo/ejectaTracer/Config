@@ -1,0 +1,4 @@
+PARAMETER ej_TempUnfreeze	 REAL 1e6
+PARAMETER ej_TimeUnfreeze	 REAL 1.57785e13
+PARAMETER ej_shockUnfreeze 	 BOOLEAN False
+VARIABLE shk

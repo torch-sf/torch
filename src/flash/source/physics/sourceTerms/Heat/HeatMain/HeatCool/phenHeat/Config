@@ -1,0 +1,83 @@
+# Config file for the SN module
+
+D stratifySN   runtime control for turning the stratification of SN on or off,
+D if off SN are distributed evenly throughout the domain
+D also turns of uv stratification
+PARAMETER stratifyHeat    BOOLEAN FALSE
+PARAMETER useHeat	  BOOLEAN TRUE
+PARAMETER coolOff	  BOOLEAN FALSE
+PARAMETER coolTime	  BOOLEAN FALSE
+
+#should not be here
+D   hgas            Scale height of the gas distribution
+
+#actual used stuff 
+D   theatmax        maximum temperature above which there is no stationary heating
+D   h_uv      	    UV field stratification
+
+D Stuff for CR ionization and heating of gas. - JW
+D Switch for CRs.
+PARAMETER use_cr_heating BOOLEAN FALSE
+D crIonRate		the background CR ionization rate
+D Note that the CR heating rate is calculated from this assuming 20 eV
+D CRs. The default is 6.8x10^-16 from M02 as listed in Padovani et al 2009 
+D for protons (see table 4.) - JW
+PARAMETER crIonRate	REAL 6.8E-16
+D crIonNH
+D crIonExp		These two values are by default 1 such that you
+D &			get a uniform CR heating and ionization from the
+D &			background, but you can set them to use eqn 27 from
+D &			Padovani et al 2009 using for example M02 from table 4
+D &			and setting NH = 1e20.
+PARAMETER crIonNH       REAL 1.0E0
+PARAMETER crIonExp      REAL 1.0E0
+D crIonEnergy		Average CR ionization energy in eV(default is 20 eV)
+PARAMETER crIonEnergy	REAL 20.0E0
+D Background UV field strength in Habing units.
+PARAMETER Gzero         REAL 1.69
+
+D dust_sputter_temp At temperatures above this value dust
+D &                 heating AND cooling will be switched off.
+D &                 Default value 3e5 due to Fig. 25.4 of Draine's book.
+D &                 At temperatures theatmax < T < dust_sputter_temp,
+D &                 dust heating will turn off, but dust cooling will continue
+D &                 to operate.
+
+PARAMETER dust_sputter_temp REAL 3.0E5
+
+D he_pe_recipe   Select recipe for photoelectric heating efficiency.
+D &              WD01 = Weingartner/Draine 2001.
+D &              BT94 = Bakes/Tielens 1994 as implemented in Wolfire+ 2003.
+D &              NOGF = no G-factor, simple knob following Joung/M-MML 2006
+D &              and Hill+ (incl JCIM, M-MML) 2018.
+PARAMETER he_pe_recipe STRING "WD01" ["WD01", "BT94", "NOGF"]
+
+D he_pe_norm    Total photoelectric heating rate (erg/s) for both gas and dust.
+D &             Default from Wolfire+ 2003, slight edit of Bakes/Tielens 1994.
+PARAMETER he_pe_norm REAL   1.3E-24
+
+PARAMETER theatmax	REAL 1.0E7
+PARAMETER theatmin	REAL 1.0E0
+
+PARAMETER subfactor	REAL 0.1d0 
+PARAMETER maxcycles	INTEGER 5000 
+
+#radiation stuff
+PARAMETER tradmin	REAL 4.7967E12
+PARAMETER tradmax	REAL 4.7967E12
+PARAMETER dradmin	REAL 4.7967E12
+PARAMETER dradmax	REAL 4.7967E12
+PARAMETER h_uv		REAL 0.3
+
+#radiation stuff
+PARAMETER absTmin	REAL 10.
+PARAMETER absTmax	REAL 1e9
+PARAMETER dtThres	REAL -0.01
+
+#heating rate
+VARIABLE phhe
+
+PARAMETER he_abundM REAL  0.1
+PARAMETER he_metal REAL 4.
+
+

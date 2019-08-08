@@ -1,0 +1,9 @@
+
+Driver_abortFlash.F90
+
+    Taken from FLASH4.5 source, modified to write checkpoint before abort.
+    Adopted from a source code edit in FLASH4.2.2.
+
+    NOTE: only works with one proc, will stall for multiple procs
+
+    -AT, 2019 August 02

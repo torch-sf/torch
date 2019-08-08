@@ -1,0 +1,13 @@
+
+PPDEFINE AMUSE_GRAVITY_BRIDGE
+
+
+# For the PM bridge used in AMUSE coupling - JW
+D BGPT The gravitational potential from the particles on the gas.
+VARIABLE BGPT
+D And acceleration variables for the acceleration from the particles on the gas.
+D (Because using the sink ones doesnt work if we are including sinks and massive particles.)
+VARIABLE BGAX
+VARIABLE BGAY
+VARIABLE BGAZ
+

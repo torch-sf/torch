@@ -1,0 +1,28 @@
+Juan C. Ibañez-Mejia		November 19 2015.
+
+Some notes about the cluster sink particles sub-grid module:
+============================================================================
+
+pt_sinkCreateParticle.F90: 
+	Initializes the arrays and set them to 0. Here I should create the data containers:
+	Mass, Cluster Creation time, Seed, Number of SN?
+	
+	Make new particle containers: subgridSeed
+	Cluster Mass (This should be new because the sink particle can continue to accrete, deccrete mass.) and I need this in order to re-sample the cluster.
+	
+	
+Particles_sinkCreateAccrete.F90:
+	This function gets called every evolutionary timestep of the cluster. Here is where I ask.
+	Is my cluster sampled yet ? (yes, no). If not then call something like set cluster parameters.
+	Saving the cluster mass, seed and formation time.
+	
+	I should then make a function in source terms, cluster sink evolve population.
+	Where using the mass and seed, samples the cluster, calls SB99 and get's the ionizing radiation, energy in winds and updates when is the next SN explosion. Right now I can do something simple like, the number of SN over the lifetime of the cluster and explode them at constant time intervals. I can think of a fancy way later.
+
+
+	Right now I'll sample the cluster every timestep, using the same seed, to make sure I have the same cluster every time I sample it.
+	I could actually save the cluster in my proc, and if my particle goes to another proc, then erase the cluster info and re-sample it in the new proc.
+	This will be version 2.0
+
+
+Cluster_init:

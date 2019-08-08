@@ -1,0 +1,27 @@
+D wind_cons_quant           Which quantity to conserve in wind
+D wind_add_therm_e          Conserve energy when wind_cons_quant=momentum by
+D &                         injecting the difference of wind luminosity
+D &                         energy and kinetic wind energy as thermal energy?
+PARAMETER wind_cons_quant   STRING "momentum" ["momentum", "energy"]
+PARAMETER wind_add_therm_e  BOOLEAN FALSE
+
+
+D wind_mass_load    Mass load the winds?
+D wind_target_temp  Target wind injection temperature for mass loading.
+D &                 Adjust wind velocity and mass to hit target temperature
+D &                 T ~ 3/16 * mu / k_b * v**2 for a strong shock.
+D &                 No effect if wind_mass_load=F
+PARAMETER wind_mass_load        BOOLEAN FALSE
+PARAMETER wind_target_temp      REAL    1e6
+
+D wind_min_radius   Minimum wind injection radius
+D wind_var_radius       Vary the radius by analytic calculation
+D &                     of R1 from Weaver et al. 1977?
+PARAMETER wind_min_radius       REAL    0.0
+PARAMETER wind_var_radius       BOOLEAN     FALSE
+
+D wind_perturb          Perturb the injected velocities from the wind?
+D wind_perturb_stdev    What standard deviation would you like to perturb it by?
+D &                     dimensionless stdev (gaussian normalized to mean 1)
+PARAMETER wind_perturb  BOOLEAN  FALSE
+PARAMETER wind_perturb_stdev    REAL     0.05

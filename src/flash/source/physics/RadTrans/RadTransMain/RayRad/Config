@@ -1,0 +1,26 @@
+D rt_maxHchange Max change in H ionization/neutral fraction to target
+D & during rad/ionize subcycle timestep.  This linearly modifies the radiation
+D & timestep adopted by code.
+PARAMETER rt_maxHchange REAL 0.1
+
+D rt_rayTrace Use raytracing from particles?
+D & This parameter is distinct from useRadTrans, which toggles the entire
+D & RadTrans unit (and so disables, e.g., both ray tracing and ionization)
+PARAMETER rt_rayTrace BOOLEAN True
+
+# Dust stuff
+PARAMETER sigDust        REAL   1e-23
+PARAMETER dust_gas_ratio REAL   0.01
+
+# needs raytracing
+#REQUIRES Particles/ParticlesMain/ray/MultiSourceSimple
+#REQUIRES physics/sourceTerms/Heat/HeatMain/phenHeat
+
+# multigamma equation of state
+#REQUIRES physics/Eos/EosMain/Multigamma
+
+#define species here IHP is ionized, IHA is atomic
+SPECIES IHP
+SPECIES IHA
+#METAL \~/
+#SPECIES IHM

@@ -1,0 +1,170 @@
+!!****if* source/Particles/ParticlesMain/RungeKutta2Passive/Particles_advance
+!!
+!! NAME
+!!
+!!  Particles_advance
+!!
+!! SYNOPSIS
+!!
+!!  call Particles_advance(real(in) :: dtOld,
+!!                         real(in) :: dtNew)
+!!
+!! DESCRIPTION
+!!
+!!  Time advancement routine for the particle module.
+!!  
+!!  This version implements the improved Euler method, also called Heun's method,
+!!  for integration in time. The improved Euler methos is one of the family of
+!!  2-stage, second-order Runge-Kutta methods.  (It can probably also be framed
+!!  as a simple Predictor-Corrector method, with a first-order predictor and
+!!  corrector.)
+!!
+!!  In detail:
+!!      x*(t+dtNew) = x(t)  + dtNew *        v(x(t),t)
+!!      x(t+dtNew)  = x(t)  + dtNew * 1/2* [ v(x(t),t) + v(x*(t+dtNew),t+dtNew) ]
+!!      v(t+dtNew)  =  v(x(t+dtNew),t+dtNew)
+!!  where x* is ephemeral (a predicted position that then is corrected after
+!!  another evaluation there).
+!!
+!!  Implementation detail:
+!!  This can be rewritten to save on memory for intermediate result storage:
+!!      x*(t+dtNew) = x (t)        + dtNew *          v(x(t),t)
+!!      x(t+dtNew)  = x*(t+dtNew)  + dtNew * 1/2* [ - v(x(t),t) + v(x*(t+dtNew),t+dtNew) ]
+!!      v(t+dtNew)  =  v(x(t+dtNew),t+dtNew)
+!!  where x* can be stored in the same location as the previous and final x.
+!!
+!! ARGUMENTS
+!!
+!!   dtOld -- not used in this first-order scheme
+!!   dtNew -- current time increment
+!!
+!! SIDE EFFECTS
+!!
+!!  Updates the POS{X,Y,Z} and VEL{X,Y,Z} properties of particles in the particles structure.
+!!  Sorts particles in the particles structure by calling Grid_sortParticles.
+!!
+!! NOTES
+!!
+!!  No special handling is done for the first call - it is assumed that particle
+!!  initialization fills in initial velocity components properly.
+!!
+!!***
+
+!===============================================================================
+
+subroutine Particles_advance (dtOld,dtNew)
+    
+  use Particles_data, ONLY: particles, pt_numLocal, pt_maxPerProc, useParticles, &
+       pt_gcMaskForAdvance, pt_gcMaskSizeForAdvance, pt_myPe
+  use Particles_interface, ONLY : Particles_mapFromMesh
+  use Grid_interface, ONLY : Grid_moveParticles, Grid_fillGuardCells, &
+                             Grid_getBlkPtr, Grid_releaseBlkPtr, &
+                             Grid_mapMeshToParticles, Grid_sortParticles
+  
+  implicit none
+
+#include "constants.h"  
+#include "Flash.h"
+  
+  real, INTENT(in)  :: dtOld, dtNew
+
+  integer       :: i,nstep, myPE
+  real          :: jumpx,jumpy,jumpz, secondVelX,secondVelY,secondVelZ
+  integer   :: k,currentBlk,blkCount,inBlk
+
+  real, pointer, dimension(:,:,:,:) :: solnVec
+  integer,dimension(MAXBLOCKS) :: perBlk
+
+!!------------------------------------------------------------------------------
+  
+  ! Don't do anything if runtime parameter isn't set
+      if (.not.useParticles ) return
+
+
+  ! Prepare guardcell data needed for particle interpolation.
+
+  call Grid_fillGuardCells(pt_myPe, CENTER, ALLDIR,&
+       maskSize=pt_gcMaskSizeForAdvance,mask=pt_gcMaskForAdvance)
+
+     
+  call Grid_sortParticles(particles,NPART_PROPS,pt_numLocal, pt_maxPerProc,perBlk)
+  call Grid_getLocalNumBlks(blkCount)
+
+
+  ! Update the particle positions to temporary ("predicted") values
+  do i = 1, pt_numLocal
+ 
+     jumpx = dtNew * particles(VELX_PART_PROP,i)
+     particles(POSX_PART_PROP,i) = particles(POSX_PART_PROP,i) + jumpx
+
+     jumpy = dtNew * particles(VELY_PART_PROP,i)
+     particles(POSY_PART_PROP,i) = particles(POSY_PART_PROP,i) + jumpy
+
+     jumpz = dtNew * particles(VELZ_PART_PROP,i)
+     particles(POSZ_PART_PROP,i) = particles(POSZ_PART_PROP,i) + jumpz
+
+  enddo
+     
+  ! Map the updated gas velocity field at the temporary positions to
+  ! obtain a second estimate of velocities;
+
+  k = 1
+  do currentBlk=1,blkCount
+     inBlk=perBlk(currentBlk)
+     if(inBlk>0) then
+        call Grid_getBlkPtr(currentBlk,solnVec)
+        do i = 1,inBlk
+           call Particles_mapFromMesh(VELX_VAR,particles(POSX_PART_PROP,k),&
+                                   particles(POSY_PART_PROP,k), &
+                                   particles(POSZ_PART_PROP,k), &
+                                   secondVelX,&
+                                   currentBlk,solnVec)
+           call Particles_mapFromMesh(VELY_VAR,particles(POSX_PART_PROP,k),&
+                                   particles(POSY_PART_PROP,k), &
+                                   particles(POSZ_PART_PROP,k), &
+                                   secondVelY,&
+                                   currentBlk,solnVec)
+           call Particles_mapFromMesh(VELZ_VAR,particles(POSX_PART_PROP,k),&
+                                   particles(POSY_PART_PROP,k), &
+                                   particles(POSZ_PART_PROP,k), &
+                                   secondVelZ,&
+                                   currentBlk,solnVec)
+           ! Adjust particle positions, using the second point velocities
+           particles(POSX_PART_PROP,k) =  particles(POSX_PART_PROP,k) + &
+                dtNew * 0.5*(secondVelX - particles(VELX_PART_PROP,k))
+           particles(POSY_PART_PROP,k) = particles(POSY_PART_PROP,k) + &
+                dtNew * 0.5*(secondVelY - particles(VELY_PART_PROP,k))
+           particles(POSZ_PART_PROP,k) = particles(POSZ_PART_PROP,k) + &
+                dtNew * 0.5*(secondVelZ - particles(VELZ_PART_PROP,k))
+
+           k=k+1
+        end do
+        call Grid_releaseBlkPtr(currentBlk,solnVec)
+     end if
+  end do
+
+
+
+  ! Map the updated gas velocity field onto the current particle positions to
+  ! obtain the updated particle velocities - for the next integration step
+  ! as well as for particle plot files etc.
+
+  call Grid_mapMeshToParticles (particles,pt_numLocal,pt_maxPerProc,&
+                                VELX_VAR, VELX_PART_PROP, &
+                                POSX_PART_PROP, POSY_PART_PROP, POSZ_PART_PROP)
+  call Grid_mapMeshToParticles (particles,pt_numLocal,pt_maxPerProc,&
+                                VELY_VAR, VELY_PART_PROP, &
+                                POSX_PART_PROP, POSY_PART_PROP, POSZ_PART_PROP)
+  call Grid_mapMeshToParticles (particles,pt_numLocal,pt_maxPerProc,&
+                                VELZ_VAR, VELZ_PART_PROP, &
+                                POSX_PART_PROP, POSY_PART_PROP, POSZ_PART_PROP)
+  
+  ! Put the particles in the appropriate blocks if they have moved off
+  call Grid_moveParticles(particles,pt_numLocal,pt_maxPerProc) 
+  
+  return
+!!------------------------------------------------------------------------------
+  
+end subroutine Particles_advance
+
+

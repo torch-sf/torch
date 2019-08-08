@@ -1,0 +1,16 @@
+README
+
+Problem setup for a uniform density cube, configured to accept some turbulent
+velocity pattern.  A direct descendant of the Cube simulation.
+Used for some troubleshooting circa March-April 2019.
+
+Simple code to generate cube velocity pattern can be found in the repo
+`flash_interface`.
+
+If you are using this simulation problem, you should carefully confirm that the
+simulation does what you expect.  The problem compiles successfully (2019 June
+01) but has not been tested by execution.  The successful setup call is:
+
+    ./setup Cube_Velocity -a -3d +usm +gravMgrid +rayPE +HandCnew +amuseSinksAndStars
+    +amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=300 +cube16
+    -objdir=objectcube
