@@ -4,16 +4,30 @@ README
 Quick-start
 -----------
 
-FLASH/AMUSE interface files: place in `$AMUSE_DIR/src/amuse/community/flash`
+Set the environment variables:
 
-    base_grid_interface.F90
-    interface.F90
-    interface.py
-    josh_multiples.py
-    Makefile.prototype
-    src/*
+    export AMUSE_DIR=/path/to/amuse
+    export FLASH_DIR=/path/to/FLASH4.5
+    export TORCH_DIR=/path/to/flash_interface
 
-FLASH/AMUSE bridge code to perform simulations:
+Then, run the script:
+
+    ./install.sh
+
+You will be prompted to confirm your environment variables, and continue with
+installation.  The installer will then automatically copy interface code from
+`$TORCH_DIR/src` to their correct locations in your AMUSE and FLASH repos.
+It will also ensure that the FLASH4.5-a patch for HDF5 >1.10.x compatibility is
+applied in your FLASH repo.
+
+It is OK to call the installer multiple times; this just repeats the copy
+operations.
+
+What's in this repository?
+--------------------------
+
+The top-level directory provides FLASH/AMUSE bridge code to perform
+simulations:
 
     bridge_multiples_for_rad_testing.py
     bridge_multiples.py
@@ -23,12 +37,41 @@ FLASH/AMUSE bridge code to perform simulations:
     flash.par.turbsph_standard
     ionizingflux.py
 
-Create initial conditions (dens, pres, vel, etc) for your simulations:
+And, some code to create turbulent initial conditions (dens, pres, vel, etc.)
+for your simulations:
 
     hAc_b_2.0E-17_e_0.021_FUV_1.69.dat
     turb-sphere.py
     turb-velbox.py
     weighscale.py
+
+The path `src/amuse/` holds AMUSE interface files, which are installed to
+`$AMUSE_DIR/src/amuse/community/flash/`.
+
+    src/amuse/
+        base_grid_interface.F90
+        interface.F90
+        interface.py
+        josh_multiples.py
+        Makefile.prototype
+        src/*
+
+The path `src/flash/` holds FLASH interface files and add-on units, which are
+installed to `$FLASH_DIR/`.  The directory structure mimics the FLASH4.5
+source tree.
+
+    src/flash/
+        bin/
+            setup_shortcuts.txt
+        sites/
+            Aliases
+            cartesius.surfsara.nl/
+            ...
+        source/
+            Driver/
+            Grid/
+            ...
+
 
 Simulation init condition setup
 -------------------------------
