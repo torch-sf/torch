@@ -172,7 +172,7 @@ def calc_sphsym_pot(r_arr, rho_arr):
     return (pot_arr, Mrmid_arr, Frmid_arr)
 
 def gauss_dens_prof(Rsph, Msph, rho_rat, Nr):
-    rarr   = np.linspace(0.0, Rsph+Rsph/Nr, Nr+1)
+    rarr   = np.linspace(0.0, Rsph, Nr+1)
     sig_R  = Rsph / sqrt(-log(rho_rat)) # characteristic radius
     rho_rarr = exp(-rarr*rarr/(sig_R*sig_R))
     # calculate mass of the sphere with temporary density profile
@@ -244,7 +244,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                    with_plots=True):
 
     rho_rat = 1.0/3.0  # density ratio between border and centre
-    Nr      = 1000     # Number of points in 1-D
+    Nr      = 10000    # Number of points in 1-D
 
     rho_amb = n0*mH*mu_amb # Ambient density
 
