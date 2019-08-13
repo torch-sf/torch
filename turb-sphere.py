@@ -4,7 +4,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 from numpy import *
-import yt
+#import yt
 import sys
 import argparse
 import numpy as np
@@ -15,11 +15,19 @@ from scipy.interpolate import interp1d as ip1d
 ### Units
 ########################
 
-MSun = yt.units.Msun.in_cgs().v
-cmpc = yt.units.pc.in_cgs().v
-G    = yt.physical_constants.G.v
-kB   = yt.physical_constants.kb.v
-mH   = yt.physical_constants.mass_hydrogen_cgs.v
+#MSun = yt.units.Msun.in_cgs().v
+#cmpc = yt.units.pc.in_cgs().v
+#G    = yt.physical_constants.G.v
+#kB   = yt.physical_constants.kb.v
+#mH   = yt.physical_constants.mass_hydrogen_cgs.v
+
+# manually extract values from yt and hardcode - AT, 2019 August 13
+# yt import is slow.
+MSun = 1.98841586e+33
+cmpc = 3.08567758e+18
+G    = 6.67384e-08
+kB   = 1.3806488e-16
+mH   = 1.67373522e-24
 
 #######################
 ### Command line parser
