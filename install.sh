@@ -42,7 +42,7 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 wget -nv http://flash.uchicago.edu/site/flashcode/user_support/FLASH4.5-a.diff -O FLASH4.5-a.diff || { echo $errstr; exit 255; }
 # this will return exit code >0 when patch is skipped over, so cannot exit on
 # error code here, and cannot use "set -e" in this script.
-patch --quiet -p0 -r - --forward --dry-run < FLASH4.5-a.diff
+patch -p0 -r - --forward < FLASH4.5-a.diff
 
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
 
