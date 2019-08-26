@@ -5,18 +5,18 @@
 
 errstr="Stopping, Torch install failed!"
 
-if [[ ! -d $(readlink -f "$AMUSE_DIR") ]]; then
-  echo "Could not resolve directory AMUSE_DIR=$AMUSE_DIR"
-  echo $errstr; exit 255;
-fi
-if [[ ! -d $(readlink -f "$FLASH_DIR") ]]; then
-  echo "Could not resolve directory FLASH_DIR=$FLASH_DIR"
-  echo $errstr; exit 255;
-fi
-if [[ ! -d $(readlink -f "$TORCH_DIR") ]]; then
-  echo "Could not resolve directory TORCH_DIR=$TORCH_DIR"
-  echo $errstr; exit 255;
-fi
+#if [[ ! -d $(readlink -f "$AMUSE_DIR") ]]; then
+#  echo "Could not resolve directory AMUSE_DIR=$AMUSE_DIR"
+#  echo $errstr; exit 255;
+#fi
+#if [[ ! -d $(readlink -f "$FLASH_DIR") ]]; then
+#  echo "Could not resolve directory FLASH_DIR=$FLASH_DIR"
+#  echo $errstr; exit 255;
+#fi
+#if [[ ! -d $(readlink -f "$TORCH_DIR") ]]; then
+#  echo "Could not resolve directory TORCH_DIR=$TORCH_DIR"
+#  echo $errstr; exit 255;
+#fi
 
 echo "Got AMUSE_DIR: $AMUSE_DIR"
 echo "Got FLASH_DIR: $FLASH_DIR"
