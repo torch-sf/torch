@@ -3,6 +3,8 @@
 # Install: copy AMUSE coupling code from Torch into separate FLASH and AMUSE
 # repositories.
 
+# Hello world! - CCA workshop 2019 Aug 28
+
 errstr="Stopping, Torch install failed!"
 
 if [[ ! -d $(readlink -f "$AMUSE_DIR") ]]; then
