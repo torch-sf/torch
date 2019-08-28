@@ -63,3 +63,6 @@ terremoto.rcs.columbia.edu t\d+\.cm\.cluster
 
 cartesius.surfsara.nl int1.bullx
 cartesius.surfsara.nl int2.bullx
+
+rusty.flatironinstitute.org rusty\d+\.cm\.cluster
+rusty.flatironinstitute.org worker\d+\.cm\.cluster
