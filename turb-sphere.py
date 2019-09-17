@@ -92,8 +92,9 @@ parser.add_argument("-f", "--filename", default=None, required=False,
 parser.add_argument('-nd','--no_data', action='store_true', default=False,
                     help="Don't write a data output file, just do the calculations. \
                           Default is false (write data).")
-parser.add_argument('-wp','--with_plots', action='store_true', default=True,
-                    help="Make slice plots of velx, pres, temp, dens")
+parser.add_argument('-np','--no_plots', action='store_true', default=False,
+                    help="Don't make slice plots of velx, pres, temp, dens. \
+                          Default is true (write plot files).")
 parser.add_argument('-rf','--read_file', default=None,
                     help="Read all input data from file, formatted in the following order: \
                           Mass	Radius	box	virial_ratio	NumDensSph	Tsph	Tamb	kmin	kmax	Eslp	Bmag	filename \
@@ -496,7 +497,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                     fmt=('%3d %3d %3d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e') )
                 f.write('\n')
 
-    f.close()
+        f.close()
 
 
 def get_P_and_T_from_Eq_Cooling_Curve(numdens, data_file='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
@@ -596,5 +597,5 @@ for i in range(num_runs):
                    filename[i], write_data,
                    Ts_from_cool_curve=args.Ts_from_cool_curve,
                    rho_match=args.rho_match,
-                   with_plots=args.with_plots)
-
+                   with_plots=(not args.no_plots),
+    )
