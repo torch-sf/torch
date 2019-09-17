@@ -20,9 +20,6 @@ installation.  The installer will then automatically copy interface code from
 It will also ensure that the FLASH4.5-a patch for HDF5 >1.10.x compatibility is
 applied in your FLASH repo.
 
-It is OK to call the installer multiple times; this just repeats the copy
-operations.
-
 What's in this repository?
 --------------------------
 
@@ -78,7 +75,7 @@ Simulation init condition setup
 
 `turb-sphere.py` creates a turbulent sphere in a 128^3 array for use with the
 FLASH simulation `setup-cube-USM`.  Originally by Richard Wuensch (Astron.
-Inst., Czech Acad. Sci.), with updates by J. Wall (Drexel; Lockheed Martin).
+Inst., Czech Acad. Sci.), with updates by J. Wall (Drexel).
 
 `turb-velbox.py` creates a turbulent box (just velocity data) in a 128^3 array
 for use with the FLASH simulation `Cube_AT` -- this is mostly for testing
