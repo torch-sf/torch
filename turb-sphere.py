@@ -307,21 +307,23 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
             kernel = 0.5*(np.tanh((Rsph-r_rarr)/f_trunc/Rsph)+1)
             rho_rarr = np.exp( (np.log(rho_rarr) - np.log(rho_amb))*kernel + np.log(rho_amb) )
 
-            # pressure match based on cooling curve.
-            # I'm too lazy to write "general" solution. - AT, 2019 Aug 13
-            assert Ts_from_cool_curve  # not tested without --Ts_from_cool_curve, so just require it
-            assert cool_curve == 'hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'
-            # density regime with dP/dn < 0 at thermal equilibrium
-            # is unstable and will evolve towards warm or cold ISM.
-            # enforce pressure continuity and skip the evolve.
-            unstable_ndens_min = 0.5888  # P/kB = 4.711E+03  # also skip the stable range n=0.5888 to 1.871
-            #unstable_ndens_min = 1.871  # P/kB = 1.156E+04
-            unstable_ndens_max = 23.50  # P/kB = 4.712E+03
+            # Skip unstable gas with n=1-10 cm^-3, T~1e3 to 1e4 K.  This (n,T)
+            # range has dP/dn < 0 at thermal equilibrium and will evolve
+            # towards warm or cold ISM.
+            #
+            # Unimportant if the ambient ISM is hot phase, so rho_amb controls
+            # the P/dens discontinuity at sphere edge.  But, could be useful if
+            # user wants fine control over the sphere's initial evolution.
 
-            assert rho_rarr[0]/mH/musph > unstable_ndens_max
-            assert n0 < unstable_ndens_min
-            rho_rarr[:indRsph] = np.maximum(rho_rarr[:indRsph], unstable_ndens_max*mH*musph)
-            rho_rarr[indRsph:] = np.minimum(rho_rarr[indRsph:], unstable_ndens_min*mH*mu_amb)
+            #assert Ts_from_cool_curve  # not tested without --Ts_from_cool_curve, so just require it
+            #assert cool_curve == 'hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'
+            #unstable_ndens_min = 0.5888  # P/kB = 4.711E+03  # also skip the stable range n=0.5888 to n=1.871 to enforce monotonic pressure
+            #unstable_ndens_max = 23.50  # P/kB = 4.712E+03
+            #
+            #assert rho_rarr[0]/mH/musph > unstable_ndens_max
+            #assert n0 < unstable_ndens_min
+            #rho_rarr[:indRsph] = np.maximum(rho_rarr[:indRsph], unstable_ndens_max*mH*musph)
+            #rho_rarr[indRsph:] = np.minimum(rho_rarr[indRsph:], unstable_ndens_min*mH*mu_amb)
 
         elif rho_rarr[indRsph-1] < rho_amb:
             # apply a density floor
