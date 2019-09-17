@@ -5,19 +5,6 @@
 
 errstr="Stopping, Torch install failed!"
 
-#if [[ ! -d $(readlink -f "$AMUSE_DIR") ]]; then
-#  echo "Could not resolve directory AMUSE_DIR=$AMUSE_DIR"
-#  echo $errstr; exit 255;
-#fi
-#if [[ ! -d $(readlink -f "$FLASH_DIR") ]]; then
-#  echo "Could not resolve directory FLASH_DIR=$FLASH_DIR"
-#  echo $errstr; exit 255;
-#fi
-#if [[ ! -d $(readlink -f "$TORCH_DIR") ]]; then
-#  echo "Could not resolve directory TORCH_DIR=$TORCH_DIR"
-#  echo $errstr; exit 255;
-#fi
-
 echo "Got AMUSE_DIR: $AMUSE_DIR"
 echo "Got FLASH_DIR: $FLASH_DIR"
 echo "Got TORCH_DIR: $TORCH_DIR"
@@ -69,14 +56,16 @@ cp -v ${asrc}/Makefile.prototype        ${adest}/Makefile || { echo $errstr; exi
 mkdir -p ${adest}/src
 cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 255; }
 
-# Create symlink in AMUSE Makefile.
-# Notes: only works for one flash_worker; sed modifies file in place
+# Point AMUSE Makefile to FLASH directory via symlink
+# TODO will not work? if user placed FLASH4.5/ in ${adest}/src
 echo -n "Linking: "
-# TODO THIS WILL NOT WORK??? if FLASH4.5 is IN DIRECTORY ALREADY
-# readlink will resolve symlinks for us.
-ln -sfv $(readlink -f ${FLASH_DIR})     ${adest}/src/FLASH4.5 || { echo $errstr; exit 255; }
+ln -sfv ${FLASH_DIR}                    ${adest}/src/FLASH4.5 || { echo $errstr; exit 255; }
 echo "Setting drive_loc in ${adest}/Makefile"
-sed -i "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.5\/object/" ${adest}/Makefile || { echo $errstr; exit 255; }
+# "sed -i" doesn't work for BSD sed (e.g. on OS X), use a workaround from
+# https://stackoverflow.com/a/44877280
+sed "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.5\/object/" ${adest}/Makefile > ${adest}/Makefile.$$ \
+  && mv "${adest}/Makefile.$$" "${adest}/Makefile" \
+  || { echo $errstr; exit 255; }
 
 #### -----------
 #### All done!!!
