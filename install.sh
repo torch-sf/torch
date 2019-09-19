@@ -44,6 +44,11 @@ wget -nv http://flash.uchicago.edu/site/flashcode/user_support/FLASH4.5-a.diff -
 # error code here, and cannot use "set -e" in this script.
 patch -p0 -r - --forward < FLASH4.5-a.diff
 
+# Patch for parallel HDF5 1.10.x, fixed in FLASH4.6
+# http://flash.uchicago.edu/pipermail/flash-users/2018-May/002626.html
+wget -nv http://flash.uchicago.edu/pipermail/flash-users/attachments/20180519/fdf3cd9b/attachment.obj -O FLASH4.5_parallelHDF5.diff || { echo $errstr; exit 255; }
+patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
+
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
 
 #### ----------------------------
