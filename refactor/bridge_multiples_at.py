@@ -32,6 +32,7 @@ from torch_state import TorchIOState, add_particles_to_grav,  \
                         init_smalln, new_smalln, stop_smalln, \
                         update_roots_from_leaves
 from torch_se import do_stellar_evolution
+from torch_sf import make_sinks_from_stars2
 
 from imf_sample import m_max_star
 import ionizingflux as ion
