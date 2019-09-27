@@ -49,6 +49,9 @@ use Timers_interface, ONLY : Timers_start, Timers_stop
 
 use IO_interface, ONLY : IO_output
 
+use IO_data, ONLY: io_checkpointFileNumber, io_plotFileNumber, &
+                   io_rollingCheckpoint
+
 #ifdef ENERGY_INJ
 use Particles_interface, ONLY : Particles_energyInjection
 #endif
@@ -6411,9 +6414,9 @@ call IO_writeCheckpoint()
 write_chpt=0
 END FUNCTION
 
-FUNCTION IO_out(output_type)
+FUNCTION IO_out(output_type, fileNumber)
 
-integer :: IO_out, ierr
+integer :: IO_out, fileNumber, ierr
 character(8) :: output_type
 logical :: endrun
 
@@ -6427,11 +6430,15 @@ if (trim(output_type)=='chk') then
                  endRun, CHECKPOINT_FILE_ONLY)
   call Particles_moveAndSort(.true.)
 
+  fileNumber = mod(io_checkpointFileNumber, io_rollingCheckpoint)
+
 else if (trim(output_type)=='pltpart') then
 
   call IO_output(dr_simTime,dr_dt,dr_nstep+1,dr_nbegin, &
                  endRun, PLOTFILE_AND_PARTICLEFILE)
   call Particles_moveAndSort(.true.)
+
+  fileNumber = io_plotFileNumber
 
 !else if (trim(output_type)=='all') then
 
@@ -6442,11 +6449,30 @@ else
 
   print*, "interface:IO_output :: output filetype ", trim(output_type), " not recognized!"
 
+  fileNumber = -1
+
 end if
 
 call MPI_Barrier(dr_globalComm, ierr)
 
 IO_out=0
+END FUNCTION
+
+FUNCTION IO_num(output_type, fileNumber)
+
+integer :: IO_num, fileNumber
+character(8) :: output_type
+
+if (trim(output_type)=='chk') then
+  fileNumber = mod(io_checkpointFileNumber, io_rollingCheckpoint)
+else if (trim(output_type)=='pltpart') then
+  fileNumber = io_plotFileNumber
+else
+  print*, "interface:IO_num :: filetype ", trim(output_type), " not recognized!"
+  fileNumber = -1
+end if
+
+IO_num=0
 END FUNCTION
 
 FUNCTION get_output_dir_wrapped(output_dir)
