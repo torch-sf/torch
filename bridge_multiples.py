@@ -2805,6 +2805,7 @@ massloss_method = 'puls'
 min_pos_diff = 0.01*3.086e16 #| units.m #((0.01*3.085e16) | units.m)
 min_vel_diff = 1e3 # | units.m/units.s
 
+nxb = 16  # cells per block from FLASH setup call
 
 # N-body softening radius is the actual radius of a large massive star here.
 eps = 15.0 | units.RSun
@@ -2972,8 +2973,8 @@ new_plt_file = '-1'
 old_plt_file = '-1'
 
 max_ref  = hydro.get_max_refinement()
-sink_rad = 2.5*(2.0*bndbox)/(8.0*2.0**(float(max_ref)-1.0))
-smallest_dx = (2.0*bndbox)/(8.0*2.0**(float(max_ref)-1.0))
+sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
+smallest_dx = (2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
 
 time.sleep(5)
 
