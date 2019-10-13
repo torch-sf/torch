@@ -71,7 +71,6 @@ def stop_smalln():
 def evolve_bridge(state, hydro, grav, mult):
 
     # FLASH time stepping
-    hy_dt           = hydro.get_timestep()
     hy_step         = hydro.get_current_step()
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
@@ -87,31 +86,22 @@ def evolve_bridge(state, hydro, grav, mult):
     dt = DT_INIT
     it = 1
 
-    # LIST OF additional LOOP VARIABLES:
-    #   made_stars
-    #   num_particles
-
-    # TODO made_stars is another loop variable... try to keep this clean.
+    # more bridge loop variables
     made_stars = False
-    if hydro.get_number_of_particles() > 0:  # restart or initial conditions
+    num_stars = hydro.get_number_of_particles()
+    if num_stars > 0:  # restart or user initial conditions
         add_particles_to_grav(state, hydro, grav)
         made_stars = True
 
     while tt < hy_max_time and hy_step < hy_max_steps:
 
-        num_particles = hydro.get_number_of_particles()
-
         tprint("Bridge step: it={}, tt={}, dt={}".format(it, tt, dt))#Current simulation time:", tt, "dt:", dt)
         tprint("... Hydro time:", hy_time)
         tprint("... Grav time:", gr_time)
-        tprint("... #stars=", num_particles)
-        #tprint("... #stars in amuse=", len(state.stars))
-        #tprint("... #stars in grav =", len(grav.particles))
-        assert num_particles == len(state.stars)  # only true without multiples
-        assert num_particles == len(grav.particles)  # only true without multiples
-        tprint("... Did we make stars?", made_stars)
+        tprint("... num_stars=", num_stars)
+        tprint("... made_stars=", made_stars)
 
-        if num_particles > 0:
+        if num_stars > 0:
 
             ### ------------------
             ### Stellar evolution.
@@ -167,7 +157,7 @@ def evolve_bridge(state, hydro, grav, mult):
             ### ------------
             if WITH_BRIDGE:
                 tprint("Second kick")
-                kick_number = 2
+                kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
                 hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
                 tprint("... grid kicked")
                 hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
@@ -176,7 +166,7 @@ def evolve_bridge(state, hydro, grav, mult):
                 state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)
                 state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])
 
-        else: # hydro.get_number_of_particles() == 0
+        else: # num_stars == 0
 
             tprint("Evolving hydro without grav for dt:", dt, "to reach t =", tt+dt)
             hydro.evolve_model(tt + dt)
@@ -190,7 +180,7 @@ def evolve_bridge(state, hydro, grav, mult):
             grav.parameters.sync_time   = hy_time
 
         # if any new sinks, draw a list of stars from Kroupa IMF
-        tprint("Make stars")
+        tprint("Star formation check")
         queue_stars(state, hydro, MIN_SF_MASS, MAX_SF_MASS,
                     sample_imf_mass=SAMPLE_MASS, sum_small=SUM_SMALL,
                     sample_imf_bins=SAMPLE_IMF_BINS)  # TODO magic numbers
@@ -199,11 +189,15 @@ def evolve_bridge(state, hydro, grav, mult):
         if made_stars:
             add_particles_to_grav(state, hydro, grav)  # push stars hydro->amuse, hydro->grav
 
+        num_stars = hydro.get_number_of_particles()  # loop variable
+        assert num_stars == len(state.stars)
+        assert num_stars == len(grav.particles)  # only true without multiples
+
         # write output iff it's time to do so
+        tprint("Output check")
         state.output()
 
         # update bridge loop variables
-
         tt += dt
         it += 1
 
@@ -212,8 +206,7 @@ def evolve_bridge(state, hydro, grav, mult):
         hy_time = hydro.get_time()
 
         hy_gr_offset = (hy_time - gr_time).value_in(units.s)
-        if abs(hy_gr_offset) > 1e4:
-            raise Exception("Large time offset b/t hydro and n-body")
+        assert abs(hy_gr_offset) <= 1e4
 
         hy_dt = hydro.get_timestep()
         dt = min(DT_MAX, 1.5*hy_dt, hy_max_time-tt, 2*dt)  # cannot increase dt more than 2x  # TODO MAGIC NUMBERS -AT,2019oct10
