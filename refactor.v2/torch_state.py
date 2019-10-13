@@ -115,8 +115,8 @@ class TorchState(object):
 
         else:
             # This call will try to write chk/plt files.
-            # FLASH shouldn't write chk again, but hy_chknum != self.chknum,
-            # so we will write torch state files.
+            # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
+            # and hy_pltnum != self.pltnum, so we will write torch files.
             self.output()
 
         # After FLASH inits (whether restart or not), it increments
@@ -131,15 +131,17 @@ class TorchState(object):
         also dump full Torch state to disk.
         """
         hy_chknum = self.hydro.IO_out('chk')
-        hy_pltnum = self.hydro.IO_out('pltpart')
 
         # If a checkpoint file was written, dump all Torch state files
-        if hy_chknum != self.chknum:  # allow for possibility of rolling chk
+        # conditional allows for possibility of rolling chk
+        if hy_chknum != self.chknum:
             self.out_rnd()
             self.out_mass()
             self.chknum = hy_chknum
 
-        # If a plt file was written, can do stuff.  Currently, does nothing.
+        hy_pltnum = self.hydro.IO_out('pltpart')
+
+        # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
             self.out_stars()
             self.pltnum = hy_pltnum
