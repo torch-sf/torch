@@ -6,10 +6,18 @@ Coding principles:
 * workers and evolution loops should be near top-level, to allow easy hooks / editing
 * do not leave debugging hooks lying around.
 
-* "state" object should be as general as possible.
+* the "state" object should be as general as possible.
   don't stuff methods into it; try not to use its workers.
 
 * "single source of truth", to the most extent possible.
+
+* Try not to pass Torch parameter struct into deeper methods.
+  Keep abstraction layers well isolated.
+  Torch pieces (e.g., "add_particles_to_grav") can know about
+      hydro worker
+      grav worker
+      state object (state.stars, state.stars_to_grav, ...)
+  but try not to let other top-level structs bleed into deeper methods.
 
 KNOWN ERRORS:
 * if all stars escape domain during bridge loop, second bridge kick fails
@@ -44,6 +52,7 @@ from amuse.community.flash import josh_multiples as multiples
 from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
 from torch_state import TorchState
 from torch_stdout import tprint
+from torch_user import torch_initial_conditions, torch_parameters
 
 #import ionizingflux as ion
 
@@ -68,21 +77,21 @@ def stop_smalln():
 
 # ============================================================================
 
-def evolve_bridge(state, hydro, grav, mult):
+def evolve(state, hydro, grav, mult):
 
-    # FLASH time stepping
+    # FLASH loop control
     hy_dt           = hydro.get_timestep()
     hy_step         = hydro.get_current_step()
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
 
-    # grav time stepping
+    # grav loop control
     grav.parameters.begin_time  = hy_time
     grav.parameters.sync_time   = hy_time
     gr_time = grav.get_time()
 
-    # bridge time stepping
+    # bridge loop control
     it = 1
     tt = hy_time  # tt = "torch time" or "time in torch"
     dt = min(1.5*hy_dt, hy_max_time-tt)  # TODO MAGIC NUMBERS -AT,2019oct10
@@ -107,8 +116,10 @@ def evolve_bridge(state, hydro, grav, mult):
             ### ------------------
             ### Stellar evolution.
             ### ------------------
-
-            # TODO
+            if USER['with_se']:
+                pass
+                # TODO
+                # do_stellar_evolution(state, hydro)
 
             ### -----------
             ### First kick.
@@ -116,7 +127,7 @@ def evolve_bridge(state, hydro, grav, mult):
 
             tprint("Evolving hydro with grav for dt:", dt, "to reach t =", tt+dt)
 
-            if WITH_BRIDGE:
+            if USER['with_bridge']:
                 tprint("First kick")
                 kick_number = 1
                 if made_stars:  # must recompute grav pot (BGPT), accel (BGA{X,Y,Z}) induced by new star prtl
@@ -155,7 +166,7 @@ def evolve_bridge(state, hydro, grav, mult):
             ### ------------
             ### Second kick.
             ### ------------
-            if WITH_BRIDGE:
+            if USER['with_bridge']:
                 tprint("Second kick")
                 kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
                 hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
@@ -179,13 +190,16 @@ def evolve_bridge(state, hydro, grav, mult):
             grav.parameters.begin_time  = hy_time
             grav.parameters.sync_time   = hy_time
 
-        # if any new sinks, draw a list of stars from Kroupa IMF
         tprint("Star formation check")
-        queue_stars(state, hydro, MIN_SF_MASS, MAX_SF_MASS,
-                    sample_imf_mass=SAMPLE_MASS, sum_small=SUM_SMALL,
-                    sample_imf_bins=SAMPLE_IMF_BINS)  # TODO magic numbers
+        queue_stars(state, hydro,
+            min_imf_mass=USER['min_imf_mass'],
+            max_imf_mass=USER['max_imf_mass'],
+            sample_imf_mass=USER['sample_imf_mass'],
+            sample_imf_bins=USER['sample_imf_bins'],
+            sum_small=USER['sum_small'],
+        )
 
-        made_stars = make_stars_from_sinks(state, hydro, sink_rad=SINK_RAD)  # in hydro  # TODO fugly parameter handling
+        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
             add_particles_to_grav(state, hydro, grav)  # push stars hydro->amuse, hydro->grav
 
@@ -208,48 +222,8 @@ def evolve_bridge(state, hydro, grav, mult):
         assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
 
         hy_dt = hydro.get_timestep()
-        dt = min(1.5*hy_dt, hy_max_time-tt, 2*dt)  # cannot increase dt more than 2x  # TODO MAGIC NUMBERS -AT,2019oct10
+        dt = min(USER['hy_dt_factor']*hy_dt, hy_max_time-tt)
 
-    return
-
-# ============================================================================
-
-def user_init(state, hydro):
-    """user initialization, just add stuff to hydro"""
-
-    if state.restart:
-        return
-
-    # Plop a single star into FLASH
-#
-#    star        = Particles(1)
-#    star.mass   = 1 | units.MSun
-#    star.x      = BNDBOX - (10 | units.cm)
-#    star.y      = 0 | units.cm
-#    star.z      = 0 | units.cm
-#    star.vx     = 100 | units.cm/units.s
-#    star.vy     = 0 | units.cm/units.s
-#    star.vz     = 0 | units.cm/units.s
-#
-#    hydro.set_particle_pointers('mass')
-#    star_tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(star_tag, star.mass)
-#    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-#
-#    # Plop another star into FLASH
-#
-#    star            = Particles(1)
-#    star.mass       = 1 | units.MSun
-#    star.position   = [0,0,0] | units.cm
-#    star.velocity   = [0,0,0] | units.cm/units.s
-#
-#    hydro.set_particle_pointers('mass')
-#    star_tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(star_tag, star.mass)
-#    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-#
     return
 
 # ============================================================================
@@ -259,56 +233,8 @@ if __name__ == '__main__':
     # --------------------
     # User configuration
 
-    global EPS
-    global NUM_GRAV_WORKERS
-    global NUM_HY_WORKERS
-    global REFRESH_RNG
-
-    global WITH_BRIDGE
-    global WITH_MULTIPLES
-    global WITH_RADIATION
-    global WITH_PE_HEAT
-    global WITH_SE
-    global WITH_SN
-    global WITH_WINDS
-    global WITH_MASSLOSS
-    global MASSLOSS_METHOD
-
-    global MIN_MASS
-    global SINK_RAD
-
-    global MIN_SF_MASS
-    global MAX_SF_MASS
-    global SAMPLE_MASS
-    global SAMPLE_IMF_BINS
-    global SUM_SMALL
-
-    EPS = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
-    MULT_DEBUG_LEVEL = 1
-    NUM_GRAV_WORKERS = 4
-    NUM_HY_WORKERS = 9
-    REFRESH_RNG     = False
-
-    # OVERALL code toggles/logic
-    WITH_BRIDGE     = True
-    WITH_MULTIPLES  = False  # adds three workers: kepler, smalln, multiples
-    WITH_SE         = True
-
-    WITH_RADIATION  = True  # stellar evolution switches
-    WITH_PE_HEAT    = True
-    WITH_SN         = True
-    WITH_WINDS      = True
-    WITH_MASSLOSS   = True
-    MASSLOSS_METHOD = 'puls'
-
-    MIN_MASS    = 7.0 | units.MSun
-    SINK_RAD    = 9.16156e+18 | units.cm # TODO hydro.get_runtime_parameter('sink_accretion_radius') | units.cm
-
-    MIN_SF_MASS = 0.08 | units.MSun
-    MAX_SF_MASS = 150.0 | units.MSun
-    SAMPLE_MASS = 10000 | units.MSun
-    SAMPLE_IMF_BINS = 10
-    SUM_SMALL   = False
+    global USER
+    USER = torch_parameters()
 
     # --------------------
     # Internal configuration
@@ -324,15 +250,15 @@ if __name__ == '__main__':
     se = SeBa()
     se.initialize_code()
 
-    grav = ph4(convert, number_of_workers=NUM_GRAV_WORKERS, mode='cpu', redirection="none")
+    grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
     grav.parameters.set_defaults()
-    grav.parameters.epsilon_squared = EPS**2.0
+    grav.parameters.epsilon_squared = USER['epsilon']**2.0
     grav.parameters.force_sync = 1  # end exactly at requested time
-    grav.parameters.timestep_parameter = 0.14  # timestep accuracy
+    grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
 
     mult = None
 
-    if WITH_MULTIPLES:
+    if USER['with_multiples']:
 
         grav.parameters.epsilon_squared = 0.0|units.cm**2.0
         grav.stopping_conditions.collision_detection.enable()
@@ -346,27 +272,30 @@ if __name__ == '__main__':
         mult.global_debug                = 1
         mult.neighbor_veto               = True
         mult.check_tidal_perturbation    = True
-        mult.neighbor_perturbation_limit = 0.05
+        mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
 
-    hydro = Flash(unit_converter=convert2, number_of_workers=NUM_HY_WORKERS, redirection='none')
+    hydro = Flash(unit_converter=convert2, number_of_workers=USER['num_hy_workers'], redirection='none')
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
     # --------------------
     # AMUSE framework state init (Particles set, channels, sink lists, etc)
 
-    state = TorchState(hydro, grav, mult, refresh=REFRESH_RNG)
+    state = TorchState(hydro, grav, mult, refresh=USER['refresh_rng'])
     state.initialize() # loads restart files if needed
 
     # --------------------
-    # Apply user initial conditions to hydro
+    # User init
 
-    user_init(state, hydro)
+    torch_initial_conditions(state, hydro)
+
+    # --------------------
+    # Start the simulation
 
     try:
 
-        evolve_bridge(state, hydro, grav, mult)
+        evolve(state, hydro, grav, mult)
 
     finally:
         pass

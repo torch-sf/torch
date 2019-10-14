@@ -21,6 +21,20 @@ from warnings import warn
 warnings.simplefilter('always', UserWarning)
 
 
+class WriteOnceDict(dict):
+    """
+    Taken from
+    https://stackoverflow.com/questions/21601593/write-once-dictionary/21601690#21601690
+    """
+    def __setitem__(self, key, value):
+        if key in self:
+            raise KeyError("{} has already been set".format(key))
+        if PYTHON3:
+            super().__setitem__(key, value)
+        elif PYTHON2:
+            super(WriteOnceDict, self).__setitem__(key, value)
+
+
 class FlashPar(MutableMapping):
     """Flash parameter file representation"""
 
