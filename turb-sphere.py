@@ -370,16 +370,9 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         #       Therefore we're going back to separately setting the ambient and
         #       core temps and pressures independently.  - JW 8/30/18
         #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
-        # Invert to get the ambient density.
 
-    # AT 20190909: don't understand why this is needed, if using cool curve, choosing
-    # both rho_amb and T_amb over-specifies the problem, and this code somewhat
-    # OVERRIDES the rho_amb passed to dens_pot_3darr(...).  The dens is used to
-    # get pres, then we jump to a different (n,T) pair, seems unnecessary.
-    # If NOT using cool curve, this is consistent with "wunsch's old method",
-    # so no effect.
-    #if not rho_match:
-    #    rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
+        # Invert to get the ambient density.
+        rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
     # calculate turbulent velocity field
     (velx, vely, velz) = kolmogorov_vel(NCD, kmin, kmax, Eslp)
