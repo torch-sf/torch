@@ -14,30 +14,30 @@ from torch_stdout import tprint
 
 class TorchState(object):
     """
-    Store AMUSE framework global objects, to facilitate communication,
-    but DON'T ACTUALLY do the communication -- let the caller handle.
-
-    Perform Torch state I/O.
+    Container for AMUSE framework global objects, to help
+    (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult, refresh=False):
+    def __init__(self, hydro, grav, mult):
 
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
 
-        self.initialized = False
-        self.refresh     = refresh
-        self.stars         = None
-        self.stars_to_grav = None
-        self.grav_to_stars = None
-        self.stars_to_mult = None
-        self.mult_to_stars = None
+        # "Global" AMUSE-level data structures
+        self.all_masses = {}
+        self.stars = Particles(0)
+
+        self.stars_to_grav = self.stars.new_channel_to(grav.particles)
+        self.grav_to_stars = grav.particles.new_channel_to(self.stars)
+        if self.mult is not None:
+            self.stars_to_mult = self.stars.new_channel_to(mult.stars)
+            self.mult_to_stars = mult.stars.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
-        # behavior.  Needs new interface code, see hydro.get_output_dir()
-        # (AT) - 2019 July 01
+        # behavior.  Needs new interface code, see hydro.get_runtime_parameter(...)
+        # which only works for doubles presently. -AT, 2019jul01, 2019oct14
         #self.restart = False  # flash defaults, in case not specified in flash.par
         #self.chknum = 0
         #self.pltnum = 0
@@ -52,32 +52,15 @@ class TorchState(object):
 
         self.output_dir = hydro.get_output_dir()
 
-    def initialize(self):
-        """Perform setup, restart load, initialization I/O"""
-
-        assert not self.initialized
-
-        # "Global" AMUSE-level data structures
-
-        self.all_masses = {}
-        self.stars = Particles(0)
-
-        s = self.stars  # temp vars for readability
-        m = self.mult
-        g = self.grav
-
-        self.stars_to_grav = s.new_channel_to(g.particles)
-        self.grav_to_stars = g.particles.new_channel_to(s)
-        if self.mult is not None:
-            self.stars_to_mult = s.new_channel_to(m.stars)
-            self.mult_to_stars = m.stars.new_channel_to(s)
+    def initial_io(self, refresh=False):
+        """Load restart files or write starting Torch state"""
 
         # flash numbering for file I/O:
         #   restart:
         #     load {chknum}
         #     ...
         #     write {chknum+1}
-        #     write {pltnum+1}
+        #     write {pltnum}
         #     ...
         #   not restart:
         #     write {chknum}
@@ -91,7 +74,7 @@ class TorchState(object):
 
         if self.restart:
 
-            if not self.refresh:
+            if not refresh:
 
                 rstatefile = path.join(self.output_dir,
                     'rnd_state{:04d}.pickle'.format(self.chknum))
@@ -123,8 +106,6 @@ class TorchState(object):
         # io_checkpointFileNumber for the /next/ file write.
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
-
-        self.initialized = True
 
     def output(self):
         """Try to write chk and plt files; if FLASH chk written,

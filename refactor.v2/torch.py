@@ -1,46 +1,30 @@
 #!/usr/bin/env python
 """
-Fresh start.  No stellar evolution, no multiples, no initial conditions yet.
+Rewrite of Josh's bridge_multiples.py, to be more readable and extensible.
 
-Coding principles:
-* workers and evolution loops should be near top-level, to allow easy hooks / editing
-* do not leave debugging hooks lying around.
+CODING PRINCIPLES:
 
-* the "state" object should be as general as possible.
-  don't stuff methods into it; try not to use its workers.
+* workers and evolution loop should be near top-level, so the user can easily
+  edit and add hooks to the evolution loop.
+
+* do not leave debugging hooks lying around, unless you think
+  (1) many users / developers will use hooks,
+  (2) a single dev will use hooks many times.
+
+* the "state" object is a container for global state, and to help with I/O.
+  don't stuff too many methods into it; try not to use its workers.
 
 * "single source of truth", to the most extent possible.
 
 * Try not to pass Torch parameter struct into deeper methods.
   Keep abstraction layers well isolated.
-  Torch pieces (e.g., "add_particles_to_grav") can know about
-      hydro worker
-      grav worker
-      state object (state.stars, state.stars_to_grav, ...)
-  but try not to let other top-level structs bleed into deeper methods.
 
-KNOWN ERRORS:
-* if all stars escape domain during bridge loop, second bridge kick fails
-  while trying to recompute BGPT_VAR.  -AT, 2019oct11
-
-Aaron Tran
-Started 2019 October 09
 """
 
 from __future__ import division, print_function
 
-#import datetime
-#import glob
 import numpy as np
-#import os
-#import pickle
-#import sys
-#import time
-
-#from scipy.integrate import *
 np.set_printoptions(precision=3)
-#np.random.seed(103180)  # Set initial random seed for testing/debugging.  # TODO DEBUGGING
-np.random.seed(203180)  # Set initial random seed for testing/debugging.  # TODO DEBUGGING
 
 from amuse.lab import *
 from amuse.community.flash.interface import Flash
@@ -52,7 +36,7 @@ from amuse.community.flash import josh_multiples as multiples
 from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
 from torch_state import TorchState
 from torch_stdout import tprint
-from torch_user import torch_initial_conditions, torch_parameters
+from torch_user import user_initial_conditions, user_parameters
 
 #import ionizingflux as ion
 
@@ -74,6 +58,49 @@ def new_smalln():
 def stop_smalln():
     global SMALLN
     SMALLN.stop()
+
+# ============================================================================
+
+def initialize_workers():
+
+    # Converter for the N-body code.
+    convert = nbody.nbody_to_si(1.0|units.parsec, 1000.0|units.MSun)
+    # Converter for the hydro code.
+    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+
+    se = SeBa()
+    se.initialize_code()
+
+    grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
+    grav.parameters.set_defaults()
+    grav.parameters.epsilon_squared = USER['epsilon']**2.0
+    grav.parameters.force_sync = 1  # end exactly at requested time
+    grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
+
+    mult = None
+
+    if USER['with_multiples']:
+
+        grav.parameters.epsilon_squared = 0.0|units.cm**2.0
+        grav.stopping_conditions.collision_detection.enable()
+
+        init_smalln(convert)
+
+        kep = Kepler(unit_converter=convert)
+        kep.initialize_code()
+
+        mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
+        mult.global_debug                = 1
+        mult.neighbor_veto               = True
+        mult.check_tidal_perturbation    = True
+        mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
+        mult.wide_perturbation_limit     = 0.08
+
+    hydro = Flash(unit_converter=convert2, number_of_workers=USER['num_hy_workers'], redirection='none')
+    hydro.initialize_code()
+    hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
+
+    return hydro, grav, mult, se
 
 # ============================================================================
 
@@ -230,68 +257,19 @@ def evolve(state, hydro, grav, mult):
 
 if __name__ == '__main__':
 
-    # --------------------
-    # User configuration
-
     global USER
-    USER = torch_parameters()
+    USER = user_parameters()
 
-    # --------------------
-    # Internal configuration
+    if USER['npy_seed'] is not None:
+        np.random.seed(USER['npy_seed'])
 
-    # Converter for the N-body code.
-    convert = nbody.nbody_to_si(1.0|units.parsec, 1000.0|units.MSun)
-    # Converter for the hydro code.
-    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+    hydro, grav, mult, se = initialize_workers()
 
-    # --------------------
-    # Worker init
+    state = TorchState(hydro, grav, mult)
 
-    se = SeBa()
-    se.initialize_code()
+    state.initial_io(refresh=USER['refresh_rng'])
 
-    grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
-    grav.parameters.set_defaults()
-    grav.parameters.epsilon_squared = USER['epsilon']**2.0
-    grav.parameters.force_sync = 1  # end exactly at requested time
-    grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
-
-    mult = None
-
-    if USER['with_multiples']:
-
-        grav.parameters.epsilon_squared = 0.0|units.cm**2.0
-        grav.stopping_conditions.collision_detection.enable()
-
-        init_smalln(convert)
-
-        kep = Kepler(unit_converter=convert)
-        kep.initialize_code()
-
-        mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
-        mult.global_debug                = 1
-        mult.neighbor_veto               = True
-        mult.check_tidal_perturbation    = True
-        mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
-        mult.wide_perturbation_limit     = 0.08
-
-    hydro = Flash(unit_converter=convert2, number_of_workers=USER['num_hy_workers'], redirection='none')
-    hydro.initialize_code()
-    hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
-
-    # --------------------
-    # AMUSE framework state init (Particles set, channels, sink lists, etc)
-
-    state = TorchState(hydro, grav, mult, refresh=USER['refresh_rng'])
-    state.initialize() # loads restart files if needed
-
-    # --------------------
-    # User init
-
-    torch_initial_conditions(state, hydro)
-
-    # --------------------
-    # Start the simulation
+    user_initial_conditions(state, hydro)
 
     try:
 

@@ -8,7 +8,7 @@ from amuse.units import units
 from torch_param import WriteOnceDict, FlashPar
 from torch_stdout import tprint
 
-def torch_initial_conditions(state, hydro):
+def user_initial_conditions(state, hydro):
 
     if state.restart:
         return
@@ -45,13 +45,15 @@ def torch_initial_conditions(state, hydro):
 #
     return
 
-def torch_parameters():
+def user_parameters():
 
     flashp = FlashPar("flash.par")
 
     p = WriteOnceDict()
 
     # <main controls>
+    p['npy_seed'] = None
+    #p['npy_seed'] = 103180  # no effect if (restart && refresh_rng=False)
     p['num_grav_workers'] = 4
     p['num_hy_workers'] = 9
     p['refresh_rng'] = False
