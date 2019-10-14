@@ -41,7 +41,7 @@ from torch_user import user_initial_conditions, user_parameters
 #import ionizingflux as ion
 
 # ============================================================================
-# Multiples boilerplate
+# Multiples boilerplate - required as of Oct 2019, see AMUSE book.
 
 SMALLN = None
 
@@ -68,9 +68,6 @@ def initialize_workers():
     # Converter for the hydro code.
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
-    se = SeBa()
-    se.initialize_code()
-
     grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
     grav.parameters.set_defaults()
     grav.parameters.epsilon_squared = USER['epsilon']**2.0
@@ -95,6 +92,13 @@ def initialize_workers():
         mult.check_tidal_perturbation    = True
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
+
+    se = None
+
+    if USER['with_se']:
+
+        se = SeBa()
+        se.initialize_code()
 
     hydro = Flash(unit_converter=convert2, number_of_workers=USER['num_hy_workers'], redirection='none')
     hydro.initialize_code()
