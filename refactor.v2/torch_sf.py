@@ -90,11 +90,10 @@ def add_particles_to_grav(state, hydro, grav):
     return
 
 
-def remove_particles_outside_bndbox(state, hydro, grav, bndbox):
+def remove_particles_outside_bndbox(state, hydro, grav):
     """
     Remove any particles that have left the simulation.
-    Args:
-        bndbox needs to have AMUSE units
+    WARNING: assumes a box-shaped domain specified by {x,y,z}{min,max}
     """
     # AMUSE stars have tags to FLASH, but grav stars don't have those tags.
     # so more convenient to operate on AMUSE star particles.
@@ -102,10 +101,17 @@ def remove_particles_outside_bndbox(state, hydro, grav, bndbox):
     if len(p) == 0:
         return False
 
+    xmin = hydro.get_runtime_parameter('xmin') | units.cm
+    xmax = hydro.get_runtime_parameter('xmax') | units.cm
+    ymin = hydro.get_runtime_parameter('ymin') | units.cm
+    ymax = hydro.get_runtime_parameter('ymax') | units.cm
+    zmin = hydro.get_runtime_parameter('zmin') | units.cm
+    zmax = hydro.get_runtime_parameter('zmax') | units.cm
+
     outside = np.logical_or.reduce([
-        p.x >= bndbox, p.x <= -1*bndbox,
-        p.y >= bndbox, p.y <= -1*bndbox,
-        p.z >= bndbox, p.z <= -1*bndbox,
+        p.x >= xmax, p.x <= xmin,
+        p.y >= ymax, p.y <= ymin,
+        p.z >= zmax, p.z <= zmin,
     ])
 
     prem = p[outside]

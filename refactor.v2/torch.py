@@ -71,6 +71,7 @@ def stop_smalln():
 def evolve_bridge(state, hydro, grav, mult):
 
     # FLASH time stepping
+    hy_dt           = hydro.get_timestep()
     hy_step         = hydro.get_current_step()
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
@@ -81,10 +82,10 @@ def evolve_bridge(state, hydro, grav, mult):
     grav.parameters.sync_time   = hy_time
     gr_time = grav.get_time()
 
-    # bridge time stepping; tt = "torch time" or "time in torch"
-    tt = hy_time
-    dt = DT_INIT
+    # bridge time stepping
     it = 1
+    tt = hy_time  # tt = "torch time" or "time in torch"
+    dt = min(1.5*hy_dt, hy_max_time-tt)  # TODO MAGIC NUMBERS -AT,2019oct10
 
     # more bridge loop variables
     made_stars = False
@@ -141,8 +142,7 @@ def evolve_bridge(state, hydro, grav, mult):
             hydro.set_particle_position(state.stars.tag, grav.particles.x, grav.particles.y, grav.particles.z)
             hydro.set_particle_velocity(state.stars.tag, grav.particles.vx, grav.particles.vy, grav.particles.vz)
 
-            remove_particles_outside_bndbox(state, hydro, grav, BNDBOX)
-
+            remove_particles_outside_bndbox(state, hydro, grav)
             # sort and also remove stars outside domain, though
             # remove_particles_outside_bndbox(...) should have us covered
             hydro.particles_sort()
@@ -205,11 +205,10 @@ def evolve_bridge(state, hydro, grav, mult):
         hy_step = hydro.get_current_step()
         hy_time = hydro.get_time()
 
-        hy_gr_offset = (hy_time - gr_time).value_in(units.s)
-        assert abs(hy_gr_offset) <= 1e4
+        assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
 
         hy_dt = hydro.get_timestep()
-        dt = min(DT_MAX, 1.5*hy_dt, hy_max_time-tt, 2*dt)  # cannot increase dt more than 2x  # TODO MAGIC NUMBERS -AT,2019oct10
+        dt = min(1.5*hy_dt, hy_max_time-tt, 2*dt)  # cannot increase dt more than 2x  # TODO MAGIC NUMBERS -AT,2019oct10
 
     return
 
@@ -261,7 +260,6 @@ if __name__ == '__main__':
     # User configuration
 
     global EPS
-    global MULT_DEBUG_LEVEL
     global NUM_GRAV_WORKERS
     global NUM_HY_WORKERS
     global REFRESH_RNG
@@ -276,11 +274,7 @@ if __name__ == '__main__':
     global WITH_MASSLOSS
     global MASSLOSS_METHOD
 
-    global BNDBOX
-    global DT_INIT
-    global DT_MAX
     global MIN_MASS
-    global NXB
     global SINK_RAD
 
     global MIN_SF_MASS
@@ -295,21 +289,19 @@ if __name__ == '__main__':
     NUM_HY_WORKERS = 9
     REFRESH_RNG     = False
 
+    # OVERALL code toggles/logic
     WITH_BRIDGE     = True
     WITH_MULTIPLES  = False  # adds three workers: kepler, smalln, multiples
-    WITH_RADIATION  = True
-    WITH_PE_HEAT    = True
     WITH_SE         = True
+
+    WITH_RADIATION  = True  # stellar evolution switches
+    WITH_PE_HEAT    = True
     WITH_SN         = True
     WITH_WINDS      = True
     WITH_MASSLOSS   = True
     MASSLOSS_METHOD = 'puls'
 
-    BNDBOX      = 1.543e+20 | units.cm # TODO hydro.get_runtime_parameter('xmax') | units.cm
-    DT_INIT     = 1.0e10 | units.s
-    DT_MAX      = 1.0e13 | units.s
     MIN_MASS    = 7.0 | units.MSun
-    NXB         = 16  # cells per block from FLASH setup call
     SINK_RAD    = 9.16156e+18 | units.cm # TODO hydro.get_runtime_parameter('sink_accretion_radius') | units.cm
 
     MIN_SF_MASS = 0.08 | units.MSun
@@ -343,8 +335,7 @@ if __name__ == '__main__':
     if WITH_MULTIPLES:
 
         grav.parameters.epsilon_squared = 0.0|units.cm**2.0
-        stopping_condition = grav.stopping_conditions.collision_detection
-        stopping_condition.enable()
+        grav.stopping_conditions.collision_detection.enable()
 
         init_smalln(convert)
 
@@ -352,7 +343,7 @@ if __name__ == '__main__':
         kep.initialize_code()
 
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
-        mult.global_debug                = MULT_DEBUG_LEVEL
+        mult.global_debug                = 1
         mult.neighbor_veto               = True
         mult.check_tidal_perturbation    = True
         mult.neighbor_perturbation_limit = 0.05
