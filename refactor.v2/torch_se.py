@@ -15,30 +15,24 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.integrate import quad
 
-#from amuse.lab import *
 from amuse.units import units
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
-
-# TODO ALERT CONSTANTS!!!!! -AT 2019Oct14
 
 h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
-
-E_ev = 1.60222497096e-12 # energy of 1 eV.
+E_ev = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
-l_min = 1e-7 #0.0 #np.finfo(float).eps # Something really small.
-l_max = h*c/E_lyc  # wavelength of 13.6 eV.
-
 # Cross section for dust per hydrogen atom.
 # Value = tau / N_H where tau = gamma * Av (Draine and Bertoli 96)
 # Av = N_H,tot / (1.87e21 cm^2) (Bohlin et al 78)
 # gamma = 2.5 (Bergin et al 2004)
 sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
+# TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
 def stellar_evolution(time, dt, state, hydro, worker,
@@ -53,12 +47,15 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
 
-    # avoid "t_evol = stars.age + dt", which induces repeated summation error
+    # Always recompute star's age from hydro time and particle creation time.
+    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
+    # age at each bridge step would introduce error.  (2) Multiple ways to
+    # query star age may not agree exactly.
     t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
 
     # Update ALL the star properties in bulk for consistentcy
     new_type = state.stars.stellar_type
-    new_mass = hydro.get_particle_mass(state.stars.tag)
+    new_mass = np.zeros(len(state.stars)) | units.MSun
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -68,7 +65,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
 
-    # follow FLASH idiom; return dt after SN... TODO handle in hydro -AT, 2019oct14
+    # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
     for i, s in enumerate(state.stars):
@@ -78,9 +75,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
-        _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO wtf is this magic number -AT, 2019oct14
+        _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
         se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        del se_evol_time  # not needed
+        assert se_time - t_evol[i] < 1e3 | units.s
+        del se_time, se_evol_time  # not needed
 
         new_type[i] = se_type
 
@@ -89,9 +87,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
             if went_supernova(se_type):
 
                 if with_sn:
-                    # inject energy and mass onto grid
                     inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                     assert inj_mass < 10.0|units.MSun
+                    # inject energy and mass onto grid
                     _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                     se_dt = min(se_dt, _tmp)
 
@@ -113,9 +111,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     _tmp = compute_epe_npe(se_temp, se_radius)
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant !!!!! -AT 2019Oct14
+                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, se_time,
+                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
@@ -131,8 +129,11 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
     state.stars.mass = new_mass
-    state.stars.age  = state.stars.age + dt
+    #state.stars.age  = state.stars.age + dt
     state.stars.stellar_type = new_type
+
+    # TODO not sure if as_quantity_in(...) calls are actually needed.
+    # FLASH worker has its own unit converter.  -AT, 2019Oct14
 
     if with_lyc:
         hydro.set_particle_nion(state.stars.tag, nion)
@@ -145,19 +146,19 @@ def stellar_evolution(time, dt, state, hydro, worker,
         hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
 
     if with_winds:
-        hydro.set_particle_wind_mass(state.stars.tag, dm_dt)
-        hydro.set_particle_wind_vel(state.stars.tag, vterm)
+        hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
+        hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     return se_dt
 
 
-def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, se_time, massloss_method=None):
+def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
     """
     if massloss_method == 'seba':
 
-        dm_dt = (prev_mass - se_mass)/se_time
+        dm_dt = (prev_mass - se_mass)/dt
         # Since we are using less certain mass loss rates anyway, just use velocity from Leitherer et al. 1992.
         vterm = 10**(1.23 - 0.30 * np.log10(se_lum.value_in(units.LSun))
                 + 0.55*np.log10(se_mass.value_in(units.MSun))
@@ -176,9 +177,9 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, se_time, 
 
     elif massloss_method == 'puls':
         # Kudritzki and Puls winds, see Kudritzki & Puls 2000, Markova & Puls 2004, 2008 and Vink 2000
-        star_wind   = StellarWind(se_temp, prev_mass, se_lum, se_radius)
-        dm_dt = star_wind.dm_dt.as_quantity_in(units.g / units.s)
-        vterm = star_wind.vterm.as_quantity_in(units.cm / units.s)
+        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
+        dm_dt = star_wind.dm_dt
+        vterm = star_wind.vterm
 
     else:
         raise Exception("Invalid stellar mass loss method")
@@ -191,8 +192,10 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
 
     flux = ionizing_photon_flux(se_mass, se_radius, se_temp)
 
+    l_min = 1e-7  # min wavelength, something really small.
+    l_max = h*c/E_lyc  # wavelength of 13.6 eV photons, 9.116e-6 cm
+
     # First integrate the power from the BB curve at this stars temp.
-    # l_min=1e-7 (small enough), min wavelength, l_max=9.116e-6 cm, wavelength of 13.6 eV photons.
     [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_cs_per_ph, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
@@ -202,11 +205,11 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
     # Cross section calculation
     # Make sure you convert energy back to ergs if you
     # use it to calculate the frequency!
-    sig = sig0*(h*avg_nu/E_lyc)**(-3.0)
+    sig = sig0*(h*avg_nu/E_lyc)**(-3)
 
-    eion = (avg_E | units.eV) - (13.6 |units.eV) #2.0 | units.eV #6.0 | units.eV
-    nion = (flux*4*np.pi*se_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
-    sigh = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
+    eion = (avg_E | units.eV) - (13.6 |units.eV)
+    nion = (flux*4*np.pi*se_radius**2).as_quantity_in(units.s**-1)
+    sigh = sig | units.cm**2
 
     return eion, nion, sigh
 
@@ -214,10 +217,10 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
 def compute_epe_npe(se_temp, se_radius):
     """Calculate photoelectric heating parameters"""
 
+    l_min_dust = h*c/E_lyc # wavelength at 13.6 eV
+    l_max_dust = h*c/(5.6*E_ev) # wavelength at 5.6 eV
+
     # First integrate the power from the BB curve at this stars temp.
-    # l_min=1e-7 (small enough), min wavelength, l_max=9.116e-6 cm, wavelength of 13.6 eV photons.
-    l_min_dust = h*c / E_lyc # wavelength at 13.6 eV
-    l_max_dust = h*c / (5.6*E_ev) # wavelength at 5.6 eV
     [power, err] = quad(lum_wl, l_min_dust, l_max_dust, args=(l_max_dust, se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_per_ph, l_min_dust, l_max_dust, args=(l_max_dust, se_temp.value_in(units.K)))
@@ -227,7 +230,7 @@ def compute_epe_npe(se_temp, se_radius):
     # actual average energy of the photons WITH the ionizing potential still in there!
     epe = avg_E | units.eV # should be around 8 eV
     # Calculate total number of photons from stellar surface with stellar radius.
-    npe = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*se_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
+    npe = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*se_radius**2).as_quantity_in(units.s**-1)
 
     return epe, npe
 
@@ -274,7 +277,7 @@ def lum_wl_per_ph(l, l_max, T):
     return L
 
 
-class StellarWind(object):
+class PulsStellarWind(object):
     """Implementation of stellar winds based on Kudritzki and Puls ARAA 2000 and Vink A&A 2000."""
 
     def __init__(self, teff, mass, lum, radius):
@@ -292,9 +295,9 @@ class StellarWind(object):
         return
 
     def thom_sig(self):
-        if (self.teff.value_in(units.K) < 3e4):
+        if self.teff < 3e4|units.K:
             self.thom_sig = 0.31 # | units.cm**2.0 / units.g
-        elif (3e4 <= self.teff.value_in(units.K) < 3.5e4):
+        elif 3e4|units.K <= self.teff < 3.5e4|units.K:
             self.thom_sig = 0.32 # | units.cm**2.0 / units.g
         else:
             self.thom_sig = 0.33 # | units.cm**2.0 / units.g
@@ -310,20 +313,20 @@ class StellarWind(object):
         return
 
     def vterm(self):
-        if (self.teff.value_in(units.K) <= 1.0e4):
-            self.vterm = (self.vesc)
-        elif (1.0e4 < self.teff.value_in(units.K) < 2.1e4):
-            self.vterm = (1.4*self.vesc)
+        if self.teff <= 1.0e4|units.K:
+            self.vterm = self.vesc
+        elif 1.0e4|units.K < self.teff < 2.1e4|units.K:
+            self.vterm = 1.4*self.vesc
         else:
-            self.vterm = (2.65*self.vesc)
+            self.vterm = 2.65*self.vesc
         return
 
     def dm_dt(self):
         # Above the bi-stability jump (larger than B1).
-        if (self.teff.value_in(units.K) > 2.75e4):
+        if self.teff > 2.75e4|units.K:
             self.dm_dt = 10**(self.mass_loss1()) | units.MSun / units.yr
         # Below the bi-stability jump (smaller than B1).
-        elif (self.teff.value_in(units.K) < 2.25e4):
+        elif self.teff < 2.25e4|units.K:
             self.dm_dt = 10**(self.mass_loss2()) | units.MSun / units.yr
         # Linear interpolation between the two.
         else:
@@ -338,7 +341,7 @@ class StellarWind(object):
     # Above the bi-stability jump (larger than B1).
     def mass_loss1(self, teff=None):
 
-        if (teff is None):
+        if teff is None:
             teff = self.teff.value_in(units.K)
 
         log_dm_dt  = -6.697 + 2.194*np.log10(self.lum.value_in(units.LSun)/1e5) \
@@ -351,7 +354,7 @@ class StellarWind(object):
     # Below the bi-stability jump (smaller than B1).
     def mass_loss2(self, teff=None):
 
-        if (teff is None):
+        if teff is None:
             teff = self.teff.value_in(units.K)
 
         log_dm_dt  = -6.688 + 2.210*np.log10(self.lum.value_in(units.LSun)/1e5) \

@@ -15,6 +15,7 @@ CODING PRINCIPLES:
   don't stuff too many methods into it; try not to use its workers.
 
 * "single source of truth", to the most extent possible.
+  In general, let hydro hold truth.  It already must do so for e.g. restarts.
 
 * Try not to pass Torch parameter struct into deeper methods.
   Keep abstraction layers well isolated.
@@ -151,6 +152,7 @@ def evolve(state, hydro, grav, mult):
             ### Stellar evolution.
             ### ------------------
             if USER['with_se']:
+                tprint("Do stellar evolution")
                 se_dt = stellar_evolution(
                     tt+dt, dt, state, hydro, se,
                     with_lyc          = USER['with_lyc'],

@@ -29,6 +29,9 @@ def add_particles_to_grav(state, hydro, grav):
     Separating hydro->grav update from sink->amuse->star->hydro update
     allows for possibility of hydro creating its own stars.
 
+    Treat hydro as main fount of knowledge; copy stars from hydro to
+    AMUSE and grav.
+
     postcondition:
         stars updated
         grav updated
@@ -54,12 +57,12 @@ def add_particles_to_grav(state, hydro, grav):
     velocity = hydro.get_particle_velocity(newtags)
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
-    age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
+    #age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
-    add_star.age  = age
+    #add_star.age  = age
     add_star.x    = position[:,0]
     add_star.y    = position[:,1]
     add_star.z    = position[:,2]
@@ -205,15 +208,15 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
     for sink_tag in sink_tags:
 
         hydro.set_particle_pointers('sink')
-        sink_mass = hydro.get_particle_mass(sink_tag).value_in(units.MSun)
-        sink_pos = hydro.get_particle_position(sink_tag)#.value_in(units.cm)
-        sink_vel = hydro.get_particle_velocity(sink_tag)#.value_in(units.cm/units.s)
-        sink_cs  = hydro.get_sink_mean_cs(sink_tag)#.value_in(units.cm/units.s)
+        sink_mass = hydro.get_particle_mass(sink_tag)
+        sink_pos = hydro.get_particle_position(sink_tag)
+        sink_vel = hydro.get_particle_velocity(sink_tag)
+        sink_cs  = hydro.get_sink_mean_cs(sink_tag)
 
         # get all the stars that we can form now
         spawn_masses = []
         for i in range(len(state.all_masses[sink_tag])):
-            m = state.all_masses[sink_tag][i]
+            m = state.all_masses[sink_tag][i] | units.MSun
             if sink_mass > m:
                 sink_mass -= m
                 spawn_masses.append(m)
@@ -221,7 +224,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         if spawn_masses:
             tprint("... sink tag {} created {} new stars".format(sink_tag, len(spawn_masses)))
             formed_stars = True
-            hydro.set_particle_mass(sink_tag, sink_mass|units.MSun)
+            hydro.set_particle_mass(sink_tag, sink_mass)
 
             # Remove newly-created stars from sink's queue
             n = len(spawn_masses)
