@@ -958,6 +958,15 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     def IO_out():
         function = LegacyFunctionSpecification()
         function.addParameter('output_type', dtype='s', direction=function.IN)
+        function.addParameter('fileNumber', dtype='i', direction=function.OUT)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def IO_num():
+        function = LegacyFunctionSpecification()
+        function.addParameter('output_type', dtype='s', direction=function.IN)
+        function.addParameter('fileNumber', dtype='i', direction=function.OUT)
         function.result_type = 'i'
         return function
 
@@ -1651,7 +1660,13 @@ class Flash(CommonCode):
         object.add_method(
             'IO_out',
             (object.NO_UNIT),
-            (object.ERROR_CODE)
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+
+        object.add_method(
+            'IO_num',
+            (object.NO_UNIT),
+            (object.NO_UNIT, object.ERROR_CODE)
         )
 
         object.add_method(
@@ -1901,6 +1916,7 @@ class Flash(CommonCode):
                     #'make_particle_tree',
                     'write_chpt',
                     'IO_out',
+                    'IO_num',
                     'get_output_dir',
                     'get_runtime_parameter',
                     'timer_summary'

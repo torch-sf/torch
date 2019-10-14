@@ -133,8 +133,8 @@ def load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart):
     global old_sink_tags
     # If this is a restart, shouldn't we load the random number state?
 
-    rstatefile =  output_dir+'/rnd_state'+chknum+'.pickle'
-    massesfile = output_dir+'/all_masses'+chknum+'.pickle'
+    rstatefile =  output_dir+'/rnd_state{:04d}.pickle'.format(chknum)
+    massesfile = output_dir+'/all_masses{:04d}.pickle'.format(chknum)
 
     refresh_rand_seed_on_restart = (refresh_rand_seed_on_restart or
                                     not os.path.isfile(rstatefile) or
@@ -2327,7 +2327,7 @@ def get_restart_and_chk_num():
                 if (words[0].lower() == 'basenm'):
                     basename = words[2].strip("\"")
 
-    return restart, chknum, pltnum, basename
+    return restart, int(chknum), int(pltnum), basename
 
 ###############################################
 ###             Multiples module            ###
@@ -2610,38 +2610,15 @@ def update_stars_from_leaves(mult_grav, grav, stars):
 
     return
 
-# Check to see if we wrote a plot or checkpoint file.
-def poll_for_new_output_files(file_name, file_modified_time):
-    import os
-    # There's two scenarios.
-    # 1) We wrote a new file and
-    # 2) We overwrote an existing file.
-    new_file = False
-    # If file didn't exist before, file_modified_time < 0
-    if (file_modified_time < 0.0):
-        if (os.path.isfile(file_name)):
-            new_file = True
-            file_modified_time = os.stat(file_name).st_mtime
-    else: # we pass the last known modified time.
-        if (os.path.isfile(file_name)):
-            curr_file_modified_time = os.stat(file_name).st_mtime
-            if (curr_file_modified_time > file_modified_time):
-                new_file = True
-                file_modified_time = curr_file_modified_time
-        else:
-            file_modified_time = -1.0 # There isn't a file with this name.
-    return new_file, file_modified_time
-
 # Write out pickles with the current random number state and the
 # dictionary with all the future stars in it.
-def write_rnd_and_mass_pickles(all_masses, output_dir, new_chpt_file):
-    print "Writing out all masses to all_masses.pickle"
-    with open(output_dir+'/all_masses'+new_chpt_file+'.pickle', 'wb') as f:
+def write_rnd_and_mass_pickles(all_masses, output_dir, pklnum):
+    print "Writing all_masses{:04d}.pickle".format(pklnum)
+    with open(output_dir+'/all_masses{:04d}.pickle'.format(pklnum), 'wb') as f:
         pickle.dump(all_masses, f)
-    old_chpt_file = new_chpt_file
-    print "Writing out random state to rnd_state.pickle"
+    print "Writing rnd_state{:04d}.pickle".format(pklnum)
     rnd_state = np.random.get_state()
-    with open(output_dir+'/rnd_state'+new_chpt_file+'.pickle', 'wb') as f:
+    with open(output_dir+'/rnd_state{:04d}.pickle'.format(pklnum), 'wb') as f:
         pickle.dump(rnd_state, f)
     return
 
@@ -2967,9 +2944,7 @@ tags_keys = np.empty(0)# Tags (ID in Flash) and keys (ID in AMUSE) for all parti
 first_loop = True
 made_stars = False
 gridChanged = True
-new_chk_file = '-1'
 old_chk_file = '-1'
-new_plt_file = '-1'
 old_plt_file = '-1'
 
 max_ref  = hydro.get_max_refinement()
@@ -2992,26 +2967,12 @@ print "grav.initialize_code() called."
 '''
 # This should be automated!
 restart,chknum,pltnum,basename = get_restart_and_chk_num()
-chknum = str(chknum).zfill(4)
-pltnum = str(pltnum).zfill(4)
 refresh_rand_seed_on_restart = False #True
 
 if (refresh_rand_seed_on_restart):
     print "WARNING WARNING WARNING! Resetting the rand seed!!!!!!!!!!"
 
 output_dir = hydro.get_output_dir()
-#current_chpt_file = max(glob.glob(output_dir+'/*_chk_????'),'0000')
-#current_chpt_file = glob.glob(output_dir+'/*_chk_*')
-#current_chpt_file.sort()
-#current_chpt_file = current_chpt_file[-1][-4:]
-chk_pre = output_dir+'/'+basename+'hdf5_chk_'
-plt_pre = output_dir+'/'+basename+'hdf5_plt_cnt_'
-current_chk_file = chk_pre+chknum
-new_chk_file = chk_pre+str(int(chknum)+1).zfill(4)
-current_plt_file = plt_pre+pltnum
-new_plt_file = plt_pre+str(int(pltnum)+1).zfill(4)
-chk_mtime = -1.0
-plt_mtime = -1.0
 
 print "Writing output files to: ", output_dir
 
@@ -3019,24 +2980,12 @@ print "Is this a restart?", restart
 print "We are assuming the checkpointfilenumber =", chknum
 load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart)
 
-wrote_chk_file = False
-wrote_plt_file = False
-# Get file modified times for current chk and plt files.
-wrote_chk_file, chk_mtime = poll_for_new_output_files(current_chk_file, chk_mtime)
-wrote_plt_file, plt_mtime = poll_for_new_output_files(current_plt_file, plt_mtime)
-
-print "Curr chk_file=", current_chk_file
-print "Curr chknum=", chknum
-print "Curr chk_mtime=", chk_mtime
-print "New chk_file=", new_chk_file
-
-print "Curr plt_file=", current_plt_file
-print "Curr pltnum=", pltnum
-print "Curr plt_mtime=", plt_mtime
-print "New plt_file=", new_plt_file
-
-if (wrote_chk_file and not restart):
+if (not restart):
     write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
+
+# After FLASH inits (whether restart or not), it increments
+# io_checkpointFileNumber for the /next/ file write.
+chknum = hydro.IO_num('chk')
 
 # This is used if you change the number of processors on restart!
 # Or if you need to clear out tracers or some other thing.
@@ -3304,49 +3253,20 @@ try:
                     # assumes this is checked during the Driver_evolveFlash loop
                     # and this won't output files properly. It will work
                     # properly if you use output time parameters, however.
-                        #hydro.IO_out('all')
-                        hydro.IO_out('pltpart')
-                        hydro.IO_out('chk')
+                        hy_pltnum = hydro.IO_out('pltpart')
+                        hy_chknum = hydro.IO_out('chk')
 
-                        # Check if a checkpoint file was written,
-                        # if yes, then store the list of stars up for
-                        # creation.
-
-                        #print "Curr chk_file=", current_chk_file
-                        #print "Curr chknum=", chknum
-                        #print "Curr chk_mtime=", chk_mtime
-                        #print "New chk_file=", new_chk_file
-
-                        #print "Curr plt_file=", current_plt_file
-                        #print "Curr pltnum=", pltnum
-                        #print "Curr plt_mtime=", plt_mtime
-                        #print "New plt_file=", new_plt_file
-
-                        wrote_chk_file = False
-                        wrote_plt_file = False
-                        old_chk_mtime = chk_mtime # Store last known times that we wrote files.
-                        old_plt_mtime = plt_mtime
-                        # Get file modified times for current chk and plt files.
-                        wrote_chk_file, chk_mtime = poll_for_new_output_files(new_chk_file, chk_mtime)
-                        wrote_plt_file, plt_mtime = poll_for_new_output_files(new_plt_file, plt_mtime)
-
-                        if (wrote_chk_file):
-                            current_chk_file = new_chk_file
-                            chknum = str(int(chknum)+1).zfill(4)
-                            new_chk_file = chk_pre+str(int(chknum)+1).zfill(4)
+                        # If a checkpoint file was written,
+                        # then store the list of stars up for creation.
+                        if (hy_chknum != chknum):  # allow for possibility of rolling chk
                             write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
-                            if (not os.path.isfile(new_chk_file)): chk_mtime = -1.0
-                        if (wrote_plt_file):
-                            current_plt_file = new_plt_file
-                            pltnum = str(int(pltnum)+1).zfill(4)
-                            new_plt_file = plt_pre+str(int(pltnum)+1).zfill(4)
-                            if (not os.path.isfile(new_plt_file)): plt_mtime = -1.0
-                        #print "Did we write a chpt file?", wrote_chk_file
-                        #print "Curr chk_file=", current_chk_file
-                        #print "Curr chknum=", chknum
-                        #print "Did we write a plot file?", wrote_plt_file
-                        #print "Curr plt_file=", current_plt_file
-                        #print "Curr pltnum=", pltnum
+                            chknum = hy_chknum
+
+                        # wrote plt file
+                        if (hy_pltnum > pltnum):
+                            pltnum = hy_pltnum
+                        elif (hy_pltnum < pltnum):
+                            raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, pltnum))
 
                     print "Current simulation time:", t
                     hydro_time = hydro.get_time()
@@ -4458,37 +4378,26 @@ try:
 
                 print "Checking for plot."
 
-                # Check if a checkpoint file was written,
-                # if yes, then store the list of stars up for
-                # creation.
+                hy_pltnum = hydro.IO_out('pltpart')
+                hy_chknum = hydro.IO_out('chk')
 
-                hydro.IO_out('pltpart')
-                hydro.IO_out('chk')
-
-                wrote_chk_file = False
-                wrote_plt_file = False
-                old_chk_mtime = chk_mtime # Store last known times that we wrote files.
-                old_plt_mtime = plt_mtime
-                # Get file modified times for current chk and plt files.
-                wrote_chk_file, chk_mtime = poll_for_new_output_files(new_chk_file, chk_mtime)
-                wrote_plt_file, plt_mtime = poll_for_new_output_files(new_plt_file, plt_mtime)
-
-                if (wrote_chk_file):
-                    current_chk_file = new_chk_file
-                    chknum = str(int(chknum)+1).zfill(4)
-                    new_chk_file = chk_pre+str(int(chknum)+1).zfill(4)
-                    if (not os.path.isfile(new_chk_file)): chk_mtime = -1.0
+                # If a checkpoint file was written,
+                # then store the list of stars up for creation.
+                if (hy_chknum != chknum):  # allow for possibility of rolling chk
                     write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
-                if (wrote_plt_file):
-                    current_plt_file = new_plt_file
-                    pltnum = str(int(pltnum)+1).zfill(4)
-                    new_plt_file = plt_pre+str(int(pltnum)+1).zfill(4)
-                    if (not os.path.isfile(new_plt_file)): plt_mtime = -1.0
+                    chknum = hy_chknum  # must increment after write
+
+                # wrote plt file
+                if (hy_pltnum > pltnum):
                     if (write_psets):
                         stars.dt = dt
-                        write_set_to_file(stars, pdir+'/stars'+pltnum+'.amuse')
+                        write_set_to_file(stars, pdir+'/stars{:04d}.amuse'.format(pltnum))
                         multstars = mult_grav.stars.copy_to_new_particles()
-                        write_set_to_file(multstars, pdir+'/mult'+pltnum+'.amuse')
+                        write_set_to_file(multstars, pdir+'/mult{:04d}.amuse'.format(pltnum))
+                    pltnum = hy_pltnum  # must increment after write
+                elif (hy_pltnum < pltnum):
+                    raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, pltnum))
+
 
                 if (insane):
                     if (with_multiples):
