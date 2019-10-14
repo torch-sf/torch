@@ -57,12 +57,10 @@ def add_particles_to_grav(state, hydro, grav):
     velocity = hydro.get_particle_velocity(newtags)
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
-    #age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
-    #add_star.age  = age
     add_star.x    = position[:,0]
     add_star.y    = position[:,1]
     add_star.z    = position[:,2]

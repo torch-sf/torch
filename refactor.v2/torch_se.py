@@ -129,7 +129,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
     state.stars.mass = new_mass
-    #state.stars.age  = state.stars.age + dt
     state.stars.stellar_type = new_type
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
