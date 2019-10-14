@@ -33,12 +33,11 @@ from amuse.community.smalln.interface import SmallN
 from amuse.community.flash import josh_multiples as multiples
 #from amuse.rfi.channel import AsyncRequestsPool
 
+from torch_se import stellar_evolution
 from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
 from torch_state import TorchState
 from torch_stdout import tprint
 from torch_user import user_initial_conditions, user_parameters
-
-#import ionizingflux as ion
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -122,10 +121,14 @@ def evolve(state, hydro, grav, mult):
     grav.parameters.sync_time   = hy_time
     gr_time = grav.get_time()
 
+    # stellar evolution timestep (hack for SN)
+    # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
+    se_dt = 1e99 | units.s
+
     # bridge loop control
     it = 1
     tt = hy_time  # tt = "torch time" or "time in torch"
-    dt = min(1.5*hy_dt, hy_max_time-tt)  # TODO MAGIC NUMBERS -AT,2019oct10
+    dt = min(1.5*hy_dt, se_dt, hy_max_time-tt)  # TODO MAGIC NUMBERS -AT,2019oct10
 
     # more bridge loop variables
     made_stars = False
@@ -148,9 +151,15 @@ def evolve(state, hydro, grav, mult):
             ### Stellar evolution.
             ### ------------------
             if USER['with_se']:
-                pass
-                # TODO
-                # do_stellar_evolution(state, hydro)
+                se_dt = stellar_evolution(
+                    tt+dt, dt, state, hydro, se,
+                    with_lyc          = USER['with_lyc'],
+                    with_pe_heat      = USER['with_pe_heat'],
+                    with_winds        = USER['with_winds'],
+                    with_sn           = USER['with_sn'],
+                    massloss_method   = USER['massloss_method'],
+                    min_feedback_mass = USER['min_feedback_mass'],
+                )
 
             ### -----------
             ### First kick.
@@ -253,7 +262,7 @@ def evolve(state, hydro, grav, mult):
         assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
 
         hy_dt = hydro.get_timestep()
-        dt = min(USER['hy_dt_factor']*hy_dt, hy_max_time-tt)
+        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
 
     return
 

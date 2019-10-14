@@ -70,10 +70,17 @@ def add_particles_to_grav(state, hydro, grav):
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
     add_star.radius = 100 | units.AU # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
-    #if WITH_RADIATION:
-    add_star.nion = 0.0 # ionizing flux
-    add_star.eion = 0.0 # ionizing energy *OVER* 13.6 eV
-    add_star.sigh = 0.0 # ionizing cross section.
+    #if with_lyc:
+    add_star.nion = 0.0 | units.s**-1 # ionizing flux
+    add_star.eion = 0.0 | units.erg # ionizing energy *OVER* 13.6 eV
+    add_star.sigh = 0.0 | units.cm**2 # ionizing cross section.
+    #if with_pe_heat:
+    add_star.npe   = 0.0 | units.s**-1 # PE photon flux
+    add_star.epe   = 0.0 | units.erg # PE photon energy (should be around 8 eV)
+    add_star.sigpe = 0.0 | units.cm**2 # dust cross section per hydrogen atom
+    #if with_wind:
+    add_star.dm_dt = 0.0 | units.g/units.s
+    add_star.vterm = 0.0 | units.cm/units.s
 
     state.stars.add_particles(add_star)
     state.stars = state.stars.sorted_by_attribute('tag')

@@ -6,6 +6,8 @@ You must define the methods:
     user_initial_conditions(state, hydro)
     user_parameters()
 
+User parameters should have AMUSE units attached, where appropriate.
+
 See the main torch code (torch.py) to understand how this all works.
 
 Design inspired by TRISTAN-MP, Athena++ architecture.
@@ -92,11 +94,10 @@ def user_parameters():
 
     # <stellar evolution>
 
-    p['with_radiation'] = True  # stellar evolution switches
+    p['with_lyc'] = True
     p['with_pe_heat'] = True
     p['with_sn'] = True
     p['with_winds'] = True
-    p['with_massloss'] = True
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
 
@@ -123,4 +124,3 @@ def user_parameters():
         p['num_hy_workers'] -= 2  # SmallN, Kepler
 
     return p
-
