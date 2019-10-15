@@ -2826,8 +2826,6 @@ stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
 print "Gravity code initialized."
 sys.stdout.flush()
 
-time.sleep(10)
-
 print "Starting hydro code."
 sys.stdout.flush()
 hydro = Flash(unit_converter = convert2, number_of_workers=num_hy_workers, redirection='none')
@@ -2948,8 +2946,6 @@ gridChanged = True
 max_ref  = hydro.get_max_refinement()
 sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
 smallest_dx = (2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
-
-time.sleep(5)
 
 '''
 stars = None
