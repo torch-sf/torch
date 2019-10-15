@@ -4,7 +4,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 from numpy import *
-import yt
+#import yt
 import sys
 import argparse
 import numpy as np
@@ -15,11 +15,19 @@ from scipy.interpolate import interp1d as ip1d
 ### Units
 ########################
 
-MSun = yt.units.Msun.in_cgs().v
-cmpc = yt.units.pc.in_cgs().v
-G    = yt.physical_constants.G.v
-kB   = yt.physical_constants.kb.v
-mH   = yt.physical_constants.mass_hydrogen_cgs.v
+#MSun = yt.units.Msun.in_cgs().v
+#cmpc = yt.units.pc.in_cgs().v
+#G    = yt.physical_constants.G.v
+#kB   = yt.physical_constants.kb.v
+#mH   = yt.physical_constants.mass_hydrogen_cgs.v
+
+# manually extract values from yt and hardcode - AT, 2019 August 13
+# yt import is slow.
+MSun = 1.98841586e+33
+cmpc = 3.08567758e+18
+G    = 6.67384e-08
+kB   = 1.3806488e-16
+mH   = 1.67373522e-24
 
 #######################
 ### Command line parser
@@ -72,14 +80,21 @@ parser.add_argument("-Tb", "--background_temperature", default=8e3, required=Fal
 parser.add_argument("--Ts_from_cool_curve", action='store_true',
                    help="Compute Ts for given density from equilibrium \
                          cooling curve. Overrides input sphere temperature.")
+parser.add_argument("--rho_match", action='store_true',
+                   help="Match density at sphere edge to ambient medium dens \
+                         by tanh smoothing or flooring. \
+                         This alters the sphere mass.")
+parser.add_argument("-s", "--seed", default=-1, required=False, type=int,
+                   help="Random seed.")
 
 parser.add_argument("-f", "--filename", default=None, required=False,
                    help="Output filename.")
 parser.add_argument('-nd','--no_data', action='store_true', default=False,
                     help="Don't write a data output file, just do the calculations. \
                           Default is false (write data).")
-parser.add_argument('-wp','--with_plots', action='store_true', default=True,
-                    help="Make slice plots of velx, pres, temp, dens")
+parser.add_argument('-np','--no_plots', action='store_true', default=False,
+                    help="Don't make slice plots of velx, pres, temp, dens. \
+                          Default is true (write plot files).")
 parser.add_argument('-rf','--read_file', default=None,
                     help="Read all input data from file, formatted in the following order: \
                           Mass	Radius	box	virial_ratio	NumDensSph	Tsph	Tamb	kmin	kmax	Eslp	Bmag	filename \
@@ -164,7 +179,7 @@ def calc_sphsym_pot(r_arr, rho_arr):
     return (pot_arr, Mrmid_arr, Frmid_arr)
 
 def gauss_dens_prof(Rsph, Msph, rho_rat, Nr):
-    rarr   = np.linspace(0.0, Rsph+Rsph/Nr, Nr+1)
+    rarr   = np.linspace(0.0, Rsph, Nr+1)
     sig_R  = Rsph / sqrt(-log(rho_rat)) # characteristic radius
     rho_rarr = exp(-rarr*rarr/(sig_R*sig_R))
     # calculate mass of the sphere with temporary density profile
@@ -228,15 +243,41 @@ def dens_pot_3darr(Rsph, Msph, rarr, rho_rarr, rho_amb, Nr, NCD, CD):
     return (rarr, rho_arr, pot_arr)
 
 
+def dens_pot_3darr_noextrap(r_rarr, rho_rarr, NCD, CD):
+    """No extrapolation w/rho_amb, just apply density profile to cube domain"""
+    # calculate gravitational potential
+    (pot_rarr, Mrmid_rarr, Frmid_rarr) = calc_sphsym_pot(r_rarr, rho_rarr)
+
+    # create computational domain
+    dx = (CD[0][1] - CD[0][0]) / NCD[0]
+    dy = (CD[1][1] - CD[1][0]) / NCD[1]
+    dz = (CD[2][1] - CD[2][0]) / NCD[2]
+    ax = arange(CD[0][0]+0.5*dx, CD[0][1], dx)
+    ay = arange(CD[1][0]+0.5*dy, CD[1][1], dy)
+    az = arange(CD[2][0]+0.5*dz, CD[2][1], dz)
+
+    (mx, my, mz) = meshgrid(ax,ay,az)
+    r_arr = sqrt(mx*mx + my*my + mz*mz)
+
+    assert np.amax(r_arr) <= r_rarr[-1]
+
+    rho_arr = np.interp(r_arr, r_rarr, rho_rarr)
+    pot_arr = np.interp(r_arr, r_rarr, pot_rarr)
+
+    return (r_arr, rho_arr, pot_arr)
+
+
 # The actual code to make the data file.
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                    kmin, kmax, Eslp, Bmag, filename, write_data,
                    Ts_from_cool_curve=False,
                    cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat',
+                   rho_match=False,
                    with_plots=True):
 
     rho_rat = 1.0/3.0  # density ratio between border and centre
-    Nr      = 1000     # Number of points in 1-D
+    Nr      = 10000    # Number of points in 1-D
+    f_trunc = 0.05      # rho-matching, hardcoded constant for tanh function, reasonable for NCD=(128,128,128)
 
     rho_amb = n0*mH*mu_amb # Ambient density
 
@@ -244,10 +285,69 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     CD   = array(((-box, box), (-box, box), (-box, box)), dtype=float64)
     NCD  = (128,128,128)
 
-    # calculate density, pressure and potential fields
-    (r_rarr, rho_rarr) = gauss_dens_prof(Rsph, Msph, rho_rat, Nr)
-    (rarr, rho_arr, pot_arr) = dens_pot_3darr(Rsph, Msph, r_rarr, rho_rarr, rho_amb, Nr, NCD, CD)
-    mask = (rarr <= Rsph).astype(float)
+    if rho_match:  # new method - AT, 2019 Aug 13
+
+        r_rarr = linspace(0, 1.74*box, Nr+1)  # 1.74 is just above sqrt(3)
+        rho_rarr = exp(-r_rarr**2/Rsph**2 * -1*log(rho_rat))
+        indRsph = np.searchsorted(r_rarr, Rsph)  # index of smallest r satisfying r >= Rsph
+
+        # calculate mass of the sphere with temporary density profile
+        (pot_rarr, Mrmid_rarr, Frmid_rarr) = calc_sphsym_pot(r_rarr[:indRsph], rho_rarr[:indRsph])
+        # scale the density profile to get correct sphere mass
+        rho_rarr *= Msph / Mrmid_rarr[-1]
+
+        # smoothly match radial density profile to ambient medium.
+        # this alters the enclosed mass.  gaussian dens profile concentrates
+        # mass at center, so tweaking edge dens should not alter mass too much.
+        if rho_rarr[indRsph-1] > rho_amb:
+
+            rho_rarr[rho_rarr < rho_amb] = rho_amb  # BEFORE applying kernel, enforce rho >= rho_amb everywhere
+
+            # kernel(r=0) -> 1, kernel(r=Rsph) = 0.5, kernel(r->infty) -> 0
+            kernel = 0.5*(np.tanh((Rsph-r_rarr)/f_trunc/Rsph)+1)
+            rho_rarr = np.exp( (np.log(rho_rarr) - np.log(rho_amb))*kernel + np.log(rho_amb) )
+
+            # Skip unstable gas with n=1-10 cm^-3, T~1e3 to 1e4 K.  This (n,T)
+            # range has dP/dn < 0 at thermal equilibrium and will evolve
+            # towards warm or cold ISM.
+            #
+            # Unimportant if the ambient ISM is hot phase, so rho_amb controls
+            # the P/dens discontinuity at sphere edge.  But, could be useful if
+            # user wants fine control over the sphere's initial evolution.
+
+            #assert Ts_from_cool_curve  # not tested without --Ts_from_cool_curve, so just require it
+            #assert cool_curve == 'hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'
+            #unstable_ndens_min = 0.5888  # P/kB = 4.711E+03  # also skip the stable range n=0.5888 to n=1.871 to enforce monotonic pressure
+            #unstable_ndens_max = 23.50  # P/kB = 4.712E+03
+            #
+            #assert rho_rarr[0]/mH/musph > unstable_ndens_max
+            #assert n0 < unstable_ndens_min
+            #rho_rarr[:indRsph] = np.maximum(rho_rarr[:indRsph], unstable_ndens_max*mH*musph)
+            #rho_rarr[indRsph:] = np.minimum(rho_rarr[indRsph:], unstable_ndens_min*mH*mu_amb)
+
+        elif rho_rarr[indRsph-1] < rho_amb:
+            # apply a density floor
+            print("Warning: sphere edge density is below ambient density, flooring...")
+            rho_rarr[rho_rarr < rho_amb] = rho_amb
+
+        if (with_plots):
+            import matplotlib.pyplot as plt
+            plt.plot(r_rarr/Rsph, rho_rarr, '-k')
+            plt.yscale('log')
+            plt.xlabel('r/Rsph')
+            plt.ylabel('rho (g/cm3)')
+            plt.savefig(filename+'profile.png')
+            plt.clf()
+
+        (r_arr, rho_arr, pot_arr) = dens_pot_3darr_noextrap(r_rarr, rho_rarr, NCD, CD)
+
+    else:
+
+        # calculate density, pressure and potential fields
+        (r_rarr, rho_rarr) = gauss_dens_prof(Rsph, Msph, rho_rat, Nr)
+        (r_arr, rho_arr, pot_arr) = dens_pot_3darr(Rsph, Msph, r_rarr, rho_rarr, rho_amb, Nr, NCD, CD)
+
+    mask = (r_arr <= Rsph).astype(float)
 
     if Ts_from_cool_curve:
         # Lets just set the temperature initially from the density in the sphere
@@ -270,9 +370,9 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         #       Therefore we're going back to separately setting the ambient and
         #       core temps and pressures independently.  - JW 8/30/18
         #p_arr = (kB*Tsph/musph/mH)*mask*rho_arr + (kB*Tsph/musph/mH)*(1.0-mask)*rho_rarr[-1] # Psph edge = Pamb
-        # Invert to get the ambient density.
 
-    rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
+        # Invert to get the ambient density.
+        rho_arr = rho_arr*mask + p_arr/(kB*T_amb/mu_amb/mH)*(1.0-mask)
 
     # calculate turbulent velocity field
     (velx, vely, velz) = kolmogorov_vel(NCD, kmin, kmax, Eslp)
@@ -392,7 +492,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                     fmt=('%3d %3d %3d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e') )
                 f.write('\n')
 
-    f.close()
+        f.close()
 
 
 def get_P_and_T_from_Eq_Cooling_Curve(numdens, data_file='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
@@ -481,6 +581,8 @@ else: # load from the file
     Rsph *= cmpc
     Msph *= MSun
 
+if args.seed != -1:
+    np.random.seed(args.seed)
 
 for i in range(num_runs):
 
@@ -489,5 +591,6 @@ for i in range(num_runs):
                    vir_rat[i], kmin[i], kmax[i], Eslp[i], Bmag[i],
                    filename[i], write_data,
                    Ts_from_cool_curve=args.Ts_from_cool_curve,
-                   with_plots=args.with_plots)
-
+                   rho_match=args.rho_match,
+                   with_plots=(not args.no_plots),
+    )
