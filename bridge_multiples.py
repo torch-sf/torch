@@ -3137,20 +3137,19 @@ try:
                              #with_ph4 = with_ph4,
                              #with_multiples = False)
 
+                        print "Evolving grav to current hydro time."
+                        with Timer(verbose=True) as grav_timer:
+                            if (with_ph4):
+                                grav.parameters.begin_time=hydro_time
+                                grav.parameters.sync_time=hydro_time
+                                grav.parameters.force_sync=1
+                            else:
+                                grav.parameters.begin_time=hydro_time
+                                grav.evolve_model(hydro_time)
+
                         grav_time  = grav.get_time()
                         print "Hydro time:", hydro_time
                         print "Grav time:", grav_time
-
-                    # Try to evolve grav to the current time.
-                        #print "Evolving grav to current hydro time."
-                        #with Timer(verbose=True) as grav_timer:
-                        #    #hydro_time = hydro.get_time()
-                        #    if (with_ph4):
-                        #        grav.parameters.begin_time=hydro_time
-                        #        grav.parameters.sync_time=hydro_time
-                        #        grav.parameters.force_sync=1
-                        #    else:
-                        #        grav.evolve_model(hydro_time)
 
                         print "Num particles in grav:", len(grav.particles)
 
