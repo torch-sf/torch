@@ -1587,8 +1587,23 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
               all_masses[sink_tags[s]][0], \
               "for sink with mass:", sink_mass
 
+        while np.sum(all_masses[sink_tags[s]]) < sink_mass:
+            # Sink wants to spawn more stars than available in queue.
+            print "restock, remaining queue mass:", np.sum(all_masses[sink_tags[s]])
+            restock = get_stellar_mass_sampling(
+                        sample_imf_mass,
+                        num_bins=10,
+                        min_samp_mass=min_imf_mass.value_in(units.MSun),
+                        max_samp_mass=max_imf_mass.value_in(units.MSun),
+                        eff=local_sfe,
+                        sum_small=sum_small
+            )
+            all_masses[sink_tags[s]] = np.concatenate((all_masses[sink_tags[s]], restock))
+            print "done restocking, new queue mass:", np.sum(all_masses[sink_tags[s]])
+
         csum = np.cumsum(all_masses[sink_tags[s]])
         i = np.searchsorted(csum, sink_mass, side='left')
+        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
         spawn_masses = all_masses[sink_tags[s]][:i]  # all stars eligible to be spawned
         nnew = len(spawn_masses)  # convenience
 
