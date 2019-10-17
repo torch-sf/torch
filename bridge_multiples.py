@@ -204,63 +204,41 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
     age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
+
     add_star = Particles(num_new_parts)             # Make new particles for grav code.
     keys     = add_star.key                         # Get the new keys for tags_keys.
 
-    #print "tags =", newtags
-    #print "pos =", position
-    #print "vel =", velocity
-    #print "mass =", mass
-    #print "initMass =", initMass
-    #print "age =", age
+    # Add the properties from hydro to
+    # the new particles. This will be added to
+    # stars and the grav code.
+    add_star.mass= mass
+    add_star.age = age
+    add_star.x   = position[:,0]
+    add_star.y   = position[:,1]
+    add_star.z   = position[:,2]
+    add_star.vx  = velocity[:,0]
+    add_star.vy  = velocity[:,1]
+    add_star.vz  = velocity[:,2]
+    add_star.tag = newtags
+    add_star.stellar_type = 1 | units.stellar_type # Start life as a ZAMS star.
+    add_star.radius = 100 | units.AU # set all the stars initial collision radius.
 
-    for kk in range(num_new_parts):       # Add the properties from hydro to
-                                          # the new particles. This will be added to
-        add_star[kk].mass= mass[kk]       # stars and the grav code.
-        add_star[kk].age = age[kk]
-        add_star[kk].x   = position[kk][0]
-        add_star[kk].y   = position[kk][1]
-        add_star[kk].z   = position[kk][2]
-        add_star[kk].vx  = velocity[kk][0]
-        add_star[kk].vy  = velocity[kk][1]
-        add_star[kk].vz  = velocity[kk][2]
-        add_star[kk].tag = newtags[kk]
-        add_star[kk].stellar_type = 1 |units.stellar_type # Start life as a ZAMS star.
-        add_star[kk].radius = 100 | units.AU # set all the stars initial collision radius.
-        if (initMass[kk].value_in(units.MSun) <= 0.001):
-            add_star[kk].initial_mass = mass[kk] # record the initial mass of the star for SE/SN uses.
-            hydro.set_particle_oldmass(newtags[kk], mass[kk])
-        else:
-            add_star[kk].initial_mass = initMass[kk] # record the initial mass of the star for SE/SN uses.
-        stars_current_id_num += 1
-        add_star[kk].id = stars_current_id_num
+    add_star.initial_mass = initMass # record the initial mass of the star for SE/SN uses.
 
-        if (debug_aptg):
-            print "New star:"
-            print "pos  =", add_star[kk].position.in_(units.cm)
-            print "vel  =", add_star[kk].velocity.in_(units.km/units.s)
-            print "mass =", add_star[kk].mass.in_(units.MSun)
-            print "age  =", add_star[kk].age.in_(units.Myr)
-            print "rad  =", add_star[kk].radius.in_(units.AU)
-            print "type =", add_star[kk].stellar_type
-            print "tag  =", add_star[kk].tag
-            print "id   =", add_star[kk].id
-    # Initialize radiation parameters to zero if this
-    # is a radiation run.
+    # initMass == 0.0 MSun means we forgot to set initMass in hydro, whenever
+    # we spawned these stars.  This breaks SeBa.
+    # Below code fixes via manual one-off edit.  Do NOT enable by default,
+    # because initMass == 0 is an error that should not pass silently.
+    #sel = (initMass <= 0.001 | units.MSun)
+    #add_star.initial_mass[sel] = mass[sel]
 
-        if (use_radiation):
+    add_star.id = stars_current_id_num + np.arange(num_new_parts)
+    stars_current_id_num += num_new_parts
 
-            add_star[kk].nion = 0.0 # ionizing flux
-            add_star[kk].eion = 0.0 #eion #0.0 # ionizing energy *OVER* 13.6 eV
-            add_star[kk].sigh = 0.0 #sigh #0.0 # ionizing cross section.
-
-    #print "Hydro code pos/vel/mass:"
-    #print position
-    #print velocity
-    #print mass
-
-    #print "Does the new tag match the new entry in tags?"
-    #print newtags, tags[ind]
+    if (use_radiation):
+        add_star.nion = 0.0 # ionizing flux
+        add_star.eion = 0.0 # ionizing energy *OVER* 13.6 eV
+        add_star.sigh = 0.0 # ionizing cross section.
 
     if (np.shape(tags_keys)[0] == 0):
 
