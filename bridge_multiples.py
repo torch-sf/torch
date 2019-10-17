@@ -1586,46 +1586,33 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
         print "current star up for assignment:", \
               all_masses[sink_tags[s]][0], \
               "for sink with mass:", sink_mass
+
+        csum = np.cumsum(all_masses[sink_tags[s]])
+        i = np.searchsorted(csum, sink_mass, side='left')
+        spawn_masses = all_masses[sink_tags[s]][:i]  # all stars eligible to be spawned
+        nnew = len(spawn_masses)  # convenience
+
         # Does this sink have enough mass to make a star? If so, party on.
-        while(sink_mass > all_masses[sink_tags[s]][0]):
+        if nnew > 0:
 
             sink_position      = hydro.get_particle_position(sink_tags[s])
             sink_vel           = hydro.get_particle_velocity(sink_tags[s]).value_in(units.cm/units.s)
             sink_cs            = hydro.get_sink_mean_cs(sink_tags[s]).value_in(units.cm/units.s)
 
-            print "Sink vel =", sink_vel
-            print "Sink mean gas sound speed =", sink_cs
-
-            # Check before pop.
-            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
-            new_star_mass     = all_masses[sink_tags[s]][0]
-            all_masses[sink_tags[s]] = np.delete(all_masses[sink_tags[s]],0)
-            # Check new_star_mass
-            #print "new_star_mass =", new_star_mass
-            # Check that it deleted properly.
-            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
-
-            new_star          = Particles(1)
-            new_star.mass     = new_star_mass  | units.MSun
-            new_star.velocity = np.random.uniform(sink_vel, np.ones(3)*sink_cs) | units.cm/units.s
-
-            sink_mass         = sink_mass  - new_star_mass
+            new_star = Particles(nnew)
+            new_star.mass = spawn_masses | units.MSun
+            new_star.velocity = np.random.uniform(sink_vel, np.ones((nnew,3))*sink_cs) | units.cm/units.s
 
             # Singular isothermal spherical distribution.
-            stars_rvec = (random_three_vector(1)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
-            #print "stars_rvec=", stars_rvec
+            stars_rvec = (random_three_vector(nnew)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
-            #print "rx, ry, rz =", rx, ry, rz
             r2 = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_star.position = np.add(stars_rvec.value_in(units.cm),sink_position.value_in(units.cm)) | units.cm
 
-            #print "new star position =", new_star.position.as_quantity_in(units.parsec)
-            #print "new star velocity =", new_star.velocity.as_quantity_in(units.km/units.s)
-            #print "new star mass =" , new_star.mass.as_quantity_in(units.MSun)
-
             # Remove the mass from the sink.
+            sink_mass = sink_mass - np.sum(spawn_masses)
             hydro.set_particle_mass(sink_tags[s], (sink_mass | units.MSun))
 
             # Make the new star particle.
@@ -1637,9 +1624,13 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
             # Switch back to sinks to continue the loop.
             hydro.set_particle_pointers('sink')
 
+            # Delete stars from queue
+            all_masses[sink_tags[s]] = all_masses[sink_tags[s]][nnew:]
+
             # Tell the main code we made a star.
-            if (formed_stars == False): formed_stars = True
-            if (new_star_mass > min_mass.value_in(units.MSun)): formed_massive_star = True
+            formed_stars = True
+            if np.any(spawn_masses > min_mass.value_in(units.MSun)):
+                formed_massive_star = True
 
     # Last thing is to ensure we are pointing back at massive particles.
     hydro.set_particle_pointers('mass')
