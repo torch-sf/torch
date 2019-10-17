@@ -38,6 +38,7 @@ from torch_se import stellar_evolution
 from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
 from torch_state import TorchState
 from torch_stdout import tprint
+import torch_user
 from torch_user import user_initial_conditions, user_parameters
 
 # ============================================================================
@@ -68,11 +69,16 @@ def initialize_workers():
     # Converter for the hydro code.
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
-    grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
-    grav.parameters.set_defaults()
-    grav.parameters.epsilon_squared = USER['epsilon']**2.0
-    grav.parameters.force_sync = 1  # end exactly at requested time
-    grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
+    if USER['with_ph4']:
+        grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
+        grav.parameters.set_defaults()
+        grav.parameters.epsilon_squared = USER['epsilon']**2.0
+        grav.parameters.force_sync = 1  # end exactly at requested time
+        grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
+    else:
+        grav = Hermite(convert, number_of_workers=USER['num_grav_workers'])
+        grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
+        grav.parameters.dt_param = 0.02  # timestep size control, default 0.03
 
     mult = None
 
@@ -118,8 +124,12 @@ def evolve(state, hydro, grav, mult):
     hy_max_time     = hydro.get_end_time()
 
     # grav loop control
-    grav.parameters.begin_time  = hy_time
-    grav.parameters.sync_time   = hy_time
+    if USER['with_ph4']:
+        grav.parameters.begin_time  = hy_time
+        grav.parameters.sync_time   = hy_time
+    else:
+        grav.parameters.begin_time  = hy_time
+        grav.evolve_model(hy_time)
     gr_time = grav.get_time()
 
     # stellar evolution timestep (hack for SN)
@@ -229,8 +239,13 @@ def evolve(state, hydro, grav, mult):
             # 2. had stars, but they all escaped
             # not sure if below code works with case 2 of stars -> no stars
             hy_time = hydro.get_time()
-            grav.parameters.begin_time  = hy_time
-            grav.parameters.sync_time   = hy_time
+            if USER['with_ph4']:
+                grav.parameters.begin_time  = hy_time
+                grav.parameters.sync_time   = hy_time
+            else:
+                grav.parameters.begin_time  = hy_time
+                grav.evolve_model(hy_time)
+
 
         tprint("Star formation check")
         queue_stars(state, hydro,
@@ -275,6 +290,10 @@ if __name__ == '__main__':
     global USER
     USER = user_parameters()
 
+    tprint("Torch user file: {:s}".format(torch_user.__file__))
+    tprint("Num hydro workers: {:d}".format(USER['num_hy_workers']))
+    tprint("Num grav workers: {:d}".format(USER['num_grav_workers']))
+
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
 
@@ -284,7 +303,8 @@ if __name__ == '__main__':
 
     state.initial_io(refresh=USER['refresh_rng'])
 
-    user_initial_conditions(state, hydro)
+    if not state.restart:
+        user_initial_conditions(state, hydro)
 
     try:
 

@@ -35,9 +35,6 @@ def get_ntasks_from_run_script(name="run.sh"):
 
 def user_initial_conditions(state, hydro):
 
-    if state.restart:
-        return
-
     star        = Particles(1)
     star.mass   = 30. | units.MSun
     star.x      = 0.0 | units.cm
@@ -60,6 +57,9 @@ def user_initial_conditions(state, hydro):
     return
 
 def user_parameters():
+    """
+    User configurable parameters.  All parameters are currently required.
+    """
 
     p = {} # WriteOnceDict()
     flashp = FlashPar("flash.par")

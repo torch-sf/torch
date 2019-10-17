@@ -34,43 +34,12 @@ def get_ntasks_from_run_script(name="run.sh"):
     return n
 
 def user_initial_conditions(state, hydro):
-
-    if state.restart:
-        return
-
-    # Plop a single star into FLASH - test star remove algorithm.
-#
-#    star        = Particles(1)
-#    star.mass   = 1 | units.MSun
-#    star.x      = BNDBOX - (10 | units.cm)
-#    star.y      = 0 | units.cm
-#    star.z      = 0 | units.cm
-#    star.vx     = 100 | units.cm/units.s
-#    star.vy     = 0 | units.cm/units.s
-#    star.vz     = 0 | units.cm/units.s
-#
-#    hydro.set_particle_pointers('mass')
-#    star_tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(star_tag, star.mass)
-#    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-#
-#    # Plop another star into FLASH
-#
-#    star            = Particles(1)
-#    star.mass       = 1 | units.MSun
-#    star.position   = [0,0,0] | units.cm
-#    star.velocity   = [0,0,0] | units.cm/units.s
-#
-#    hydro.set_particle_pointers('mass')
-#    star_tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(star_tag, star.mass)
-#    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-#
     return
 
 def user_parameters():
+    """
+    User configurable parameters.  All parameters are currently required.
+    """
 
     p = {} # WriteOnceDict()
     flashp = FlashPar("flash.par")
@@ -90,6 +59,7 @@ def user_parameters():
 
     # <star/n-body gravity>
 
+    p['with_ph4'] = False  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <stellar evolution>
