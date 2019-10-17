@@ -758,6 +758,7 @@ def make_cluster_in_hydro(cluster, initial_x=0.0 | units.cm, initial_y=0.0 | uni
     print "tag =", tag
     hydro.set_particle_velocity(tag, cluster.vx, cluster.vy, cluster.vz)
     hydro.set_particle_mass(tag, cluster.mass)
+    hydro.set_particle_oldmass(tag, cluster.mass)
     #print hydro.get_particle_mass(tag)
 
     #hydro.particles_gather()
