@@ -8,7 +8,7 @@ Set the environment variables:
 
     export AMUSE_DIR=/path/to/amuse
     export FLASH_DIR=/path/to/FLASH4.5
-    export TORCH_DIR=/path/to/flash_interface
+    export TORCH_DIR=/path/to/torch
 
 Then, run the script:
 

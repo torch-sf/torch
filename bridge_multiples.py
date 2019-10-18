@@ -2944,8 +2944,6 @@ tags_keys = np.empty(0)# Tags (ID in Flash) and keys (ID in AMUSE) for all parti
 first_loop = True
 made_stars = False
 gridChanged = True
-old_chk_file = '-1'
-old_plt_file = '-1'
 
 max_ref  = hydro.get_max_refinement()
 sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
