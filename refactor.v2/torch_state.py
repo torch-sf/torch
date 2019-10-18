@@ -86,11 +86,11 @@ class TorchState(object):
                 with open(rstatefile, 'r') as f:
                     rnd_state = pickle.load(f)
                 np.random.set_state(rnd_state)
-                tprint("Random state set with file # "+rstatefile)
+                tprint("Random state set from "+rstatefile)
 
                 with open(massesfile, 'r') as f:
                     self.all_masses = pickle.load(f)
-                tprint("Loaded all_masses dictionary from file # "+massesfile)
+                tprint("Loaded all_masses dictionary from "+massesfile)
 
             else:
 
@@ -149,7 +149,7 @@ class TorchState(object):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
-        write_set_to_file(self.stars, stars_fname, format='hdf5')  # hdf5 works correctly with Particles(0), csv breaks
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult_grav.stars.copy_to_new_particles(, format='hdf5')

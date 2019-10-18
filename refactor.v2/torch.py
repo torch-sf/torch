@@ -20,6 +20,14 @@ CODING PRINCIPLES:
 * Try not to pass Torch parameter struct into deeper methods.
   Keep abstraction layers well isolated.
 
+* (1) Write your comments now.  You won't have time to do it later.
+  (2) If you change something, update the comments NOW.  Wrong comments are
+  worse than no comments.
+  -- Adapted from ENZO Developer's Guide
+  https://enzo.readthedocs.io/en/latest/developer_guide/ProgrammingGuide.html
+
+* Some general principles: http://google.github.io/styleguide/pyguide.html
+
 """
 
 from __future__ import division, print_function
@@ -114,7 +122,7 @@ def initialize_workers():
 
 # ============================================================================
 
-def evolve(state, hydro, grav, mult):
+def evolve(state, hydro, grav, mult, se):
 
     # FLASH loop control
     hy_dt           = hydro.get_timestep()
@@ -285,7 +293,22 @@ def evolve(state, hydro, grav, mult):
 
 # ============================================================================
 
-if __name__ == '__main__':
+def main():
+    # Why do we need function? (vs placing under "if __name__ == '__main__'")
+    # This keeps variables out of module (i.e., global) namespace.
+    #
+    # Example:
+    #
+    #   def foo():
+    #       print(a)
+    #
+    #   if __name__ == '__main__':
+    #       a = 10
+    #       foo()
+    #
+    # foo() will find "a" in module's variable scope (effectively a global)
+    # and print "10".  This behavior is sneaky and can lead to astonishment!
+    # https://en.wikipedia.org/wiki/Principle_of_least_astonishment
 
     global USER
     USER = user_parameters()
@@ -308,7 +331,7 @@ if __name__ == '__main__':
 
     try:
 
-        evolve(state, hydro, grav, mult)
+        evolve(state, hydro, grav, mult, se)
 
     finally:
         pass
@@ -318,3 +341,8 @@ if __name__ == '__main__':
         #kep.stop()
         #stop_smalln()
         #del multiples
+
+# ============================================================================
+
+if __name__ == '__main__':
+    main()
