@@ -180,6 +180,12 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
+                # sync workers
+                # TODO note inconsistency.  stellar_evolution(...)
+                # updates a number of hydro properties, but
+                # here we are doing that, too!
+                state.stars_to_grav.copy()
+                hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
             ### -----------
             ### First kick.
