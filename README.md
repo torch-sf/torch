@@ -119,3 +119,30 @@ This reports to STDOUT something like:
     Ambient mass (Msun): [7.138e+00 7.138e+00 3.677e+01 2.596e+03 3.872e+06]
     Total - ambient mass (Msun): [9.978e+02 9.978e+02 5.686e+03 4.849e+05 6.290e+08]
     t_freefall (Myr): [2.865 2.865 3.394 4.109 3.608]
+
+Contributing
+------------
+
+Torch is an open-source code!  Please see [CONTRIBUTING.md](CONTRIBUTING.md) to
+learn how to get involved.
+
+The Torch code includes contributions by:
+
+* Raúl Domínguez
+* Ralf Klessen
+* Sean Lewis
+* Steve McMillan
+* Mordecai-Mark Mac Low
+* Andrew Pellegrino
+* Simon Portegies Zwart
+* Aaron Tran
+* Joshua Wall
+
+In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
+
+* Christian Bacyznski
+* Robi Banerjee
+* Moo Kwang Ryan Joung
+* Juan Camilo Ibáñez-Mejía
+* Daniel Seifried
+* Richard Wünsch
