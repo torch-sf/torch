@@ -160,20 +160,27 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     # of old sinks, which I (AT) removed for brevity.
     # Simple for-loop should work fine for up to few thousand sinks...
     for sink_tag in sink_tags:
+
         if sink_tag not in state.all_masses:
+            state.all_masses[sink_tag] = np.array([])
+            tprint("... new sink tag {}".format(sink_tag))
+
+        while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
             new_masses = sample_stellar_mass(
                             sample_imf_mass.value_in(units.MSun),
-                            num_bins=sample_imf_bins,  # TODO fugly naming and unit handling
+                            num_bins=sample_imf_bins,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
                             sum_small=sum_small,
             )
-            state.all_masses[sink_tag] = new_masses
 
-            tprint("... sink tag {} queued".format(sink_tag), end='')
-            print(" {} stars,".format(len(new_masses)), end='')  # note mixing tprint(...) and print(...)
-            print(" total mass {},".format(np.sum(new_masses)), end='')
+            tprint("... sink tag {}".format(sink_tag), end='')
+            print(" added {} stars,".format(len(new_masses)), end='')
+            print(" mass {},".format(np.sum(new_masses)), end='')
             print(" max mass {}".format(np.amax(new_masses)))
+
+            state.all_masses[sink_tag] = np.concatenate((state.all_masses[sink_tag], new_masses))
+
 
     hydro.set_particle_pointers('mass')
 
@@ -214,29 +221,40 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
 
         # get all the stars that we can form now
-        spawn_masses = []
-        for i in range(len(state.all_masses[sink_tag])):
-            m = state.all_masses[sink_tag][i] | units.MSun
-            if sink_mass > m:
-                sink_mass -= m
-                spawn_masses.append(m)
+        csum = np.cumsum(state.all_masses[sink_tag])
+        i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
+        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
-        if spawn_masses:
-            tprint("... sink tag {} created {} new stars".format(sink_tag, len(spawn_masses)))
+        spawn_masses = state.all_masses[sink_tag][:i]
+        nnew = len(spawn_masses)
+
+        if nnew == 0:
+
+            tprint("... sink tag {} did not spawn stars".format(sink_tag), end='')
+
+        else:
+
+            tprint("... sink tag {} spawned".format(sink_tag), end='')
+            print(" {} stars,".format(nnew), end='')
+            print(" total mass {},".format(np.sum(spawn_masses)), end='')
+            print(" max mass {}".format(np.amax(spawn_masses)))
+
             formed_stars = True
-            hydro.set_particle_mass(sink_tag, sink_mass)
 
             # Remove newly-created stars from sink's queue
-            n = len(spawn_masses)
-            state.all_masses[sink_tag] = state.all_masses[sink_tag][n:]
+            state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
 
-            star          = Particles(n)
-            star.mass     = spawn_masses
+            # Remove the mass from the sink.
+            sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun)
+            hydro.set_particle_mass(sink_tag, sink_mass)
+
+            star          = Particles(nnew)
+            star.mass     = spawn_masses | units.MSun
             # Isothermal spherical distribution.
             star.position = sink_pos
-            star.position = star.position + ( sink_rad * np.random.rand() * random_three_vector(n) )
+            star.position = star.position + ( sink_rad * np.random.rand() * random_three_vector(nnew) )
             star.velocity = sink_vel
-            star.velocity = star.velocity + sink_cs*np.random.uniform(-1,+1,size=(n,3))
+            star.velocity = star.velocity + sink_cs*np.random.uniform(-1,+1,size=(nnew,3))
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')

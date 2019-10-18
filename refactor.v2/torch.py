@@ -300,21 +300,9 @@ def evolve(state, hydro, grav, mult, se):
 # ============================================================================
 
 def main():
-    # Why do we need function? (vs placing under "if __name__ == '__main__'")
-    # This keeps variables out of module (i.e., global) namespace.
-    #
-    # Example:
-    #
-    #   def foo():
-    #       print(a)
-    #
-    #   if __name__ == '__main__':
-    #       a = 10
-    #       foo()
-    #
-    # foo() will find "a" in module's variable scope (effectively a global)
-    # and print "10".  This behavior is sneaky and can lead to astonishment!
-    # https://en.wikipedia.org/wiki/Principle_of_least_astonishment
+    # Use function to keep variables out of module namespace;
+    # code under "if __name__ == '__main__'" would pollute module namespace,
+    # effectively adding global variables.
 
     global USER
     USER = user_parameters()
