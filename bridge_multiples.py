@@ -2051,7 +2051,7 @@ def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiple
     return stars_removed, num_particles
 
 
-def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU ,
+def check_sanity(hydro, grav, stars, min_pos_diff = 1.0e-4 | units.AU ,
                               min_vel_diff = 1.0e-2 | units.km / units.s,
                               min_mass_diff = 0.01 | units.MSun,
                               kill=True, with_multiples=False):
@@ -3186,7 +3186,7 @@ try:
                             if (with_multiples):
                                 check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                             else:
-                                check_sanity(hydro, grav)
+                                check_sanity(hydro, grav, stars)
 
                         #if (with_ph4):
                         #    grav.parameters.begin_time=hydro_time
@@ -3305,7 +3305,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 #if (write_psets):
@@ -3727,7 +3727,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
 
@@ -3749,7 +3749,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 #print "Saving hydro positions"
@@ -3851,7 +3851,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
             ### Get the location of the particles so that we can get the
@@ -4003,7 +4003,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, kill=False, with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars, kill=False)
                     else:
-                        check_sanity(hydro, grav, kill=False)
+                        check_sanity(hydro, grav, stars, kill=False)
 
                 print "After evolve / before update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s)
                 print "After evolve / before update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
@@ -4079,7 +4079,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, kill=False,  with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 if (test_unique_tags):
@@ -4215,7 +4215,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 if (test_unique_tags):
@@ -4269,7 +4269,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 #if (np.abs(pos_diff.value_in(units.m)).any() > min_pos_diff or np.abs(vel_diff.value_in(units.m*(units.s**-1))).any() > min_vel_diff):
@@ -4368,7 +4368,7 @@ try:
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                         check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
 
@@ -4401,7 +4401,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav)
+                        check_sanity(hydro, grav, stars)
                 if (type_insane): check_stellar_type(stars)
 
                 print "Current simulation time:", t
