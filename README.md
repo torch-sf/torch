@@ -49,7 +49,6 @@ The path `src/amuse/` holds AMUSE interface files, which are installed to
         base_grid_interface.F90
         interface.F90
         interface.py
-        josh_multiples.py
         Makefile.prototype
         src/*
 

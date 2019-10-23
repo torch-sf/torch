@@ -1,4 +1,4 @@
 # Config file for the SN module
 
 D useSN   runtime control for turning the random supernovae on or off 
-PARAMETER useSN	  BOOLEAN TRUE
+PARAMETER useSN	  BOOLEAN FALSE

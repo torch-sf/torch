@@ -12,7 +12,7 @@ from amuse.community.flash.interface import Flash
 #from amuse.rfi.channel import AsyncRequestsPool
 from amuse.community.smalln.interface import SmallN
 from amuse.community.kepler.interface import Kepler
-from amuse.community.flash import josh_multiples as multiples
+from amuse.couple import multiples
 import sys
 import time
 import datetime

@@ -26,8 +26,14 @@
 
 subroutine pt_setDataStructures()
   use Particles_data, ONLY :  pt_typeInfo, pt_posInitialized, pt_velInitialized, pt_posAttrib,&
-       pt_posPredAttrib, pt_velNumAttrib, pt_velAttrib, pt_velPredAttrib, pt_meshMe, particles, &
-       therm_numAttrib, therm_Attrib
+       pt_posPredAttrib, pt_velNumAttrib, pt_velAttrib, pt_velPredAttrib, pt_meshMe, particles
+
+! to track thermodynamical evolution in sb particle module uses overloaded particle properties
+#ifdef TSN_PART_PROP
+#ifdef MASS_PART_PROP
+  use Particles_data, ONLY :  therm_numAttrib, therm_Attrib
+#endif
+#endif
 
   use Simulation_interface, ONLY : Simulation_mapStrToInt,Simulation_mapParticlesVar
   use pt_interface, ONLY : pt_mapStringParamToInt, pt_picInit
