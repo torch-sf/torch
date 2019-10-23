@@ -50,7 +50,6 @@ touch ${adest}/__init__.py || { echo $errstr; exit 255; }
 cp -v ${asrc}/base_grid_interface.F90   ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/interface.F90             ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/interface.py              ${adest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/josh_multiples.py         ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/Makefile.prototype        ${adest}/Makefile || { echo $errstr; exit 255; }
 
 mkdir -p ${adest}/src
