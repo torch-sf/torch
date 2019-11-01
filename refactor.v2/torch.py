@@ -147,7 +147,7 @@ def evolve(state, hydro, grav, mult, se):
     # bridge loop control
     it = 1
     tt = hy_time  # tt = "torch time" or "time in torch"
-    dt = min(1.5*hy_dt, se_dt, hy_max_time-tt)  # TODO MAGIC NUMBERS -AT,2019oct10
+    dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
 
     # more bridge loop variables
     made_stars = False
@@ -196,8 +196,9 @@ def evolve(state, hydro, grav, mult, se):
             if USER['with_bridge']:
                 tprint("First kick")
                 kick_number = 1
-                if made_stars:  # must recompute grav pot (BGPT), accel (BGA{X,Y,Z}) induced by new star prtl
+                if made_stars:  # update grav pot (BGPT), accel (BGA{X,Y,Z}) to account for new star prtl
                     kick_number = 2
+
                 hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
                 tprint("... grid kicked")
                 hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
@@ -235,6 +236,7 @@ def evolve(state, hydro, grav, mult, se):
             if USER['with_bridge']:
                 tprint("Second kick")
                 kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
+
                 hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
                 tprint("... grid kicked")
                 hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
