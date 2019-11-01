@@ -30,9 +30,6 @@ class TorchState(object):
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
-        if self.mult is not None:
-            self.stars_to_mult = self.stars.new_channel_to(mult.stars)
-            self.mult_to_stars = mult.stars.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -152,6 +149,66 @@ class TorchState(object):
         write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
-        #multstars = mult_grav.stars.copy_to_new_particles(, format='hdf5')
+        #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
         tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
+
+    def stars_to_mult_grav_copy(self, attr):
+        """
+        Copy attribute from stars Particles() set to leaves AND center-of-mass
+        particles tracked by both Multiples and gravity code.
+
+        Stars NOT tracked by multiples are not updated.
+
+        mult.root_to_tree is usually not updated.  A pure N-body simulation
+        would update only COM particles, barring encounter.
+        We must update mult.root_to_tree AND the COM particles because
+        (1) gas+sinks can kick individual stars in binaries, and
+        (2) stellar evolution modifies individual stars, not COM particles.
+        """
+        assert attr in ["mass", "velocity"]
+
+        for s in self.stars:
+            for root, tree in self.mult.root_to_tree.iteritems():
+                leaves = tree.get_leafs_subset()
+                if s in leaves:
+                    if attr == "mass":
+                        s.as_particle_in_set(leaves).mass = s.mass
+                    elif attr == "velocity":
+                        s.as_particle_in_set(leaves).velocity = s.velocity
+
+        update_roots_from_leaves(self.mult, self.grav)
+
+
+def update_roots_from_leaves(mult, grav):
+    """
+    Update the center of mass particles from
+    the leaves properties (in all codes!).
+    """
+    for root, tree in mult.root_to_tree.iteritems():
+        root_particle = root.as_particle_in_set(mult._inmemory_particles)
+        leaves = tree.get_leafs_subset()
+        com     = 0.0
+        com_vel = 0.0
+
+        for leaf in leaves:
+            com += leaf.mass*leaf.position
+            com_vel += leaf.mass*leaf.velocity
+        com     = (com/leaves.mass.sum()).as_quantity_in(units.cm)
+        com_vel = (com_vel/leaves.mass.sum()).as_quantity_in(units.cm/units.s)
+        msum    = leaves.mass.sum()
+        # Update the root particle in multiples.
+        root_particle.mass     = msum
+        root_particle.position = com
+        root_particle.velocity = com_vel
+        # Also update the tree.particle thing (top of the tree in the dictionary in multiples).
+        tree.particle.mass     = msum
+        tree.particle.position = com
+        tree.particle.velocity = com_vel
+        # The same particle in the N body code must also be updated!
+        grav_particle = root.as_particle_in_set(grav.particles)
+        grav_particle.mass     = msum
+        grav_particle.position = com
+        grav_particle.velocity = com_vel
+
+    return

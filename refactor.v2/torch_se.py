@@ -131,9 +131,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
     state.stars.mass = new_mass
     state.stars.stellar_type = new_type
 
+    hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+
     # TODO not sure if as_quantity_in(...) calls are actually needed.
     # FLASH worker has its own unit converter.  -AT, 2019Oct14
-
     if with_lyc:
         hydro.set_particle_nion(state.stars.tag, nion)
         hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))

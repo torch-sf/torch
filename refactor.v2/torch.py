@@ -20,6 +20,16 @@ CODING PRINCIPLES:
 * Try not to pass Torch parameter struct into deeper methods.
   Keep abstraction layers well isolated.
 
+* In "evolution" methods, update as few workers as possible, to keep modular.
+  For example:
+
+    stellar evolution: update {hydro, AMUSE set} only
+    bridge kick: update hydro only
+    bridge evolve: update {hydro, grav} only
+
+  Sync data between workers via explicit calls in top loop.
+  Do not hide sync in "evolution" methods.
+
 * (1) Write your comments now.  You won't have time to do it later.
   (2) If you change something, update the comments NOW.  Wrong comments are
   worse than no comments.
@@ -39,7 +49,8 @@ from amuse.lab import *
 from amuse.community.flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
-from amuse.community.flash import josh_multiples as multiples
+#from amuse.couple import multiples
+import multiples_aaron as multiples # TODO -AT,2019oct30, edits to fold into AMUSE repo after testing
 #from amuse.rfi.channel import AsyncRequestsPool
 
 from torch_se import stellar_evolution
@@ -153,7 +164,7 @@ def evolve(state, hydro, grav, mult, se):
     made_stars = False
     num_stars = hydro.get_number_of_particles()
     if num_stars > 0:  # restart or user initial conditions
-        add_particles_to_grav(state, hydro, grav)
+        add_particles_to_grav(state, hydro, grav, mult)
         made_stars = True
 
     while tt < hy_max_time and hy_step < hy_max_steps:
@@ -171,6 +182,7 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------------
             if USER['with_se']:
                 tprint("Do stellar evolution")
+                # update both stars set and hydro properties
                 se_dt = stellar_evolution(
                     tt+dt, dt, state, hydro, se,
                     with_lyc          = USER['with_lyc'],
@@ -180,12 +192,13 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
-                # sync workers
-                # TODO note inconsistency.  stellar_evolution(...)
-                # updates a number of hydro properties, but
-                # here we are doing that, too!
-                state.stars_to_grav.copy()
-                hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+                tprint("... dt from stellar evol:", se_dt)
+
+                # sync mass to gravity code(s) from stars
+                state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
+                if USER['with_multiples']:
+                    mult.channel_from_code_to_memory.copy() # grav  -> multiples
+                    state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
 
             ### -----------
             ### First kick.
@@ -203,22 +216,34 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("... grid kicked")
                 hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
                 tprint("... stars kicked")
-                # sync workers
-                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)
-                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+
+                # sync velocity to stars + gravity code(s) from hydro
+                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
+                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
+                if USER['with_multiples']:
+                    mult.channel_from_code_to_memory.copy()     # grav  -> multiples
+                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
 
             ### --------------
             ### Evolve models.
             ### --------------
+
             tprint("Advance grav")
-            grav.evolve_model(tt+dt)
+            if USER['with_multiples']:
+                mult.evolve_model(tt+dt)
+            else:
+                grav.evolve_model(tt+dt)
+
             tprint("Advance hydro")
             hydro.evolve_model(tt+dt)
 
-            # sync workers
-            state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
-            hydro.set_particle_position(state.stars.tag, grav.particles.x, grav.particles.y, grav.particles.z)
-            hydro.set_particle_velocity(state.stars.tag, grav.particles.vx, grav.particles.vy, grav.particles.vz)
+            # sync position & velocity to stars + hydro from gravity code(s)
+            state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
+            if USER['with_multiples']:
+                mult.update_leaves_pos_vel()  # grav COM -> multiples; this synchronizes full tree, i.e. also updates root, tree.particle
+                mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # grav singles AND multiples -> AMUSE
+            hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
+            hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
             remove_particles_outside_bndbox(state, hydro, grav)
             # sort and also remove stars outside domain, though
@@ -241,9 +266,14 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("... grid kicked")
                 hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
                 tprint("... stars kicked")
-                # sync workers
-                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)
-                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+
+                # sync velocity to stars + gravity code(s) from hydro
+                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
+                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
+                if USER['with_multiples']:
+                    mult.channel_from_code_to_memory.copy()     # grav singles -> multiples
+                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+
 
         else: # num_stars == 0
 
@@ -274,11 +304,15 @@ def evolve(state, hydro, grav, mult, se):
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
-            add_particles_to_grav(state, hydro, grav)  # push stars hydro->amuse, hydro->grav
+            add_particles_to_grav(state, hydro, grav, mult)  # push stars hydro->amuse, hydro->grav
 
         num_stars = hydro.get_number_of_particles()  # loop variable
+
         assert num_stars == len(state.stars)
-        assert num_stars == len(grav.particles)  # only true without multiples
+        if USER['with_multiples']:
+            assert num_stars == len(mult.stars)
+        else:
+            assert num_stars == len(grav.particles)
 
         # write output iff it's time to do so
         tprint("Output check")

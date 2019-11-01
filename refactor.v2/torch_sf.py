@@ -18,7 +18,7 @@ from torch_stdout import tprint
 from imf_sample import sample_stellar_mass
 
 
-def add_particles_to_grav(state, hydro, grav):
+def add_particles_to_grav(state, hydro, grav, mult):
     """
     Send prtl from hydro to grav + AMUSE
 
@@ -89,6 +89,12 @@ def add_particles_to_grav(state, hydro, grav):
     state.stars = state.stars.sorted_by_attribute('tag')
 
     grav.particles.add_particles(add_star)
+
+    if mult is not None:
+        mult._inmemory_particles.add_particles(add_star)
+        # Multiples module needs an "id" attribute for internal book-keeping.
+        # AMUSE example scripts set "id" directly; we use "index_in_code".
+        mult.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
 
     if add_parts_restart:
         hydro.set_starting_local_tag_numbers()
