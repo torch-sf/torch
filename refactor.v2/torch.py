@@ -57,8 +57,6 @@ from torch_se import stellar_evolution
 from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
 from torch_state import TorchState
 from torch_stdout import tprint
-import torch_user
-from torch_user import user_initial_conditions, user_parameters
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -348,15 +346,29 @@ def evolve(state, hydro, grav, mult, se):
 
 # ============================================================================
 
-def main():
-    # Use function to keep variables out of module namespace;
-    # code under "if __name__ == '__main__'" would pollute module namespace,
-    # effectively adding global variables.
+def run_torch(user_initial_conditions, user_parameters):
+    """
+    Run a Torch simulation.  This is called from a user script, which provides
+    initial conditions and parameters for the desired problem set up.
+
+    Arguments: requires two methods as input.
+
+        user_initial_conditions(state, hydro)
+
+            method that alters "state", "hydro" objects
+            to set initial conditions for simulation.
+
+        user_parameters()
+
+            method that returns a dict of Torch configuration parameters
+
+    Result: spawn the necessary FLASH, gravity, stellar evolution, etc. workers
+    to run a Torch simulation.  Attempt to run the simulation to completion.
+    """
 
     global USER
     USER = user_parameters()
 
-    tprint("Torch user file: {:s}".format(torch_user.__file__))
     tprint("Num hydro workers: {:d}".format(USER['num_hy_workers']))
     tprint("Num grav workers: {:d}".format(USER['num_grav_workers']))
 
@@ -390,8 +402,3 @@ def main():
         #kep.stop()
         #stop_smalln()
         #del multiples
-
-# ============================================================================
-
-if __name__ == '__main__':
-    main()

@@ -18,8 +18,8 @@ from __future__ import division, print_function
 from amuse.datamodel import Particles
 from amuse.units import units
 
-from torch_param import WriteOnceDict, FlashPar
-from torch_stdout import tprint
+from torch_param import FlashPar
+from torch import run_torch
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
@@ -49,7 +49,7 @@ def user_parameters():
     User configurable parameters.  All parameters are currently required.
     """
 
-    p = {} # WriteOnceDict()
+    p = {}
     flashp = FlashPar("flash.par")
 
     # <bridge>
@@ -105,3 +105,11 @@ def user_parameters():
         p['num_hy_workers'] -= 2  # SmallN, Kepler
 
     return p
+
+# ============================================================================
+
+if __name__ == '__main__':
+    run_torch(
+        user_initial_conditions,
+        user_parameters,
+    )
