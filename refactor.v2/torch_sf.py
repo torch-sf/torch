@@ -67,6 +67,7 @@ def add_particles_to_grav(state, hydro, grav, mult):
     add_star.vx   = velocity[:,0]
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
+
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
     add_star.radius = 100 | units.AU # initial collision radius
@@ -181,7 +182,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')
-            print(" added {} stars,".format(len(new_masses)), end='')
+            print(" queued {} stars,".format(len(new_masses)), end='')
             print(" mass {},".format(np.sum(new_masses)), end='')
             print(" max mass {}".format(np.amax(new_masses)))
 

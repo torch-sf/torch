@@ -34,6 +34,14 @@ def get_ntasks_from_run_script(name="run.sh"):
     return n
 
 def user_initial_conditions(state, hydro):
+    """
+    User-provided method to set initial conditions for the simulation.
+    Usually, this means adding star particles to the hydro code.
+
+    We add stars to hydro only, not other Particles() structures such as
+    state.stars or grav.particles.  The method torch.evolve(...) copies
+    particles from hydro to other workers before it starts the evolution loop.
+    """
     return
 
 def user_parameters():
@@ -46,11 +54,14 @@ def user_parameters():
 
     # <bridge>
 
-    p['npy_seed'] = None
-    #p['npy_seed'] = 103180  # no effect if (restart && refresh_rng=False)
-    p['refresh_rng'] = False
+    #p['npy_seed'] = None
+    #p['refresh_with_new_rng'] = False
+    #p['restart_with_ics'] = False  # meant for testing
+    p['npy_seed'] = 103180  # no effect if (restart && refresh_rng=False)
+    p['restart_with_new_rng'] = True  # TODO return to False 2019nov01
+    p['restart_with_user_ics'] = True  # meant for testing  # TODO return to False 2019nov01
     p['with_bridge'] = True
-    p['with_multiples'] = False  # adds three workers: kepler, smalln, multiples
+    p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True
 
     # <timestepping>

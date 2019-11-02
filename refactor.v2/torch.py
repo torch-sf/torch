@@ -159,10 +159,9 @@ def evolve(state, hydro, grav, mult, se):
     it = 1
     tt = hy_time  # tt = "torch time" or "time in torch"
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
-
-    # more bridge loop variables
     made_stars = False
     num_stars = hydro.get_number_of_particles()
+
     if num_stars > 0:  # restart or user initial conditions
         add_particles_to_grav(state, hydro, grav, mult)
         made_stars = True
@@ -172,14 +171,18 @@ def evolve(state, hydro, grav, mult, se):
         tprint("Bridge step: it={}, tt={}, dt={}".format(it, tt, dt))#Current simulation time:", tt, "dt:", dt)
         tprint("... Hydro time:", hy_time)
         tprint("... Grav time:", gr_time)
-        tprint("... num_stars=", num_stars)
-        tprint("... made_stars=", made_stars)
+        tprint("... Num stars in hydro:", num_stars)
+        if USER['with_multiples']:
+            tprint("... Num in grav:", len(grav.particles))
+            tprint("... Num in mult.root_to_tree:", len(mult.root_to_tree))
+        tprint("... made_stars:", made_stars)
 
         if num_stars > 0:
 
             ### ------------------
             ### Stellar evolution.
             ### ------------------
+
             if USER['with_se']:
                 tprint("Do stellar evolution")
                 # update both stars set and hydro properties
@@ -258,6 +261,7 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------
             ### Second kick.
             ### ------------
+
             if USER['with_bridge']:
                 tprint("Second kick")
                 kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
@@ -274,8 +278,11 @@ def evolve(state, hydro, grav, mult, se):
                     mult.channel_from_code_to_memory.copy()     # grav singles -> multiples
                     state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
 
-
         else: # num_stars == 0
+
+            ### --------------
+            ### Evolve models.
+            ### --------------
 
             tprint("Evolving hydro without grav for dt:", dt, "to reach t =", tt+dt)
             hydro.evolve_model(tt + dt)
@@ -292,6 +299,9 @@ def evolve(state, hydro, grav, mult, se):
                 grav.parameters.begin_time  = hy_time
                 grav.evolve_model(hy_time)
 
+        ### --------------------------------
+        ### Queue and create star particles.
+        ### --------------------------------
 
         tprint("Star formation check")
         queue_stars(state, hydro,
@@ -306,30 +316,33 @@ def evolve(state, hydro, grav, mult, se):
         if made_stars:
             add_particles_to_grav(state, hydro, grav, mult)  # push stars hydro->amuse, hydro->grav
 
+        ### ---------------------------------------------
+        ### Output FLASH and Torch plot,checkpoint files.
+        ### ---------------------------------------------
+
+        tprint("Output check")
+        state.output()
+
+        # FLASH loop control
+        hy_dt = hydro.get_timestep()
+        hy_step = hydro.get_current_step()
+        hy_time = hydro.get_time()
+
+        # grav loop control
+        gr_time = grav.get_time()
+
+        # bridge loop control
+        it += 1
+        tt += dt
+        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
         num_stars = hydro.get_number_of_particles()  # loop variable
 
+        assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
         assert num_stars == len(state.stars)
         if USER['with_multiples']:
             assert num_stars == len(mult.stars)
         else:
             assert num_stars == len(grav.particles)
-
-        # write output iff it's time to do so
-        tprint("Output check")
-        state.output()
-
-        # update bridge loop variables
-        tt += dt
-        it += 1
-
-        gr_time = grav.get_time()
-        hy_step = hydro.get_current_step()
-        hy_time = hydro.get_time()
-
-        assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
-
-        hy_dt = hydro.get_timestep()
-        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
 
     return
 
@@ -354,10 +367,16 @@ def main():
 
     state = TorchState(hydro, grav, mult)
 
-    state.initial_io(refresh=USER['refresh_rng'])
+    state.initial_io(refresh=USER['restart_with_new_rng'])
 
     if not state.restart:
         user_initial_conditions(state, hydro)
+    elif state.restart and USER['restart_with_user_ics']:
+        # massage the hydro particle structures so that particles from user ICs
+        # look like they came from restart checkpoint file.
+        hydro.set_starting_local_tag_numbers()
+        user_initial_conditions(state, hydro)
+        hydro.clear_new_tags()
 
     try:
 

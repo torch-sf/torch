@@ -8,6 +8,7 @@ import pickle
 
 from amuse.datamodel import Particles
 from amuse.io import write_set_to_file
+from amuse.units import units
 
 from torch_param import FlashPar
 from torch_stdout import tprint
@@ -50,7 +51,13 @@ class TorchState(object):
         self.output_dir = hydro.get_output_dir()
 
     def initial_io(self, refresh=False):
-        """Load restart files or write starting Torch state"""
+        """Load restart files or write starting Torch state
+        Kwargs:
+            refresh (False): for restarts,
+            ... use new random number generator state.
+            ... force code to draw new list of stars from IMF for all sinks.
+            ... if run is not restart, no effect.
+        """
 
         # flash numbering for file I/O:
         #   restart:
@@ -186,18 +193,13 @@ def update_roots_from_leaves(mult, grav):
     the leaves properties (in all codes!).
     """
     for root, tree in mult.root_to_tree.iteritems():
-        root_particle = root.as_particle_in_set(mult._inmemory_particles)
         leaves = tree.get_leafs_subset()
-        com     = 0.0
-        com_vel = 0.0
-
-        for leaf in leaves:
-            com += leaf.mass*leaf.position
-            com_vel += leaf.mass*leaf.velocity
-        com     = (com/leaves.mass.sum()).as_quantity_in(units.cm)
-        com_vel = (com_vel/leaves.mass.sum()).as_quantity_in(units.cm/units.s)
         msum    = leaves.mass.sum()
+        com = leaves.center_of_mass().as_quantity_in(units.cm)
+        com_vel = leaves.center_of_mass_velocity().as_quantity_in(units.cm/units.s)
+
         # Update the root particle in multiples.
+        root_particle = root.as_particle_in_set(mult._inmemory_particles)
         root_particle.mass     = msum
         root_particle.position = com
         root_particle.velocity = com_vel

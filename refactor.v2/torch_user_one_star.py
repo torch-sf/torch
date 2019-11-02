@@ -48,7 +48,7 @@ def user_initial_conditions(state, hydro):
     creation_time = hydro.get_time() - age
 
     hydro.set_particle_pointers('mass')
-    ag = hydro.add_particles(star.x, star.y, star.z)
+    tag = hydro.add_particles(star.x, star.y, star.z)
     hydro.set_particle_mass(tag, star.mass)
     hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
     hydro.set_particle_oldmass(tag, star.mass) # for SE code
