@@ -146,9 +146,75 @@ def remove_particles_outside_bndbox(state, hydro, grav):
 
         grav.particles.synchronize_to(state.stars)
 
-        return True
+    return
 
-    return False
+
+def remove_particles_outside_bndbox_mult(state, hydro, grav, mult):
+    """
+    Remove any particles that have left the simulation.
+
+    Special version to deal with multiples.
+
+      hydro: indiv star prtl
+      AMUSE: indiv star prtl
+      grav: only tracks COM
+      multiples: COM + inner nodes + leaves (indiv stars)
+
+
+    WARNING: assumes a box-shaped domain specified by {x,y,z}{min,max}
+    """
+    p = grav.particles
+    if len(p) == 0:
+        return False
+
+    xmin = hydro.get_runtime_parameter('xmin') | units.cm
+    xmax = hydro.get_runtime_parameter('xmax') | units.cm
+    ymin = hydro.get_runtime_parameter('ymin') | units.cm
+    ymax = hydro.get_runtime_parameter('ymax') | units.cm
+    zmin = hydro.get_runtime_parameter('zmin') | units.cm
+    zmax = hydro.get_runtime_parameter('zmax') | units.cm
+
+    outside = np.logical_or.reduce([
+        p.x >= xmax, p.x <= xmin,
+        p.y >= ymax, p.y <= ymin,
+        p.z >= zmax, p.z <= zmin,
+    ])
+
+    grav_rem = p[outside]
+    stars_rem = Particles(0)
+
+    if len(grav_rem) > 0:
+
+        tprint("Removing", len(grav_rem), "grav particles outside bndbox")
+
+        # All leaves exist in stars and hydro while all roots
+        # exist in grav.
+        for s in grav_rem:
+            if s in mult.root_to_tree:  # remove COM particle and its leaves
+                tree = mult.root_to_tree[s]
+                leaves = tree.get_leafs_subset()
+                # remove all leaves by deleting root of the tree
+                for leaf in leaves:
+                    stars_rem.add_particles(state.stars[np.where(state.stars.key==leaf.key)[0]])
+                    #stars_rem.add_particles(leaf.as_particle_in_set(state.stars))  # doesn't work
+                del mult.root_to_tree[s.as_particle_in_set(mult._inmemory_particles)]
+            else:  # single star
+                stars_rem.add_particles(s.as_particle_in_set(state.stars))
+
+        # hydro requires sorted tags for removal
+        # only the stars particle set has a tag attribute.
+        t = stars_rem.tag
+        t = np.sort(np.array(t).flatten())
+
+        hydro.remove_particles(t)
+        state.stars.remove_particles(stars_rem)
+        grav.particles.remove_particles(grav_rem)
+        mult._inmemory_particles.remove_particles(grav_rem)
+
+        grav.particles.synchronize_to(mult._inmemory_particles)
+        #grav.particles.synchronize_to(state.stars)
+
+    return
 
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,

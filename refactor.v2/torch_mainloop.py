@@ -30,6 +30,10 @@ CODING PRINCIPLES:
   Sync data between workers via explicit calls in top loop.
   Do not hide sync in "evolution" methods.
 
+* hydro worker points to either "mass" (star) or "sink" particles at any given
+  time.  We choose to point at star particles by default.  Anytime you access
+  sink particles, don't forget to unpoint when done.
+
 * (1) Write your comments now.  You won't have time to do it later.
   (2) If you change something, update the comments NOW.  Wrong comments are
   worse than no comments.
@@ -54,7 +58,13 @@ import multiples_aaron as multiples # TODO -AT,2019oct30, edits to fold into AMU
 #from amuse.rfi.channel import AsyncRequestsPool
 
 from torch_se import stellar_evolution
-from torch_sf import add_particles_to_grav, remove_particles_outside_bndbox, make_stars_from_sinks, queue_stars
+from torch_sf import (
+    add_particles_to_grav,
+    remove_particles_outside_bndbox,
+    remove_particles_outside_bndbox_mult,
+    make_stars_from_sinks,
+    queue_stars,
+)
 from torch_state import TorchState
 from torch_stdout import tprint
 
@@ -246,7 +256,12 @@ def evolve(state, hydro, grav, mult, se):
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
-            remove_particles_outside_bndbox(state, hydro, grav)
+            # this updates all of grav,stars,hydro
+            if USER['with_multiples']:
+                remove_particles_outside_bndbox_mult(state, hydro, grav, mult)
+            else:
+                remove_particles_outside_bndbox(state, hydro, grav)
+
             # sort and also remove stars outside domain, though
             # remove_particles_outside_bndbox(...) should have us covered
             hydro.particles_sort()
@@ -260,7 +275,9 @@ def evolve(state, hydro, grav, mult, se):
             ### Second kick.
             ### ------------
 
-            if USER['with_bridge']:
+            num_stars = hydro.get_number_of_particles()
+
+            if USER['with_bridge'] and num_stars > 0:  # in case star exited domain
                 tprint("Second kick")
                 kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
 
