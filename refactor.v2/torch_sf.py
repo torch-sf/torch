@@ -107,65 +107,21 @@ def add_particles_to_grav(state, hydro, grav, mult):
     return
 
 
-def remove_particles_outside_bndbox(state, hydro, grav):
+def remove_particles_outside_bndbox(state, hydro, grav, mult):
     """
     Remove any particles that have left the simulation.
-    WARNING: assumes a box-shaped domain specified by {x,y,z}{min,max}
-    """
-    # AMUSE stars have tags to FLASH, but grav stars don't have those tags.
-    # so more convenient to operate on AMUSE star particles.
-    p = state.stars
-    if len(p) == 0:
-        return False
+    WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
+    FLASH runtime parameters.
 
-    xmin = hydro.get_runtime_parameter('xmin') | units.cm
-    xmax = hydro.get_runtime_parameter('xmax') | units.cm
-    ymin = hydro.get_runtime_parameter('ymin') | units.cm
-    ymax = hydro.get_runtime_parameter('ymax') | units.cm
-    zmin = hydro.get_runtime_parameter('zmin') | units.cm
-    zmax = hydro.get_runtime_parameter('zmax') | units.cm
-
-    outside = np.logical_or.reduce([
-        p.x >= xmax, p.x <= xmin,
-        p.y >= ymax, p.y <= ymin,
-        p.z >= zmax, p.z <= zmin,
-    ])
-
-    prem = p[outside]
-
-    if len(prem) > 0:
-
-        tprint("Removing", len(prem), "particles outside bndbox")
-
-        t = prem.tag
-        t = np.sort(np.array(t).flatten())  # hydro requires sorted tags for removal
-
-        hydro.remove_particles(t)
-        grav.particles.remove_particles(prem)
-        state.stars.remove_particles(prem)
-
-        grav.particles.synchronize_to(state.stars)
-
-    return
-
-
-def remove_particles_outside_bndbox_mult(state, hydro, grav, mult):
-    """
-    Remove any particles that have left the simulation.
-
-    Special version to deal with multiples.
-
-      hydro: indiv star prtl
-      AMUSE: indiv star prtl
-      grav: only tracks COM
-      multiples: COM + inner nodes + leaves (indiv stars)
-
-
-    WARNING: assumes a box-shaped domain specified by {x,y,z}{min,max}
+    Arguments:
+        state = TorchState(...)
+        hydro = FLASH worker code instance
+        grav = N-body gravity code instance
+        mult = Multiples worker code instance, OR None
     """
     p = grav.particles
     if len(p) == 0:
-        return False
+        return
 
     xmin = hydro.get_runtime_parameter('xmin') | units.cm
     xmax = hydro.get_runtime_parameter('xmax') | units.cm
@@ -190,13 +146,13 @@ def remove_particles_outside_bndbox_mult(state, hydro, grav, mult):
         # All leaves exist in stars and hydro while all roots
         # exist in grav.
         for s in grav_rem:
-            if s in mult.root_to_tree:  # remove COM particle and its leaves
+            if mult is not None and s in mult.root_to_tree:  # COM particle and leaves
                 tree = mult.root_to_tree[s]
                 leaves = tree.get_leafs_subset()
-                # remove all leaves by deleting root of the tree
                 for leaf in leaves:
-                    stars_rem.add_particles(state.stars[np.where(state.stars.key==leaf.key)[0]])
                     #stars_rem.add_particles(leaf.as_particle_in_set(state.stars))  # doesn't work
+                    stars_rem.add_particles(state.stars[np.where(state.stars.key==leaf.key)[0]])
+                # remove all leaves by deleting root of the tree
                 del mult.root_to_tree[s.as_particle_in_set(mult._inmemory_particles)]
             else:  # single star
                 stars_rem.add_particles(s.as_particle_in_set(state.stars))
@@ -209,10 +165,11 @@ def remove_particles_outside_bndbox_mult(state, hydro, grav, mult):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
-        mult._inmemory_particles.remove_particles(grav_rem)
-
-        grav.particles.synchronize_to(mult._inmemory_particles)
-        #grav.particles.synchronize_to(state.stars)
+        if mult is not None:
+            mult._inmemory_particles.remove_particles(grav_rem)
+            grav.particles.synchronize_to(mult._inmemory_particles)
+        else:
+            grav.particles.synchronize_to(state.stars)
 
     return
 

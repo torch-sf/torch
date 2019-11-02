@@ -61,7 +61,6 @@ from torch_se import stellar_evolution
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
-    remove_particles_outside_bndbox_mult,
     make_stars_from_sinks,
     queue_stars,
 )
@@ -256,11 +255,9 @@ def evolve(state, hydro, grav, mult, se):
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
-            # this updates all of grav,stars,hydro
-            if USER['with_multiples']:
-                remove_particles_outside_bndbox_mult(state, hydro, grav, mult)
-            else:
-                remove_particles_outside_bndbox(state, hydro, grav)
+            # this updates all of grav,stars,hydro,
+            # and works correctly for mult=None
+            remove_particles_outside_bndbox(state, hydro, grav, mult)
 
             # sort and also remove stars outside domain, though
             # remove_particles_outside_bndbox(...) should have us covered
