@@ -19,7 +19,7 @@ from amuse.datamodel import Particles
 from amuse.units import units
 
 from torch_param import FlashPar
-from torch import run_torch
+from torch_mainloop import run_torch
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
