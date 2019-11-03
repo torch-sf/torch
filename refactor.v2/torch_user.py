@@ -173,12 +173,11 @@ def user_parameters():
 
     # <bridge>
 
-    #p['npy_seed'] = None
-    #p['refresh_with_new_rng'] = False
-    #p['restart_with_ics'] = False  # meant for testing
-    p['npy_seed'] = 103180  # no effect if (restart && refresh_rng=False)
-    p['restart_with_new_rng'] = True  # TODO return to False 2019nov01
-    p['restart_with_user_ics'] = True  # meant for testing  # TODO return to False 2019nov01
+    p['npy_seed'] = None  # no effect if (restart && restart_with_new_rng=False)
+    p['restart_with_new_rng'] = False
+    p['restart_with_user_ics'] = False  # meant for testing
+
+    p['evolve_async'] = False
     p['with_bridge'] = True
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True

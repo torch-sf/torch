@@ -275,7 +275,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
         if nnew == 0:
 
-            tprint("... sink tag {} did not spawn stars".format(sink_tag), end='')
+            tprint("... sink tag {} did not spawn stars".format(sink_tag))
 
         else:
 

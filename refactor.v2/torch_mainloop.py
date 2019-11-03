@@ -55,7 +55,6 @@ from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
 #from amuse.couple import multiples
 import multiples_aaron as multiples # TODO -AT,2019oct30, edits to fold into AMUSE repo after testing
-#from amuse.rfi.channel import AsyncRequestsPool
 
 from torch_se import stellar_evolution
 from torch_sf import (
@@ -174,6 +173,19 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     num_stars = hydro.get_number_of_particles()
 
+    if USER['evolve_async']:
+        from amuse.rfi.async_request import AsyncRequestsPool
+        pool = AsyncRequestsPool()
+        pool_table_hydro = []
+        pool_table_grav = []
+        def handle_result(request, name, i):
+            assert request.is_result_available()
+            if name == "hydro":
+                pool_table_hydro.append(i)
+            elif name == "grav":
+                pool_table_grav.append(i)
+
+    # worker setup
     if num_stars > 0:  # restart or user initial conditions
         add_particles_to_grav(state, hydro, grav, mult)
 
@@ -239,14 +251,50 @@ def evolve(state, hydro, grav, mult, se):
             ### Evolve models.
             ### --------------
 
-            tprint("Advance grav")
-            if USER['with_multiples']:
-                mult.evolve_model(hy_time+dt)
-            else:
-                grav.evolve_model(hy_time+dt)
+            if USER['evolve_async']:
+                # Example async request code:
+                # amuse/src/amuse/test/suite/compile_tests/test_python_implementation.py
+                tprint("Advance grav and hydro asynchronously")
 
-            tprint("Advance hydro")
-            hydro.evolve_model(hy_time+dt)
+                if USER['with_multiples']:
+                    req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
+                    pool.add_request(req_hydro, handle_result, ["hydro", it])
+                    tprint("... hydro submitted")
+
+                    # Multiples is not a worker code, so we can't send it to
+                    # the AsyncRequestsPool.
+                    mult.evolve_model(hy_time+dt)
+                    tprint("... grav advanced")
+
+                    pool.wait()
+                    tprint("... both grav and hydro advanced")
+
+                else:
+                    req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
+                    req_grav = grav.evolve_model.asynchronous(hy_time+dt)
+
+                    pool.add_request(req_hydro, handle_result, ["hydro", it])
+                    pool.add_request(req_grav, handle_result, ["grav", it])
+
+                    pool.wait()
+                    if pool_table_hydro and pool_table_hydro[-1] == it:
+                        tprint("... hydro advanced")
+                    elif pool_table_grav and pool_table_grav[-1] == it:
+                        tprint("... grav advanced")
+
+                    pool.wait()
+                    tprint("... both grav and hydro advanced")
+
+            else:  # evolve models sequentially
+
+                tprint("Advance grav")
+                if USER['with_multiples']:
+                    mult.evolve_model(hy_time+dt)
+                else:
+                    grav.evolve_model(hy_time+dt)
+                tprint("Advance hydro")
+                hydro.evolve_model(hy_time+dt)
+
 
             # sync position & velocity to stars + hydro from gravity code(s)
             state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
