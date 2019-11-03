@@ -117,47 +117,47 @@ def user_initial_conditions(state, hydro):
     # This is a bit unphysical because the star's position while tracked by
     # Multiples is not well defined.
 
-    star        = Particles(2)
-    star.mass   = 1. | units.MSun
-    star.x      = 0.0 | units.cm
-    star.y      = 0.0 | units.cm
-    star.z      = 0.0 | units.cm
-    star.vx     = 0.0 | units.cm/units.s
-    star.vy     = 0.0 | units.cm/units.s
-    star.vz     = 0.0 | units.cm/units.s
-
-    # make bound binary with stars initially along x-axis.
-    star[0].x = -1.5e16 | units.cm  # 1000 AU away
-    star[0].vy = -1.0e3 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
-    star[1].vy = 1.0e3 | units.cm/units.s  # balance so that COM vy~0
-
-    # first bridge dt = 4.5e12 sec, dx = 4.5e14cm.  Nominally,
-    # system moves 1/3rd of binary sep, so COM in domain, one star past xmax.
-    # next bridge dt, COM exits domain.
-    flashp = FlashPar("flash.par")
-    star.x = star.x + ((flashp['xmax'] - 1e12) | units.cm)
-    star.y = star.y + ((flashp['ymax'] - 1e15) | units.cm)  # be careful about float precision
-    star.z = star.z + ((flashp['zmax'] - 1e15) | units.cm)
-    star.vx = star.vx + (1e3 | units.cm/units.s)  # COM vx=1e2 cm/s too small, gets perturbed by grav
-
-    # The stars fall towards each other and perturb starting positions before
-    # ph4 throws stopping condition, so the setup is inexact.
-    #
-    # Nevertheless, with current (2019 nov 02) example torch settings, after
-    # two bridge steps the binary straddles domain boundary with COM inside and
-    # one star outside.
-    #
-    # This triggers crash in hydro.particles_sort() with old star-removal
-    # algorithm that only looks for ph4 particles outside domain.
-    # New algorithm, which removes entire tree if any leaf outside, works.
-
-    creation_time = hydro.get_time()  # comes with AMUSE units
-
-    tag = hydro.add_particles(star.x, star.y, star.z)
-    hydro.set_particle_mass(tag, star.mass)
-    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-    hydro.set_particle_oldmass(tag, star.mass) # for SE code
-    hydro.set_particle_creation_time(tag, creation_time)
+#    star        = Particles(2)
+#    star.mass   = 1. | units.MSun
+#    star.x      = 0.0 | units.cm
+#    star.y      = 0.0 | units.cm
+#    star.z      = 0.0 | units.cm
+#    star.vx     = 0.0 | units.cm/units.s
+#    star.vy     = 0.0 | units.cm/units.s
+#    star.vz     = 0.0 | units.cm/units.s
+#
+#    # make bound binary with stars initially along x-axis.
+#    star[0].x = -1.5e16 | units.cm  # 1000 AU away
+#    star[0].vy = -1.0e3 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
+#    star[1].vy = 1.0e3 | units.cm/units.s  # balance so that COM vy~0
+#
+#    # first bridge dt = 4.5e12 sec, dx = 4.5e14cm.  Nominally,
+#    # system moves 1/3rd of binary sep, so COM in domain, one star past xmax.
+#    # next bridge dt, COM exits domain.
+#    flashp = FlashPar("flash.par")
+#    star.x = star.x + ((flashp['xmax'] - 1e12) | units.cm)
+#    star.y = star.y + ((flashp['ymax'] - 1e15) | units.cm)  # be careful about float precision
+#    star.z = star.z + ((flashp['zmax'] - 1e15) | units.cm)
+#    star.vx = star.vx + (1e3 | units.cm/units.s)  # COM vx=1e2 cm/s too small, gets perturbed by grav
+#
+#    # The stars fall towards each other and perturb starting positions before
+#    # ph4 throws stopping condition, so the setup is inexact.
+#    #
+#    # Nevertheless, with current (2019 nov 02) example torch settings, after
+#    # two bridge steps the binary straddles domain boundary with COM inside and
+#    # one star outside.
+#    #
+#    # This triggers crash in hydro.particles_sort() with old star-removal
+#    # algorithm that only looks for ph4 particles outside domain.
+#    # New algorithm, which removes entire tree if any leaf outside, works.
+#
+#    creation_time = hydro.get_time()  # comes with AMUSE units
+#
+#    tag = hydro.add_particles(star.x, star.y, star.z)
+#    hydro.set_particle_mass(tag, star.mass)
+#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
+#    hydro.set_particle_oldmass(tag, star.mass) # for SE code
+#    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ def user_parameters():
 
     # <timestepping>
 
-    p['hy_dt_factor'] = 1.5  # pin bridge timestep to <= hy_dt_factor*(hydro timestep)
+    p['hy_dt_factor'] = 0.99999  # pin bridge timestep to <= hy_dt_factor*(hydro timestep)
 
     # <star/n-body gravity>
 

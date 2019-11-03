@@ -27,6 +27,7 @@ class TorchState(object):
 
         # "Global" AMUSE-level data structures
         self.all_masses = {}
+        self.loop = {}
         self.stars = Particles(0)
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
@@ -78,14 +79,19 @@ class TorchState(object):
 
         if self.restart:
 
+            loopfile = path.join(self.output_dir,
+                'torch_loop{:04d}.pickle'.format(self.chknum))
+
+            with open(loopfile, 'r') as f:
+                self.loop = pickle.load(f)
+            tprint("Loaded torch loop state from "+loopfile)
+
             if not refresh:
 
                 rstatefile = path.join(self.output_dir,
                     'rnd_state{:04d}.pickle'.format(self.chknum))
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
-                assert path.isfile(rstatefile)
-                assert path.isfile(massesfile)
 
                 with open(rstatefile, 'r') as f:
                     rnd_state = pickle.load(f)
@@ -101,6 +107,11 @@ class TorchState(object):
                 tprint("WARNING: Refreshing random state with a new seed.")
 
         else:
+
+            # state from "previous" loop, so gets incremented
+            self.loop['it'] = 0
+            self.loop['dt'] = 0.0 | units.s
+
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
             # and hy_pltnum != self.pltnum, so we will write torch files.
@@ -120,8 +131,9 @@ class TorchState(object):
         # If a checkpoint file was written, dump all Torch state files
         # conditional allows for possibility of rolling chk
         if hy_chknum != self.chknum:
-            self.out_rnd()
+            self.out_loop()
             self.out_mass()
+            self.out_rnd()
             self.chknum = hy_chknum
 
         hy_pltnum = self.hydro.IO_out('pltpart')
@@ -132,6 +144,14 @@ class TorchState(object):
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
+
+    def out_loop(self):
+        """Write dict with bridge loop state to pickle"""
+        fname = path.join(self.output_dir,
+                          "torch_loop{:04d}.pickle".format(self.chknum))
+        with open(fname, 'wb') as f:
+            pickle.dump(self.loop, f)
+        tprint("*** Wrote bridge loop state to {:s} ****".format(fname))
 
     def out_mass(self):
         """Write dict with all future stars to pickle"""

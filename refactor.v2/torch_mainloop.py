@@ -163,28 +163,46 @@ def evolve(state, hydro, grav, mult, se):
     se_dt = 1e99 | units.s
 
     # bridge loop control
-    it = 1
-    tt = hy_time  # tt = "torch time" or "time in torch"
-    dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
-    made_stars = False
+    it = state.loop['it'] + 1
+    dt_prev = state.loop['dt']
+    dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     num_stars = hydro.get_number_of_particles()
 
     if num_stars > 0:  # restart or user initial conditions
         add_particles_to_grav(state, hydro, grav, mult)
-        made_stars = True
 
-    while tt < hy_max_time and hy_step < hy_max_steps:
+    while hy_time < hy_max_time and hy_step < hy_max_steps:
 
-        tprint("Bridge step: it={}, tt={}, dt={}".format(it, tt, dt))#Current simulation time:", tt, "dt:", dt)
+        tprint("Bridge step: it={}, dt={}, dt_prev={}".format(it, dt, dt_prev))
         tprint("... Hydro time:", hy_time)
-        tprint("... Grav time:", gr_time)
+        tprint("... Grav time: ", gr_time)
         tprint("... Num stars in hydro:", num_stars)
         if USER['with_multiples']:
             tprint("... Num in grav:", len(grav.particles))
             tprint("... Num in mult.root_to_tree:", len(mult.root_to_tree))
-        tprint("... made_stars:", made_stars)
 
         if num_stars > 0:
+
+            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
+
+            ### ------------
+            ### Bridge kick.
+            ### ------------
+
+            if USER['with_bridge']:
+                tprint("Bridge kick")
+                kick_number = 2  # tell FLASH to update grav pot (BGPT), accel (BGA{X,Y,Z})
+                hydro.get_gravity_particles_on_gas(0.5*dt_prev+0.5*dt, kick_number)  # star->gas, star->sink kick
+                tprint("... grid kicked")
+                hydro.get_gravity_gas_on_particles(0.5*dt_prev+0.5*dt, kick_number)  # gas->star, sink->star kick
+                tprint("... stars kicked")
+
+                # sync velocity to stars + gravity code(s) from hydro
+                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
+                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
+                if USER['with_multiples']:
+                    mult.channel_from_code_to_memory.copy()     # grav  -> multiples
+                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
 
             ### ------------------
             ### Stellar evolution.
@@ -194,7 +212,7 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("Do stellar evolution")
                 # update both stars set and hydro properties
                 se_dt = stellar_evolution(
-                    tt+dt, dt, state, hydro, se,
+                    hy_time+dt, dt, state, hydro, se,
                     with_lyc          = USER['with_lyc'],
                     with_pe_heat      = USER['with_pe_heat'],
                     with_winds        = USER['with_winds'],
@@ -210,93 +228,40 @@ def evolve(state, hydro, grav, mult, se):
                     mult.channel_from_code_to_memory.copy() # grav  -> multiples
                     state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
 
-            ### -----------
-            ### First kick.
-            ### -----------
-
-            tprint("Evolving hydro with grav for dt:", dt, "to reach t =", tt+dt)
-
-            if USER['with_bridge']:
-                tprint("First kick")
-                kick_number = 1
-                if made_stars:  # update grav pot (BGPT), accel (BGA{X,Y,Z}) to account for new star prtl
-                    kick_number = 2
-
-                hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
-                tprint("... grid kicked")
-                hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
-                tprint("... stars kicked")
-
-                # sync velocity to stars + gravity code(s) from hydro
-                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
-                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
-                if USER['with_multiples']:
-                    mult.channel_from_code_to_memory.copy()     # grav  -> multiples
-                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
-
             ### --------------
             ### Evolve models.
             ### --------------
 
             tprint("Advance grav")
             if USER['with_multiples']:
-                mult.evolve_model(tt+dt)
+                mult.evolve_model(hy_time+dt)
             else:
-                grav.evolve_model(tt+dt)
+                grav.evolve_model(hy_time+dt)
 
             tprint("Advance hydro")
-            hydro.evolve_model(tt+dt)
+            hydro.evolve_model(hy_time+dt)
 
             # sync position & velocity to stars + hydro from gravity code(s)
             state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
             if USER['with_multiples']:
                 mult.update_leaves_pos_vel()  # grav COM -> multiples; updates tree.particle and leaves (but not root, weirdly)
-                mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # grav singles AND multiples -> AMUSE
+                mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # multiples AND grav singles -> AMUSE
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
-            # this updates all of grav,stars,hydro,
-            # and works correctly for mult=None
+            # updates all of grav,stars,hydro,mult; can accept mult=None
             remove_particles_outside_bndbox(state, hydro, grav, mult)
-            # sort and also remove stars outside domain, though
-            # remove_particles_outside_bndbox(...) should have us covered
-            hydro.particles_sort()
-
-            # TODO can we move star creation here?
-            # this saves one poisson solve when new stars are being formed.
-            # edge case of restarts can get weird
-            # -AT,2019Oct10
-
-            ### ------------
-            ### Second kick.
-            ### ------------
-
-            num_stars = hydro.get_number_of_particles()
-
-            if USER['with_bridge'] and num_stars > 0:  # in case star exited domain
-                tprint("Second kick")
-                kick_number = 2  # update grav pot (BGPT), accel (BGA{X,Y,Z}) for star prtl new positions
-
-                hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
-                tprint("... grid kicked")
-                hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
-                tprint("... stars kicked")
-
-                # sync velocity to stars + gravity code(s) from hydro
-                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
-                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
-                if USER['with_multiples']:
-                    mult.channel_from_code_to_memory.copy()     # grav singles -> multiples
-                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+            hydro.particles_sort()  # also checks for stars outside domain
 
         else: # num_stars == 0
+
+            tprint("Evolving hydro without grav to reach t =", hy_time+dt)
 
             ### --------------
             ### Evolve models.
             ### --------------
 
-            tprint("Evolving hydro without grav for dt:", dt, "to reach t =", tt+dt)
-            hydro.evolve_model(tt + dt)
+            hydro.evolve_model(hy_time+dt)
 
             # two possible cases:
             # 1. no stars yet, so never called grav.evolve_model(...)
@@ -344,11 +309,16 @@ def evolve(state, hydro, grav, mult, se):
 
         # bridge loop control
         it += 1
-        tt += dt
-        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-tt)
+        dt_prev = dt
+        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         num_stars = hydro.get_number_of_particles()  # loop variable
 
-        assert abs((hy_time - gr_time).value_in(units.s)) <= 1e4
+        # save for restarts.  be careful about ordering in code.
+        # loop file holds 'it', 'dt' for LAST bridge loop before checkpoint.
+        state.loop['it'] = it
+        state.loop['dt'] = dt
+
+        assert abs(hy_time - gr_time) <= (1e4|units.s)
         assert num_stars == len(state.stars)
         if USER['with_multiples']:
             assert num_stars == len(mult.stars)
