@@ -96,13 +96,13 @@ def initialize_workers():
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
     if USER['with_ph4']:
-        grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection="none")
+        grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     else:
-        grav = Hermite(convert, number_of_workers=USER['num_grav_workers'])
+        grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
         grav.parameters.dt_param = 0.02  # timestep size control, default 0.03
 
@@ -132,7 +132,13 @@ def initialize_workers():
         se = SeBa()
         se.initialize_code()
 
-    hydro = Flash(unit_converter=convert2, number_of_workers=USER['num_hy_workers'], redirection='none')
+    hydro = Flash(
+        unit_converter=convert2,
+        number_of_workers=USER['num_hy_workers'],
+        redirection='file',
+        redirect_stdout_file='flash_worker.out',
+        redirect_stderr_file='flash_worker.err',
+    )
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
@@ -174,6 +180,7 @@ def evolve(state, hydro, grav, mult, se):
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
         tprint("Bridge step: it={}, dt={}, dt_prev={}".format(it, dt, dt_prev))
+        tprint("... Hydro step:", hy_step)
         tprint("... Hydro time:", hy_time)
         tprint("... Grav time: ", gr_time)
         tprint("... Num stars in hydro:", num_stars)
@@ -301,7 +308,7 @@ def evolve(state, hydro, grav, mult, se):
 
         # FLASH loop control
         hy_dt = hydro.get_timestep()
-        hy_step = hydro.get_current_step()
+        hy_step = hydro.get_current_step() + 1  # need +1 because AMUSE coupling changes FLASH nstep logic
         hy_time = hydro.get_time()
 
         # grav loop control

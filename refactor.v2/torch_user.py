@@ -189,7 +189,7 @@ def user_parameters():
 
     # <star/n-body gravity>
 
-    p['with_ph4'] = False  # use ph4 or Hermite
+    p['with_ph4'] = True  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <stellar evolution>
