@@ -113,13 +113,16 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
     WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
     FLASH runtime parameters.
 
+    Note: if any star in multiple is outside bndbox, remove the entire multiple
+    system, even if rest of system is inside bndbox.
+
     Arguments:
         state = TorchState(...)
         hydro = FLASH worker code instance
         grav = N-body gravity code instance
         mult = Multiples worker code instance, OR None
     """
-    p = grav.particles
+    p = state.stars
     if len(p) == 0:
         return
 
@@ -136,26 +139,38 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         p.z >= zmax, p.z <= zmin,
     ])
 
-    grav_rem = p[outside]
-    stars_rem = Particles(0)
+    stars_rem = p[outside]
+    grav_rem = stars_rem.copy()
 
-    if len(grav_rem) > 0:
+    if len(stars_rem) > 0:
 
-        tprint("Removing", len(grav_rem), "grav particles outside bndbox")
+        tprint("Removing", len(stars_rem), "star(s) outside bndbox")
 
-        # All leaves exist in stars and hydro while all roots
-        # exist in grav.
-        for s in grav_rem:
-            if mult is not None and s in mult.root_to_tree:  # COM particle and leaves
-                tree = mult.root_to_tree[s]
+        if mult is not None:
+
+            root_rem = Particles(0)
+
+            # remove the entire tree if any leaf outside bndbox
+            for root, tree in mult.root_to_tree.iteritems():
                 leaves = tree.get_leafs_subset()
-                for leaf in leaves:
-                    #stars_rem.add_particles(leaf.as_particle_in_set(state.stars))  # doesn't work
-                    stars_rem.add_particles(state.stars[np.where(state.stars.key==leaf.key)[0]])
-                # remove all leaves by deleting root of the tree
-                del mult.root_to_tree[s.as_particle_in_set(mult._inmemory_particles)]
-            else:  # single star
-                stars_rem.add_particles(s.as_particle_in_set(state.stars))
+                leaves_outside = stars_rem.get_intersecting_subset_in(leaves)
+                leaves_inside = leaves - leaves_outside
+                if leaves_outside:
+                    for leaf in leaves_inside:
+                        stars_rem.add_particle(leaf.as_particle_in_set(state.stars))
+                    grav_rem.remove_particles(leaves_outside)
+                    grav_rem.add_particle(root)
+                    root_rem.add_particle(root)
+
+            # stars_rem contains all single stars outside bndbox, and all
+            # leaves for multiple-star systems straddling/outside bndbox.
+            # grav_rem contains all single stars outside bndbox, and all root
+            # particles for multiple-star systems straddling/outside bndbox.
+            tprint("Removing", len(root_rem), "multiple system(s) on/outside bndbox")
+            tprint("Removing", len(stars_rem), "star(s) on/outside bndbox")
+
+            for root in root_rem:
+                del mult.root_to_tree[root]
 
         # hydro requires sorted tags for removal
         # only the stars particle set has a tag attribute.
@@ -165,11 +180,11 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
-        if mult is not None:
+        if mult is None:
+            grav.particles.synchronize_to(state.stars)
+        else:
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
-        else:
-            grav.particles.synchronize_to(state.stars)
 
     return
 

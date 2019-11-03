@@ -305,7 +305,7 @@ class Multiples(object):
 
         return result
 
-    def update_leaves_pos_vel(self):
+    def update_leaves_pos_vel(self, local_debug=False):
 
         # The FLASH interface needs a function that updates the
         # properties of the leaves from the properties of the
@@ -315,7 +315,6 @@ class Multiples(object):
         # leaves, not a copy of the leaf particles.  So tree.particle
         # also then needs to be updated - Josh.
 
-        local_debug = False
         self.channel_from_code_to_memory.copy() # update the copy in memory
                                                 # from the gravity code - Josh
 

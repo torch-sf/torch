@@ -51,8 +51,8 @@ def user_initial_conditions(state, hydro):
 #
 #    star          = Particles(1)
 #    star.mass     = 1 | units.MSun
-#    star.position = [flashp['xmax'] - 200, 0, 0] | units.cm
-#    star.velocity = [100, 0, 0] | units.cm/units.s
+#    star.position = [flashp['xmax'] - 1e10, 0, 0] | units.cm
+#    star.velocity = [1e5, 0, 0] | units.cm/units.s
 #
 #    star_tag = hydro.add_particles(star.x, star.y, star.z)
 #    hydro.set_particle_mass(star_tag, star.mass)
@@ -85,6 +85,38 @@ def user_initial_conditions(state, hydro):
     # ------------------------------------------------------------------------
     # Multiples test: plop a binary system that exits domain QUICKLY
 
+#    star        = Particles(2)
+#    star.mass   = 1. | units.MSun
+#    star.x      = 0.0 | units.cm
+#    star.y      = 0.0 | units.cm
+#    star.z      = 0.0 | units.cm
+#    star.vx     = 0.0 | units.cm/units.s
+#    star.vy     = 0.0 | units.cm/units.s
+#    star.vz     = 0.0 | units.cm/units.s
+#
+#    # make bound binary
+#    star[0].x = -1.5e16 | units.cm  # 1000 AU away
+#    star[1].vy = 1.0e4 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
+#
+#    # place system on exit trajectory
+#    flashp = FlashPar("flash.par")
+#    star.x = star.x + ((flashp['xmax'] - 1e17) | units.cm)
+#    star.vx = (5.0e17/1.0e12) | units.cm/units.s  # 6e4 cm/s
+#
+#    creation_time = hydro.get_time()  # comes with AMUSE units
+#
+#    tag = hydro.add_particles(star.x, star.y, star.z)
+#    hydro.set_particle_mass(tag, star.mass)
+#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
+#    hydro.set_particle_oldmass(tag, star.mass) # for SE code
+#    hydro.set_particle_creation_time(tag, creation_time)
+
+    # ------------------------------------------------------------------------
+    # Multiples test: plop a binary system that exits domain SLOWLY,
+    # such that one star lies outside bndbox while COM lies inside bndbox.
+    # This is a bit unphysical because the star's position while tracked by
+    # Multiples is not well defined.
+
     star        = Particles(2)
     star.mass   = 1. | units.MSun
     star.x      = 0.0 | units.cm
@@ -94,14 +126,30 @@ def user_initial_conditions(state, hydro):
     star.vy     = 0.0 | units.cm/units.s
     star.vz     = 0.0 | units.cm/units.s
 
-    # make bound binary
+    # make bound binary with stars initially along x-axis.
     star[0].x = -1.5e16 | units.cm  # 1000 AU away
-    star[1].vy = 1.0e4 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
+    star[0].vy = -1.0e3 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
+    star[1].vy = 1.0e3 | units.cm/units.s  # balance so that COM vy~0
 
-    # place system on exit trajectory
+    # first bridge dt = 4.5e12 sec, dx = 4.5e14cm.  Nominally,
+    # system moves 1/3rd of binary sep, so COM in domain, one star past xmax.
+    # next bridge dt, COM exits domain.
     flashp = FlashPar("flash.par")
-    star.x = star.x + ((flashp['xmax'] - 1e17) | units.cm)
-    star.vx = (5.0e17/1.0e12) | units.cm/units.s  # 6e4 cm/s
+    star.x = star.x + ((flashp['xmax'] - 1e12) | units.cm)
+    star.y = star.y + ((flashp['ymax'] - 1e15) | units.cm)  # be careful about float precision
+    star.z = star.z + ((flashp['zmax'] - 1e15) | units.cm)
+    star.vx = star.vx + (1e3 | units.cm/units.s)  # COM vx=1e2 cm/s too small, gets perturbed by grav
+
+    # The stars fall towards each other and perturb starting positions before
+    # ph4 throws stopping condition, so the setup is inexact.
+    #
+    # Nevertheless, with current (2019 nov 02) example torch settings, after
+    # two bridge steps the binary straddles domain boundary with COM inside and
+    # one star outside.
+    #
+    # This triggers crash in hydro.particles_sort() with old star-removal
+    # algorithm that only looks for ph4 particles outside domain.
+    # New algorithm, which removes entire tree if any leaf outside, works.
 
     creation_time = hydro.get_time()  # comes with AMUSE units
 
@@ -112,8 +160,6 @@ def user_initial_conditions(state, hydro):
     hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
-    # Multiples test: plop a binary system that exits domain SLOWLY,
-    # such that one star lies outside bndbox while COM lies inside bndbox
 
     return
 

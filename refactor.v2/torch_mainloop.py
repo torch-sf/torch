@@ -250,7 +250,7 @@ def evolve(state, hydro, grav, mult, se):
             # sync position & velocity to stars + hydro from gravity code(s)
             state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
             if USER['with_multiples']:
-                mult.update_leaves_pos_vel()  # grav COM -> multiples; this synchronizes full tree, i.e. also updates root, tree.particle
+                mult.update_leaves_pos_vel()  # grav COM -> multiples; updates tree.particle and leaves (but not root, weirdly)
                 mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # grav singles AND multiples -> AMUSE
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
@@ -258,7 +258,6 @@ def evolve(state, hydro, grav, mult, se):
             # this updates all of grav,stars,hydro,
             # and works correctly for mult=None
             remove_particles_outside_bndbox(state, hydro, grav, mult)
-
             # sort and also remove stars outside domain, though
             # remove_particles_outside_bndbox(...) should have us covered
             hydro.particles_sort()
