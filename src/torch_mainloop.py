@@ -54,7 +54,7 @@ from amuse.community.flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
 #from amuse.couple import multiples
-import multiples_aaron as multiples # TODO -AT,2019oct30, edits to fold into AMUSE repo after testing
+import multiples_mod as multiples # TODO -AT,2019oct30, edits to fold into AMUSE repo after testing
 
 from torch_se import stellar_evolution
 from torch_sf import (

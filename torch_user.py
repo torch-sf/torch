@@ -177,7 +177,7 @@ def user_parameters():
     p['restart_with_new_rng'] = False
     p['restart_with_user_ics'] = False  # meant for testing
 
-    p['evolve_async'] = False
+    p['evolve_async'] = True
     p['with_bridge'] = True
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True
