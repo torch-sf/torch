@@ -1618,7 +1618,7 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
             new_star.velocity = np.random.uniform(sink_vel, np.ones((nnew,3))*sink_cs) | units.cm/units.s
 
             # Singular isothermal spherical distribution.
-            stars_rvec = (random_three_vector(nnew)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
+            stars_rvec = random_three_vector(nnew)*np.random.rand(nnew,1)*sink_rad
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
