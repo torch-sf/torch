@@ -297,7 +297,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             star.mass     = spawn_masses | units.MSun
             # Isothermal spherical distribution.
             star.position = sink_pos
-            star.position = star.position + ( sink_rad * np.random.rand() * random_three_vector(nnew) )
+            star.position = star.position + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
+            # Uniform velocities up to +/-cs
             star.velocity = sink_vel
             star.velocity = star.velocity + sink_cs*np.random.uniform(-1,+1,size=(nnew,3))
 
