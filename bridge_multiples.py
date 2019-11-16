@@ -1610,12 +1610,12 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
         if nnew > 0:
 
             sink_position      = hydro.get_particle_position(sink_tags[s])
-            sink_vel           = hydro.get_particle_velocity(sink_tags[s]).value_in(units.cm/units.s)
-            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s]).value_in(units.cm/units.s)
+            sink_vel           = hydro.get_particle_velocity(sink_tags[s])
+            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s])
 
             new_star = Particles(nnew)
             new_star.mass = spawn_masses | units.MSun
-            new_star.velocity = np.random.uniform(sink_vel, np.ones((nnew,3))*sink_cs) | units.cm/units.s
+            new_star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
             # Singular isothermal spherical distribution.
             stars_rvec = random_three_vector(nnew)*np.random.rand(nnew,1)*sink_rad
