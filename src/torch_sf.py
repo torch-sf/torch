@@ -296,11 +296,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             star          = Particles(nnew)
             star.mass     = spawn_masses | units.MSun
             # Isothermal spherical distribution.
-            star.position = sink_pos
-            star.position = star.position + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
-            # Uniform velocities up to +/-cs
-            star.velocity = sink_vel
-            star.velocity = star.velocity + sink_cs*np.random.uniform(-1,+1,size=(nnew,3))
+            star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
+            # Gaussian distribution satisfying <vx**2> = sink_cs**2
+            # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2
+            # matches gas specific energy P/rho/(gamma-1) for gamma=5/3
+            # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
+            star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
