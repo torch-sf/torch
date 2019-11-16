@@ -1627,7 +1627,7 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
 
             new_star          = Particles(1)
             new_star.mass     = new_star_mass  | units.MSun
-            new_star.velocity = np.random.uniform(sink_vel, np.ones(3)*sink_cs) | units.cm/units.s
+            new_star.velocity = np.random.normal(loc=sink_vel, scale=sink_cs) | units.cm/units.s
 
             sink_mass         = sink_mass  - new_star_mass
 
