@@ -83,15 +83,13 @@ nblocky         = 1
 nblockz         = 1
 lrefine_max     = 2
 lrefine_min     = 2
-refine_var_1 = "none"
-refine_var_2 = "none"
 
-#refine_var_1    = "pres"
-#refine_filter_1 = 1e-2
-## Note a factor of 2 in difference gives 0.97087
-## A factor of 3 is just above 0.98
-#refine_cutoff_1 = 0.98
-#derefine_cutoff_1 = 0.6  # fairly aggressive
+refine_var_1    = "pres"
+refine_filter_1 = 1e-2
+# Note a factor of 2 in difference gives 0.97087
+# A factor of 3 is just above 0.98
+refine_cutoff_1 = 0.98
+derefine_cutoff_1 = 0.6  # fairly aggressive
 
 #   maximum change of refinements per step
 #nrefs = 2
@@ -102,6 +100,7 @@ refine_var_2 = "none"
 gr_sanitizeDataMode  = 3 # Try to correct "bad data"
 gr_sanitizeVerbosity = 4 # Just print warning, not cell info
 
+gr_pmrpConserve          = .true.
 
 # ==================================================
 # simulation time, output file intervals, restarting
@@ -207,28 +206,29 @@ cvisc		    = 0.1     # coefficient for artificial viscosity
 use_flattening	= .false. # use flattening (dissipative) (originally for PPM)
 use_steepening	= .false. # use contact steepening (originally for PPM)
 use_upwindTVD	= .true.  #use upwind biased TVD slope for PPM (need nguard=6)
-use_gravhalfupdate = .false. # This would violate the bridge stuff, no?
+use_gravhalfupdate = .true.
 
-#hy_fallbackLowerCFL = .true.
-#hy_cflFallbackFactor = 0.25
-#use_hybridOrder = .true.
+use_hybridOrder     = .true.
+hy_fallbackLowerCFL = .true.
+hy_cflFallbackFactor = 0.9
 
 #	II. MAGNETIC(B) AND ELECTRIC(E) FIELDS:
 E_modification	= .true.           # High order algorithm for E-field construction
 E_upwind        = .true.           # Better E field reconstruction (Lee and Deane 2009)
 energyFix	    = .true.           # Update magnetic energy using staggered B-fields
 ForceHydroLimit	= .false.          # Pure Hydro Limit (B=0)
-prolMethod      = "balsara_prol" #"injection_prol" # Prolongation method (injecton_prol, balsara_prol)
+prolMethod      = "injection_prol" # Prolongation method (injecton_prol, balsara_prol)
 #useMagneticResistivity = .true.
 #resistivity = 7.3e-14 # Spitzer resistivity for T = 10^4 K #1.0E-0
 
 #	III. RIEMANN SOLVERS:
-RiemannSolver	= "HLLC"      # Roe, HLL, HLLC, HLLD, LLF, Marquina
+RiemannSolver	= "HLLD"      # Roe, HLL, HLLC, HLLD, LLF, Marquina
 entropy         = .false.     # Entropy fix for the Roe solver
 EOSforRiemann	= .false.     # Call EOS in Riemann flux calculations
 
 #	IV. STRONG SHOCK HANDELING SCHEME:
-shockDetect	= .false.     # Shock Detect for numerical stability
+shockDetect	    = .true.      # Shock Detect for numerical stability
+shockLowerCFL   = .true.
 ## -------------------------------------------------------------##
 
 ## ---------------------------------------------------------------##
@@ -254,8 +254,8 @@ pt_maxPerProc   = 10000
 # Particles/ParticlesMain/active/SinkNoAdvance
 # --------------------------------------------
 
-jeans_ncells_ref    = 6.0 #12.0  #20.0 #32.0
-jeans_ncells_deref  = 12.0 #24.0  #40.0 #64.0
+jeans_ncells_ref    = 12.0  #20.0 #32.0
+jeans_ncells_deref  = 24.0  #40.0 #64.0
 
 # For -+7pc box with lrefine=2, demonstration problem
 sink_density_thresh       = 8.52171362932e-22
@@ -310,7 +310,7 @@ grav_boundary_type_z    = "isolated"
 # Multigrid solver
 # ----------------
 mpole_lmax = 10
-mg_maxresidualnorm = 1e-6
+mg_maxResidualNorm = 0.01 #1e-6
 mg_printNorm       = .false.
 
 ## -------------
@@ -379,7 +379,7 @@ he_pe_norm      = 1.3e-24
 
 # heating and cooling thresholds
 # at which temperatures to apply heating
-theatmin        = 0.0E0
+theatmin        = 1e-99
 theatmax        = 2.0E4
 
 # at which temperatures to apply cooling
@@ -391,7 +391,7 @@ absTmin = 10.
 absTmax = 1e9
 
 # electron number densities at which to apply cooling
-dradmin   = 0.0 #1e-8
+dradmin   = 1e-99
 dradmax   = 1e10
 
 # heat in exponential profile or uniformely
@@ -457,7 +457,13 @@ rt_rayTrace    = T
 # NOTE: useRadTrans and useRadTransfer do distinct things
 useRadTransfer = T
 
-rt_maxHchange = 0.1
+rt_maxHchange = 0.1  # this number shouldn't be doing anything now. -JW
+rt_ion_threshold = 0.1  # this replaces rt_maxHchange
+rt_ion_min = 1e-8
+# rt_neutral_min shouldn't be zero ever, because the radiation solver assumes
+# zero photons are absorbed and the heating from ionization will flip flop
+# rapidly from high to zero, making things unstable. -JW
+rt_neutral_min = 1e-10
 
 ph_sampling     = 2.0
 ph_initHPlevel  = 2
@@ -472,6 +478,11 @@ early_term_FUV  = T
 sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
 dust_gas_ratio  = 0.01  # 1% dust
 ph_EUVonDust    = T     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
+
+rt_useRadTransDt = .true.
+# Use the feedback safety timestep on start or restart?
+rt_useNumstepsRadTransDtOnStart = .false.  # actually has no effect in code -AT,2019oct23
+rt_numStepsRadTransDt = 10  # how many safe steps to take
 
 
 # ======================================================================================
@@ -507,3 +518,7 @@ wind_target_temp = 5e6
 # Perturb the wind velocity by a normal distribution?
 perturb_velocity = .false. #.true. #
 perturb_std_dev  = 0.05
+
+# Use internal (and generally very limiting) timestep calculation
+# in inject_direct.F90?
+use_wind_compute_dt = .false.
