@@ -86,6 +86,10 @@ def add_particles_to_grav(state, hydro, grav, mult):
 #    add_star.dm_dt = 0.0 | units.g/units.s
 #    add_star.vterm = 0.0 | units.cm/units.s
 
+    # only used by ph4... without this, ph4 complains about reused user IDs
+    add_star.id = state.stars_next_id + np.arange(num_new_parts)
+    state.stars_next_id += num_new_parts
+
     state.stars.add_particles(add_star)
     state.stars = state.stars.sorted_by_attribute('tag')
 

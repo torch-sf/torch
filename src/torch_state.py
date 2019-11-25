@@ -29,6 +29,7 @@ class TorchState(object):
         self.all_masses = {}
         self.loop = {}
         self.stars = Particles(0)
+        self.stars_next_id = 0  # to supply ID attribute for ph4
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
