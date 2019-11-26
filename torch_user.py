@@ -202,11 +202,11 @@ def user_initial_conditions(state, hydro):
 #
 #        return tag
 #
-#    # create new cluster from scratch...
 #    flashp = FlashPar("flash.par")
 #    xmax = flashp['xmax'] | units.cm
+#
+#    # create new cluster from scratch...
 #    conv_cluster = nbody_system.nbody_to_si(3.0|units.parsec, 300.0|units.MSun)
-#    #cluster_bndbox = xmax
 #    cluster = make_cluster(conv_cluster, 100, xmax, fractal=True)
 #    #write_set_to_file(cluster, 'starting_cluster.hdf5', 'hdf5')
 #
