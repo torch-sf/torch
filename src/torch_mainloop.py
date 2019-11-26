@@ -191,10 +191,10 @@ def evolve(state, hydro, grav, mult, se):
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
-        tprint("Bridge step: it={}, dt={}, dt_prev={}".format(it, dt, dt_prev))
+        tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
+            it, hy_time.value_in(units.s), dt.value_in(units.s),
+        ))
         tprint("... Hydro step:", hy_step)
-        tprint("... Hydro time:", hy_time)
-        tprint("... Grav time: ", gr_time)
         tprint("... Num stars in hydro:", num_stars)
         if USER['with_multiples']:
             tprint("... Num in grav:", len(grav.particles))
@@ -239,7 +239,7 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
-                tprint("... dt from stellar evol:", se_dt)
+                tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
                 state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
