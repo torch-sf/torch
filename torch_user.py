@@ -160,6 +160,62 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
+    # Start with a cluster.  BEWARE: properties are not very carefully chosen,
+    # e.g., current initialization scheme probably adds subtle biases etc...
+
+    # The fractal cluster model requires an extra worker, a bit wasteful.
+    # It calls "stop()" and should probably release/kill the worker...
+    # If we re-initialize grav, delay grav init to after IC setup, or only load
+    # cluster from file instead of worker, maybe we can save a process.
+    # -AT, 2019 Nov 25
+#    from amuse.community.fractalcluster.interface import new_fractal_cluster_model
+#    from amuse.ic.brokenimf import new_kroupa_mass_distribution
+#    from amuse.ic.plummer import new_plummer_sphere
+#    from amuse.ic.salpeter import new_salpeter_mass_distribution
+#    from amuse.io import write_set_to_file, read_set_from_file
+#    from amuse.units import nbody_system
+#    import numpy as np
+#
+#    def make_cluster(converter, nm_part, bndbox, fractal=False):
+#        stars_out = True
+#        n = 0
+#        while stars_out:
+#            if fractal:
+#                cluster = new_kroupa_mass_distribution(nm_part, mass_max=(150.0|units.MSun))
+#                cluster = new_fractal_cluster_model(masses=cluster, convert_nbody=converter, do_scale=False, virial_ratio=1.0)
+#            else:
+#                cluster = new_plummer_sphere(nm_part, convert_nbody=converter, do_scale=False)
+#                cluster.mass = new_kroupa_mass_distribution(nm_part, mass_min=(0.08|units.MSun), mass_max=(150.0|units.MSun))
+#            remove_stars = cluster.select(lambda r: bndbox < max(abs(r)), ["position"])
+#            stars_out = len(remove_stars) > 0
+#            n += 1
+#        print("Made cluster in", n, "attempts.")
+#        return cluster
+#
+#    def make_cluster_in_hydro(cluster, bndbox):
+#
+#        tag = hydro.add_particles(cluster.x, cluster.y, cluster.z)
+#        hydro.set_particle_velocity(tag, cluster.vx, cluster.vy, cluster.vz)
+#        hydro.set_particle_mass(tag, cluster.mass)
+#        hydro.set_particle_oldmass(tag, cluster.mass)  # for SE code
+#        hydro.set_particle_creation_time(tag, hydro.get_time())
+#
+#        return tag
+#
+#    # create new cluster from scratch...
+#    flashp = FlashPar("flash.par")
+#    xmax = flashp['xmax'] | units.cm
+#    conv_cluster = nbody_system.nbody_to_si(3.0|units.parsec, 300.0|units.MSun)
+#    #cluster_bndbox = xmax
+#    cluster = make_cluster(conv_cluster, 100, xmax, fractal=True)
+#    #write_set_to_file(cluster, 'starting_cluster.hdf5', 'hdf5')
+#
+#    # load cluster from file...
+#    #cluster = read_set_from_file('starting_cluster.hdf5', 'hdf5')
+#
+#    make_cluster_in_hydro(cluster, xmax)
+
+    # ------------------------------------------------------------------------
 
     return
 
@@ -215,6 +271,7 @@ def user_parameters():
 
     p['num_grav_workers'] = 1
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
+    #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
