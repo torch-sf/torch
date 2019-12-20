@@ -382,15 +382,15 @@ he_pe_norm      = 1.3e-24
 theatmin        = 1e-99
 theatmax        = 2.0E4
 
-# at which temperatures to apply cooling
-tradmin         = 10.0 # 0.0 # tradmin=0 will BREAK heat/cooling solver - 2019 Feb 26 AT
+# at which temperatures to apply atomic cooling curve
+tradmin         = 10.0  # tradmin=0 breaks heat/cool solver
 tradmax         = 1.E15 # so always
 
 # absolute thresholds never goes below or above these temperatures
 absTmin = 10.
 absTmax = 1e9
 
-# electron number densities at which to apply cooling
+# electron number densities at which to apply atomic cooling curve
 dradmin   = 1e-99
 dradmax   = 1e10
 
