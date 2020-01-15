@@ -138,6 +138,7 @@ learn how to get involved.
 
 The Torch code includes contributions by:
 
+* Sabrina Appel
 * Raúl Domínguez
 * Ralf Klessen
 * Sean Lewis

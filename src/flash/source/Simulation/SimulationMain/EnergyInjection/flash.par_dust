@@ -9,6 +9,7 @@ useGravity     = F
 useRadTrans    = T
 rt_rayTrace    = F
 useParticles   = T
+useSinkParticles = T  # required for torch sink+stars
 useHeat        = T
 
 #//////////////////////////
@@ -102,7 +103,7 @@ theatmin        = 0.E0
 theatmax        = 2.0E4
 
 # at which temperatures to apply cooling
-tradmin         = 0.0
+tradmin         = 10.0  # tradmin=0 breaks heat/cool solver
 tradmax         = 1.E15 # so always
 
 # absolut thresholds never goes below or above these temperatures
