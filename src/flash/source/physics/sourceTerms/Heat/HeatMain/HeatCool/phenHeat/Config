@@ -63,6 +63,11 @@ PARAMETER subfactor	REAL 0.1d0
 PARAMETER maxcycles	INTEGER 5000 
 
 #radiation stuff
+D tradmin   Minimum temperature at which to apply atomic cooling curve.
+D &         Must be >0, tradmin=0 will break the solver.
+D tradmax   Maximum temperature at which to apply atomic cooling curve.
+D dradmin   Minimum electron number density at which to apply atomic cooling curve.
+D dradmax   Maximum electron number density at which to apply atomic cooling curve.
 PARAMETER tradmin	REAL 4.7967E12
 PARAMETER tradmax	REAL 4.7967E12
 PARAMETER dradmin	REAL 4.7967E12
