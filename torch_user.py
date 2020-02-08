@@ -8,8 +8,6 @@ You must define the methods:
 
 User parameters should have AMUSE units attached, where appropriate.
 
-See the main torch code (torch.py) to understand how this all works.
-
 Design inspired by TRISTAN-MP, Athena++ architecture.
 """
 
