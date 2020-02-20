@@ -3686,48 +3686,48 @@ try:
                             hydro.set_particle_wind_vel(tags_keys[part_inds,0], vterm[part_inds])
                             #print "mass loss should be ", dm_dt[part_inds].in_(units.MSun/units.s)*dt.in_(units.s), "for star of mass ", stars.mass[part_inds]
 
-                #if (made_massive_star):
-                    #print "Massive star made, checking if dt should be reduced. Current dt is", dt
-                    #dt = min(dt.value_in(units.s), 0.3*smallest_dx.value_in(units.cm)/np.max(vterm.value_in(units.cm/units.s))) | units.s
-                    #print "dt now is", dt
+                    #if (made_massive_star):
+                        #print "Massive star made, checking if dt should be reduced. Current dt is", dt
+                        #dt = min(dt.value_in(units.s), 0.3*smallest_dx.value_in(units.cm)/np.max(vterm.value_in(units.cm/units.s))) | units.s
+                        #print "dt now is", dt
 
-                # Remove any mass loss due to winds and update to this
-                # mass. Note this assumes steps are relatively small
-                # in the mass loss rate of stars, so that graviationally
-                # we can use the mass after all the wind mass loss
-                # has occcured. Otherwise we'd have to average
-                # mass loss and keep up with old and new masses and
-                # it just gets ugly.
-                stars.mass = star_mass # - dm_dt*dt
-                stars.age  = stars.age + dt
-                stars.stellar_type = star_type
-                #print "new star mass = ", stars.mass
+                    # Remove any mass loss due to winds and update to this
+                    # mass. Note this assumes steps are relatively small
+                    # in the mass loss rate of stars, so that graviationally
+                    # we can use the mass after all the wind mass loss
+                    # has occcured. Otherwise we'd have to average
+                    # mass loss and keep up with old and new masses and
+                    # it just gets ugly.
+                    stars.mass = star_mass # - dm_dt*dt
+                    stars.age  = stars.age + dt
+                    stars.stellar_type = star_type
+                    #print "new star mass = ", stars.mass
 
-                # Note when using the multiples module we can't copy stars to grav
-                # because the stars are all the particles (including leaves) and only
-                # the roots are in grav.
-                # Instead we should modify the values in multiples directly such that:
-                # 1. Leaves have updated mass
-                # 2. Roots have updated mass and velocity.
-                # 3. We then need to update the radii of all the particles (to update the root radii).
-                # 4. We then copy from multiples roots to grav code.
+                    # Note when using the multiples module we can't copy stars to grav
+                    # because the stars are all the particles (including leaves) and only
+                    # the roots are in grav.
+                    # Instead we should modify the values in multiples directly such that:
+                    # 1. Leaves have updated mass
+                    # 2. Roots have updated mass and velocity.
+                    # 3. We then need to update the radii of all the particles (to update the root radii).
+                    # 4. We then copy from multiples roots to grav code.
 
-                if (with_multiples):
-                    pass
-                    #mult_grav.channel_from_memory_to_code.copy()
-                    #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
-                else:
-                    stars_to_grav.copy()
-                #stars_to_grav.copy_attributes(["mass"])
-                hydro.set_particle_mass(tags_keys[:,0], stars.mass)
-
-                if (insane):
                     if (with_multiples):
-                        check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars)
+                        pass
+                        #mult_grav.channel_from_memory_to_code.copy()
+                        #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
                     else:
-                        check_sanity(hydro, grav, stars)
-                if (type_insane): check_stellar_type(stars)
+                        stars_to_grav.copy()
+                    #stars_to_grav.copy_attributes(["mass"])
+                    hydro.set_particle_mass(tags_keys[:,0], stars.mass)
+
+                    if (insane):
+                        if (with_multiples):
+                            check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
+                            check_root_and_leaves(mult_grav, grav, stars)
+                        else:
+                            check_sanity(hydro, grav, stars)
+                    if (type_insane): check_stellar_type(stars)
 
 
                 # Set the bridge timestep.
