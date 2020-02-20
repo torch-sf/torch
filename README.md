@@ -68,6 +68,10 @@ source tree.
             Grid/
             ...
 
+The path `utils/` provides user-contributed tools (AS-IS, support not
+guaranteed) that may be of use for setting up, running, and/or analyzing Torch
+simulations.
+
 
 Simulation init condition setup
 -------------------------------
