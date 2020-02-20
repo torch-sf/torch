@@ -41,5 +41,5 @@ tar -cz -C ${FLASH_DIR} --checkpoint=100 --totals \
 
 ln -sf ${TORCH_DIR}/cool.dat
 cp -nv ${TORCH_DIR}/bridge_multiples.py .
-cp -nv ${TORCH_DIR}/flash.par.turbsph_standard .
+cp -nv ${TORCH_DIR}/flash.par.turbsph_standard flash.par
 cp -nv ${TORCH_DIR}/run.sh .
