@@ -27,12 +27,13 @@
 subroutine Simulation_initBlock(blockID)
   ! get the needed unit scope data
   use Grid_interface, ONLY : Grid_getBlkIndexLimits,Grid_getCellCoords, &
-                              Grid_putPointData, Grid_getDeltas
+                              Grid_putPointData
   use Multispecies_interface, ONLY : Multispecies_getSum
-  use RuntimeParameters_interface, ONLY: RuntimeParameters_get
   use Eos_interface, ONLY: Eos_wrapped
   use Simulation_data
+#ifdef VARY_ATM_FRAC
   use rt_data, ONLY : rt_vary_atomic_frac
+#endif
   implicit none
 
 ! get all the constants
@@ -58,17 +59,14 @@ subroutine Simulation_initBlock(blockID)
   integer :: sizeX, sizeY, sizeZ
 
   integer, dimension(MDIM) :: axis
-  integer,parameter :: dataSize = 1  ! for Grid put data function
   logical,parameter :: gcell = .true.
 
   ! these variables store the calculated initial values of physical
   ! variables a grid point at a time.
   real :: rhoZone, velxZone, velyZone, velzZone, presZone, &
        enerZone, ekinZone, tempZone
-  real :: dx(3), pxdist, pydist, pzdist, pradius, sim_mu
+  real :: sim_mu
   real, dimension(NSPECIES) :: massFrac_box
-
-!  print*,' PE', myPE,' initializing block no.', blockID
 
   massFrac_box(IHP_SPEC-SPECIES_BEGIN+1)    = sim_init_Hp 
   massFrac_box(IHA_SPEC-SPECIES_BEGIN+1)    = (1.0 - sim_init_Hp)
@@ -90,7 +88,6 @@ subroutine Simulation_initBlock(blockID)
   call Grid_getCellCoords(IAXIS, blockID, CENTER, gcell, xCoord, sizeX)
   call Grid_getCellCoords(JAXIS, blockID, CENTER, gcell, yCoord, sizeY)
   call Grid_getCellCoords(KAXIS, blockID, CENTER, gcell, zCoord, sizeZ)
-  call Grid_getDeltas(blockId,dx)
 
   !-----------------------------------------------------------------------------
   ! loop over all of the zones in the current block and set the variables.
@@ -108,12 +105,6 @@ subroutine Simulation_initBlock(blockID)
            axis(JAXIS) = j
            axis(KAXIS) = k
 
-           ! Refine on where the particle will be.
-           pxdist = xx - sim_p1x - sign(1.0, xx)*0.5*dx(1)
-           pydist = yy - sim_p1y - sign(1.0, yy)*0.5*dx(2)
-           pzdist = zz - sim_p1z - sign(1.0, zz)*0.5*dx(3)
-           pradius = sqrt( pxdist**2 + pydist**2 + pzdist**2)
-
            ! Compute the gas energy and set the gamma-values
            ! needed for the equation of  state.
            ! boring temperature
@@ -121,8 +112,9 @@ subroutine Simulation_initBlock(blockID)
            tempZone = sim_amTemp
            rhoZone  = sim_amNumDens*sim_protonmass
            
+           sim_mu = 1.3d0
+#ifdef VARY_ATM_FRAC
            if (rt_vary_atomic_frac) then
-           
              if (tempZone > 8e3) then
                sim_mu = 0.61d0
              else if (tempZone > 100.) then
@@ -130,9 +122,8 @@ subroutine Simulation_initBlock(blockID)
              else
                sim_mu = 2.3d0
              end if
-           else
-             sim_mu = 1.3d0
            end if
+#endif
 
            presZone  = rhoZone * sim_gasconstant * sim_amTemp / (sim_mu*sim_protonmass)
 
@@ -174,10 +165,6 @@ subroutine Simulation_initBlock(blockID)
            call Grid_putPointData(blockId, CENTER, MAGY_VAR, EXTERIOR, axis, sim_magy)
            call Grid_putPointData(blockId, CENTER, MAGZ_VAR, EXTERIOR, axis, sim_magz)
 #endif
-           !to force initial refinement on the particle location, set pden to be a refinement var.
-           if (pradius .le. 2*dx(1)) then
-             call Grid_putPointData(blockId, CENTER, PDEN_VAR, EXTERIOR, axis, 1.0)
-           end if
         end do
      end do
   end do
