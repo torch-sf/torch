@@ -1798,6 +1798,8 @@ def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiple
         hydro.remove_particles(rem_tag)
         stars.remove_particles(stars_rem_part)
         for rt in rem_tag:
+            # new local variable does not affect global "tags_keys",
+            # so must return to caller to update global version.
             tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
 
         num_particles = len(stars)
@@ -1913,6 +1915,8 @@ def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiple
         hydro.remove_particles(rem_tag)
         stars.remove_particles(stars_rem_part)
         for rt in rem_tag:
+            # new local variable does not affect global "tags_keys",
+            # so must return to caller to update global version.
             tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
 
         num_particles = len(stars)
@@ -2028,6 +2032,8 @@ def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiple
         hydro.remove_particles(rem_tag)
         stars.remove_particles(stars_rem_part)
         for rt in rem_tag:
+            # new local variable does not affect global "tags_keys",
+            # so must return to caller to update global version.
             tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
 
         num_particles = len(stars)
@@ -2047,7 +2053,7 @@ def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiple
         else:
             grav.particles.synchronize_to(stars)
 
-    return stars_removed, num_particles
+    return tags_keys, stars_removed, num_particles
 
 
 def check_sanity(hydro, grav, stars, min_pos_diff = 1.0e-4 | units.AU ,
@@ -4221,7 +4227,7 @@ try:
                     test_tags(tags_keys)
 
                 # Remove any particles that have left the simulation domain.
-                stars_removed, num_particles  = remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiples, tags_keys, bndbox, debug=True)
+                tags_keys, stars_removed, num_particles  = remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiples, tags_keys, bndbox, debug=True)
 
                 # Sync stars to the particles in grav.
                 if (with_multiples):
