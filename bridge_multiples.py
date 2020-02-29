@@ -203,63 +203,41 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
     age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
+
     add_star = Particles(num_new_parts)             # Make new particles for grav code.
     keys     = add_star.key                         # Get the new keys for tags_keys.
 
-    #print "tags =", newtags
-    #print "pos =", position
-    #print "vel =", velocity
-    #print "mass =", mass
-    #print "initMass =", initMass
-    #print "age =", age
+    # Add the properties from hydro to
+    # the new particles. This will be added to
+    # stars and the grav code.
+    add_star.mass= mass
+    add_star.age = age
+    add_star.x   = position[:,0]
+    add_star.y   = position[:,1]
+    add_star.z   = position[:,2]
+    add_star.vx  = velocity[:,0]
+    add_star.vy  = velocity[:,1]
+    add_star.vz  = velocity[:,2]
+    add_star.tag = newtags
+    add_star.stellar_type = 1 | units.stellar_type # Start life as a ZAMS star.
+    add_star.radius = 100 | units.AU # set all the stars initial collision radius.
 
-    for kk in range(num_new_parts):       # Add the properties from hydro to
-                                          # the new particles. This will be added to
-        add_star[kk].mass= mass[kk]       # stars and the grav code.
-        add_star[kk].age = age[kk]
-        add_star[kk].x   = position[kk][0]
-        add_star[kk].y   = position[kk][1]
-        add_star[kk].z   = position[kk][2]
-        add_star[kk].vx  = velocity[kk][0]
-        add_star[kk].vy  = velocity[kk][1]
-        add_star[kk].vz  = velocity[kk][2]
-        add_star[kk].tag = newtags[kk]
-        add_star[kk].stellar_type = 1 |units.stellar_type # Start life as a ZAMS star.
-        add_star[kk].radius = 100 | units.AU # set all the stars initial collision radius.
-        if (initMass[kk].value_in(units.MSun) <= 0.001):
-            add_star[kk].initial_mass = mass[kk] # record the initial mass of the star for SE/SN uses.
-            hydro.set_particle_oldmass(newtags[kk], mass[kk])
-        else:
-            add_star[kk].initial_mass = initMass[kk] # record the initial mass of the star for SE/SN uses.
-        stars_current_id_num += 1
-        add_star[kk].id = stars_current_id_num
+    add_star.initial_mass = initMass # record the initial mass of the star for SE/SN uses.
 
-        if (debug_aptg):
-            print "New star:"
-            print "pos  =", add_star[kk].position.in_(units.cm)
-            print "vel  =", add_star[kk].velocity.in_(units.km/units.s)
-            print "mass =", add_star[kk].mass.in_(units.MSun)
-            print "age  =", add_star[kk].age.in_(units.Myr)
-            print "rad  =", add_star[kk].radius.in_(units.AU)
-            print "type =", add_star[kk].stellar_type
-            print "tag  =", add_star[kk].tag
-            print "id   =", add_star[kk].id
-    # Initialize radiation parameters to zero if this
-    # is a radiation run.
+    # initMass == 0.0 MSun means we forgot to set initMass in hydro, whenever
+    # we spawned these stars.  This breaks SeBa.
+    # Below code fixes via manual one-off edit.  Do NOT enable by default,
+    # because initMass == 0 is an error that should not pass silently.
+    #sel = (initMass <= 0.001 | units.MSun)
+    #add_star.initial_mass[sel] = mass[sel]
 
-        if (use_radiation):
+    add_star.id = stars_current_id_num + np.arange(num_new_parts)
+    stars_current_id_num += num_new_parts
 
-            add_star[kk].nion = 0.0 # ionizing flux
-            add_star[kk].eion = 0.0 #eion #0.0 # ionizing energy *OVER* 13.6 eV
-            add_star[kk].sigh = 0.0 #sigh #0.0 # ionizing cross section.
-
-    #print "Hydro code pos/vel/mass:"
-    #print position
-    #print velocity
-    #print mass
-
-    #print "Does the new tag match the new entry in tags?"
-    #print newtags, tags[ind]
+    if (use_radiation):
+        add_star.nion = 0.0 # ionizing flux
+        add_star.eion = 0.0 # ionizing energy *OVER* 13.6 eV
+        add_star.sigh = 0.0 # ionizing cross section.
 
     if (np.shape(tags_keys)[0] == 0):
 
@@ -779,6 +757,7 @@ def make_cluster_in_hydro(cluster, initial_x=0.0 | units.cm, initial_y=0.0 | uni
     print "tag =", tag
     hydro.set_particle_velocity(tag, cluster.vx, cluster.vy, cluster.vz)
     hydro.set_particle_mass(tag, cluster.mass)
+    hydro.set_particle_oldmass(tag, cluster.mass)
     #print hydro.get_particle_mass(tag)
 
     #hydro.particles_gather()
@@ -1606,46 +1585,48 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
         print "current star up for assignment:", \
               all_masses[sink_tags[s]][0], \
               "for sink with mass:", sink_mass
+
+        while np.sum(all_masses[sink_tags[s]]) < sink_mass:
+            # Sink wants to spawn more stars than available in queue.
+            print "restock, remaining queue mass:", np.sum(all_masses[sink_tags[s]])
+            restock = get_stellar_mass_sampling(
+                        sample_imf_mass,
+                        num_bins=10,
+                        min_samp_mass=min_imf_mass.value_in(units.MSun),
+                        max_samp_mass=max_imf_mass.value_in(units.MSun),
+                        eff=local_sfe,
+                        sum_small=sum_small
+            )
+            all_masses[sink_tags[s]] = np.concatenate((all_masses[sink_tags[s]], restock))
+            print "done restocking, new queue mass:", np.sum(all_masses[sink_tags[s]])
+
+        csum = np.cumsum(all_masses[sink_tags[s]])
+        i = np.searchsorted(csum, sink_mass, side='left')
+        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+        spawn_masses = all_masses[sink_tags[s]][:i]  # all stars eligible to be spawned
+        nnew = len(spawn_masses)  # convenience
+
         # Does this sink have enough mass to make a star? If so, party on.
-        while(sink_mass > all_masses[sink_tags[s]][0]):
+        if nnew > 0:
 
             sink_position      = hydro.get_particle_position(sink_tags[s])
-            sink_vel           = hydro.get_particle_velocity(sink_tags[s]).value_in(units.cm/units.s)
-            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s]).value_in(units.cm/units.s)
+            sink_vel           = hydro.get_particle_velocity(sink_tags[s])
+            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s])
 
-            print "Sink vel =", sink_vel
-            print "Sink mean gas sound speed =", sink_cs
-
-            # Check before pop.
-            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
-            new_star_mass     = all_masses[sink_tags[s]][0]
-            all_masses[sink_tags[s]] = np.delete(all_masses[sink_tags[s]],0)
-            # Check new_star_mass
-            #print "new_star_mass =", new_star_mass
-            # Check that it deleted properly.
-            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
-
-            new_star          = Particles(1)
-            new_star.mass     = new_star_mass  | units.MSun
-            new_star.velocity = np.random.normal(loc=sink_vel, scale=sink_cs) | units.cm/units.s
-
-            sink_mass         = sink_mass  - new_star_mass
+            new_star = Particles(nnew)
+            new_star.mass = spawn_masses | units.MSun
+            new_star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
             # Singular isothermal spherical distribution.
-            stars_rvec = (random_three_vector(1)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
-            #print "stars_rvec=", stars_rvec
+            stars_rvec = random_three_vector(nnew)*np.random.rand(nnew,1)*sink_rad
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
-            #print "rx, ry, rz =", rx, ry, rz
             r2 = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_star.position = np.add(stars_rvec.value_in(units.cm),sink_position.value_in(units.cm)) | units.cm
 
-            #print "new star position =", new_star.position.as_quantity_in(units.parsec)
-            #print "new star velocity =", new_star.velocity.as_quantity_in(units.km/units.s)
-            #print "new star mass =" , new_star.mass.as_quantity_in(units.MSun)
-
             # Remove the mass from the sink.
+            sink_mass = sink_mass - np.sum(spawn_masses)
             hydro.set_particle_mass(sink_tags[s], (sink_mass | units.MSun))
 
             # Make the new star particle.
@@ -1657,9 +1638,13 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
             # Switch back to sinks to continue the loop.
             hydro.set_particle_pointers('sink')
 
+            # Delete stars from queue
+            all_masses[sink_tags[s]] = all_masses[sink_tags[s]][nnew:]
+
             # Tell the main code we made a star.
-            if (formed_stars == False): formed_stars = True
-            if (new_star_mass > min_mass.value_in(units.MSun)): formed_massive_star = True
+            formed_stars = True
+            if np.any(spawn_masses > min_mass.value_in(units.MSun)):
+                formed_massive_star = True
 
     # Last thing is to ensure we are pointing back at massive particles.
     hydro.set_particle_pointers('mass')
@@ -2831,8 +2816,6 @@ stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
 print "Gravity code initialized."
 sys.stdout.flush()
 
-time.sleep(10)
-
 print "Starting hydro code."
 sys.stdout.flush()
 hydro = Flash(unit_converter = convert2, number_of_workers=num_hy_workers, redirection='none')
@@ -2953,8 +2936,6 @@ gridChanged = True
 max_ref  = hydro.get_max_refinement()
 sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
 smallest_dx = (2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
-
-time.sleep(5)
 
 '''
 stars = None
@@ -3146,20 +3127,19 @@ try:
                              #with_ph4 = with_ph4,
                              #with_multiples = False)
 
+                        print "Evolving grav to current hydro time."
+                        with Timer(verbose=True) as grav_timer:
+                            if (with_ph4):
+                                grav.parameters.begin_time=hydro_time
+                                grav.parameters.sync_time=hydro_time
+                                grav.parameters.force_sync=1
+                            else:
+                                grav.parameters.begin_time=hydro_time
+                                grav.evolve_model(hydro_time)
+
                         grav_time  = grav.get_time()
                         print "Hydro time:", hydro_time
                         print "Grav time:", grav_time
-
-                    # Try to evolve grav to the current time.
-                        #print "Evolving grav to current hydro time."
-                        #with Timer(verbose=True) as grav_timer:
-                        #    #hydro_time = hydro.get_time()
-                        #    if (with_ph4):
-                        #        grav.parameters.begin_time=hydro_time
-                        #        grav.parameters.sync_time=hydro_time
-                        #        grav.parameters.force_sync=1
-                        #    else:
-                        #        grav.evolve_model(hydro_time)
 
                         print "Num particles in grav:", len(grav.particles)
 
