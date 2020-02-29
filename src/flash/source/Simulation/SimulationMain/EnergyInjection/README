@@ -1,0 +1,38 @@
+EnergyInjection README
+
+This FLASH problem sets up a uniform gas distribution.
+No particles are created - user should make particles via AMUSE interface.
+
+The flash.par files can be treated as "suggestions" for what wind bubble / H II
+region setups to run.  See also:
+* bacyznski 2015 https://ui.adsabs.harvard.edu/abs/2015MNRAS.454..380B/abstract
+* bisbas 2015 https://ui.adsabs.harvard.edu/abs/2015MNRAS.453.1324B/abstract
+
+For example,
+
+    $ diff -wbBu flash.par_dtype flash.par_rtype
+
+shows that the "rtype" parameter file uses a 10x hotter and 10x less dense
+ambient medium, and sim_Eph = 0 (make all ionizing photons contribute no extra
+heat beyond the ionization potential 13.6 eV, they simply ionize gas).
+
+Two big caveats:
+
+1. Many parameters might not work or might be outdated.  E.g., sim_Eph was
+   previously used to setup the single star in FLASH, but because we make the
+   star in AMUSE now, sim_Eph should have no effect whatsoever.
+
+2. I have not used these parameter files myself, so can't promise that
+   flash.par_rtype will actually give you an R-type ionization front...
+
+It's probably easier to start with the officially-maintained torch parameter
+file flash.par.turbsph_standard , and make your own setups for different wind
+bubbles / H II regions.  But these old files are here for reference should you
+need/want to cross-check your parameter choices.
+
+Provenance for this directory:
+
+    https://bitbucket.org/joshuawall/flash4.2.2-rad/src/master/source/Simulation/SimulationMain/EnergyInjUSM/
+    https://bitbucket.org/joshuawall/flash4.2.2-rad/commits/d746ac64
+
+- Aaron Tran, 2020 Jan 15
