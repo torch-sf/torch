@@ -1,0 +1,49 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{What is added to vanilla FLASH?}{}% 2
+\BOOKMARK [1][-]{section.3}{More on build/compile process}{}% 3
+\BOOKMARK [1][-]{section.4}{SETTINGS IN BRIDGE MULTIPLES}{}% 4
+\BOOKMARK [1][-]{section.5}{Hydro}{}% 5
+\BOOKMARK [2][-]{subsection.5.1}{CFL and pressure holes}{section.5}% 6
+\BOOKMARK [2][-]{subsection.5.2}{Artificial viscosity}{section.5}% 7
+\BOOKMARK [1][-]{section.6}{Gravity}{}% 8
+\BOOKMARK [2][-]{subsection.6.1}{Unsplit Gravity Calculation}{section.6}% 9
+\BOOKMARK [2][-]{subsection.6.2}{Sink particle gravity}{section.6}% 10
+\BOOKMARK [2][-]{subsection.6.3}{Static Grav Potential}{section.6}% 11
+\BOOKMARK [3][-]{subsubsection.6.3.1}{Joung, Ibanez-Mejia implementation}{subsection.6.3}% 12
+\BOOKMARK [1][-]{section.7}{Gravity Bridge}{}% 13
+\BOOKMARK [1][-]{section.8}{The Sub-Cycle: rays, ionization, heat/cool}{}% 14
+\BOOKMARK [1][-]{section.9}{Ray tracing}{}% 15
+\BOOKMARK [1][-]{section.10}{Ionization}{}% 16
+\BOOKMARK [2][-]{subsection.10.1}{Ionization Terms}{section.10}% 17
+\BOOKMARK [2][-]{subsection.10.2}{Ionization Equilibrium}{section.10}% 18
+\BOOKMARK [1][-]{section.11}{Heating/Cooling}{}% 19
+\BOOKMARK [2][-]{subsection.11.1}{Gas heat/cool}{section.11}% 20
+\BOOKMARK [3][-]{subsubsection.11.1.1}{Photo-heating}{subsection.11.1}% 21
+\BOOKMARK [3][-]{subsubsection.11.1.2}{CR heating}{subsection.11.1}% 22
+\BOOKMARK [3][-]{subsubsection.11.1.3}{Photoelectric heating}{subsection.11.1}% 23
+\BOOKMARK [3][-]{subsubsection.11.1.4}{Atomic cooling curve}{subsection.11.1}% 24
+\BOOKMARK [3][-]{subsubsection.11.1.5}{Molecular cooling curve}{subsection.11.1}% 25
+\BOOKMARK [3][-]{subsubsection.11.1.6}{Collisional gas-to-dust cooling}{subsection.11.1}% 26
+\BOOKMARK [2][-]{subsection.11.2}{Dust heat/cool}{section.11}% 27
+\BOOKMARK [2][-]{subsection.11.3}{Banerjee/Seifried mol+dust module}{section.11}% 28
+\BOOKMARK [2][-]{subsection.11.4}{JCIM??: phenHeat/IGWCurve}{section.11}% 29
+\BOOKMARK [2][-]{subsection.11.5}{Joung/Baczynski?: phenHeat with rad xfer}{section.11}% 30
+\BOOKMARK [2][-]{subsection.11.6}{Joung/Baczynski?: phenHeat}{section.11}% 31
+\BOOKMARK [1][-]{section.12}{Stellar winds}{}% 32
+\BOOKMARK [1][-]{section.13}{Supernova Driving}{}% 33
+\BOOKMARK [2][-]{subsection.13.1}{Wall: momentum+thermal SN driving}{section.13}% 34
+\BOOKMARK [2][-]{subsection.13.2}{Joung: pure thermal SN driving}{section.13}% 35
+\BOOKMARK [2][-]{subsection.13.3}{Particle stuff in Joung unit}{section.13}% 36
+\BOOKMARK [2][-]{subsection.13.4}{Compare to other SN driving schemes}{section.13}% 37
+\BOOKMARK [2][-]{subsection.13.5}{Superbubble schemes and behavior}{section.13}% 38
+\BOOKMARK [1][-]{section.14}{Code development}{}% 39
+\BOOKMARK [2][-]{subsection.14.1}{Pull Requests}{section.14}% 40
+\BOOKMARK [1][-]{section.15}{Lessons Learned, Cheatsheets, and FAQ}{}% 41
+\BOOKMARK [2][-]{subsection.15.1}{FLASH GOTCHAS!!!!!}{section.15}% 42
+\BOOKMARK [2][-]{subsection.15.2}{FLASH runtime parameters}{section.15}% 43
+\BOOKMARK [2][-]{subsection.15.3}{FLASH ifdef variables}{section.15}% 44
+\BOOKMARK [2][-]{subsection.15.4}{FLASH variable cheat sheet}{section.15}% 45
+\BOOKMARK [3][-]{subsubsection.15.4.1}{FLASH field variables}{subsection.15.4}% 46
+\BOOKMARK [3][-]{subsubsection.15.4.2}{FLASH particle variables}{subsection.15.4}% 47
+\BOOKMARK [3][-]{subsubsection.15.4.3}{FLASH species variables}{subsection.15.4}% 48
+\BOOKMARK [2][-]{subsection.15.5}{Frequently asked questions}{section.15}% 49

@@ -1,0 +1,20 @@
+\BOOKMARK [1][-]{section.1}{CCA Workshop 2019 August 28\20530}{}% 1
+\BOOKMARK [1][-]{section.2}{Introduction}{}% 2
+\BOOKMARK [1][-]{section.3}{Quick Start}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Prerequisites}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Environment setup \(Josh thesis Appendix A.1\)}{section.3}% 5
+\BOOKMARK [2][-]{subsection.3.3}{Install Torch}{section.3}% 6
+\BOOKMARK [2][-]{subsection.3.4}{Build FLASH 4.5 \(Josh thesis Appendix A.2 + FLASH docs\)}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.5}{Configure AMUSE \(Josh thesis Appendix A.3 + AMUSE docs\)}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.6}{Run a Torch simulation \(Josh thesis Appendix B\)}{section.3}% 9
+\BOOKMARK [2][-]{subsection.3.7}{Look at the output}{section.3}% 10
+\BOOKMARK [2][-]{subsection.3.8}{Next steps}{section.3}% 11
+\BOOKMARK [1][-]{section.4}{Caveats and Known Issues}{}% 12
+\BOOKMARK [1][-]{section.5}{Help!}{}% 13
+\BOOKMARK [2][-]{subsection.5.1}{General checks}{section.5}% 14
+\BOOKMARK [2][-]{subsection.5.2}{FLASH setup/compile problems}{section.5}% 15
+\BOOKMARK [2][-]{subsection.5.3}{AMUSE configure/make problems}{section.5}% 16
+\BOOKMARK [2][-]{subsection.5.4}{Runtime and MPI problems}{section.5}% 17
+\BOOKMARK [2][-]{subsection.5.5}{Navigating the source code}{section.5}% 18
+\BOOKMARK [1][-]{appendix.A}{Torch component references}{}% 19
+\BOOKMARK [2][-]{subsection.A.1}{Cartesius}{appendix.A}% 20

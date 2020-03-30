@@ -1,0 +1,915 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.75in, letterpaper]{geometry}
+\usepackage{parskip}
+
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage{gensymb}  % For use of degree symbol
+\usepackage[pdftex]{graphicx}
+\usepackage{hyperref}
+
+\usepackage{enumerate} % For use of (a), (b), et cetera
+\usepackage{booktabs} % Tables
+\usepackage[margin=20pt, labelfont=bf, labelsep=period,
+justification=justified]{caption} % Captions in figure floats
+
+% https://stackoverflow.com/questions/3175105/inserting-code-in-this-latex-document-with-indentation
+\usepackage{listings}
+\usepackage{color}
+
+% ======================
+% Document setup, layout
+% ======================
+
+% Code block formatting
+% http://texdoc.net/texmf-dist/doc/latex/listings/listings.pdf
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\lstset{
+  backgroundcolor=\color{lightgray},
+  frame=none,
+%  language=python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+%  mathescape=false,
+}
+
+% The following metadata will show up in the PDF properties
+\hypersetup{
+    colorlinks = true,
+    urlcolor = magenta,  % Links to URLs
+    linkcolor = blue,  % Links within PDF
+    pdfauthor = {},
+    pdfkeywords = {Torch, FLASH, AMUSE},
+    pdftitle = {Torch Quick Start - \today},
+    pdfsubject = {},
+    pdfpagemode = UseNone
+}
+
+% Don't indent paragraphs
+\setlength\parindent{0em}
+
+% Slightly more compact lines
+\linespread{0.95}
+
+% ===============
+% Useful commands
+% ===============
+\newcommand*{\mt}{\mathrm}
+\newcommand*{\unit}[1]{\;\mt{#1}}  % vemod.net/typesetting-units-in-latex
+\newcommand*{\abt}{\mathord{\sim}} % tex.stackexchange.com/q/55701
+\newcommand*\mean[1]{\bar{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}  % Bold vectors
+\newcommand*{\tsup}{\textsuperscript}
+
+% Sets, operators
+\newcommand*{\ints}{\mathbb{Z}}
+\newcommand*{\ptl}{\partial}
+\newcommand*{\dl}{\nabla}
+\newcommand*{\dtl}{\mathrm{d}}
+
+\newcommand*{\Msun}{M_\odot}
+\newcommand*{\sun}{\odot}
+\newcommand*{\kB}{k_\mathrm{B}}
+
+\begin{document}
+
+% =======
+% Titling
+% =======
+\begin{center}
+Torch Quick Start Guide \\
+Last updated: \today \\
+\end{center}
+
+\tableofcontents
+\newpage
+
+% ==================================
+% Introduction
+% ==================================
+\section{Introduction}
+
+\textbf{Torch} is a star formation simulation code with magnetohydrodynamics
+(FLASH), radiative transfer (Fervent), self-gravity \& sinks, star particles,
+feedback (stellar winds, SNe), stellar evolution tracks (SeBa), and N-body
+dynamics (AMUSE).
+Torch features and add-ons are listed in Figure~\ref{fig:features},
+and references for the major components are in Appendix~\ref{sec:components}.
+
+You can find a high-level overview of the code in:
+\begin{itemize}
+    \item Wall+ 2019, \href{https://arxiv.org/abs/1901.01132}{arXiv:1901.01132}
+    \item Wall 2019, \href{https://www.dropbox.com/s/c0qh1no85y1jnxf/J_Wall-Thesis_final.pdf?dl=0}{Ph.D thesis}
+\end{itemize}
+
+Torch comprises (1) interface code that plugs into both FLASH and AMUSE, and
+(2) a good number of add-on code units for FLASH.
+To use Torch, you install interface code into both FLASH and AMUSE, compile
+FLASH alone, and then compile an AMUSE ``worker'' binary that enables FLASH to
+be called from AMUSE python scripts.
+
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.9\textwidth]{torch-features.pdf}
+    \caption{
+        Adapted from Wall+ 2018,
+\href{https://cpb-us-e1.wpmucdn.com/sites.northwestern.edu/dist/d/1838/files/2018/07/Wall_MODEST18_Santorini-10rxnkm.pdf}{MODEST conference proceedings}
+    }
+    \label{fig:features}
+\end{figure}
+
+% ===========
+% Quick Start
+% ===========
+\section{Quick Start}
+
+Torch has many moving parts.  You'll likely have to adjust the procedure below
+for your personal setup.  In any case, don't despair!  Torch has been
+successfully built and run on a variety of systems.
+
+We assume that you're using (1) the bash shell, and (2) conda for Python
+package management.  But, the setup procedure should work for any shell and
+Python package manager with some adjustments.
+
+% -------------
+% Prerequisites
+% -------------
+\subsection{Prerequisites}
+
+%Torch may work with parallel HDF5 and/or Python 3.x, but has not been tested as
+%much with those packages.
+\begin{itemize}
+%\item \texttt{FLASH4.5} repo commit \texttt{68dfed1},
+%    \url{https://bitbucket.org/joshuawall/FLASH4.5}
+\item FLASH 4.5 (not 4.6 or 4.6.1):
+    \url{http://flash.uchicago.edu/site/flashcode}
+\item AMUSE: \url{https://github.com/amusecode/amuse}
+\item Torch: \url{https://bitbucket.org/torch-sf/torch}
+\item Conda / Python 2.7
+\item MPI
+\item HDF5
+\item git, wget
+\end{itemize}
+
+To download FLASH, you'll need to register, which takes a few days.
+
+To download AMUSE, do:
+\begin{lstlisting}[language=bash]
+cd your/code/directory
+git clone https://github.com/amusecode/amuse.git
+\end{lstlisting}
+%cd amuse
+%git checkout d3da434
+
+To download Torch:
+\begin{lstlisting}[language=bash]
+cd your/code/directory
+git clone https://bitbucket.org/torch-sf/torch.git
+\end{lstlisting}
+%cd torch
+%git checkout ca036d1
+
+MPI and HDF5 may be pre-installed if you are using a cluster.  If not, you will
+have to install these packages from source.  Be sure to use the same compiler
+set that you will use for the rest of this Torch build.
+
+To install MPI from source, we recommend OpenMPI 4.x (latest stable).
+Torch is known to work with OpenMPI 2.x, 3.x, and 4.x.
+
+To install HDF5 from source, we recommend HDF5 1.10.x (latest stable).
+Torch is known to work with HDF5 1.8.x and 1.10.x.
+
+\texttt{git} and \texttt{wget}, if not already provided by your system, can be
+installed in your custom conda environment (see next section) with
+\texttt{conda install git wget}.
+
+% -----------
+% Environment
+% -----------
+\subsection{Environment setup (Josh thesis Appendix A.1)}
+
+Start a new shell session.  You may want to check your \texttt{.bashrc} for any
+old MPI or HDF5 configuration that could conflict with Torch setup -- module
+load commands, environment variable exports, et cetera -- and comment them out.
+
+Load MPI into your environment.  If you have MPI pre-installed on a cluster, do:
+\begin{lstlisting}[language=bash]
+module load OpenMPI/x.y.z/blah  # for clusters with lmod
+\end{lstlisting}
+
+Else, if you built MPI from scratch, set your environment like so:
+\begin{lstlisting}[language=bash]
+export MPI_HOME={path/to/your/mpi/home}
+export MPI_RUN={path/to/your/mpi/run}
+
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+\end{lstlisting}
+
+Setup a clean, isolated Python environment for AMUSE:
+\begin{lstlisting}[language=bash]
+mkdir {your/conda_env/directory}
+conda create --prefix {your/conda_env/directory}/{env_name} python=2.7
+source activate {your/conda_env/directory}/{env_name}  # give absolute path so conda can find your env
+\end{lstlisting}
+
+Install some Python packages required by AMUSE:
+\begin{lstlisting}[language=bash]
+conda install ipython matplotlib numpy scipy docutils gsl gmp h5py mpfr nose
+conda clean --all
+pip install --no-cache-dir mpi4py
+\end{lstlisting}
+
+% -------------
+% Install Torch
+% -------------
+\subsection{Install Torch}
+
+Declare the following environment variables:
+\begin{lstlisting}[language=bash]
+export AMUSE_DIR=/path/to/amuse
+export FLASH_DIR=/path/to/FLASH4.5
+export TORCH_DIR=/path/to/torch
+\end{lstlisting}
+
+Then, cd to the \texttt{torch} repo and do:
+\begin{lstlisting}[language=bash]
+./install.sh
+\end{lstlisting}
+This will copy interface files from \texttt{torch} to both the AMUSE and FLASH
+repos.
+
+% ---------------
+% Build FLASH 4.5
+% ---------------
+\subsection{Build FLASH 4.5 (Josh thesis Appendix A.2 + FLASH docs)}
+
+Let's \texttt{cd} to the FLASH4.5 directory and setup a turbulent sphere
+collapse problem.
+
+First, create a \texttt{Makefile.h} in \texttt{FLASH4.5/sites/mysitedir}.
+We recommend that you fork an example file from \texttt{sites/Prototypes}.
+You may have done this already while traversing the FLASH manual's quick start.
+
+If you used the example \texttt{Makefile.h} for the Netherlands supercomputer
+Cartesius in Josh's thesis, you may need to (1) remove
+\texttt{-march=core-avx2} flags throughout, and/or (2) remove
+\texttt{-lhdf5\_fortran} from the \texttt{LIB\_HDF5} variable declaration.
+
+Then, issue the setup command (update ``mysitedir''):
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
+    +supportPPMupwind +pm4dev -maxblocks=100 +cube16 \
+    --site={mysitedir}
+\end{lstlisting}
+
+%Alternatively, you can add your machine to \texttt{FLASH4.5/sites/Aliases} in
+%the form ``\texttt{mysitedir  myhostname}'', where \texttt{myhostname} is given
+%by the shell command \texttt{hostname --fqdn}.
+
+Compile FLASH.  The \texttt{flash4} binary is not needed for the AMUSE/FLASH
+bridge, but compiling FLASH alone helps to catch errors and save time in the
+AMUSE compile step.
+\begin{lstlisting}[language=bash]
+cd object
+make -j
+\end{lstlisting}
+
+% ------------------------
+% Configure and make AMUSE
+% ------------------------
+\subsection{Configure AMUSE (Josh thesis Appendix A.3 + AMUSE docs)}
+
+Now, \texttt{cd} to the AMUSE repository.  You can follow the AMUSE docs up to
+the \texttt{make} step, but take a look at these notes for extra information.
+
+If you used a local conda environment following this guide, you'll probably
+need to tell \texttt{configure} where GMP, MPFR, and GSL reside.
+Often, you'll have to tell \texttt{configure} where HDF5 and FFTW live, too.
+
+Here is an example \texttt{configure} call for the Netherlands supercomputer
+Cartesius (early 2019):
+\begin{lstlisting}[language=bash]
+./configure \
+    --with-fftw=/hpc/eb/RedHatEnterpriseServer7/FFTW/3.3.8-gompi-2018b \
+    --with-hdf5=/hpc/sw/hdf5-1.8.12-intel-seq \
+    --with-gmp={your/conda_env/directory}/{env_name} \
+    --with-mpfr={your/conda_env/directory}/{env_name} \
+    --with-gsl-prefix={your/conda_env/directory}/{env_name}
+\end{lstlisting}
+
+Library path errors are rather common at this step.  FFTW and NetCDF library
+errors are OK, but HDF5 library and/or header errors are not OK.
+The STDOUT from a successful configure build should include (valid for AMUSE
+v12.0.0, but changed by AMUSE commit \href{https://github.com/amusecode/amuse/commit/9a3b134eeee665b838cb84ff45b85df0887a77bb}{9a3b134e})
+\begin{lstlisting}[language=bash]
+checking hdf5.h usability... yes
+checking hdf5.h presence... yes
+checking for hdf5.h... yes
+checking for H5_init_library in -lhdf5... yes
+\end{lstlisting}
+See Section~\ref{sec:help-amuse} for more troubleshooting suggestions.
+
+You may need to manually edit the files:
+\begin{verbatim}
+    config.mk
+    src/amuse/community/flash/Makefile
+\end{verbatim}
+to select the correct compilers and libraries.
+
+Now, you can make the AMUSE \texttt{flash\_worker}, which is basically an
+AMUSE-hooked replacement for the normal \texttt{flash4} executable.
+The standard \texttt{make} takes ~10--20 minutes and builds all the codes
+included in AMUSE.  To request only the codes needed for Torch, do:
+% Present as separate steps, rather than make-ing all together,
+% so that user can clearly see which builds failed or succeeded.
+\begin{lstlisting}[language=bash]
+make framework
+make flash.code
+make kepler.code
+make ph4.code
+make seba.code
+make smalln.code
+\end{lstlisting}
+A successful make will create \texttt{flash\_worker} in
+\texttt{src/amuse/community/flash/}.
+%If the configure and/or Make fails, the STDOUT from configure and the
+%\texttt{config.log} file should show some informative error messages.
+
+% --------------------
+% Run Torch simulation
+% --------------------
+\subsection{Run a Torch simulation (Josh thesis Appendix B)}
+
+You are now ready to run a Torch simulation!  We will simulate a
+$3 \times 10^3 \Msun$, $5 \unit{pc}$ radius gas sphere in $\pm 7 \unit{pc}$
+cubic domain with outflow boundary conditions.
+In about a free-fall time ($\approx 2 \unit{Myr}$), the cloud will collapse
+under its own gravity, create a sink particle, and begin forming stars.
+
+Choose a directory for your simulation and \texttt{cd} there.  Then do:
+\begin{lstlisting}[language=bash]
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+ln -s $TORCH_DIR/cool.dat
+ln -s $TORCH_DIR/cube128
+
+cp $TORCH_DIR/bridge_multiples.py           bridge_multiples.py
+cp $TORCH_DIR/flash.par.turbsph_standard    flash.par
+mkdir data
+\end{lstlisting}
+
+The file \texttt{bridge\_multiples.py} is the heart of the simulation.  It
+performs the split time-evolution with both FLASH and the n-body integrator
+ph4, handles stellar evolution, and lots more.
+
+The simulation should take 1--10 minutes to reach
+$t_\mt{max} = 2 \unit{Myr} = 6.31 \times 10^{13} \unit{s}$.
+It will use 7 threads: 2 for FLASH, 1 for n-body integration (ph4), 2 for
+n-body binary interactions (multiples), 1 for stellar evolution, and 1 for
+AMUSE itself.  At around $1 \unit{Myr}$, a sink particle will form and begin
+creating stars.  One or a few $\ge 7 \Msun$ stars may begin blowing a wind, so
+the time step may drop; you may wish to end the simulation early.
+
+To run the simulation interactively, execute the command:
+\begin{lstlisting}[language=bash]
+mpiexec -n 1 python bridge_multiples.py
+\end{lstlisting}
+
+On a compute cluster with Slurm, copy \texttt{run.sh} from the
+\texttt{torch} repository to your simulation directory.
+Edit the \texttt{SBATCH} options as needed.  Then do:
+\begin{lstlisting}[language=bash]
+sbatch run.sh
+\end{lstlisting}
+If you increase the number of tasks requested, \texttt{bridge\_multiples.py}
+will automatically assign more threads (workers) to FLASH.
+
+Log files will be dumped in your current working directory, and simulation
+outputs will be written to the \texttt{data/} directory.  If you re-start a
+simulation, Torch (FLASH) will overwrite existing data, but append to (some)
+existing logs.  You may want to rename or delete your old logs to help keep
+track of your runs.
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.5\textwidth]{quickstart-dens-slice.pdf}
+    \caption{
+        Density in x-y plane.
+    }
+    \label{fig:dens}
+\end{figure}
+
+% ------------------
+% Look at the output
+% ------------------
+\subsection{Look at the output}
+
+Let's have a quick look at this gestating star cluster.  The example plots here
+were created with the \texttt{yt} package, version 3.4.1.  To learn more about
+\texttt{yt}, visit \url{http://yt-project.org/}.  To install \texttt{yt}:
+\begin{lstlisting}[language=bash]
+conda install yt
+conda clean --all
+\end{lstlisting}
+
+We can first look at density-slice plots in the three coordinate planes (x-y,
+x-z, y-z).  At the command line, call:
+\begin{lstlisting}[language=bash]
+yt plot data/turbsph_forced_hdf5_plt_cnt_0000
+\end{lstlisting}
+This will create a new directory \texttt{frames/} with three plots similar to
+Figure~\ref{fig:dens}.
+
+How about the particles?  Let's see how they're distributed, and inspect some
+of their other properties.  In a Python session:
+\begin{lstlisting}[language=python]
+import numpy as np
+import matplotlib.pyplot as plt
+import yt
+
+ds = yt.load('data/turbsph_hdf5_plt_cnt_0018')
+
+ad = ds.all_data()
+ppx = ad['all', 'particle_posx'].to('pc').value
+ppy = ad['all', 'particle_posy'].to('pc').value
+ppm = ad['all', 'particle_mass'].to('Msun').value
+windy = ad['all', 'particle_dmdt'].value
+windy[windy > 0] = 1
+
+plt.scatter(ppx, ppy, s=ppm*6, c=windy, cmap='bwr', alpha=0.5)
+plt.gca().set_aspect('equal')
+plt.xlim(-2.5, +2.5)
+plt.ylim(-2.5, +2.5)
+plt.xlabel('x (pc)')
+plt.ylabel('y (pc)')
+plt.show()
+\end{lstlisting}
+In this particular simulation, three stars are massive enough to blow a wind
+(Figure~\ref{fig:particles}).
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.4\textwidth]{quickstart-particles.pdf}
+    \caption{
+        Star particles.  Size is proportional to mass; red particles have
+        $\dtl m/\dtl t > 0$ (wind-blowing stars), blue particles have
+        $\dtl m/\dtl t = 0$ (quiescent).
+    }
+    \label{fig:particles}
+\end{figure}
+
+
+% ----------
+% Next steps
+% ----------
+\subsection{Next steps}
+
+To tweak the simulation parameters, you will need to edit \texttt{flash.par}
+and \texttt{bridge\_multiples.py}.  These two files specify most of the
+configuration options for the simulation.
+
+%To understand how the initial gas-cloud conditions are set up, look at:
+%\texttt{FLASH4.5/source/Simulation/SimulationMain/Cube/Simulation\_initBlock.F90}.
+
+Torch comes packaged with a few simulations in
+\texttt{FLASH4.5/source/Simulation/SimulationMain/}
+\begin{verbatim}
+    Cube
+    EnergyInjection
+    StratBox
+\end{verbatim}
+which provide initial conditions for (1) a turbulent gas sphere initialized
+from a $128^3$ array, (2) a uniform medium for testing a stellar wind or
+supernova, and (3) a planar gas layer in a periodic domain, driven by random
+thermal supernova explosions.
+
+It's often useful to reduce the number of Torch features for study or
+debugging.  Below are setup calls showing some reduced feature sets:
+
+Full Torch code with AMUSE/FLASH coupling.
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars \
+	+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16
+\end{lstlisting}
+
+FLASH-only simulation, no AMUSE coupling. Sinks will work, but no stars will
+form.
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +usm +gravMgrid +rayPE +HandCnew  +amuseSinksAndStars \
+    +amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16
+\end{lstlisting}
+
+FLASH-only simulation, no ray-tracing or sinks/stars.  Only self-gravity and
+heating/cooling.
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +usm +gravMgrid +HandCnew \
+	+supportPPMupwind +pm4dev -maxblocks=100 +cube16
+\end{lstlisting}
+
+FLASH-only simulation, only MHD.
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +usm +supportPPMupwind +pm4dev -maxblocks=100 +cube16
+\end{lstlisting}
+
+Note that \texttt{+rayPE} generally requires \texttt{+amuseSinksAndStars}.
+These setup flags are aliases for various FLASH units; the flags are defined in
+\texttt{FLASH4.5/bin/setup\_shortcuts.txt}.
+
+Don't forget that after a fresh setup + compile of FLASH, you will need to
+recompile the AMUSE worker too.
+
+% ============
+% Known Issues
+% ============
+\section{Caveats and Known Issues}
+\label{sec:caveats}
+
+Unphysical hot/empty zones are a common problem in finite volume codes, and are
+readily generated by under-resolved supernovae and stellar winds in Torch.  To
+combat such zones, a few tactics include:
+\begin{itemize}
+    \item Lower CFL
+    \item Restart with more diffusive hydro solver parameters, temporarily
+    \item Manually smooth out extremely sharp gradients
+    \item Enable or increase artificial shock viscosity.
+    \item Use the time-step limiter for positive-definite cell values (already
+        enabled in the example Torch flash.par files).  This is controlled by
+        the FLASH runtime parameter \texttt{dr\_usePosdefComputeDt}, among
+        others.
+\end{itemize}
+See \url{http://flash.uchicago.edu/pipermail/flash-users/2019-May/002908.html}
+for a nice explanation by Sasha Tchekhovskoy.
+
+%If using old AMUSE commit (?) with OpenMPI-4.0.0, will get C++ bindings error.
+%Needs Josh fix.  Non-issue if we can move forward with new AMUSE.
+
+In the FLASH unsplit solver, the logic for the hybrid Riemann solver is
+slightly altered; see the \texttt{torch} file:
+\texttt{src/flash/source/physics/Hydro/HydroMain/unsplit/hy\_uhd\_dataReconstOneStep.F90}
+
+Torch does not support the use of BHTree with AMUSE.  Code exists to hook
+FLASH/BHTree and AMUSE together, but it needs a small update and some testing
+to work.
+
+Several add-on ParticleInitialization, ParticleMapping, etc. units are provided
+with Torch.  These were created to trace supernova and superbubble ejecta in
+stratified box simulations run by Ibanez-Mejia et al.
+(\href{https://iopscience.iop.org/article/10.3847/1538-4357/aa93fe}{2017}).
+However, these have not been tested with the Torch sink/star framework and
+probably will not work correctly as is.
+
+The module \texttt{source/physics/sourceTerms/GridInject} is in development and
+not recommended for use yet.
+
+% ===========
+% Help!
+% ===========
+\section{Help!}
+%\label{sec:help}
+
+% ---------------
+% General remarks
+% ---------------
+\subsection{General checks}
+
+\begin{itemize}
+
+    \item Are all packages built using the same compiler set?
+
+    \item Check your environment variables.  Is PATH pointing somewhere it
+        shouldn't?  Are two different installs/versions of a module visible in
+        PATH?
+
+    \item Anaconda or Conda may provide its own HDF5.  If you are using this
+        HDF5, great, but if you are using a system HDF5 install, not so great.
+        Check your PATH and make sure that the desired system HDF5 comes before
+        the Anaconda/Conda HDF5.
+
+    \item Check that FLASH, AMUSE, and mpi4py are using the same HDF5 and MPI
+        libraries.
+
+    \item If you had to swap MPI modules and reinstall \texttt{mpi4py} at any
+        point, \texttt{pip install} needs the \texttt{--no-cache-dir} flag or
+        else \texttt{mpi4py}'s compiled object library will not be reinstalled.
+        You can check that \texttt{mpi4py} is linked to the correct MPI library
+        by doing:
+
+\begin{lstlisting}[language=bash]
+ldd {your/conda_env/directory}/{env_name}/lib/python2.7/site-packages/mpi4py/MPI.so
+\end{lstlisting}
+
+    \item Here are some commands that may help diagnose library and path problems:
+
+\begin{lstlisting}[language=bash]
+module list
+module show some/module/name
+which python
+which mpiexec
+python -c "from mpi4py import MPI; print MPI"
+ldd flash4
+ldd flash_worker
+\end{lstlisting}
+
+\end{itemize}
+
+% --------------
+% FLASH problems
+% --------------
+\subsection{FLASH setup/compile problems}
+%\label{sec:help-flash}
+
+\begin{itemize}
+
+    \item \textbf{make fails immediately with something like
+        \texttt{/usr/local/mpich2//bin/mpif90: Command not found}.}
+
+        Check that you are using the correct \texttt{Makefile.h}, with
+        \texttt{MPI\_PATH} and \texttt{HDF5\_PATH} appropriate for your system.
+
+    \item \textbf{make is slow.}
+
+        Try \texttt{make -j} to use multiple processes.
+
+    \item \textbf{make succeeds, but flash4 or flash\_worker fails at runtime with
+        error like \texttt{error while loading shared libraries: libhdf5.so.8:
+        cannot open shared object file}.}
+
+        Take a look at \url{http://flash.uchicago.edu/pipermail/flash-users/2013-July/001322.html}.
+
+    \item \textbf{FLASH runs out of memory.}
+
+        Reduce MAXBLOCKS or allocate more memory per core.
+        The memory cost can be estimated as:
+\begin{verbatim}
+(NUNK_VARS + NFACEVAR + NFLUXVAR) * (NXB + 2*NGUARD) * (NYB + 2*NGUARD) * (NZB + 2*NGUARD)
+* MAXBLOCKS * (8 bytes)
+\end{verbatim}
+        where the variables are defined in \texttt{FLASH4.5/object/Flash.h}.
+        For example, with \texttt{NUNK\_VARS=46}, \texttt{NFACEVAR=2},
+        \texttt{NFLUXVAR=12}, \texttt{NXB=NYB=NZB=16}, \texttt{NGUARD=6}, and
+        \texttt{MAXBLOCKS=100}, the memory usage is around 1 GB.
+
+\end{itemize}
+
+% --------------
+% AMUSE problems
+% --------------
+\subsection{AMUSE configure/make problems}
+\label{sec:help-amuse}
+
+\begin{itemize}
+
+    \item \textbf{How do I troubleshoot X configure error?}
+
+		A few places to look include: STDOUT from \texttt{configure},
+		\texttt{config.log}, and the source code of \texttt{configure} itself.
+
+		Also, \texttt{./configure --help} may give an idea of tunable
+		parameters.
+
+    \item \textbf{FLASH alone compiles, but the AMUSE \texttt{flash\_worker} build
+        fails with library errors.}
+
+		Try comparing, piece-by-piece, the command-line invocations of
+        \texttt{mpif90} for FLASH alone versus \texttt{flash\_worker} to make
+        sure that \texttt{-L} and \texttt{-l} flags are sensible.
+
+        You can manually edit some compiler flags in \texttt{config.mk},
+        located in the top-level AMUSE directory.
+
+\end{itemize}
+
+% ------------------------
+% Runtime and MPI problems
+% ------------------------
+\subsection{Runtime and MPI problems}
+
+\begin{itemize}
+
+    \item \textbf{AMUSE fails spawn processes over $>1$ cluster node, but works if all
+        processes are on the same node.  MPI may hang, or return errors of form
+        (for Intel MPI).}
+
+\begin{verbatim}
+HYDT_dmx_register_fd ({...}demux.c:101): registering duplicate fd 0
+HYDT_bscd_slurm_launch_procs ({...}/slurm_launch.c:258): demux returned error registering fd
+...
+main (../../ui/mpich/mpiexec.c:1118): process manager error waiting for completion
+\end{verbatim}
+
+		One known solution: use OpenMPI, and do not overspecify Slurm
+		sbatch or srun options, give only \texttt{-n}.  A general solution is
+		not known.  This was seen with a relatively old AMUSE version, and may
+		be resolved in newer versions.
+
+%		AMUSE creates subprocesses by calling the global MPI Communicator's spawn
+%		method (which maps to the MPI API method \texttt{MPI\_Comm\_spawn}) in
+%		\texttt{src/amuse/rfi/channel.py}.
+%		The process spawning, if not correctly configured, may throw errors.
+%		The process spawning is influenced by a combination of: mpirun/mpiexec
+%		parameters, slurm sbatch (or srun) parameters, your environment configuration,
+%		and some parameters passed to the MPI communicator at the time of subprocess
+%		spawn.
+
+\end{itemize}
+
+For OpenMPI specifically:
+\begin{itemize}
+
+    \item \textbf{How do I get information about the OpenMPI build on my cluster?}
+
+        The command \texttt{ompi\_info} reports how a given OpenMPI
+        installation was built, e.g., version, compiler, configure flags, etc.
+
+    \item \textbf{How do I set MCA parameters?}
+
+        \url{https://www.open-mpi.org/faq/?category=tuning#setting-mca-params}
+
+    % don't know what error/setup induces this, so omit for now.
+%    \item At runtime, you may need to set \texttt{mpi\_warn\_on\_fork=0}.
+
+    \item \textbf{How do I fix runtime warnings about infiniband ports?}
+
+\begin{verbatim}
+By default, for Open MPI 4.0 and later, infiniband ports on a device
+are not used by default.  The intent is to use UCX for these devices.
+You can override this policy by setting the btl_openib_allow_ib MCA parameter
+to true.
+...
+WARNING: There was an error initializing an OpenFabrics device.
+  Local host:   t035
+  Local device: mlx5_0
+\end{verbatim}
+
+        Follow the suggestion and set \texttt{btl\_openib\_allow\_ib=1}.
+        The OpenMPI FAQ explains how to set MCA parameters.
+
+\end{itemize}
+
+% --------------------------
+% Navigating the source code
+% --------------------------
+\subsection{Navigating the source code}
+
+\begin{itemize}
+
+    \item \textbf{How do I decipher FLASH setup calls and runtime parameters?}
+
+        Look at \texttt{bin/setup\_shortcuts.txt} and \texttt{object/setup\_params}.
+
+    \item \textbf{A runtime parameter X has little or no documentation in
+        \texttt{object/setup\_params}.  What do I do?}
+
+        The file \texttt{object/setup\_params} will tell you which unit
+        declared the mysterious parameter.  Once you figure out what it does,
+        consider adding some documentation (in the FLASH unit's \texttt{Config}
+        file) and submitting a pull request to the Torch repository!
+
+    \item \textbf{How do I quickly track down a FLASH error message?}
+
+        In the object directory,
+\begin{lstlisting}[language=bash]
+grep -I "my error message" *
+\end{lstlisting}
+        The flag \texttt{-I} instructs grep to ignore binary files, greatly
+        speeding up the search.
+
+\end{itemize}
+
+% =================================
+% Appendix: references
+% =================================
+\appendix
+\section{Torch component references}
+\label{sec:components}
+
+This list includes most major components, but is not comprehensive.
+%Noticeably missing are references on radiative heating/cooling prescriptions.
+
+\begin{itemize}
+    \item FLASH 4.5:
+        \href{http://flash.uchicago.edu/site/flashcode/user_support/}{user's guide},
+        \href{http://adsabs.harvard.edu/abs/2000ApJS..131..273F}{Fryxell+ 2000}
+    \item PARAMESH (in vanilla FLASH):
+        \href{https://web.archive.org/web/20160421055017/http://www.physics.drexel.edu/~olson/paramesh-doc/Users_manual/amr.html}{archived v4.1 manual}
+    \item AMUSE:
+        \href{http://www.amusecode.org/}{documentation},
+        \href{https://iopscience.iop.org/book/978-0-7503-1320-9}{book}
+    \item Fervent (radiative transfer):
+        \href{https://ui.adsabs.harvard.edu/abs/2015MNRAS.454..380B/abstract}{Baczynski+ 2015},
+        \href{http://archiv.ub.uni-heidelberg.de/volltextserver/19189/}{Baczynski 2015, Ph.D thesis}
+    \item Multigrid (self-gravity):
+        \href{https://ui.adsabs.harvard.edu/abs/2008ApJS..176..293R/abstract}{Ricker+ 2008}
+    \item BHTree (self-gravity):
+        \href{https://ui.adsabs.harvard.edu/abs/2018MNRAS.475.3393W/abstract}{W\"{u}nsch+ 2018}
+    \item Sink particles:
+        \href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{Federrath+ 2010}
+    \item Multiples (N-body):
+        \href{https://iopscience.iop.org/book/978-0-7503-1320-9}{AMUSE book (see Sec.~4.5)}
+    \item Stratified box setup:
+        \href{https://ui.adsabs.harvard.edu/abs/2006ApJ...653.1266J/abstract}{Joung \& Mac Low 2006},
+        \href{https://ui.adsabs.harvard.edu/abs/2016ApJ...824...41I/abstract}{Ib\'{a}\~{n}ez-Mej\'{i}a+ 2016}
+%    \item Stellar evolution and feedback
+%            SeBa paper
+%            Puls paper (winds)
+%            Simpson 2015
+%    \item ph4, multiples
+%            TODO 20190614 need references
+\end{itemize}
+
+% ==================================================================
+% Appendix: build commands for different clusters (to give examples)
+% ==================================================================
+\section{Notes on build process for specific clusters}
+
+%\subsection{Draco (Drexel University)}
+%
+%\textbf{TBD}
+
+\subsection{Cartesius}
+
+\href{https://userinfo.surfsara.nl/systems/cartesius}{Cartesius} is the Dutch
+national supercomputer managed by the cooperative educational and scientific
+association SURFsara. Many projects have utilized Cartesius and its up-to-date
+hard/software are well suited for the many projects involving Torch.
+
+To run Torch on Cartesius, you will need to first request an account on the
+computer.  Logging on to Cartesius
+is straight forward: \texttt{ssh [username]@doornode.surfsara.nl} which will
+then allow you to select \texttt{cartesius} after asking for your password. At
+this stage, you will be able to use Cartesius in its full capacity but you will
+not be able to \texttt{scp} over your \texttt{FLASH} repository until your IP
+address is whitelisted. This can be accomplished by providing your IP to the
+Surfsara help center. You will be able to use \texttt{git} to bring over the
+\texttt{torch} repository to install everything.
+
+Before we install anything however, you must make sure to use the appropriate
+software packages. Cartesius operates by use of user-chosen modules to be
+loaded prior to any process you wish to run.
+Either by editing your \texttt{.bashrc} or creating your own bash script to be
+run at login, you will need to load the updated module environment, as well as
+the individual modules required by torch.
+\begin{lstlisting}[language=bash]
+module load 2019
+module load foss/2018b
+module load Python/2.7.15-foss-2018b
+module load HDF5/1.10.2-foss-2018b
+module load h5py/2.8.0-foss-2018b-Python-2.7.15
+module load GSL/2.5-iccifort-2018.3.222-GCC-7.3.0-2.30
+
+export MODLOC=/sw/arch/RedHatEnterpriseServer7/EB_production/2019/software
+export MPIHOME=$MODLOC/OpenMPI/3.1.1-GCC-7.3.0-2.30
+
+export OMPI_MCA_mpi_warn_on_fork=0
+\end{lstlisting}
+
+At this point, following the installation steps for \texttt{Torch} should
+result in a fully functioning software suite!
+
+Preparing a run. Make sure to edit the \texttt{flash.par} file you are using
+such that the \texttt{output\_directory} is pointed to your desired directory
+and make sure your module list script has been
+executed (an easy check is typing \texttt{which mpiexec} in the command line).
+
+Starting a run. Cartesius uses the \texttt{slurm} job managing system and so is
+fairly straightforward to use. Here I have provided my run.sh script that I
+deliver to Cartesius with \texttt{sbatch run.sh}. The script contains
+parameters read by the slurm system as well as the command you want executed.
+
+\begin{lstlisting}[language=bash]
+#!/bin/sh
+#SBATCH --job-name=[informative-job-name]
+#SBATCH -n [number of procs]
+#SBATCH --time=[day]-[hour]:[min]:[sec]
+#SBATCH --mail-user=[your-email@email.com]
+#SBATCH --mail-type=[email condition]
+mpiexec --mca orte_base_help_aggregate 0 -n 1 python bridge_multiples.py
+\end{lstlisting}
+
+It may take some time before your run makes it through the waitlist. Once it
+does, there will be some information output in your \texttt{simulation}
+directory where you ran the script. The most useful file is the one named
+\texttt{slurm-\#\#\#\#\#.out} which is where your screen output is redirected
+to. I check this periodically to see what simulation time my run has achieved,
+how many stars I've made, if it is hung up on a process, etc.
+
+\end{document}
