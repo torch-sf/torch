@@ -17,3 +17,46 @@ Session.vim
 *~
 # Auto-generated tag files
 tags
+
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.eps
+*.gif
+*.tiff
+# Images (caps)
+*.PNG
+*.JPG
+*.JPEG
+*.EPS
+*.GIF
+*.TIFF
+
+# PDF files
+*.pdf
+*.PDF
+
+# PDF files NOT to be ignored
+!docs/torch_manual/torch-features.pdf
+!docs/torch_manual/quickstart-particles.pdf
+!docs/torch_manual/quickstart-dens-slice.pdf
+
+# Images NOT to be ignored
+!docs/torch_manual/fig/gas_atomic_cool.png
+
+# Tars and zips
+*.gz
+*.tar
+*.GZ
+*.TAR
