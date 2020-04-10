@@ -4,7 +4,6 @@
 \usepackage{parskip}
 
 \usepackage{amsthm, amsmath, amssymb}
-\usepackage{gensymb}  % For use of degree symbol
 \usepackage[pdftex]{graphicx}
 \usepackage{hyperref}
 
@@ -107,7 +106,7 @@ Last updated: \today \\
 %	c. usage in Torch
 % II. Setup Parameters
 %	a. Sink Size
-%		i. Truelove criterion 
+%		i. Truelove criterion
 %	b. Density threshold
 %		i. Derived from Jean's criterion
 %	c. Refinement
@@ -125,13 +124,13 @@ Last updated: \today \\
 % Overview
 % =========
 \section{Note to the reader}
-Keep in mind that everything listed here is based on my (Sean C. Lewis) personal workflow and can be augmented to fit whatever your preferences are. 
+Keep in mind that everything listed here is based on my (Sean C. Lewis) personal workflow and can be augmented to fit whatever your preferences are.
 That said, following this workflow structure will help ensure that all contributions to the \texttt{Torch} project are kept organized and introduced to the master project in an organized matter.
 
 \section{Overview}
 In order to effectively maintain an up-to-date collaborative project, we will need to implement some sort of version control. Luckily, a \texttt{git} repository already exists for \texttt{Torch}: https://bitbucket.org/torch-sf/torch/src/master/
 
-\texttt{Git} version control allows multiple users to view and use the most recent version of a project while also maintaining individual feature development and bug fixes. \texttt{Git} is not inherently intuitive and this document is intended to be a basic guide to the development and implementation of a feature in \texttt{Torch}. 
+\texttt{Git} version control allows multiple users to view and use the most recent version of a project while also maintaining individual feature development and bug fixes. \texttt{Git} is not inherently intuitive and this document is intended to be a basic guide to the development and implementation of a feature in \texttt{Torch}.
 
 A feature for \texttt{Torch} could be a minor update to a routine, a bugfix, or the inclusion of a new physics module. Any changes made to the \texttt{Torch} source code should be done using a process similar to the following.
 
@@ -145,7 +144,7 @@ git fetch origin
 git reset --hard origin/master
 \end{lstlisting}
 
-This series of commands will switch your local repository over to the master branch and resets the local to match the latest version of the source code. 
+This series of commands will switch your local repository over to the master branch and resets the local to match the latest version of the source code.
 
 \textbf{WARNING:} If you have any previous changes that you have made locally, back them up in a repository outside of the Torch git controlled repo. All changes that diverge from the master branch will be erased by these commands.
 
@@ -163,15 +162,15 @@ We want to now create a local copy of the master branch that we can augment with
 git checkout -b new-feature
 \end{lstlisting}
 
-The \texttt{-b} flag of this command ensures the branch \texttt{new-feature} is created locally if it does not exist yet.  
+The \texttt{-b} flag of this command ensures the branch \texttt{new-feature} is created locally if it does not exist yet.
 
 \textbf{NAME YOUR BRANCH}: As per convention, name your branch according to whatever task you intend to undertake (all lowercase with dashes in between words). We will pretend for the rest of this document that your branch is called \texttt{new-feature}
 
 You can check if you are in fact on this new branch by doing \texttt{git branch -a} which will show you all available branches and highlight the one you are on.
 
-Once here, you can implement any changes you like. If you had to backup some changes before going through this process, you can copy the pieces back into the appropriate directories now. All changes you are making at this point are to the local branch called \texttt{new-feature} (or whatever you choose). Therefore, no one else can see your changes, and no one can access them or begin to integrate them into the source code. 
+Once here, you can implement any changes you like. If you had to backup some changes before going through this process, you can copy the pieces back into the appropriate directories now. All changes you are making at this point are to the local branch called \texttt{new-feature} (or whatever you choose). Therefore, no one else can see your changes, and no one can access them or begin to integrate them into the source code.
 
-To keep track of your changes to your branch: check the status of your branch (if you've made any changes since your last commit), make a change, stage the changes, commit the changes with an explanation message. 
+To keep track of your changes to your branch: check the status of your branch (if you've made any changes since your last commit), make a change, stage the changes, commit the changes with an explanation message.
 
 \begin{lstlisting}[language=bash]
 git status
@@ -180,7 +179,7 @@ git status
 git commit -m "Explain your changes here (in quotes)"
 \end{lstlisting}
 
-You will want to perform these commits frequently, at the very least issue a commit every time a major change to your code is made. You can issue as many commits as you want prior to the next step of pushing your branch and associated changes to origin (remote). 
+You will want to perform these commits frequently, at the very least issue a commit every time a major change to your code is made. You can issue as many commits as you want prior to the next step of pushing your branch and associated changes to origin (remote).
 
 \subsection{Push \texttt{new-feature} branch to remote}
 This command makes your feature branch visible to all other collaborators on the project (both in content and all the commits you made during development).
@@ -234,8 +233,8 @@ shows the commit history with comments and authorship as well as branches, merge
 
 \textbf{local branch} -  a \texttt{git} branch that exists on your personal computer; one you can \texttt{git checkout} to see and make changes to. Local branches can be put on the remote level via \texttt{git push}.
 
-\textbf{remote branch} - a branch that exists on the online version control system (origin). remote branches can be brought to the local level via \texttt{git pull}. 
+\textbf{remote branch} - a branch that exists on the online version control system (origin). remote branches can be brought to the local level via \texttt{git pull}.
 
-\textbf{master branch} - represents the working full state of the project. Note: local and remote versions of this branch exist. If you simply \texttt{git checkout master} you will NOT be up to date with the latest version of the project. You must issue a \texttt{git pull} while on the master branch as well. 
+\textbf{master branch} - represents the working full state of the project. Note: local and remote versions of this branch exist. If you simply \texttt{git checkout master} you will NOT be up to date with the latest version of the project. You must issue a \texttt{git pull} while on the master branch as well.
 
 \end{document}

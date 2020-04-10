@@ -4,7 +4,6 @@
 \usepackage{parskip}
 
 \usepackage{amsthm, amsmath, amssymb}
-\usepackage{gensymb}  % For use of degree symbol
 \usepackage[pdftex]{graphicx}
 \usepackage{hyperref}
 
@@ -107,7 +106,7 @@ Last updated: \today \\
 %	c. usage in Torch
 % II. Setup Parameters
 %	a. Sink Size
-%		i. Truelove criterion 
+%		i. Truelove criterion
 %	b. Density threshold
 %		i. Derived from Jean's criterion
 %	c. Refinement
@@ -125,19 +124,19 @@ Last updated: \today \\
 % Overview
 % =========
 \section{What Are Sink Particles?}
-Sink particles are computational objects used in hydrodynamical simulations where excessive refinement is computationally prohibitive. Sinks eliminate the ability to evolve the dense gas dynamics within their volume thereby saving computation time, and negating the need for further refinement (which would decrease the simulation timestep via the Courant condition). Sinks are an incredibly useful technique in astrophysical computations as simulations often model physical processes on scales ranging many orders of magnitude.  
+Sink particles are computational objects used in hydrodynamical simulations where excessive refinement is computationally prohibitive. Sinks eliminate the ability to evolve the dense gas dynamics within their volume thereby saving computation time, and negating the need for further refinement (which would decrease the simulation timestep via the Courant condition). Sinks are an incredibly useful technique in astrophysical computations as simulations often model physical processes on scales ranging many orders of magnitude.
 
-Sinks were first designed for SPH simulations of accreting primordial binary systems \href{https://ui.adsabs.harvard.edu/abs/1995MNRAS.277..362B/abstract}{(Bate 1995)}, were modified to operate in Cartesian adaptive mesh refinement codes \href{https://ui.adsabs.harvard.edu/abs/2004ApJ...611..399K/abstract}{(Krumholz 2004)}, and then enhanced and included in the FLASH magnetohydrodynamics software suite \href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{(Federrath 2010)}. 
+Sinks were first designed for SPH simulations of accreting primordial binary systems \href{https://ui.adsabs.harvard.edu/abs/1995MNRAS.277..362B/abstract}{(Bate 1995)}, were modified to operate in Cartesian adaptive mesh refinement codes \href{https://ui.adsabs.harvard.edu/abs/2004ApJ...611..399K/abstract}{(Krumholz 2004)}, and then enhanced and included in the FLASH magnetohydrodynamics software suite \href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{(Federrath 2010)}.
 
-The evolution and development of the sink particle as a computational tool is certainly an interesting trail to follow and worth the deep dive into the literature, but here I will focus on how sinks operate within FLASH and what additions have been made in Torch \href{https://ui.adsabs.harvard.edu/abs/2019ApJ...887...62W/abstract}{(Wall 2019)}. Their main function in Torch is to eliminate the need for MHD calculations when the Jean's criterion is satisfied at the maximum level of refinement, accrete infalling gas, and introduce star particles (AMUSE) to the simulation space. 
+The evolution and development of the sink particle as a computational tool is certainly an interesting trail to follow and worth the deep dive into the literature, but here I will focus on how sinks operate within FLASH and what additions have been made in Torch \href{https://ui.adsabs.harvard.edu/abs/2019ApJ...887...62W/abstract}{(Wall 2019)}. Their main function in Torch is to eliminate the need for MHD calculations when the Jean's criterion is satisfied at the maximum level of refinement, accrete infalling gas, and introduce star particles (AMUSE) to the simulation space.
 
 \section{Setup Parameters}
-In the flash.par parameter file, three variables are of significant importance when it comes to the formation of sinks. 
+In the flash.par parameter file, three variables are of significant importance when it comes to the formation of sinks.
 \subsection{Sink Size}
 
-First,  \texttt{sink\_accretion\_radius} sets the physical size of the sink as well as the sink creation test volume \emph{V}. The accretion radius is set such that the width of the sink particle corresponds to the smallest resolvable Jean's Length $\Lambda_{J}$. 
+First,  \texttt{sink\_accretion\_radius} sets the physical size of the sink as well as the sink creation test volume \emph{V}. The accretion radius is set such that the width of the sink particle corresponds to the smallest resolvable Jean's Length $\Lambda_{J}$.
 
-According to the grid hydrodynamical analysis by \href{https://ui.adsabs.harvard.edu/abs/1997ApJ...489L.179T/abstract}{Truelove et al. (1997)}, a Jean's Length must be resolved by a minimum of 4 grid cells to ensure that the gas will continue collapsing.  Krumholz et al. (2004) adapted this method for AMR capable codes and set the sink diameter to $5\Delta x$ where $\Delta x$ is the highest refinement cell width. Federrath et al. (2010) continues this convention for their implementation in FLASH. All told, the \texttt{sink\_accretion\_radius} parameter is conventionally set to $2.5\Delta x$. 
+According to the grid hydrodynamical analysis by \href{https://ui.adsabs.harvard.edu/abs/1997ApJ...489L.179T/abstract}{Truelove et al. (1997)}, a Jean's Length must be resolved by a minimum of 4 grid cells to ensure that the gas will continue collapsing.  Krumholz et al. (2004) adapted this method for AMR capable codes and set the sink diameter to $5\Delta x$ where $\Delta x$ is the highest refinement cell width. Federrath et al. (2010) continues this convention for their implementation in FLASH. All told, the \texttt{sink\_accretion\_radius} parameter is conventionally set to $2.5\Delta x$.
 %See \emph{Discussion of Methods} for my thoughts on how/why this value is set as such.
 
 \subsection{Density Threshold}
@@ -145,18 +144,18 @@ With our assertion that the sink particle be just able to encapsulate the smalle
 \begin{align}
 \rho_{res} = \frac{\pi c_{s}^2}{G\lambda_{J}^2} = \frac{\pi c_{s}^2}{G(2*2.5\Delta x)^2}
 \end{align}
-Each timestep, FLASH will check each highest refinement cell against this parameter. If the gas density in a cell exceeds $\rho_{thresh}$ then the series of steps and checks described in Section 3 are initiated. 
+Each timestep, FLASH will check each highest refinement cell against this parameter. If the gas density in a cell exceeds $\rho_{thresh}$ then the series of steps and checks described in Section 3 are initiated.
 
 Within an already existing sink particle, each cell within the sink volume is again checked against the density threshold parameter. If the value is exceeded, the excess mass is accreted as described in Section 4.
 
 \subsection{Refinement Criteria}
-%In flash.par, \texttt{refine\_var\_1} sets the field variable on which the grid AMR capabilities are activated (such as "dens", "pres", "temp"). A field value of "none" still results in (what I believe to be) AMR activation on the Jean's Length (i.e. if a cell's density/size corresponds to a Jean's length smaller than the cell itself, the cell is refined). 
+%In flash.par, \texttt{refine\_var\_1} sets the field variable on which the grid AMR capabilities are activated (such as "dens", "pres", "temp"). A field value of "none" still results in (what I believe to be) AMR activation on the Jean's Length (i.e. if a cell's density/size corresponds to a Jean's length smaller than the cell itself, the cell is refined).
 
 FLASH decides how/when/where to increase a block's refinement based on parameters set by the user in flash.par. Specifically, setting \texttt{refine\_var\_1 = "none"} allows FLASH to follow any refinement criteria defined by activated modules. For the \texttt{FLASH4.5/source/Particles/ParticlesMain/active/Sink/} module, the refinement criteria is the local Jeans' Length (i.e. if a block's size and contained gas mass corresponds to a Jean's length smaller than the block itself, the block is refined). This refinement criteria is useful for Torch star formation simulations, but \emph{any} refinement flags can be designed by the user.
 
 In addition, grid refinement can be forced in regions where a gradient in any field is present. To refine on gradients in density, the user needs only to set \texttt{refine\_var\_1 = "dens"} in the flash.par file. Multiple field value gradients can be refined on at once by introducing another refinement variable: \texttt{refine\_var\_2 = "pres"}. Any field gradient refinement declaration is also accompanied by a field threshold declaration, a filter to help prevent error calculations to determine refinement from diverging: \texttt{refine\_cutoff\_1}, \texttt{refine\_filter\_1} with the corresponding default values being 0.8 and 0.01 respectively.
 
-%I find "none" to function well while also limiting the amount of the simulation space that is overrefined while having no interesting behavior. For example, refining on "dens" highly refines the boundary of the CNM and WNM which we are not necessarily interested in (especially not in the first Myrs). 
+%I find "none" to function well while also limiting the amount of the simulation space that is overrefined while having no interesting behavior. For example, refining on "dens" highly refines the boundary of the CNM and WNM which we are not necessarily interested in (especially not in the first Myrs).
 
 \section{Rules of Sink Creation in Torch}
 Firstly, the sink method (Federrath 2010) iterates over all cells in the simulation space that exist at the highest level of refinement checking density of each. If a cell's density exceeds the set density threshold, a spherical test volume V with radius $r_{acc}$ centered around the cell and a series of checks is initiated:
@@ -167,24 +166,24 @@ Firstly, the sink method (Federrath 2010) iterates over all cells in the simulat
 \item Is gas within V Jean's unstable ($E_{grav} > 2E_{therm}$)?
 \item Is the gas bound?
 \item Is V entirely outside $r_{acc}$ of other sinks?
-\end{enumerate} 
+\end{enumerate}
 
 The order of these checks does not matter, but are arranged such that the computationally least expensive checks are done first. If any check is failed, the sink creation process is halted. If all checks are passed, mass is removed from all cells within V until each has a density equal to or less than the density threshold. The sink particle is then placed at the central cell and all removed gas mass is assigned to the sink particle. In addition to the conservation of mass during the formation, the conservation of linear and angular momentum is also upheld: the momentum of the removed gas is summed and assigned to the sink.
 
-At this point, the sink behaves as a Lagrangian particle: permitted to move around the simulation space (always being centered at a single cell) and can be acted upon by the gravity of surrounding gas. 
+At this point, the sink behaves as a Lagrangian particle: permitted to move around the simulation space (always being centered at a single cell) and can be acted upon by the gravity of surrounding gas.
 
 \section{Rules of Sink Accretion in Torch}
 Once created, the mass of the sink itself and the gas mass within the cells on which the sink sits results in infalling gas, increasing the gas density within the cells in and around the sink. If any gas density within the sink's $r_{acc}$ exceeds the density threshold, the sink will accrete the excess gas if brief set of checks is passed:
 \begin{enumerate}
 \item Is the excess mass $\Delta M$ bound to the sink particle?
 \item Is the radial velocity of $\Delta M$ negative with respect to the sink center?
-\end{enumerate} 
+\end{enumerate}
 
 Of course, the same conservation rules apply as with the sink creation process. The accreted gas mass and momentum is added to the sink particle.
 \section{Listing and Placement of Stars}
-Upon creation, a sink particle will have a star list generated and assigned to it. The list is derived from Poisson sampling the Initial Mass Function (IMF; \href{https://ui.adsabs.harvard.edu/abs/2002Sci...295...82K/abstract}{Kroupa 2002}) of the total gas cloud. For a $10^4 M_{\odot}$ cloud, a sink will have a list with around 10.000 stars in the 0.08--0.10$M_{\odot}$ range and a handful of 100$M_{\odot}$+ stars. The list of stars is then randomized. If the sink exceeds the mass of the first star on the list, that mass is removed from the sink and a star particle is placed inside of the sink volume. This mass condition is then checked for the next star on the list and repeated until the sink cannot form the next star. Then, the process repeats after the accretion step in subsequent time-steps. 
+Upon creation, a sink particle will have a star list generated and assigned to it. The list is derived from Poisson sampling the Initial Mass Function (IMF; \href{https://ui.adsabs.harvard.edu/abs/2002Sci...295...82K/abstract}{Kroupa 2002}) of the total gas cloud. For a $10^4 M_{\odot}$ cloud, a sink will have a list with around 10.000 stars in the 0.08--0.10$M_{\odot}$ range and a handful of 100$M_{\odot}$+ stars. The list of stars is then randomized. If the sink exceeds the mass of the first star on the list, that mass is removed from the sink and a star particle is placed inside of the sink volume. This mass condition is then checked for the next star on the list and repeated until the sink cannot form the next star. Then, the process repeats after the accretion step in subsequent time-steps.
 
-Star placement is handled in \texttt{src/torch\_sf.py}. As of commit \texttt{a6c07ed}, a star particle is placed inside of the corresponding sink volume following an isothermal distribution. The star particle is then assigned a velocity derived from a normal distribution around the parent sink's velocity with a scale set to the sound speed of the gas $c_{s} = \sqrt{P/\rho}$ inside of the sink. Excerpts of the position and velocity methods can be seen below. This is what was used in Wall et al. 2019 and Wall et al. 2020 in prep. 
+Star placement is handled in \texttt{src/torch\_sf.py}. As of commit \texttt{a6c07ed}, a star particle is placed inside of the corresponding sink volume following an isothermal distribution. The star particle is then assigned a velocity derived from a normal distribution around the parent sink's velocity with a scale set to the sound speed of the gas $c_{s} = \sqrt{P/\rho}$ inside of the sink. Excerpts of the position and velocity methods can be seen below. This is what was used in Wall et al. 2019 and Wall et al. 2020 in prep.
 
 \begin{lstlisting}[language=python]
 def random_three_vector(n=1):
@@ -231,27 +230,27 @@ As made clear by the Truelove criterion, we are unable to resolve any Jeans inst
 
 The counter to this would be that the explicit purpose of sink particles is remove only the most obstructive gas dynamics. Using larger-than-standard sinks would essentially cut out large portions of simulation data that were refined on in order to see/follow their intricacies. In addition, it is important to note that sink particles are able to merge, so multiple small particles (rather than one large one) are able to accurately represent and follow multiple compact star forming regions that may merge into one structure.
 
-Ultimately, defining sink particles via the Truelove criterion appears to be the industry standard and for the purposes of their implementation Torch, this definition is preferable. 
+Ultimately, defining sink particles via the Truelove criterion appears to be the industry standard and for the purposes of their implementation Torch, this definition is preferable.
 
-%In the current implementation of Torch, the sink particle size is varied depending on the highest level of refinement; each refinement level increase reduces the sink volume by a factor of 8. 
+%In the current implementation of Torch, the sink particle size is varied depending on the highest level of refinement; each refinement level increase reduces the sink volume by a factor of 8.
 
 \subsection{Star Particle Placement, Velocity, and the Courant Condition}
 
 \subsubsection{Star Particle Placement}
-There are some considerations needed in how stars are placed in Torch. The isothermal distribution assumes that the region in the sink with the highest rate of star formation is directly in the center. However, the purpose with the sink particle is to denote a region where further gravitational collapse in known to occur, but the specific dynamics and further fragmentation are not followed/resolved. Therefore, it is reasonable to give to-be-made stars an equal probability of being placed anywhere in the sink rather than oversampling the central region (\textbf{SCL to be tested - 03/23/20}). 
+There are some considerations needed in how stars are placed in Torch. The isothermal distribution assumes that the region in the sink with the highest rate of star formation is directly in the center. However, the purpose with the sink particle is to denote a region where further gravitational collapse in known to occur, but the specific dynamics and further fragmentation are not followed/resolved. Therefore, it is reasonable to give to-be-made stars an equal probability of being placed anywhere in the sink rather than oversampling the central region (\textbf{SCL to be tested - 03/23/20}).
 
-The counter to this the fact that sink particles are defined to form with the central cell being at a gravitational potential minimum, implying an isothermal (or at least a centrally concentrated distribution) is preferred. In addition, the Lagrangian nature of the sink particle allows it to follow the local gravitational potential minimum as the gas in neighboring cells evolves. 
+The counter to this the fact that sink particles are defined to form with the central cell being at a gravitational potential minimum, implying an isothermal (or at least a centrally concentrated distribution) is preferred. In addition, the Lagrangian nature of the sink particle allows it to follow the local gravitational potential minimum as the gas in neighboring cells evolves.
 
-Although the above counterpoints are true, the nature of the sink particle forbids the user or simulation grid from knowing what kind of dynamics occur within the sink radius. Without the sink present, we could expect further fragmentation to occur, gas stirred up by the presence of stars, etc. Ultimately, the undeterminable nature of gas dynamics within sinks lends credence to the placement of stars with no preference to any location inside of the sink. More testing and discussion is needed and encouraged on this subject.  
+Although the above counterpoints are true, the nature of the sink particle forbids the user or simulation grid from knowing what kind of dynamics occur within the sink radius. Without the sink present, we could expect further fragmentation to occur, gas stirred up by the presence of stars, etc. Ultimately, the undeterminable nature of gas dynamics within sinks lends credence to the placement of stars with no preference to any location inside of the sink. More testing and discussion is needed and encouraged on this subject.
 
 \subsubsection{Star Velocity}
-Current (March 2020) implementations of Torch use the gas sound ($c_{s}$) as the variance in star particle speed. $c_{s}$ data is determined within and passed from the sink particle module in FLASH. This method of assigning star velocities functions well for early times in an embedded cluster's life where the gas being accreted into the sink is cool, dense 10K gas. However, if/when a massive star forms, the radiative feedback will quickly increase the temperature of the gas in and around the sink, causing $c_{s}$ and the velocity of any subsequently formed stars to also increase unrealistically. Dr. Joshua Wall implemented a quick fix for this (which I believe is turned `on' by default) that calculates $c_{s}$ by only iterating over cells within 2 radii of the sink that have gas temperatures of $<$100K.  
+Current (March 2020) implementations of Torch use the gas sound ($c_{s}$) as the variance in star particle speed. $c_{s}$ data is determined within and passed from the sink particle module in FLASH. This method of assigning star velocities functions well for early times in an embedded cluster's life where the gas being accreted into the sink is cool, dense 10K gas. However, if/when a massive star forms, the radiative feedback will quickly increase the temperature of the gas in and around the sink, causing $c_{s}$ and the velocity of any subsequently formed stars to also increase unrealistically. Dr. Joshua Wall implemented a quick fix for this (which I believe is turned `on' by default) that calculates $c_{s}$ by only iterating over cells within 2 radii of the sink that have gas temperatures of $<$100K.
 
-A more robust fix would be to use the gas virial velocity as the stellar velocity spread. This can be accomplished by determining the total gas mass a sink is sitting on: $V_{vir} \equiv \big(\frac{3GM}{5R}\big)^{1/2}$ (\textbf{SCL TODO 03/23/20}). 
+A more robust fix would be to use the gas virial velocity as the stellar velocity spread. This can be accomplished by determining the total gas mass a sink is sitting on: $V_{vir} \equiv \big(\frac{3GM}{5R}\big)^{1/2}$ (\textbf{SCL TODO 03/23/20}).
 
 \subsubsection{Star Particles and the Courant Condition}
-Star particles and Lagrangian particles and are free to move about the simulation space without being confined to any aspect of the Grid. This fact has a couple implications. Firstly, the movement of stars is unconstrained by the Courant condition, permitting stars to be supersonic. While this is not necessarily an unphysical occurrence, this means that stars are allowed to pass through multiple gas cells within a single system evolution timestep which could lead to significant error in star-gas/gas-star gravitational interactions especially at the highest levels of refinement. 
+Star particles and Lagrangian particles and are free to move about the simulation space without being confined to any aspect of the Grid. This fact has a couple implications. Firstly, the movement of stars is unconstrained by the Courant condition, permitting stars to be supersonic. While this is not necessarily an unphysical occurrence, this means that stars are allowed to pass through multiple gas cells within a single system evolution timestep which could lead to significant error in star-gas/gas-star gravitational interactions especially at the highest levels of refinement.
 
-Secondly, refinement regions are not determined by the presence of star particles. If gas-star drag is a behavior of interest, it can only ever be resolved at the highest levels of refinement. Of course, all of the stars are formed within sink particles which are necessarily at the highest grid refinement level, so this may only apply to outlier stars with an outlier radial velocity away from the sink.   
+Secondly, refinement regions are not determined by the presence of star particles. If gas-star drag is a behavior of interest, it can only ever be resolved at the highest levels of refinement. Of course, all of the stars are formed within sink particles which are necessarily at the highest grid refinement level, so this may only apply to outlier stars with an outlier radial velocity away from the sink.
 
 \end{document}
