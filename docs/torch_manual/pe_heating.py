@@ -5,6 +5,8 @@ Spring 2019
 Modified June 2019
 """
 from __future__ import division, print_function
+import matplotlib as mpl
+mpl.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 

@@ -14,6 +14,8 @@ Aaron Tran
 from __future__ import division, print_function
 
 import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 c = 3e10  # cm s^-1, light speed

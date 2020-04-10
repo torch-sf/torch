@@ -3,6 +3,8 @@
 Quickly plot expression from Draine chapter 14
 Aaron Tran - 2019 April 23
 """
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
