@@ -1,11 +1,11 @@
 all: main.pdf quickstart-web.pdf
 #quickstart-cca.pdf
 
-quickstart-cca.pdf: quickstart-cca.tex torch-features.pdf quickstart-particles.pdf quickstart-dens-slice.pdf
+quickstart-cca.pdf: quickstart-cca.tex fig/torch-features.pdf fig/quickstart-particles.pdf fig/quickstart-dens-slice.pdf
 	pdflatex quickstart-cca.tex
 	pdflatex quickstart-cca.tex
 
-quickstart-web.pdf: quickstart-web.tex torch-features.pdf quickstart-particles.pdf quickstart-dens-slice.pdf
+quickstart-web.pdf: quickstart-web.tex fig/torch-features.pdf fig/quickstart-particles.pdf fig/quickstart-dens-slice.pdf
 	pdflatex quickstart-web.tex
 	pdflatex quickstart-web.tex
 
