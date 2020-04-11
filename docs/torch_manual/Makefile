@@ -42,3 +42,21 @@ fig/pe_heating_expressions.pdf: pe_heating_expressions.py
 fig/gas_atomic_cool.png:
 	mkdir -pv fig
 	wget -O fig/gas_atomic_cool.png http://user.astro.columbia.edu/~atran/share/gas_atomic_cool.png
+
+.PHONY: clean
+
+# this should probably clear out the figures, too
+clean:
+	rm -f main.aux
+	rm -f main.log
+	rm -f main.out
+	rm -f main.pdf
+	rm -f main.toc
+	rm -f quickstart-web.aux
+	rm -f quickstart-web.log
+	rm -f quickstart-web.out
+	rm -f quickstart-web.pdf
+	rm -f quickstart-web.toc
+#rm ${FNAME}.bbl
+#rm ${FNAME}.blg
+#rm ${FNAME}Notes.bib
