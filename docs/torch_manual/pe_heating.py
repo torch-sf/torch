@@ -92,3 +92,42 @@ plt.savefig('fig/pe_heating.pdf', bbox_inches='tight')
 #plt.show()
 plt.clf()
 plt.close()
+
+# ----------------------------------------------------------------------
+# Try to plot behavior in (T, ne) space
+
+#G = 1.69 #1.7 * 1.6e-3  # woops . . .
+#T = np.logspace(0,8,1000)
+#
+#ne_range = np.array([1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2])
+#for ne in ne_range:
+#    Gfactor = G * np.sqrt(T) / ne
+#    #plt.plot(T, eff(T, ne), '-', label='ne={:g}'.format(ne))
+#    plt.plot(T, epsilon_wd01(Gfactor, T), '-', label='ne={:g}'.format(ne))
+#
+#plt.axhline(1)
+#
+## annotate where weingartner/draine indicate that the equation is valid
+#plt.axvspan(10, 10**4, color='g', alpha=0.25, zorder=-99)  # T range
+#T_Gfactmin = (1e2 * ne_range / G)**2
+#T_Gfactmax = (1e6 * ne_range / G)**2
+#plt.plot(T_Gfactmin, epsilon_wd01(1e2, T_Gfactmin), 'o')
+#plt.plot(T_Gfactmax, epsilon_wd01(1e6, T_Gfactmax), 's')
+##plt.axvspan(10, 10**4)
+#
+## annotate line of expected ISM pressure, for pure hydrogen plasma
+## problem: what is the equilibrium ionization fraction?
+## basically you need n_H -- T curve, then x=n_e/n_H, only then can you compute
+## dust charge state, which controls photoelectric heating.
+#
+## vaguely suspect that if you do the numbers,
+## you should get something around unity.
+#
+#plt.xscale('log')
+#plt.xlabel(r'T (K)')
+#plt.yscale('log')
+#plt.ylabel(r'eff factor, $\Gamma/(G n_\mathrm{H})$')
+#plt.legend()
+#plt.title('eff factor')
+#plt.show()
+#

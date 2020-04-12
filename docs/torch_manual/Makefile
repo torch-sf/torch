@@ -9,7 +9,7 @@ quickstart-web.pdf: quickstart-web.tex fig/torch-features.pdf fig/quickstart-par
 	pdflatex quickstart-web.tex
 	pdflatex quickstart-web.tex
 
-main.pdf: main.tex fig/pe_heating.pdf fig/gas_cool.pdf fig/recombination_case_b.pdf fig/dust_opacity.pdf fig/dust_heat_cool_Tgas10.pdf fig/dust_heat_cool_Tgas10000.pdf fig/pe_heating_expressions.pdf fig/gas_atomic_cool.png
+main.pdf: main.tex fig/pe_heating.pdf fig/gas_cool.pdf fig/recombination_case_b.pdf fig/dust_opacity.pdf fig/dust_heat_cool_Tgas10.pdf fig/dust_heat_cool_Tgas10000.pdf fig/gas_atomic_cool.png
 	pdflatex main.tex
 	pdflatex main.tex
 
@@ -32,10 +32,6 @@ fig/dust_opacity.pdf: dust_opacity.py
 fig/dust_heat_cool_Tgas10.pdf fig/dust_heat_cool_Tgas10000.pdf: dust_heat_cool.py
 	mkdir -pv fig
 	./dust_heat_cool.py
-
-fig/pe_heating_expressions.pdf: pe_heating_expressions.py
-	mkdir -pv fig
-	./pe_heating_expressions.py
 
 # TOTAL hack -AT 2019 June 21
 # IDK better way to do this without having to git commit binary files...
