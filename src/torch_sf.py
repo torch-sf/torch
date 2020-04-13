@@ -281,6 +281,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} did not spawn stars".format(sink_tag))
 
+        elif np.isnan(sink_cs.value_in(units.cm/units.s)):
+
+            tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
+            print(" {} stars,".format(nnew), end='')
+            print(" total mass {},".format(np.sum(spawn_masses)), end='')
+            print(" due to absence of nearby cold gas")
+
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
