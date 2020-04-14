@@ -58,6 +58,28 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
 
     # ------------------------------------------------------------------------
+    # SN with SE test: plop a star that goes SN within 5e11 seconds
+
+#    star        = Particles(1)
+#    star.mass   = 3.09698e+34 | units.g
+#    star.x      = 0.0 | units.cm
+#    star.y      = 0.0 | units.cm
+#    star.z      = 0.0 | units.cm
+#    star.vx     = 0.0 | units.cm/units.s
+#    star.vy     = 0.0 | units.cm/units.s
+#    star.vz     = 0.0 | units.cm/units.s
+#
+#    oldmass = 5.10964e+34 | units.g  # about 25.5 MSun
+#    creation_time = hydro.get_time() - (2.3861e+14|units.s)  # 7.5611 Myr old
+#    # goes SN between 7.5611 and 7.5763 Myr (2.3861e14 to 2.3909e14 s)
+#
+#    tag = hydro.add_particles(star.x, star.y, star.z)
+#    hydro.set_particle_mass(tag, star.mass)
+#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
+#    hydro.set_particle_oldmass(tag, oldmass) # for SE code
+#    hydro.set_particle_creation_time(tag, creation_time)
+
+    # ------------------------------------------------------------------------
     # Multiples test: plop a binary system
 
 #    star        = Particles(2)
