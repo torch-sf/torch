@@ -88,10 +88,15 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
                 if with_sn:
                     inj_mass = s.mass - se_mass  # minus stellar remnant's mass
-                    assert inj_mass < 10.0|units.MSun
+                    if inj_mass > 15.0|units.MSun:
+                        # expected upper limit for SeBa tracks; see
+                        # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                        tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                        inj_mass = 15.0|units.MSun
                     # inject energy and mass onto grid
                     _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                     se_dt = min(se_dt, _tmp)
+                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
                 nion[i] = 0.0 | units.s**-1
                 eion[i] = 0.0 | units.erg
