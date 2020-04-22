@@ -249,14 +249,14 @@ def user_parameters():
 
     # <bridge>
 
-    p['npy_seed'] = None  # no effect if (restart && restart_with_new_rng=False)
-    p['restart_with_new_rng'] = False
+    p['npy_seed'] = None  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
+    p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
 
-    p['evolve_async'] = True
-    p['with_bridge'] = True
+    p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
+    p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
-    p['with_se'] = True
+    p['with_se'] = True  # do stellar evolution for individual stars?
 
     # <timestepping>
 
@@ -269,10 +269,10 @@ def user_parameters():
 
     # <stellar evolution>
 
-    p['with_lyc'] = True
-    p['with_pe_heat'] = True
-    p['with_sn'] = True
-    p['with_winds'] = True
+    p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
+    p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
+    p['with_sn'] = True  # allow stars to deposit SNe at end of life
+    p['with_winds'] = True  # allow stars to deposit hot winds
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
 
@@ -283,7 +283,7 @@ def user_parameters():
     p['sample_imf_mass'] = 10000.0 | units.MSun
     p['sample_imf_bins'] = 10
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
-    p['sum_small'] = False
+    p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
     # <job>
 
