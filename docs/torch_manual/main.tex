@@ -1,0 +1,2414 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.75in, letterpaper]{geometry}
+\usepackage{parskip}
+
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage[pdftex]{graphicx}
+\usepackage{hyperref}
+
+\usepackage{enumerate} % For use of (a), (b), et cetera
+\usepackage{booktabs} % Tables
+\usepackage[margin=20pt, labelfont=bf, labelsep=period,
+justification=justified]{caption} % Captions in figure floats
+
+% https://stackoverflow.com/questions/3175105/inserting-code-in-this-latex-document-with-indentation
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+
+% http://texdoc.net/texmf-dist/doc/latex/listings/listings.pdf
+\lstset{
+  backgroundcolor=\color{lightgray},
+  frame=none,
+%  language=python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+%  mathescape=false,
+}
+
+
+% ======================
+% Document setup, layout
+% ======================
+
+% The following metadata will show up in the PDF properties
+\hypersetup{
+    colorlinks = true,
+    urlcolor = magenta,  % Links to URLs
+    linkcolor = blue,  % Links within PDF
+    pdfauthor = {Torch collaboration},
+    pdfkeywords = {FLASH},
+    pdftitle = {Torch Manual - \today},
+    pdfsubject = {},
+    pdfpagemode = UseNone
+}
+
+% Don't indent paragraphs
+\setlength\parindent{0em}
+
+% Slightly more compact lines
+\linespread{0.95}
+
+% ===============
+% Useful commands
+% ===============
+\newcommand*{\mt}{\mathrm}
+\newcommand*{\unit}[1]{\;\mt{#1}}  % vemod.net/typesetting-units-in-latex
+\newcommand*{\abt}{\mathord{\sim}} % tex.stackexchange.com/q/55701
+%\newcommand*{\del}{\nabla}
+\newcommand*\mean[1]{\bar{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}  % Bold vectors
+\newcommand*{\tsup}{\textsuperscript}
+
+% Sets, operators
+\newcommand*{\ints}{\mathbb{Z}}
+\newcommand*{\ptl}{\partial}
+\newcommand*{\dl}{\nabla}
+\newcommand*{\dtl}{\mathrm{d}}
+
+\newcommand*{\Msun}{M_\odot}
+\newcommand*{\sun}{\odot}
+\newcommand*{\kB}{k_\mathrm{B}}
+
+\begin{document}
+
+% =======
+% Titling
+% =======
+\begin{center}
+A Torch Manual (ATM) \\
+Last updated: \today \\
+Started: April 25, 2019
+\end{center}
+
+\tableofcontents
+\newpage
+
+% ==================================
+% Introduction
+% ==================================
+\section{Introduction}
+
+\textbf{A Torch Manual} (ATM) (1) holds developer knowledge, (2) explains code
+features in more depth than published literature, and (3) provides historical
+context to show how \textbf{Torch} has evolved.  ATM gives references and
+equations for code features, but should generally not explain physics.
+
+ISM physics references:
+\begin{itemize}
+    \item Stahler \& Palla 2004 Star Formation
+    \item Draine 2011 Physics of ISM/IGM
+    \item Klessen \& Glover 2014 Physical Processes in the ISM,
+        \href{https://arxiv.org/abs/1412.5182}{arXiv:1412.5182},
+        \href{https://link.springer.com/chapter/10.1007\%2F978-3-662-47890-5\_2}{Springer PDF}.
+\end{itemize}
+
+\textbf{Warning:} ATM describes some features that are unmaintained and/or in
+development.  Some features may not exist in the main Torch repository and may
+not even work.
+
+% =================================
+% Version History of Torch
+% =================================
+\section{Version History of Torch}
+
+\textbf{Torch} is distributed in the public repository:
+\url{https://bitbucket.org/torch-sf/torch}
+
+Old versions of the code exist in private repositories:
+\begin{itemize}
+    \item Aaron, Spring-Summer 2019: \url{https://bitbucket.org/aarontran/flash4.5-rad}
+    \item Josh, Fall 2018 - Spring 2019: \url{https://bitbucket.org/joshuawall/flash4.5}
+    \item Josh, Fall 2016 - Fall 2018: \url{https://bitbucket.org/joshuawall/flash4.2.2-rad}
+    \item Juan+Christian, Spring 2013 - Spring 2016: \url{https://bitbucket.org/mordecai/flash4-ita-amnh-jcim}
+    \item Christian, Spring 2013 - Spring 2014: \url{https://bitbucket.org/mordecai/flash4-ita-cb}
+\end{itemize}
+
+To get access to old repositories, contact the devs.
+
+The version \texttt{flash4.2.2-rad} contains many add-ons and units accumulated
+from the mid-2000s to present; many add-ons are NOT yet ported into the public
+Torch repository.
+
+% =================================
+% What is added onto vanilla FLASH?
+% =================================
+\section{What is added to vanilla FLASH?}
+
+Not a comprehensive list.
+
+\begin{itemize}
+
+\item
+``Mtmod'' is called at restart by \texttt{IO\_readCheckpoint.F90}.
+This is a custom edit to handle RNG state dump/read.
+\textbf{TODO 2019 April 25 make a unit for this}
+
+% In development - not pushed to any public repository yet.
+%New unit 2019 July: AT adding \texttt{source/numericalTools/Random}
+%to prevent constantly rewriting code for random number generation.
+%Also allows user to choose a seed!
+
+\item
+Bouchut split solver (in flash4.2.2-rad).
+Christoph Federrath has some comments on usage:
+\url{http://flash.uchicago.edu/pipermail/flash-users/2014-May/001459.html}
+
+\item
+\texttt{Grid\_checkGridVar.F90} is located in
+\texttt{flash4.2.2-rad/source/Grid}
+or \texttt{flash4.5-rad/source/Grid\_checkVar/}.
+This subroutine reports where fields are going wonky.
+In flash4.2.2-rad, hooks for grid var debugging are included in:
+
+\texttt{Driver/DriverMain/Unsplit/Driver\_evolveFlash.F90} \\
+\texttt{Driver/DriverMain/Unsplit/Couple\_AMUSE/Driver\_evolveFlash.F90} \\
+\texttt{Driver/DriverMain/Split/Couple\_AMUSE/Driver\_evolveFlash.F90}
+
+In flash4.5-rad, hooks for grid var debugging are included in:
+
+\texttt{Driver/DriverMain/Unsplit/Couple\_AMUSE/Driver\_evolveFlash.F90}
+
+To use this functionality, specify \texttt{--defines=DEBUG\_GRIDVAR} in your
+\texttt{setup} call.  Modify the Driver file to report on whatever grid
+variable you desire.
+
+\item
+In \texttt{Driver\_computeDt} the guardcell filling is changed by josh due to
+an error of zero dens on restarts...
+
+\item
+Modified Riemann solver behavior (Josh, Nov 2018):
+``Added the ability for the code to mark regions where data
+reconstruction falls back to 1st order as "shocked" regions
+so that when using the HYBRID Reimann solver the solver will
+also fall back to HLL instead of HLLD or HLLC.''
+See change at:
+\url{https://bitbucket.org/joshuawall/flash4.5/commits/bc708aa9d27dfc04741bb8f21c007b27cf8f033b#chg-source/physics/Hydro/HydroMain/unsplit/hy_uhd_dataReconstOneStep.F90}
+
+\end{itemize}
+
+% =============================
+% More on build/compile process
+% =============================
+\section{More on build/compile process}
+
+\subsection{AMUSE build snags}
+
+AMUSE: we have run into problems with OpenMPI C++ bindings.
+This is an issue for new versions of OpenMPI (4.x); you may have to build
+OpenMPI from source with a configure flag to request bindings.  See:
+\begin{itemize}
+    \item \url{https://github.com/amusecode/amuse/pull/366}
+    \item \url{https://github.com/joshuawall/amuse/commit/7ed7f2e45679587a43cb7b1f172297160f9bb820}
+\end{itemize}
+
+AMUSE in August 2019 (after HDF5 configure update) doesn't work quite right...
+first you need to change the configure call for \texttt{with-hdf}
+(at command line, do \texttt{./configure --help}).
+Then, need to manually fix \texttt{HDF5\_LIBS} in \texttt{config.mk}.
+%See Aaron's notes, 2019 August 13.
+
+\subsection{FLASH build snags}
+
+FLASH with OpenMPI v4.0.0 may throw errors like:
+\begin{verbatim}
+    undefined reference to `mpi_type_extent_'
+    undefined reference to `mpi_address_'
+    undefined reference to `mpi_type_struct_'
+    undefined reference to `mpi_type_hvector_'
+\end{verbatim}
+Resolution was (early 2019) to use OpenMPI nightly build with
+`--enable-mpi1-compatibility`.  It should be fixed in 4.0.1.
+To address, see \url{https://github.com/open-mpi/ompi/issues/6114}
+
+FLASH 4.5: when building with parallel HDF5 1.10.5, you may get the error:
+\begin{verbatim}
+    io_h5_report_xfer_method.c: In function ‘io_h5_report_xfer_method’:
+    io_h5_report_xfer_method.c:105:26: error: ‘H5D_MPIO_FILTERS’ undeclared (first use in this function)
+           if (global_cause & H5D_MPIO_FILTERS) {
+\end{verbatim}
+\texttt{H5D\_MPIO\_FILTERS} was removed in HDF5 1.10.2, apparently. See:\\
+\url{https://github.com/hhoeflin/hdf5r/issues/97#issuecomment-422478916}
+
+Resolution: directly modify:
+\begin{verbatim}
+    source/IO/IOMain/hdf5/io_h5_report_xfer_method.c
+\end{verbatim}
+Here is the diff:
+\begin{verbatim}
+    104a105
+    > #if (H5_VERSION_LE(1,10,1))
+    107a109,113
+    > #else
+    >       if (global_cause & H5D_MPIO_NO_COLLECTIVE_MAX_CAUSE) {
+    >       ADD_CAUSE_TO_STR("H5D_MPIO_NO_COLLECTIVE_MAX_CAUSE ");
+    >       }
+    > #endif
+\end{verbatim}
+This fix is already applied to FLASH 4.6.0.
+
+\subsection{Misc build notes}
+
+HDF5: if you built HDF5 from source, rather than using "module load",
+you can review your HDF5 configuration in the plaintext file:
+\begin{verbatim}
+hdf5-1.10.5/lib/libhdf5.settings
+\end{verbatim}
+which exists in your HDF5 build directory (i.e., the place that contains bin,
+lib, include, etc.)
+
+% =============================
+% Parameters in FLASH and Torch
+% =============================
+\section{Parameters in FLASH and Torch}
+
+\subsection{FLASH parameters}
+
+\begin{itemize}
+    \item If initializing sim w/ feedback star, choose a small \texttt{dtinit}
+        because hydro will not take appropriate timestep for winds/radiation
+        until the star begins barfing onto the grid.
+\end{itemize}
+
+\subsection{\texttt{bridge\_multiples.py} parameters}
+
+\begin{itemize}
+    \item Choose \texttt{cloud\_mass}, or equivalently your IMF high-mass
+        cutoff, manually.
+    \item Adjust \texttt{sink\_rad} to match your NXB setting,
+        should be 16 for NXB=16.
+\end{itemize}
+
+
+% ===================
+% Driver timestepping
+% ===================
+\section{Driver timestepping}
+
+Torch modifies the default FLASH timestep calculation.  Here is a pseudo-code
+summary of Josh's scheme to compute dt at the top, instead of bottom, of the
+FLASH evolution loop.
+\begin{lstlisting}[language=Fortran]
+call Driver_init(...)
+
+    call Driver_verifyInitDt(...)
+
+        dr_dt = dtInit  ! only if not restart
+
+call Driver_evolveFlash(...)
+
+    call Driver_computeDt(...)
+
+        dtNew = ...  ! Hydro, posdef, radtrans, all units; after MPI_AllReduce
+        dr_dtAdvect = dtNew
+        dtNew = min( dtNew, dtOld*dr_tstepChangeFactor )
+        dtNew = min( max( dtNew, dr_dtMin ), dr_dtMax )
+
+    dr_dt = dr_dtNew
+
+    call dr_shortenLastDt(dr_dt, dr_simTime, dr_tmax, shortenedDt, 1)
+
+    ! evolve units with dr_dt
+
+    if (shortenedDt)
+        dr_dt = dr_dtNew
+    dr_dtOld = dr_dt
+\end{lstlisting}
+
+Old \texttt{bridge\_multiples.py} code used \texttt{dr\_dtAdvect} for hydro
+timestep in brige loop, and used separate bridge loop controls (bridge had own
+dtinit) to control timestep for e.g. simulations w/ feedback stars.
+
+New refactored code uses \texttt{dr\_dt} as hydro timestep and does NOT include
+separate bridge loop timestepping controls.
+
+% =============
+% Hydro lessons
+% =============
+\section{Hydro}
+
+Remember to check your small numbers in flash.par (smallt, smallp, smallu,
+etc.).  The flash.par provided with Torch has reasonable defaults, but the
+FLASH defaults may not work as well.
+
+Unsplit solver references:
+\url{https://ui.adsabs.harvard.edu/abs/2009JCoPh.228..952L/abstract} \\
+\url{https://ui.adsabs.harvard.edu/abs/2013JCoPh.243..269L/abstract}
+
+MHD code comparison:
+\url{https://ui.adsabs.harvard.edu/abs/2011ApJ...737...13K/abstract}
+
+\subsection{CFL and pressure holes}
+
+A problem that has recurred through work with Juan, Josh, etc.
+Sometimes, lowering CFL to push past can help.
+Bouchut, unsplit, \texttt{use\_PosdefComputeDt} are supposed to help alleviate.
+Helpful thread:
+\url{http://flash.uchicago.edu/pipermail/flash-users/2019-May/002908.html}
+
+% --------------------
+% Artificial viscosity
+% --------------------
+\subsection{Artificial viscosity}
+
+About 0.1 is good.  See Fryxell paper section 3.2 for brief description, I am
+unsure if the Lapidus paper actually matches whatever is in the code.
+
+Only turns on when shocks are present.  For example, using the 1-D advection
+equation for just density:
+\[
+    \frac{\ptl \rho}{\ptl t} + \frac{\ptl}{\ptl x} \left( \rho u \right) = 0
+\]
+where $\rho u$ is the flux, the artificial viscosity looks something like
+\[
+    \frac{\ptl \rho}{\ptl t}
+    + \frac{\ptl}{\ptl x} \left(
+        \rho u - C \frac{\ptl u}{\ptl x} \frac{\ptl \rho}{\ptl x} \left(\Delta x\right)^2
+    \right)
+    = 0
+\]
+where $C$ is the dimensionless runtime parameter \texttt{avisc},
+and the viscosity is only turned on in cells satisfying $\ptl u / \ptl x < 0$;
+i.e., zones that are steepening.
+This all based on reading \texttt{unsplit/hy\_uhd\_getFaceFlux.F90}
+
+It looks consistent with artificially smearing the flux, EXCEPT that you
+only keep the cross-term for some reason . . . why this exact form?
+\[
+    \frac{\ptl^2}{\ptl x^2} \left( \rho u \right)
+    = \rho \frac{\ptl^2 u}{\ptl x^2}
+    + u \frac{\ptl^2 \rho}{\ptl x^2}
+    + 2 \frac{\ptl \rho}{\ptl x} \frac{\ptl u}{\ptl x}
+\]
+
+% =============
+% Gravity
+% =============
+\section{Gravity}
+
+% ------------------------------
+% Gravity - unsplit hydro solver
+% ------------------------------
+\subsection{Unsplit Gravity Calculation}
+
+The unsplit MHD solver computes gravity in \texttt{hy\_uhd\_unsplit.F90}.
+Hydro is evolved first in each timestep.  Then, we must update grav potential
+and accel for other evolution subroutines (e.g., particle advance).
+
+\begin{lstlisting}[language=Fortran]
+! compute GPOT_VAR from Poisson equation via Gravity_potentialListOfBlocks(...)
+! also compute sink->gas accel SGA{X,Y,Z}_VAR and gas->sink accel ACC{X,Y,Z}_PART_PROP
+call hy_uhd_prepareNewGravityAccel(blockCount,blockList,...)
+
+do i = 1,blockCount
+    ! compute grav{X,Y,Z} accels via Gravity_accelOneRow(...),
+    ! accel is SGA{X,Y,Z}_VAR plus finite difference of GPOT_VAR
+    call hy_uhd_putGravityUnsplit(blockID,...,gravX,gravY,gravZ)
+
+    ! update velocities and energy from grav{X,Y,Z}
+    call hy_uhd_addGravityUnsplit(blockID,...,gravX,gravY,gravZ,...)
+end do
+\end{lstlisting}
+
+\textbf{Note:} in normal FLASH, \texttt{GPOT\_VAR} includes contribution
+from massive non-sink particles via \texttt{PDEN\_VAR}.  This is disabled in
+\textbf{Torch} since all massive non-sink particles are handled by the AMUSE
+bridge.
+
+\textbf{Question:} are sink particles double counted in grav accel?  They require the
+\texttt{active/massive/Leapfrog} integrator, which defines both
+\texttt{MASS\_PART\_PROP} and \texttt{PDEN\_VAR}.  Superficially, it may appear
+that sinks are included twice:
+\begin{itemize}
+\item \texttt{Gravity\_potentialListOfBlocks}: \texttt{GPOT} includes sink mass via \texttt{PDEN}, and
+\item \texttt{Particles\_sinkAccelGasOnSinksAndSinksOnGas}: computes sink acceleration upon gas directly.
+\end{itemize}
+
+\textbf{Answer:} no, we are OK.
+\begin{itemize}
+\item In default FLASH: in \texttt{Particles\_updateGridVar}, which would map
+prtl masses to PDEN, a special exclusion is made for sink particles.  Only
+non-sink massive prtls are included in PDEN.
+\item In Torch: all massive prtls excluded from GPOT.
+\end{itemize}
+
+% --------------------------
+% Gravity - sink particles
+% --------------------------
+\subsection{Sink particle gravity}
+
+In \texttt{Particles\_sinkAdvanceParticles} sink particles are advanced using
+both gas $\to$ sink and sink $\leftrightarrow$ sink accelerations.
+The gas $\to$ sink acceleration \texttt{ACC{X,Y,Z}\_PART\_PROP} is not re-computed,
+but just taken and assumed up-to-date, which I think presumes?? that the Hydro
+unit calculated it for us??
+
+The sink $\leftrightarrow$ sink acceleration is computed by direct calculation,
+according to FLASH manual.
+
+% --------------------------
+% Gravity - static potential
+% --------------------------
+\subsection{Static Grav Potential}
+
+Used in stratified box simulations to get disk grav, exponential z-profile
+(Joung, Bacyznski, Ibanez-Mejia work).
+
+Use \texttt{flash4.2.2-rad} with BHTree, but not BHTree4.3.
+The FLASH source code is directly modified in:
+\begin{verbatim}
+    flash4.2.2-rad/source/physics/Gravity/GravityMain/Poisson/Gravity_accelOneRow
+\end{verbatim}
+to hook in a static grav acceleration.
+But, BHTree4.3 will override this.
+All AMUSE couplings in \texttt{flash4.2.2-rad} will also override.
+
+%In addition, sink particles do NOT feel this grav potential!
+
+% ==============
+% Gravity Bridge
+% ==============
+\section{Gravity Bridge}
+
+Pseudocode for stars to kick gas+sinks, AMUSE bridge.
+
+\begin{lstlisting}[language=Fortran]
+FUNCTION get_gravity_particles_on_gas(dt, kick_number)
+
+    if (kick_number == 1) then
+
+        VEL{X,Y,Z}_VAR += BGA{X,Y,Z}_VAR * dt  ! gas kicked by stars
+        BGA{X,Y,Z}_VAR = 0
+
+    else if (kick_number == 2) then
+
+        call Gravity_potentialListOfBlocks(GPOT_VAR)
+        ! Result: GPOT_VAR computed from DENS_VAR (solve Poisson eqn).
+        !          sinks are NOT included in GPOT_VAR, a change from default FLASH
+        ! Side effect: update SGA{X,Y,Z}_VAR = grav accel field due to sinks
+        ! Should this be in get_gravity_gas_on_particles instead? -AT,2020feb27
+
+        call Gravity_potentialListOfBlocksPDENonly(BGPT_VAR, ACTIVE_PART_TYPE)
+        ! result: BGPT_VAR computed from PDEN_VAR (solve Poisson eqn)
+        !          where PDEN_VAR = prtl-to-mesh mapping of stars
+
+        call Gravity_accelListOfBlocks(IAXIS, BGAX_VAR, BGPT_VAR)
+        call Gravity_accelListOfBlocks(JAXIS, BGAY_VAR, BGPT_VAR)
+        call Gravity_accelListOfBlocks(KAXIS, BGAZ_VAR, BGPT_VAR)
+        ! result: BGA{X,Y,Z}_VAR contains {x,y,z}-acceleration from BGPT_VAR
+
+        VEL{X,Y,Z}_VAR += BGA{X,Y,Z}_VAR * dt  ! gas kicked by stars
+
+    end if
+
+    call Particles_longRangeForce(SINK_PART_TYPE, BGPT_VAR)
+    ! result: sink ACC{X,Y,Z}_PART_PROP contains acceleration from BGPT_VAR
+
+    VEL{X,Y,Z}_PART_PROP += ACC{X,Y,Z}_PART_PROP * dt  ! sinks kicked by stars
+
+END FUNCTION
+\end{lstlisting}
+
+Pseudocode for gas+sinks to kick stars, AMUSE bridge.
+
+\begin{lstlisting}[language=Fortran]
+FUNCTION get_gravity_gas_on_particles(dt)
+
+    ! pre-requisite: SGA{X,Y,Z}_VAR = sink accel field is up-to-date
+    Particles_longRangeForce(ACTIVE_TYPE_PART, GPOT_VAR)
+    ! result: star ACC{X,Y,Z}_PART_PROP holds accel from gas (GPOT_VAR) and sinks (SGA{X,Y,Z}_VAR)
+
+    ! breakdown of Particles_longRangeForce(...)
+    !   call Gravity_accelListOfBlocks(IAXIS, GRAC_VAR, GPOT_VAR)
+    !       for all blocks:
+    !           call Gravity_accelOneRow(SWEEP_X, GPOT_VAR)
+    !               returns: first-order finite difference of GPOT_VAR along x, plus SGAX_VAR
+    !       result: GRAC_VAR contains x-acceleration from gas (GPOT_VAR) and sinks (SGA{X,Y,Z}_VAR)
+    !   call Grid_mapMeshToParticles(...)
+    !       result: GRAC_VAR mapped to ACCX_PART_PROP via CIC method
+    !   repeat for other coordinates JAXIS, KAXIS
+
+    VEL{X,Y,Z}_PART_PROP += ACC{X,Y,Z}_PART_PROP * dt  ! stars kicked by gas+sinks
+
+END FUNCTION get_gravity_gas_on_particles
+\end{lstlisting}
+
+NOTE: the coupling code subroutines:
+\begin{verbatim}
+    Gravity_getAccelAtPoint.F90
+    Gravity_getPotentialAtPoint.F90
+\end{verbatim}
+are not currently in use.  Josh used these in an older version of bridge
+interface, but all that stuff is commented out now.  These routines are not
+called anywhere in FLASH code.
+- AT, 2019 May 09.
+
+
+% =========================
+% Sinks and stars
+% =========================
+\section{Sinks and stars}
+
+% -------------------------
+% Star/sink data structures
+% -------------------------
+\subsection{Star/sink data structures}
+
+The AMUSE interface to FLASH uses pointers to get/set different particle types.
+
+The sink and star data reside in:
+\begin{verbatim}
+Particles/ParticlesMain/active/Sink/Couple_AMUSE/Particles_sinkData.F90
+Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_Sinks_and_Stars/Particles_data.F90
+\end{verbatim}
+respectively.
+
+AMUSE interface: \texttt{set\_particle\_pointers} tells the AMUSE worker, OK,
+here are the particles you can access directly from memory!
+
+When AMUSE interface code points to star particles:
+\begin{verbatim}
+    AMUSE interface.F90                 FLASH Particles_data.F90
+    -------------------                 ------------------------
+    real :: particles_pointer(:,:)  =>  particles(:,:)
+    int :: num_part_local_prt       =>  pt_numLocal
+    int :: new_particles_tags(:)    =>  new_massive_tags(:)
+    int :: number_new_particles     =>  number_new_massive
+\end{verbatim}
+
+When AMUSE interface code points to sink particles:
+\begin{verbatim}
+    AMUSE interface.F90                 FLASH Particles_sinkData.F90
+    -------------------                 ------------------------
+    real :: particles_pointer(:,:)  =>  particles_local(:,:)
+    int :: num_part_local_prt       =>  localnp
+    int :: new_particles_tags(:)    =>  new_sink_tags(:)
+    int :: number_new_particles     =>  number_new_sinks
+\end{verbatim}
+
+Note \texttt{particles\_pointer} has array shape
+\texttt{(NPART\_PROPS, MAX\_PARTICLES\_PER\_PROCESSOR)}.
+
+%AMUSE interface: \texttt{get\_particle\_tags} and \texttt{get\_new\_tags} do
+%MPI gather to get all particle tags.
+
+
+% -----------------------------------
+% Sink creation, accretion, evolution
+% -----------------------------------
+\subsection{Sink creation, accretion, evolution}
+
+Mostly summarized by Federrath
+\href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{2010ApJ...713..269F}
+
+Sink motion is a two-step process.
+First, we compute gas-to-sink and sink-to-sink gravity, updating the sink
+positions and velocities in a leapfrog-staggered manner.
+Second, we check whether sink particles need to be created, and then accrete
+gas onto all existing and newly created sink particles.
+
+The first step happens in \texttt{Particles\_sinkAdvanceParticles}, which is
+called by \texttt{Particles\_advance} during the \texttt{Driver\_evolveFlash}
+loop.  Below is stripped-down pseudocode to show process for the $i$-th sink
+particle along the $x$ direction only.
+\begin{lstlisting}[language=Fortran]
+! store acceleration from GasOnSinksAccel (now called in Gravity_PotentialListOfBlocks)
+ax_gas(i) = particles_local(ACCX_PART_PROP, i)
+
+do while (.not. end_subcycling)
+
+   particles_local(ACCX_PART_PROP, i) = ax_gas(i)
+
+   ! compute sink-sink gravity
+   call pt_sinkAccelSinksOnSinks(local_min_radius, local_max_accel)
+
+   ! First step of leapfrog:
+   particles_local(VELX_PART_PROP, i) += 0.5*dt * particles_local(ACCX_PART_PROP, i)
+   particles_local(POSX_PART_PROP, i) += dt * particles_local(POSX_PART_PROP, i)
+
+   ! restore gas contribution
+   particles_local(ACCX_PART_PROP, i) = ax_gas(i)
+
+   ! re-compute sink-sink acceleration at new prtl location
+   call pt_sinkAccelSinksOnSinks(local_min_radius, local_max_accel)
+
+   ! Second step of leapfrog:
+   particles_local(VELX_PART_PROP, i) += 0.5*dt * particles_local(ACCX_PART_PROP, i)
+
+end do
+\end{lstlisting}
+
+The next step happens in \texttt{Particles\_sinkCreateAccrete}, with the
+following logic.
+
+\begin{lstlisting}[language=Fortran]
+! loop over all LEAF BLOCKS (Federrath Sec 2.2)
+do lb = 1, blockCount
+   do kp, jp, ip = blklimits(...)
+      if (comovingCellDens .gt. density_thresh_comoving) then
+         ! 1. check for max refinement  (JOSH added/fixed??? this???)
+         ! 2. check for neighbor sinks
+         ! 3. check converging flow in adjacent (3x3x3) cells
+         ! 4. check grav potential minimum
+         ! 5. check jeans mass
+         ! 6. check total energy < 0, exclude bulk COM KE.
+   end do
+end do
+
+! loop over all LEAF BLOCKS with dens > threshold (Federrath Sec 2.3)
+do llb = 1, blockCount
+   do kp, jp, ip = blklimits(...)
+
+      mass = (comovingCellDens - density_thresh_comoving) * dVol
+
+      ! does current cell lie within accretion radius of any sinks?
+      if (np_found .gt. 0) then
+
+         do npf = 1, np_found
+            radius(npf) = ... ! dist from cell to sink
+            etot(npf) = ...  ! grav + kinetic energy, computed including only the mass above density thresh
+            vr(npf) = ...  ! radial velocity
+         end do
+
+         inner_r_accr = max( 0.2*accretion_radius_comoving, (dVol**(1.0/3.0)) )
+
+         do npf = 1, np_found
+
+             ! FLASH 4.5 VERSION, WITHOUT ANDREA GATTO BUG FIX
+             !   ...
+             !   IF cell lies within "inner" accretion radius
+             !   of any sink(s), always accrete to most
+             !   strongly bound sink
+             !   ...
+             !   ELSE, check Etot<0, vr < 1e-5*cs,
+             !   if satisfied, then accrete to most strongly
+             !   bound sink
+
+             ! ANDREA GATTO BUG FIX
+             !   ...
+             !   IF cell lies within "inner" accretion radius
+             !   of any sink(s), query Etot
+             !   ...
+             !   ELSE, check Etot<0, vr < 1e-5*cs,
+             !   if satisfied, query Etot
+             !   ...
+             !   RESULT, take lowest Etot cell that is
+             !   either "inner" or ("outer" + bound)
+             !   this allows cell to accrete to a sink
+             !   outside "inner" radius if it is more
+             !   strongly bound to that sink AND
+             !   passes the Etot, vr checks
+
+         end do  ! loop over all nearby sinks
+      end if  ! cell is near >=1 sink
+   end do  ! coords
+end do  ! blocks
+
+call pt_sinkGatherGlobal(...) ! MPI communicate sink properties
+
+do lp = 1, localnp
+   ! check if local particle is affected by regions on other CPUs
+   do nlp = localnp+1, localnpf
+      if(int(particles_local(iptag,lp)) .eq.  int(particles_global(iptag,nlp))) then
+         tot_mass(lp) = tot_mass(lp) + particles_global(ipm,nlp)
+         ...
+      end if
+   end do
+
+   ! update particle properties (conservation laws)
+   particles_local(iold_pmass,lp) = particles_local(ipm,lp)
+   if (tot_mass(lp) .ne. 0.0) then
+       ! mass update
+       particles_local(ipm,lp) = particles_local(ipm,lp) + tot_mass(lp)
+       ! position update
+       px_old = particles_local(ipx,lp)
+       py_old = particles_local(ipy,lp)
+       pz_old = particles_local(ipz,lp)
+       particles_local(ipx,lp) = particles_local(ipx,lp) + cm_x(lp)/particles_local(ipm,lp)
+       particles_local(ipy,lp) = particles_local(ipy,lp) + cm_y(lp)/particles_local(ipm,lp)
+       particles_local(ipz,lp) = particles_local(ipz,lp) + cm_z(lp)/particles_local(ipm,lp)
+       ...
+   end if
+end do
+
+! Josh added queries to save local gas conditions as sink properties
+\end{lstlisting}
+
+After accreting, the sink immediately adopts the center-of-mass (COM) position
+and velocity of the combined sink-and-accreted-gas system.
+
+The COM position/velocity update includes the sink's own mass in a subtle way.
+The sink's own mass enters via total mass \texttt{particles\_local(ipm,lp)}
+during the position update step.
+
+Andrea Gatto bug fix... motivation unknown to AT (2019 dec 18).
+Josh picked it up from Andrea and added it at some point.
+
+% -----------
+% Stellar IMF
+% -----------
+\subsection{Stellar IMF sampling}
+
+%Key questions: is there a high-mass cutoff?  What is low-mass slope?  Does IMF
+%for clusters differ from galaxy-integrated IMF?
+
+The main star-forming algorithm uses a Kroupa IMF, with a marginally different
+index than the Kroupa papers cited:
+\begin{align*}
+    \frac{\mathrm{d} N}{\mathrm{d} M} \propto
+    \begin{cases}
+        M^{-0.30}, & 0.01 < M/\Msun < 0.08 \\
+        M^{-1.30}, & 0.08 < M/\Msun < 0.50 \\
+        M^{-2.30}, & 0.50 < M/\Msun
+    \end{cases}
+\end{align*}
+
+
+Salpeter (\href{https://ui.adsabs.harvard.edu/abs/1955ApJ...121..161S}{1955ApJ...121..161S}) IMF:
+\[
+    \frac{\mathrm{d} N}{\mathrm{d} M} \propto M^{-2.35}
+\]
+for $-0.4 < \log_{10} \left(M/\Msun\right) < +1.0$, or roughly $0.4 \Msun$ to
+$10 \Msun$.
+
+Weidner and Kroupa
+\href{http://adsabs.harvard.edu/abs/2004MNRAS.348..187W}{2004MNRAS.348..187W}
+Section 2 states:
+\begin{align*}
+    \frac{\mathrm{d} N}{\mathrm{d} M} \propto
+    \begin{cases}
+        M^{-0.30}, & 0.01 < M/\Msun < 0.08 \\
+        M^{-1.30}, & 0.08 < M/\Msun < 0.50 \\
+        M^{-2.30}, & 0.50 < M/\Msun < 1.00 \\
+        M^{-2.35}, & 1.00 < M/\Msun
+    \end{cases}
+\end{align*}
+
+Weidner, Kroupa, Pflamm-Altenburg
+\href{http://adsabs.harvard.edu/abs/2013MNRAS.434...84W}{2013MNRAS.434...84W}
+Appendix B states:
+\begin{align*}
+    \frac{\mathrm{d} N}{\mathrm{d} M} \propto
+    \begin{cases}
+        M^{-0.30}, & 0.01 < M/\Msun < 0.08 \\
+        M^{-1.30}, & 0.08 < M/\Msun < 0.50 \\
+        M^{-2.35}, & 0.50 < M/\Msun < M_\mathrm{max}
+    \end{cases}
+\end{align*}
+
+
+% ----------------
+% Multiples
+% ----------------
+\subsection{Multiples}
+
+In AMUSE's multiples module, a bound binary is represented by one
+center-of-mass (COM) particle and two star particles (leaves).  For now,
+consider only binaries and ignore triples or higher-order systems.
+
+The COM particle is the ``root'' of its tree.  It exists in FOUR different data
+structures:
+\begin{verbatim}
+    grav.particles              # ph4 buffer
+    mult._inmemory_particles    # copy (not view) of ph4 buffer
+    mult.root_to_tree = {
+        root: tree,             # the key "root" is a particle
+        ...
+    }
+    tree.particle               # taken from root_to_tree
+\end{verbatim}
+The four particle copies are usually updated together.
+
+The \texttt{tree} is an instance of:
+\begin{verbatim}
+    amuse.datamodel.trees.BinaryTreeOnParticle
+\end{verbatim}
+which represents (1) a node and two children.  The children may in turn be COM
+particles, and so on and so forth.
+
+Warning: in Multiples, the \texttt{root} and \texttt{tree.particle} are usually
+NOT synced with gravity code.  The \texttt{tree.particle} captures the system
+state when the binary first formed.  However, to account for stellar evolution,
+\texttt{TORCH} modifies and update these particles (and the leaf particles /
+stars as well).
+
+Warning: the AMUSE logic seems to assume \textbf{full} binary trees; that is,
+every node has either zero or two children.  Some of its functions will NOT
+work correctly for trees with one-child nodes.
+
+Historical note: Josh experimented with channels to Multiples.  It seems like
+this did not work, since the \texttt{mult.stars} Particles set is constructed
+dynamically from the \texttt{mult.root\_to\_tree} and probably doesn't play
+well with AMUSE channels.  Josh settled for iterating through the Multiples
+tree at every sync operation to Multiples.
+
+%AT has hand-written notes from study/reading of Multiples, from late 2019 October.
+
+
+% ==============================================
+% Ray tracing, ionization, heat/cool sub-cycling
+% ==============================================
+\section{The Sub-Cycle: rays, ionization, heat/cool}
+
+\textbf{One moral:} in runtime parameters, set the ionization fraction $x$ to the
+equilibrium value for your initial temperature and density.
+Cold gas can take $> 10^9 \unit{yr}$ for cosmic ray ionization and
+recombination to balance; if the initial ionization is wrong, the heating and
+cooling may be wrong too.
+
+Timestep sub-cycling: only triggered for rapidly varying radiation fields.
+Tentatively (as of April 2019), heating and cooling is NOT sub-cycled.
+IF the ionization is stable, \texttt{RadTrans} will take two steps.
+It first computes an ionization timestep using \texttt{rt\_dt = 0.01 dt}.
+Then, it advances rays, ionization, and heating/cooling using (almost) the full
+hydro timestep, \texttt{rt\_dt = 0.99 dt}.
+
+Ionization: implicit solve + timestep-estimation is explained in Josh's thesis
+and Paper II.  Baczynski used an explicit solve and accounted for electrons
+from metals.
+
+\textbf{TODO low priority (2019 April 25):} when the gas is almost fully
+ionized and $1-x \ll 1$, the quadratic solve returns $x$, but the value of
+$1-x$ may be inaccurate (subtracting two big numbers to get a small number).
+Not tested, not yet demonstrated whether this is a problem or not.
+
+\textbf{TODO low priority (2019 May 01):} do the ionization more simply when
+there are no stars.  No need for clever sub-cycling with rad transfer in this
+case, just advance the ionization and proceed!
+
+% ===========
+% Ray tracing
+% ===========
+\section{Ray tracing}
+
+The code is split across two units.  First a particle unit:
+\texttt{Particles/ParticlesMain/ray\_pe}
+then a rad transfer unit:
+\texttt{physics/RadTrans/RadTransMain/RayRad} .
+Two PPDEFINE flags indicate presence of ray tracing units:
+FERVENT and PE\_HEATING.  Both ray and ray\_pe versions of unit will define
+FERVENT.
+
+There exists an old version of the raytracing particle unit,
+\texttt{Particles/ParticlesMain/ray}, that HAS been modified by Josh; not sure
+if it's up to date or if it works.
+
+
+% ==========
+% Ionization
+% ==========
+\section{Ionization}
+
+\textbf{Torch} solves an ionization equation for a pure hydrogen gas:
+\begin{equation}
+    \frac{\dtl x}{\dtl t}
+    = C_\mt{cl}(T) n_\mt{H} x (1-x) + k_\mt{ion} (1-x) - \alpha_B(T) n_\mt{H} x^2
+\end{equation}
+or equivalently
+\[
+    \frac{\dtl n_e}{\dtl t}
+    = C_\mt{cl}(T) n_e n_\mt{HI} + k_\mt{ion} n_\mt{HI} - \alpha_B{T} n_e n_p
+\]
+in \texttt{calc\_ionization.F90}.
+The ionization fraction $x = n_e/n_\mt{H}$, the total H nucleon density
+$n_\mt{H} = n_\mt{HI} + n_e$, and the electron/proton densities $n_e$ and $n_p$
+are equal.  Compared to FERVENT, \textbf{Torch} omits electrons from metals,
+dust-catalyzed recombination, and CR ionization of molecules.
+
+\subsection{Ionization Terms}
+
+Collisional ionization follows equation (3) of Cox and Tucker
+\href{1969ApJ...157.1157C}{http://adsabs.harvard.edu/abs/1969ApJ...157.1157C}.
+Draine's textbook restates and abridges Cox/Tucker's result.
+\begin{align}
+    C_\mt{cl}
+    &= \frac{1.3 \times 10^{-8} \times 0.83 \times 1 \unit{cm^{3}\;s^{-1}}}{13.598^2}
+    \;
+    T^{1/2} \exp \left( - \frac{13.598 \unit{eV}}{\kB T}\right) \\
+    %&= \left( 5.8 \times 10^{-11} \unit{cm^{3}\;s^{-1}} \right)
+    %T^{1/2} \exp \left( - \frac{13.598 \unit{eV}}{\kB T}\right)
+    &= 5.8 \times 10^{-9} \unit{cm^{3}\;s^{-1}}
+    \left(\frac{T}{10^4\unit{K}}\right)^{1/2} \exp \left( - \frac{13.598 \unit{eV}}{\kB T}\right)
+\end{align}
+
+The ``Case B'' recombination coefficient is from Draine's book; it is good for
+$T = 30$ to $30,000\unit{K}$:
+\[
+    \alpha_B
+    = 2.54 \times 10^{-13} \unit{cm^{3}\;s^{-1}}
+    \left( \frac{T}{10^4 \unit{K}} \right)^{-0.8163 - 0.0208\ln(T/10^4\unit{K})}
+\]
+C.~Baczynski uses a simpler expression that is credited to Osterbrock (1989).
+The Osterbrock and Draine expressions differ by $\abt 20\%$ or less over the
+temperature range given by Draine.
+\[
+    \alpha_B
+    = 2.59 \times 10^{-13} \unit{cm^{3}\;s^{-1}}
+    \left( \frac{T}{10^4 \unit{K}} \right)^{-0.7}
+\]
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.5\textwidth]{{fig/recombination_case_b}.pdf}
+    \caption{
+        Recombination case B coefficients.
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+The photoionization rate $k_\mt{ion}$ combines (1) background cosmic-ray (CR)
+ionization of \textit{molecular} H2 to H2+, and (2) ionizing photons from FUV-emitting
+stars.  The CR ionization is from eqn (27) and Table 4 of Padovani, Galli, and
+Glassgold
+\href{https://ui.adsabs.harvard.edu/abs/2009A\%26A...501..619P/abstract}{2009A\&A...501..619P}.
+Josh uses ``W98'' spectrum shown in Figure 13.
+\textbf{WARNING/TODO:} the exponential cutoff for $N(H_2) > 10^{25}
+\unit{cm^{-2}}$ is NOT IMPLEMENTED.  For that, see the paper's corrigendum:
+\href{https://ui.adsabs.harvard.edu/abs/2013A\%26A...549C...3P/abstract}{2013A\&A...549C...3P}.
+\[
+    k_\mt{ion,CR} = \zeta^{H_2}_k
+    = 2 \times 10^{-17} \unit{s^{-1}} \left( \frac{N(H_2)}{10^{20} \unit{cm^{-2}}} \right)^{-0.021}
+\]
+To convert from volume density to column density, Josh uses a local
+approximation valid for $N(H_2) \sim 10^{20}$ to $10^{25} \unit{cm^{-2}}$:
+\begin{align*}
+    N(H_2) &\approx \lambda_\mt{J} n_\mt{H} \\
+    \lambda_\mt{J} &= \sqrt{\frac{5 \pi \kB T}{\mu \rho G}} \propto c_s t_\mt{ff}
+\end{align*}
+where $\mu = \rho / n$ is mean particle mass.
+
+%\textbf{TODO 2019 April 25:} column density approximation, do we need to halve
+%the number density from FLASH?  Relates to assumptions on molecular vs atomic
+%gas fraction.  Very unimportant here: the CR ionization rate is almost constant
+%with respect to number density.  But may matter elsewhere.
+
+\textbf{TODO 2019 May 31:} Walch+ 2015 (SILCC) mention: ``at no point do we
+assume that hydrogen is in collisional ionization equilibrium: its contribution
+to the cooling rate is determined self-consistently at all temperatures,
+allowing us to properly model the non-equilibrium effects that can strongly
+affect the cooling rate at temperatures close to $10^4$ K''.
+\textbf{Do we need to consider this?  Need to read more}
+
+\subsection{Ionization Equilibrium}
+
+To find the correct starting ionization for your simulation, set $\dtl x/\dtl t
+= 0$.  This gives a quadratic for the equilibrium value of $x$:
+\begin{equation}
+    0 = \left( C_\mt{cl}(T) + \alpha_B(T) \right) n_\mt{H} x^2
+    + \left(-C_\mt{cl}(T) + k_\mt{ion}\right) x
+    - k_\mt{ion}
+\end{equation}
+Beware, the solution is not so accurate for $x \approx 1$.
+I find unphysical $x > 1$ when solving this quadratic with $\rho = 10^{-25}
+\unit{g\;cm^{-3}}$ and $T = 10^6 \unit{K}$.
+It is probably necessary to swap variable to $1-x$ to do the calculation
+accurately.
+
+
+% ===============
+% Heating/Cooling
+% ===============
+\section{Heating/Cooling}
+
+Like ionization, heat/cool is intimately tied to radiation transfer.
+Location: \\
+\texttt{HeatMain/HeatCool/phenHeat/mol\_and\_dust/solver}.
+
+\textbf{Developer warning:} lots of global variables used here.
+
+Truth table for heating/rad parameters:
+\begin{verbatim}
+    useHeat  rt_useRadTrans  rt_heatInRad
+    F        ...             ...            Heat.F90 does nothing
+    T        F               F              Heat.F90 calls RadHeat
+    T        F               T              Heat.F90 calls RadHeat
+    T        T               F              Heat.F90 calls RadHeat
+    T        T               T              Heat.F90 does nothing, RadTrans calls RadHeat
+\end{verbatim}
+
+There is also the parameter \texttt{useRadTransfer}, which toggles the code for
+ray tracing in \texttt{ParticlesMain/ray} and \texttt{ParticlesMain/raype};
+therefore \texttt{useRadTransfer} does not
+directly affect heating/cooling in the above truth table! (but of course if you
+turn off stars' radiation, that will change feedback heating)
+
+
+% -------------------
+% Gas Heating/Cooling
+% -------------------
+\subsection{Gas heat/cool}
+obeys the equation
+\begin{equation}
+    \frac{\dtl \epsilon}{\dtl t} =
+    \Gamma_\mt{phen} + \Gamma_\mt{CR} + \Gamma_\mt{PE}
+    - \Lambda_\mt{atom} - \Lambda_\mt{mol} - \Lambda_\mt{g\to d}
+\end{equation}
+where $\epsilon$ is specific energy in units $\mathrm{erg\;g^{-1}}$,
+so all $\Gamma$ and $\Lambda$ have units $\mathrm{erg\;s^{-1}\;g^{-1}}$.
+
+\textbf{Method:} use implicit finite-difference scheme.
+Let $f\left(\epsilon\right) = \dtl\epsilon/\dtl t$.  Then, the scheme is:
+\[
+    \frac{\epsilon^{n+1} - \epsilon^{n}}{\Delta t}
+    =
+    f \left(\epsilon^{n+1}, n^n, T_\mt{dust}^{n+1}, \ldots\right)
+\]
+where $n$ and $n+1$ index hydro timesteps or a heat/cool subcycle of size
+$\Delta t$.  The code seeks the root of:
+\[
+    \epsilon^{n+1} - \Delta t f \left(\epsilon^{n+1}, \ldots\right) - \epsilon^n = 0
+\]
+\textbf{Developer warning:} the bracket- and root-finding code is called as follows:
+\begin{lstlisting}[language=Fortran]
+    call zbrac(f, x1, x2, xold, dt, success)
+    call zero(a, b, a_old, machep, t, f, dt)
+\end{lstlisting}
+These functions do NOT operate on function \texttt{f}, but rather operate on the
+left-hand side of the equation:
+\begin{lstlisting}[language=Fortran]
+    x - dt * f(dt, x) - xold = 0
+\end{lstlisting}
+in order to implement the implicit solve.  This is very confusing, but works
+correctly.
+Fortran functions are not first-class
+functions; we cannot easily pass them around like objects.  So engineering the
+bracket- and root- finding code in a general way is a bit non-trivial.  Maybe
+modern Fortran features can alleviate?
+
+\textbf{Numerics warning:} implicit solve is formally stable, but can still be
+inaccurate.  See Townsend \url{http://adsabs.harvard.edu/abs/2009ApJS..181..391T}
+for a discussion and an alternative scheme (not implemented in Torch, yet).
+
+% ---------------------------
+\subsubsection{Photo-heating}
+
+$\Gamma_\mt{phen}$ is ``direct'' radiation heating (also called
+photo-heating), \texttt{PHHE\_VAR/DENS\_VAR}.
+
+% ------------------------
+\subsubsection{CR heating}
+
+$\Gamma_\mt{CR}$ is heating from cosmic rays, eqn (27) and Table 4 of
+Padovani, Galli, and Glassgold
+\href{https://ui.adsabs.harvard.edu/abs/2009A\%26A...501..619P/abstract}{2009A\&A...501..619P}.
+\[
+    \Gamma_\mt{CR} =
+        \left(20 \unit{eV}\right) \left(2 \times 10^{-17} \unit{s^{-1}}\right)
+        \left( \frac{N(H_2)}{10^{20} \unit{cm^{-2}}} \right)^{-0.021}
+    =   6.41 \times 10^{-28} \unit{erg\;s^{-1}}
+        \left( \frac{N(H_2)}{10^{20} \unit{cm^{-2}}} \right)^{-0.021}
+\]
+where $20 \unit{eV}$ is the average energy liberated by CR ionization.
+%This should \textbf{TODO:check} account for secondary ionizations as well.
+
+% -----------------------------------
+\subsubsection{Photoelectric heating}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{{fig/pe_heating}.pdf}
+    \caption{
+        PE heating expressions from BT94 and WD01
+        Note, I rescaled WD01 expression
+        from $10^{-26} \unit{erg\;s^{-1}}$
+        to $10^{-24} \unit{erg\;s^{-1}}$
+        in order to permit direct comparison of $\epsilon$ with BT94.
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+Warning: notes on PE heating were for quick, one-off study, not meant for
+long-term use.  Please clean up / check carefully before using.
+
+$\Gamma_\mt{PE}$ is photoelectric heating; i.e., ``indirect'' radiation heating
+from \texttt{PEFL\_VAR} liberating electrons on dust grains.  First, we need
+the FUV flux:
+\[
+    G = \mathtt{PEFL\_VAR} + G_0 \, f_\mt{shield}\left(\rho,n,T\right) e^{-|z| / z_{0,FUV}} ,
+\]
+where $G$ and $G_0$ are normalized to the
+Habing flux $1.6 \times 10^{-3} \unit{erg\;s^{-1}}$.
+Josh adopts $G_0 = 1.69$ following Draine (1978).
+Note: Josh's thesis defines $G_0$ as the dimension-ful Habing flux.
+Here, $G_0 = \mathtt{he\_Gzero} = 1.69$ means a heating rate
+$1.69 \times 1.6 \times 10^{-3} \unit{erg\;s^{-1}}$;
+Bakes/Tielens (1994) use our convention, Weingartner/Draine use $G$ instead of
+$G_0$.
+%\textbf{TODO (20190619): I think Josh is trying to follow Weingartner/Draine convention.
+%Change code variable name.}
+
+The heating rate is from Weingartner and Draine
+\href{http://adsabs.harvard.edu/abs/2001ApJS..134..263W}{2001ApJS..134..263W},
+equation (44) and Table 2 with $R_V = 3.1$ and $b_c = 6 \times 10^{-5}$.
+\begin{align*}
+    G_\mt{f} &= G \sqrt{T} / n_\mt{e} \\
+    \epsilon &= \frac{ 7.64 + 4.52 \times T^{0.132} }{ 1 + 0.04371 {G_\mt{f}}^{0.452} \left(1+0.00557{G_\mt{f}}^{0.675}\right) } \\
+    \Gamma_\mt{PE} &= 10^{-26} \unit{erg\;s^{-1}} \times \epsilon G n / \rho
+\end{align*}
+The factor $n/\rho = 1/\mu$ gives a specific heating rate.
+Note that $\epsilon$ influences how the radiation energy from $G$ gets divided between
+thermal energy of gas versus dust; the heating rate for dust is
+$\Gamma_\mt{PE\to dust} = 10^{-26} \unit{erg\;s^{-1}} \times (1-\epsilon) G n / \rho$.
+whenever $\epsilon < 1$.
+
+% fixed in june 2019 - but maybe good to review this 1 - epsilon calculation.
+
+%For reasonable temperatures and densities, say
+%$T < 10^4 \unit{K}$ and $n > 10^{-4} \unit{cm^{-3}}$,
+%the factor $\epsilon > 1$ and so dust doesn't get any heating, all the energy goes
+%into the liberated photo-electron.
+%\textbf{TODO 2019 June 14} I'm not sure how to understand the $1-\epsilon$ in the
+%code, one expects energy from FUV flux to be partitioned into dust and free
+%electron (gas) heat.  Any energy dumped in dust will radiate away, but that
+%ought to be accounted for in the dust temperature calculation.  Problem is
+%$\epsilon$ does not lie within $[0, 1]$.
+%\textbf{TODO 2019 June 19} I think this is resolved by rescaling from
+%$10^{-26}$ to $10^{-24}$ in WD01 pre-factor.
+
+%The Weingartner/Draine expression is a bit confusing - the range of values is
+%quite large at the densities we are considering.  What is the range of
+%validity?
+%Also, Josh is adding a local column density approx, which counter-balances this
+%effect somewhat.
+In Torch, $n_e = x n_\mt{H}$ is taken from the ionization solver, which does
+not track O, C, etc chemistry.  So our PE heating rates should be considered
+fairly approximate.
+
+Joung, M-MML (2006), Hill+ (2012), and Hill+ (2018) use a simpler form of this
+expression:
+\[
+    \Gamma_\mt{PE} = 10^{-24} \unit{erg\;s^{-1}} \times \epsilon G n / \rho
+\]
+with $G = G_0 e^{-|z| / z_{0}}$ (this FUV scale height $z_0$ may differ from
+grav, SN driving scale heights).
+Joung, M-MML (2006) adopt $G_0 = 1.7$ and $\epsilon = 0.05$, yielding
+$\Gamma_\mt{PE}/n = 0.85 \times 10^{-25} \unit{erg\;s^{-1}\;(H\,atom)^{-1}}$.
+Hill+ (2018) adopt a larger fiducial value
+$\Gamma_\mt{PE}/n = 3 \times 10^{-25} \unit{erg\;s^{-1}\;(H\,atom)^{-1}}$.
+
+Kim and Ostriker (2017) do FUV from star particles.
+They make two adjustments: (1) smooth linear turnoff towards high temperature,
+using their mean molecular mass prescription (a proxy for ionization), and (2)
+use a floor to represent ``metagalactic FUV'' that is present even in the
+absence of star particles.  For cold gas with $\mu(T) = \mu_\mt{atomic}$, they
+use $\Gamma = 0.0024 \times 2 \times 10^{-26} \unit{erg\;s^{-1}}$.
+
+Josh also implemented (but now disabled) Wolfire 1995 and 2003 prescription.
+Let's review these.
+
+Wolfire+ 1995 equations (1--2) are:
+\begin{align*}
+    \Gamma &= 10^{-24} \unit{erg\;s^{-1}} \epsilon G_0 \\
+    \epsilon
+    &= \frac{0.049}{1 + \left( G_\mt{f} / 1925 \right)^{0.73}}
+    + \frac{0.037 \left(T/10^4\unit{K}\right)^{0.7}}{1 + G_\mt{f} / 5000}
+\end{align*}
+where the efficiency $\epsilon$ is from Bakes \& Tielens 1994 and spans 0.001
+to 0.1 for a range of $G_\mt{f}$ values.
+
+Wolfire+ 2003 equations (19--20) are nearly the same, but adjusted to higher
+PAH abundances:
+\begin{align*}
+    \Gamma &= 1.3 \times 10^{-24} \unit{erg\;s^{-1}} \epsilon G_0 \\
+    \epsilon
+    &= \frac{0.049}{1 + \left(G_\mt{f}/1925/\phi_\mt{PAH}\right)^{0.73}}
+    + \frac{0.037 \left(T/10^4\unit{K}\right)^{0.7}}{1 + G_\mt{f}/5000/\phi_mt{PAH}}
+\end{align*}
+Wolfire+ 2003 adopt $\phi_\mt{PAH} = 0.5$ for their ``standard model''.
+
+OTHER references: Wolfire 1995, Avillez and Breitschwerdt 2004
+
+% -----
+% a bit messy - discussion of this (1-epsilon) factor needs to be cleaned up
+%
+%% Question: how do we budget PEH heating to dust vs to gas?  I.e., how to explain
+%% Josh's $(1-f)$ factor.
+%%
+%% ISRF: Weingartner/Draine quoted $5.33 \times 10^{-14} \unit{erg\;cm^{-3}}$ for
+%% Habing (1968) and $8.93 \times 10^{-14} \unit{erg\;cm^{-3}}$ for Draine (1978).
+%% Is it safe to assume equilibrium reaction?
+%%
+%% Goldsmith \href{https://ui.adsabs.harvard.edu/abs/2001ApJ...557..736G/abstract}{2001ApJ...557..736G}
+%% and
+%% Banerjee, Pudritz, Anderson
+%% \href{http://adsabs.harvard.edu/abs/2006MNRAS.373.1091B}{2006MNRAS.373.1091B}
+%% do not include PEH/external heating term, because FUV flux is shielded in
+%% cores.
+%%
+%% Klessen/Glover 2014 review states dust heating in terms of $\Gamma_\mt{ext}$,
+%% not separating contributions from CR and photo-heating.
+%% The specific heating rate is of order
+%% $\Gamma_\mt{ext} \sim 3 \times 10^{-24} \unit{erg\;s^{-1}} \, n/\rho$
+%% which is like $10\times$ larger than the PE heating rate, so it's probably OK
+%% to neglect the dust photo-heating that goes into gas rather than dust.
+%%
+%% If $\Gamma_\mt{ext}$ is dominated by photo-heating and not CRs, then  on the
+%% basis of the cited heating rate, I think the use of $(1-\epsilon)$ in the code
+%% can be adjusted by rescaling the Weingartner/Draine expression to
+%% $10^{-24} \unit{erg\;s^{-1}}$, which lowers $\epsilon$ by $10$--$100$.
+% -----
+
+Krumholz's star formation textbook quotes a lower number:
+\[
+    \Gamma = 4 \times 10^{-26} G_0 \unit{erg\;s^{-1}}
+\]
+where I assume Habing is correct for ``local interstellar''.  For efficient
+$\epsilon=0.05$, this implies total heating of gas and dust to be $8 \times
+10^{-25} \unit{erg\;s^{-1}}$.
+This is quite close to the value used by Joung and M-MML 2006, but somewhat
+lower than the values considered by Hill+ (2018): $10^{-25}$ to $10^{-24}$
+(pure PE gas heating, not the total FUV gas+dust heating).
+
+% ----------------------------------
+\subsubsection{Atomic cooling curve}
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.8\textwidth]{{fig/gas_atomic_cool}.png}
+    \caption{
+        Atomic cooling curve compared to Dalgarno/McCray 1972.
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+$\Lambda_\mt{atom}$ is the cooling curve for atomic gas, originally used
+in Joung and Mac Low 2006.  The references are:
+Dalgarno and McCray \href{http://adsabs.harvard.edu/abs/1972ARA\%26A..10..375D}{1972ARA\&A..10..375D},
+Sutherland and Dopita \href{https://ui.adsabs.harvard.edu/abs/1993ApJS...88..253S}{1993ApJS...88..253S}
+
+Dalgarno/McCray include (1) free electron collisions that excite lines in both
+ions and neutrals, (2) neutral hydrogen collisions in low-ionization regime to
+excite fine structure lines of C${}^+$ and O.  They also state:
+``The conversion of H to H${}_2$ substantially \emph{reduces} the cooling rate
+of gas at low temperatures.  The spin change mechanism that [controls]
+fine-structure excitation by neutral atomic hydrogen impact does not operate
+with molecular hydrogen.'' They don't give rate estimates for H2 cooling, and
+suggest just dividing atomic hydrogen rates by 4.
+
+The validity of the atomic cooling curve at lower temperature is uncertain.
+
+Comparison: Wolfire+ 1995 and 2003 explicitly write formulae for the
+fine-structure line cooling from C II, O I, et cetera.
+
+Dopita \& Sutherland is standard: recombination cooling and bremsstrahlung,
+fewer physical processes need be considered in general.
+
+% -------------------------------------
+\subsubsection{Molecular cooling curve}
+
+$\Lambda_\mt{mol}$ uses molecular cooling tables (\texttt{cool.dat}) adopted from
+Neufeld+ 1993, Neufeld+ 1995; Banerjee papers 2004, 2006a, 2006b, 2015.
+
+\textbf{Note:} H2 dissolution and formation timescales are comparable to MC
+timescales, but we don't account for this chemistry!
+
+Glover \& Clark
+\href{https://ui.adsabs.harvard.edu/abs/2012MNRAS.421..116G/abstract}{2012MNRAS.421..116G}
+have simulations with $n \sim 1$ to $100 \unit{cm^{-3}}$
+with CO forming over $\abt 1 \unit{Myr}$.
+Bigger simulation with colliding flows indicates $1$--$10 \unit{Myr}$,
+Clark, Glover, Klessen, Bonnell
+\href{https://ui.adsabs.harvard.edu/abs/2012MNRAS.424.2599C}{2012MNRAS.424.2599C}
+
+Liszt
+\href{https://ui.adsabs.harvard.edu/abs/2007A\%26A...461..205L/abstract}{2007A\&A...461..205L}
+cites $\abt 10 \unit{Myr}$ in a neutral H I cloud of column density
+$N(H) \sim 4 \times 10^{20} \unit{cm^{-2}}$ (which is low-ish compared to big
+MW clouds, I think).
+
+Useful overview of molecule cooling: Goldsmith and Langer
+\href{https://ui.adsabs.harvard.edu/abs/1978ApJ...222..881G/abstract}{1978ApJ...222..881G}
+
+
+% -------------------------------------
+\subsubsection{Collisional gas-to-dust cooling}
+
+$\Lambda_\mt{g\to d}$ cooling from gas colliding with dust, then dust
+rapidly radiating away (dust acts as a heat sink).
+\[
+    \Gamma_\mt{g\leftarrow d}
+    = \left(3.8 \times 10^{-33} \unit{erg\;cm^3\;s^{-1}} \right)
+      \left(1 - 0.8 e^{-75/T_\mt{g}}\right)
+      {T_\mt{g}}^{1/2} \left( T_\mt{g} - T_\mt{d} \right) {n_\mt{H}}^2 \rho^{-1}
+    % this is volumetric rate erg /s /cm^3
+    % convert to specific rate erg/s/g
+\]
+This is erg/s/g instead of erg/s/cm${}^3$ expressions quoted in dust heat/cool
+calculation; they differ by a factor $\rho^{-1}$.
+
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.5\textwidth]{{fig/gas_cool}.pdf}
+    \caption{
+        Atomic cooling curve with interpolation at low temperature,
+        and also dust cooling.
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+% --------------------
+% Dust Heating/Cooling
+% --------------------
+\subsection{Dust heat/cool}
+obeys the equation
+\begin{equation}
+    n \frac{\dtl \epsilon}{\dtl t} =
+    \Gamma_\mt{PE} + \Gamma_\mt{CR} + \Gamma_\mt{d\leftarrow g}
+    - \Lambda_\mt{dust}
+\end{equation}
+where we have abruptly switched to volumetric heating rates, units:
+$\mathrm{erg\;s^{-1}\;cm^{-3}}$.
+
+\textbf{Method:} to solve for dust temperature, let $f\left(T_\mt{d}\right) = n \; \dtl\epsilon/\dtl t$.
+Use Newton's method.  Iteratively compute:
+\[
+    T_\mt{d,new} = T_\mt{d} - \frac{ f\left(T_\mt{d}\right) }{ \frac{\ptl f}{\ptl T_\mt{d}} }
+\]
+until $T_\mt{d,new} = T_\mt{d}$ is converged.  This solution method, plus
+commented out code relating to dust opacity, is described in the appendix of
+Banerjee, Pudritz, Anderson \href{http://adsabs.harvard.edu/abs/2006MNRAS.373.1091B}{2006MNRAS.373.1091B}.
+\textbf{TODO 2019 May 15: can we just use Brent's method instead?}
+
+$\Gamma_\mt{PE}$ and $\Gamma_\mt{CR}$ are radiative and CR heating
+respectively.  This replaces the commonly assumed ``external'' heating
+$\Gamma_\mt{ext}$ from an assumed interstellar radiation field (ISRF).
+\textbf{TODO 2019 May 14:} check that we reproduce correct ``external'' heating
+rate with Habing FUV background?
+
+$\Gamma_\mt{d\leftarrow g}$ is collisional heating of dust by gas from
+Glover/Clark 2012, taken from Hollenbach/McKee.  Here $T_\mt{g}$ and $T_\mt{d}$
+are gas and dust temperatures respectively.
+\[
+    \Gamma_\mt{d\leftarrow g}
+    = 3.8 \times 10^{-33} \left(1 - 0.8 e^{-75/T_\mt{g}}\right)
+    {T_\mt{g}}^{1/2} \left( T_\mt{g} - T_\mt{d} \right) {n_\mt{H}}^2
+\]
+
+
+$\Lambda_\mt{dust}$ is radiative dust cooling from Goldsmith 2001:
+\[
+    \Lambda_\mt{dust}
+    =
+    6.8 \times 10^{-33} {T_\mt{d}}^6 \; n\left(\mt{H}_2\right)
+\]
+in units $\mathrm{erg \; s^{-1} \; cm^{-3}}$.
+
+This apparently disagrees with the result stated in Glover and Clark 2012
+(reprinted in Klessen and Glover 2014 review).
+I probably didn't account for or understand a necessary pre-factor.
+Anyways, Glover and Clark (2012) state in equations (A7-8):
+\[
+    \Lambda_\mt{dust}
+    =
+    4\pi \rho_d \int_0^\infty B_\nu\left(T_\mt{d}\right) \; \kappa_\nu \dtl\nu
+    \approx
+    4.68 \times 10^{-31} {T_\mt{d}}^6 \; n
+\]
+in units $\mathrm{erg \; s^{-1} \; cm^{-3}}$.
+Here $n$ is hydrogen number density, dust-to-gas mass ratio is probably $0.01$
+(they claim it's a ``standard value'' but don't state the number),
+and opacity $\kappa(\nu)$ is taken from Ossenkopf and Henning
+\href{http://adsabs.harvard.edu/abs/1994A\%26A...291..943O}{1994A\&26A...291..943O}
+for wavelengths $> 1 \unit{\mu m}$, and Mathis et al.~(1983) for shorter
+wavelengths.  The Ossenkopf/Henning opacities are for non-coagulated grains
+with thick ice mantles, intended for protostellar core modeling.
+
+The use of molecular versus atomic number density can only explain a factor of
+$2$ difference at most.  Why are these values so different?
+Answer (2019 May 17): opacities, cannot be anywhere else.
+MC conditions are quite different from protostellar core conditions, so
+probably more physical to use Goldsmith, which indeed we use in Torch.
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.5\textwidth]{{fig/dust_opacity}.pdf}
+    \caption{
+        Compare dust opacities from Goldsmith versus Ossenkopf/Henning
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+\textbf{Note (2019 May 15):} dust cooling equation is only good for
+$T < 100 \unit{K}$ but we are using it all the way up to $T \sim 10^4
+\unit{K}$.  In Draine book and other places, the dust cooling expression
+plateaus.
+
+Three papers cited for rates:
+Goldsmith \href{https://ui.adsabs.harvard.edu/abs/2001ApJ...557..736G/abstract}{2001ApJ...557..736G},
+Glover and Clark \href{https://ui.adsabs.harvard.edu/abs/2012MNRAS.421..116G/abstract}{2012MNRAS.421..116G},
+Hollenbach and McKee \href{https://ui.adsabs.harvard.edu/abs/1989ApJ...342..306H/abstract}{1989ApJ...342..306H}.
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.85\textwidth]{{fig/dust_heat_cool_Tgas10}.pdf}
+    \includegraphics[width=0.85\textwidth]{{fig/dust_heat_cool_Tgas10000}.pdf}
+    \caption{
+        Goldsmith versus Glover/Clark give slightly different dust
+        temperatures.  Dust attains equilibrium temperature in a fraction of a
+        second.
+        Left column: net dust heating/cooling rate for given $T_\mt{dust}$ and
+        $n_\mt{H}$.
+        Right column: timescale for dust heating/cooling.
+        Top four panels, $T_\mt{gas} = 10$; bottom, $T_\mt{gas} = 10^4$.
+    }
+    %\label{fig:peheat}
+\end{figure}
+
+% below units are only in flash4.2.2-rad/ , not part of main torch repo
+% just various old versions of heating code
+%
+%\subsection{Banerjee/Seifried mol+dust module}
+%
+%Location: \\
+%\texttt{
+%HeatMain/phenHeat/RadHeat/molecules+dust
+%}
+%
+%Code appears to harness FLASH's built-in Cooling unit?
+%
+%\subsection{JCIM?: phenHeat/IGWCurve}
+%
+%Location: \\
+%\texttt{
+%flash4.2.2-rad/source/physics/sourceTerms/Heat/phenHeat
+%}
+%
+%I dunno why this was taken out of \texttt{HeatMain}.
+%
+%\subsection{Joung/Baczynski?: phenHeat with rad xfer}
+%
+%Location: \\
+%\texttt{
+%flash4.2.2-rad/source/physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
+%}
+%
+%What is \textbf{different}?
+%
+%\subsection{Joung/Baczynski?: phenHeat}
+%
+%Location: \\
+%\texttt{
+%flash4.2.2-rad/source/physics/sourceTerms/Heat/HeatMain/phenHeat
+%}
+%
+%Heating: background FUV, user sets via \texttt{he\_peheat},
+%and photo-electric heating via variable \texttt{PHHE\_VAR}.
+%
+%Cooling: Ryan Joung wrote a cooling function from some combination of Sarazin
+%(1986), Raymond (1976), and Dalgarno \& McCray (1972).
+%
+%Sub-cycle as follows.  During $i$-th hydro step, compute the cooling time using
+%an explicit method, where $n$ and $n+1$ index the sub-cycle steps within the
+%$i$-th hydro step.
+%\begin{align*}
+%    \Delta t^n_\mathrm{sub} &= \min\left(
+%      f_\mathrm{sub} t^{n}_\mathrm{cool},\,
+%      t_{\mathrm{hy},i+1} - t^n_\mathrm{sub}
+%    \right) \\
+%    t_\mathrm{cool} &= \frac{\epsilon^{n}}{\left| \mathrm{d}\epsilon / \mathrm{d}t \right|}
+%    = \frac{\epsilon^{n}}{\left| n^2 \mathcal{L}/\rho \right|}
+%    = \frac{\epsilon^{n}}{ \left| n \Gamma(\vec{r}) - n^2 \Lambda(T^n) \right| /\rho }
+%\end{align*}
+%
+%With subcycle timestep in hand, advance subcycle energy to $\epsilon^{n+1}$
+%with an explicit method:
+%\[
+%    \frac{\epsilon^{n+1} - \epsilon^{n}}{\Delta t^n_\mathrm{sub}}
+%    = n^2\mathcal{L}/\rho = \left[ n\Gamma\left(\vec{r}\right) - n^2 \Lambda(T^n)\right]/\rho
+%\]
+
+% =============
+% Stellar winds
+% =============
+\section{Stellar winds}
+
+Implemented in: \\
+\texttt{
+source/Particles/ParticlesMain/active/Sink/Couple\_AMUSE/wind
+}
+
+Star particles have the following important properties:
+\begin{verbatim}
+    BGDY_PART_PROP              background gas density at time of wind start
+    CREATION_TIME_PART_PROP     creation time
+    DMDT_PART_PROP              star's mass loss rate
+    POSX_PART_PROP              x position
+    POSY_PART_PROP              y position
+    POSZ_PART_PROP              z position
+    VELW_PART_PROP              star's mass loss rate
+\end{verbatim}
+which are used to inject winds.
+
+Note: \texttt{ref\_radius} was formerly used in particle mark refine/derefine.
+But particle mark refine/derefine criterion has been moved to junk, so not used?.
+%\textbf{TODO (2019 Jul 03) Why was the prtl refinement removed? Or was it
+%refinement implemented elsewhere?}
+
+There is an adjustment to the injection scheme for winds without mass-loading.
+Each cell is weighted by the solid angle $\Omega$ computed from
+\[
+    \cos^2 \left(\Omega/4\right)
+    = \frac {1 + \frac{1}{2} \frac{\Delta^2}{r^2}}
+            {1 + \frac{1}{2} \frac{\Delta^2}{r^2} + \frac{\Delta^4}{r^4}}
+\]
+which should make the mass density decrease as $r^{-2}$ (i.e., constant mass in
+each shell, as expected for free expansion), according to commit
+flash4.2.2-rad \texttt{88fc47a}.
+
+Note, the feature for adding thermal energy to momentum-conserving wind is
+relatively new.  Josh has some comments to this effect,
+correct amount of thermal energy to add is not 100\% clear.
+Commit is FLASH4.5 \texttt{00272ec}.
+
+
+% ========================
+% Random Supernova Driving
+% ========================
+\section{Supernova Driving}
+
+% ---------------------------------------
+% Josh's implementation of Simpson method
+% ---------------------------------------
+\subsection{Wall: momentum+thermal SN driving}
+
+\texttt{
+source/Particles/ParticlesMain/energyInjection
+}
+
+% ----------------------------------------
+% Joung/M-MML/Baczynski thermal SN driving
+% ----------------------------------------
+\subsection{Joung: pure thermal SN driving}
+
+Principle: deposit 100\% thermal energy in a sphere.
+Mass of 60 Msun is chosen to prevent unphysical cooling (either at too hot or
+too cold temperatures).
+
+%\textbf{TODO 2019 May 16 - understand the choice of mass shells, what's going
+%on}
+
+References: Joung \& Mac Low (2006); Joung, Mac Low, \& Bryan (2009);
+Gatto et al.~(?) (2015); Ib\'{a}\~{n}ez-Mej\'{i}a et al.~(2016,2017).
+
+Key units are: \\
+\texttt{
+source/physics/sourceTerms/SN \\
+source/physics/sourceTerms/SN/SNSBrandom \\
+source/physics/sourceTerms/SN/SNSBrandom/Clustersink \\
+source/physics/sourceTerms/SN/SNSBrandom/SNsink \\
+source/physics/sourceTerms/SN/SNSBrandom/SBpeak \\
+source/physics/sourceTerms/SN/SNSBrandom/SNejecta \\
+source/physics/sourceTerms/SN/SNSBrandom/SNkinetic \\
+source/Particles/ParticlesMain/sb \\
+source/Particles/ParticlesMain/active/Sink/Clustersink \\
+source/Particles/ParticlesMain/active/Sink/SNsink \\
+}
+
+Further units, used with SNSB unit and Juan's stratboxes: \\
+\texttt{
+source/Particles/ParticlesMain/passive/RungeKuttaThermo \\
+source/Particles/ParticlesMain/passive/MonteCarlo \\
+source/Particles/ParticlesMapping/NoMap \\
+source/Particles/ParticlesMapping/InZone \\
+source/Particles/ParticlesInitialization/NParPerZone \\
+source/Particles/ParticlesInitialization/NParPerZoneMC
+}
+
+To use, request \texttt{sourceTerms/SN/SNSBrandom} and/or one of its sub-units,
+and the necessary particles unit will be loaded.
+
+A useful problem to test this unit on is
+\texttt{
+source/Simulation/SimulationMain/SNSBbox \\
+source/Simulation/SimulationMain/SNSBbox\_AT
+}
+
+Aaron ported from FLASH4.2.2 to FLASH4.5 on 2019 May 01.  The code is deeply
+interwoven into vanilla FLASH source, but this is probably the cleanest way to
+do it (avoids copy-paste, and allows the various init/mapping units to be used
+in the most modular way).
+
+Easiest way to review changes is by diffing prtl directory directly (vanilla
+FLASH vs Torch), but here is a guide to help disentangle the distinct changes
+since there's a lot going on.
+
+\textbf{TODO May 2019}: only some not all prtl functionality tested.
+
+\begin{itemize}
+
+    \item SN unit is hardcoded into Driver sourceTerms, initSourceTerms, computeDt,
+          finalizeSourceTerms.
+
+      \item \texttt{Particles/Particles.h} edited to register new particle
+          types, mapping, and initialization units. Note that
+          \texttt{RungeKuttaStatic} is hidden under
+          \texttt{ParticlesMain/sb/}.
+
+    \item \texttt{ParticlesMain/passive/Config} edited to register new passive
+        integrators RungeKuttaThermo, MonteCarlo.
+
+    \item New \textbf{ParticlesMain/passive} particle types \texttt{RungeKuttaThermo},
+        \texttt{MonteCarlo}, and \texttt{sb/RungeKuttaStatic} require
+        registration.
+
+        Define new \texttt{Particles/Particles.h} constants
+        \texttt{RUNGEKUTTASTATIC}, \texttt{RUNGEKUTTATHERMO}, and
+        \texttt{MONTECARLO}.
+
+        Add stubs: \\
+        \texttt{Particles/localAPI/pt\_advanceRKstatic.F90 \\
+                Particles/localAPI/pt\_advanceRKthermo.F90 \\
+                Particles/localAPI/pt\_advanceMonteCarlo.F90
+        } \\
+        and register them in \texttt{Particles/localAPI/Makefile} so that code
+        knows how to advance prtl from different sub-units.
+
+        Edit: \\
+        \texttt{
+            Particles/ParticlesMain/Particles\_advance.F90
+        }
+        to add new case logic for prtl advance.
+
+        Finally, for \texttt{RUNGEKUTTATHERMO} alone, edit: \\
+        \texttt{
+            Particles/ParticlesMain/Particles\_data.F90 \\
+            Particles/ParticlesInitialization/pt\_setDataStructures.F90
+        } \\
+        to get
+
+        \textbf{TODO/BEWARE!} \texttt{Particles\_advance} is overwritten by
+        AMUSE coupling code... this will probably break passive tracers.
+
+
+    \item \textbf{ParticlesInitialization} sub-units \texttt{NParPerZone} and
+        \texttt{NParPerZoneMC} require registration.
+
+        Define new \texttt{Particles/Particles.h} constants
+        \texttt{NPPARPERZONE} and \texttt{NPPARPERZONEMC}
+
+        Add stubs: \\
+        \texttt{Particles/localAPI/pt\_initPositionsNParPerZone.F90 \\
+                Particles/localAPI/pt\_initPositionsNParPerZoneMC.F90
+        } \\
+        and register them in \texttt{Particles/localAPI/Makefile} so that code
+        knows how to initialize prtl from different sub-units.
+
+        Edit: \\
+        \texttt{
+            Particles/ParticlesInitialization/Particles\_init.F90 \\
+            Particles/ParticlesInitialization/Particles\_initPositions.F90 \\
+            Particles/ParticlesMain/Particles\_data.F90 \\
+        }
+        to add new case logic for prtl init, and to add some config options.
+
+        QUESTION: can we implement as "CUSTOM" instead of named sub-units?
+        ANSWER: maybe.  But, this looks possibly useful for things other than
+        SN unit.
+
+    \item \textbf{ParticlesMapping} sub-units \texttt{InZone} and
+        \texttt{NoMap} require registration.
+
+        Define new \texttt{Particles/Particles.h} constants
+        \texttt{INZONE} and \texttt{NOMAP}
+
+        Add stubs: \\
+        \texttt{Particles/localAPI/pt\_mapFromMeshInZone.F90 \\
+                Particles/localAPI/pt\_mapFromMeshNone.F90
+        } \\
+        and register them in \texttt{Particles/localAPI/Makefile} so that code
+        knows how to map prtl from different sub-units.
+        \textbf{WARNING} for ParticlesMapping ALSO register in
+        \texttt{pt\_interface.F90}, I don't understand why the init/integrate
+        methods don't need to be registered here for subunits to find........
+
+        Edit: \\
+        \texttt{
+            Particles/ParticlesMapping/Particles\_mapFromMesh.F90
+        } \\
+        to add new case logic for prtl mapping.
+
+    \item Why do we have to register all this stuff in localAPI?
+        Answer: PRTL code has a bunch of sub-units.
+        Even if our simulation doesn't have all sub-units, it must know the
+        methods from all sub-units in order to compile.
+
+\end{itemize}
+%The hardcoding into FLASH source makes future Torch upgrades more difficult.
+%However, the edits are small and alternatives had their own cons.
+
+Joung/CB SN heating is applied as a heating rate via \texttt{PHHE\_VAR}, which
+does not play nice with the rad xfer (fluxes get cleared in subcycles, but the
+SN heating rate needs to be applied continuously).
+
+Tentatively, I (AT) have reverted to older direct \texttt{EINT\_VAR} and
+\texttt{ENER\_VAR} injection method, which redistributes the mass within the
+injection sphere.  \textbf{TODO 20190614} this also breaks momentum
+conservation, to be addressed by AT.
+
+To use SB particle unit, currently you have to declare particle type
+\texttt{sb} in your problem Config.  It appears to work fine with Josh's code.
+Although, need to make sure that particles are requested/addressed by name
+explicitly everywhere, and does not assume / require only two prtl types in
+logic.
+
+Not sure how to make Particle unit advance work nicely with Josh's setup.
+In flash4.2.2-rad, CB manually registered  \texttt{Particles\_advance} method...
+commit from like 2013...
+
+% --------------------------------------------------------
+% Joung/M-MML/Baczynski thermal SN driving, particle stuff
+% --------------------------------------------------------
+%\subsection{Particle stuff in Joung unit}
+
+
+
+% --------------------------------
+% Comparison of SN driving schemes
+% --------------------------------
+\subsection{Compare to other SN driving schemes}
+
+Key point: if you don't resolve the radius where shell formation occurs with at
+least 3--5 cells, you will not get energy/momentum injection correct.  All
+authors broadly agree on this.
+
+Remark (M-MML): evaporation of shell mass into hot phase might matter and is generally
+neglected.
+
+Martizzi+ \href{https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.2311M/abstract}{2016MNRAS.459.2311M}
+SN feedback in local stratified ISM for MW- and ULIRG-like disks
+using the subgrid model from Martizzi+
+\href{https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..504M/abstract}{2015MNRAS.450..504M}
+\begin{itemize}
+    \item Procedure: inject uniform thermal energy and radial momentum into a
+        sphere of radius $2 \Delta x$.  Use Martizzi+ 2015 equations (9-10) to
+        figure out how much to inject, for forward shock $R = R_\mt{inj}$:
+\[
+    E_\mt{th}\left(R, n_\mt{H}, Z\right) = E_\mt{th,0}
+    \begin{cases}
+        1                                       &, R < R_\mt{c} \\
+        \left(R / R_\mt{c}\right)^\alpha        &, R_\mt{c} < R < R_\mt{r} \\
+        \left(R_\mt{r} / R_\mt{c}\right)^\alpha &, R_\mt{r} < R
+    \end{cases}
+\]
+        where $R_\mt{c}$ is cooling radius where snow-plough shell forms, and
+        $R_\mt{r}$ is late-time radius where thermal energy becomes roughly
+        constant.  For momentum (changing Martizzi's $P_r$ to $p_r$) use:
+\[
+    p_\mt{r}\left(R, n_\mt{H}, Z\right) = P_\mt{0}
+    \begin{cases}
+        \left(R / R_0\right)^{1.5}      &, R < R_\mt{b} \\
+        \left(R_\mt{b}/R_0\right)^{1.5} &, R > R_\mt{b}
+    \end{cases}
+\]
+        where $R_0$ is scale radius used to extrapolate S-T power law to small
+        radii, and $R_\mt{b}$ is where SNR momentum becomes roughly constant.
+        The hierarchy is $R_0 < R_\mt{c} < R_\mt{b} < R_\mt{r}$.
+        S-T scale $<$  cooling radius $<$ radius where momentum stabilizes $<$
+        radius where thermal energy stabilizes.  See Figure 4 of Martizzi.
+
+        Compute mean density, metallicity within injection sphere.
+        Use Martizzi+ 2015 paper fitting functions, equation (11), to determine
+        $\alpha$, $R_\mt{c}$, $R_\mt{r}$, $R_0$, $R_\mt{b}$.
+        Then, use equations (9-10) reproduced above to inject appropriate
+        energy and momentum.
+
+    \item They sampled densities $0.01$, $1$, $100$, and $10^4 \unit{cm^{-3}}$.
+        with solar metallicity $Z_\sun$.
+
+    \item When SNR cooling radius is well resolved ($R_\mt{inj} < R_c$)
+        the model ``reduces to injecting $10^{51} \unit{erg}$ of thermal energy
+        per SN and letting the simulation code explicitly capture the
+        conversion into radial momentum''.
+
+    \item Note that cooling radius $R_\mt{c}$ is...
+\[
+    R_\mt{c} \approx 14 \unit{pc}
+        \; \left(n_\mt{H}/1\unit{cm^{-3}}\right)^{-3/7}
+        \; \left(E_\mt{tot}/10^{51}\unit{erg}\right)^{2/7}
+        \; \left(Z/Z_\sun\right)^{-1/7}
+\]
+    based on Cioffi+ (1988) and Thornton+ (1998).  In the high-resolution sims,
+    Martizzi resolve $R_\mt{c}$ with at least 50 cells.
+\end{itemize}
+
+
+Miao Li+ (incl Jerry, Greg)
+\href{https://ui.adsabs.harvard.edu/abs/2015ApJ...814....4L/abstract}{2015ApJ...814....4L}
+also simulated SNe in uniform and inhomogeneous environments.
+See Figure 2 for energy, momentum evolution with radius.
+However, they don't provide any sub-grid model fitting functions.
+
+Gatto+ \href{https://ui.adsabs.harvard.edu/abs/2015MNRAS.449.1057G/abstract}{2015MNRAS.449.1057G}
+choose $R_\mt{inj}$ to contain $10^3 M_\sun$, and require
+$R_\mt{inj} \geq 4 \Delta x$ (so, in dense environment.  Procedure is as
+follows...
+\begin{itemize}
+    \item If SN is resolved, dump $10^{51} \unit{erg}$ pure thermal energy.
+        Gas is heated to $8 \times 10^6 \unit{K}$ ($\mu = 1.3 m_\mt{P}$, H and
+        He, ignore lecs) or $3 \times 10^6 \unit{K}$ ($\mu =  0.5 m_\mt{P}$, H
+        and lec plasma, ignore He).
+    \item If SN is unresolved, $R_\mt{inj}$ contains too much mass and would
+        over-cool.  Then, inject momentum instead:
+\[
+    p_\mt{ST} = 2.6\times10^5 \unit{M_\sun\;km\;s^{-1}}
+        \left(E/10^{51}\unit{erg}\right)^{16/17}
+        \left(\bar{n}/1\unit{cm^{-3}}\right)^{-2/17}
+\]
+    Flatten density within injection region, add velocity, and heat the
+    injection region to $10^4\unit{K}$.
+\item They note that result should under-estimate momentum input;
+    during snowplough phase, SNR may continue to gain momentum.
+    Also, lacks strong shocks and hot gas.
+\end{itemize}
+
+Simpson, Bryan, Hummels, JPO
+\href{https://ui.adsabs.harvard.edu/abs/2015ApJ...809...69S}{2015ApJ...809...69S}
+\begin{itemize}
+    \item Injection stencil is 3x3x3, so $r_\mt{inj} = 1.5 \Delta x$ and will
+        put energy into 4x4x4 cells.
+    \item If $4.5 \Delta x < R_\mt{PDS}$ (same as Martizzi $R_\mt{C}$),
+        then just dump thermal energy.  Otherwise, do:
+\[
+    f_\mt{kin} = 3.97 \times 10^{-6} \mu n_0 {R_\mt{PDS}}^7 {t_\mt{PDS}}^{-2}
+        \Delta x^{-2} {E_\mt{51}}^{-1}
+\]
+    \item To evaluate $t_\mt{PDS}$ and $r_\mt{PDS}$ use equations (17-18),
+        which also encode density and metallicity dependence.
+        For solar metallicity,
+        $R_\mt{PDS} = 18.5 \unit{pc} \; {E_{51}}^{2/7} {n_0}^{-3/7}$
+        is quite similar to expression of Martizzi
+    \item Density range: 0.5 to $500 \unit{cm^{-3}}$, they show test of their
+        prescription for $n = 49 \unit{cm^{-3}}$.
+\end{itemize}
+
+Kim \& Ostriker
+\href{https://ui.adsabs.harvard.edu/abs/2015ApJ...802...99K}{2015ApJ...802...99K}
+\begin{itemize}
+    \item Inject a small region, $r_\mt{init} = \Delta x$ and so touch 2x2x2 cells (8 zones)
+    \item $r_\mt{sf} = 22.6 \unit{pc} \; {E_{51}}^{0.29} {n_0}^{-0.42}$,
+        note that $2/7 = 0.286$ and $-3/7 = -0.428$ so basically the same as
+        all the other authors
+    \item \textbf{Particularly useful for discussing $r_\mt{init}$ convergence,
+        which I haven't seen other papers explore}
+    \item Density range: 0.1 to $100 \unit{cm^{-3}}$
+\end{itemize}
+
+Kim \& Ostriker TIGRESS
+\href{https://ui.adsabs.harvard.edu/abs/2017ApJ...846..133K/abstract}{2017ApJ...846..133K}
+use a complex prescription with ST, EJ, MC regimes.
+\begin{enumerate}
+    \item Look at spheres from $R_\mt{min} = 3\Delta x$ to $R_\mt{max}$,
+        varying $R$ by $\Delta x/2$.  For each sphere, compute $M/M_\mt{sf}$
+        where $M_\mt{sf} = 1679 M_\sun \left(n_\mt{H}/1\unit{cm^{-3}}\right)^{-0.26}$
+    \item IF $M > M_\mt{sf}$ at $R_\mt{min}$, then ST is unresolved.
+        Inject momentum onto grid, using prescription from hi-res sims of SNRs
+        in two-phase medium.  No thermal energy, assume all cooled and gone(?).
+    \item IF $0.027 M_\mt{sf} < M < M_\mt{sf}$ at $R_\mt{min}$, then ST is
+        resolved.  Inject 72\% thermal and 28\% kinetic energy onto grid.
+    \item IF $M < 0.027 M_\mt{sf}$ at $R_\mt{min}$, increase $R$ until we reach
+        $M \geq 0.027 M_\mt{sf}$.  Then do ST injection.
+    \item IF $M < 0.027 M_\mt{sf}$ at $R_\mt{max}$ (can't find enough mass),
+        then ejectra in free expansion (EJ regime).  Dump pure KE.
+\end{enumerate}
+They have some comments:
+\begin{itemize}
+    \item For ST regime, dumping thermal energy + redistribute mass is supposed
+        to produce same results.  However, they claim you must re-distribute
+        mass within region to avoid overcooling, for $M$ close to $M_\mt{sf}$.
+    \item EJ, ST regimes: redistribute mass/velocity/energy.  For MC regime,
+        do not reset gas properties, just add momentum to all zones.
+    \item Argue Gatto+ 2015 feedback scheme is ``marginal'', and that they
+        needed to redistribute mass in injection sphere, and so they got too
+        high SFR.
+    \item Figure 6: the prescription looks kind of bonkers at high density,
+        artifact of fixed (low) spatial resolution.
+        This is the MC regime; discard thermal energy, just keep momentum.
+\end{itemize}
+
+Hopkins FIRE
+\href{https://ui.adsabs.harvard.edu/abs/2014MNRAS.445..581H/abstract}{2014MNRAS.445..581H}
+\begin{itemize}
+    \item Take
+        $R_\mt{cool} \approx 28 \unit{pc} \; {E_{51}}^{0.29}
+            \left(n / 1 \unit{cm^{-3}}\right)^{-0.43}
+            \left(Z/Z_\sun + 0.01\right)^{-0.18}$.
+    \item When S-T phase is resolved, deposit correct amounts of thermal
+        and kinetic energy (momentum) directly.
+    \item When not, deposit momentum boosted by $\abt {M_\mt{swept-up}}^{0.5}$,
+        depending on how much mass got swept up by hot gas in the S-T stage.
+\[
+    \vec{p} = \vec{p}_\mt{ej} \sqrt{ \frac{M_\mt{ej} + M_\mt{enc}(<R_\mt{cool})}{M_\mt{ej}} }
+\]
+    and also decrease the thermal energy,
+\[
+    E_\mt{thermal,shocked} \propto \left(R/R_\mt{cool}\right)^{-6.5}
+\]
+    which reduces its ability to do any more work.
+\end{itemize}
+
+% -----------------------------------------
+% Comparison of superbubble driving schemes
+% -----------------------------------------
+\subsection{Superbubble schemes and behavior}
+
+Kim Ostriker Ralaenu
+
+Useful, recent discussion of sub-grid SNe schemes and winds by Chia-Yu Hu, see
+Section 4.3:
+\href{https://ui.adsabs.harvard.edu/abs/2019MNRAS.483.3363H/abstract}{2019MNRAS.483.3363H}
+
+
+% ================
+% Code development
+% ================
+\section{Code development}
+
+\subsection{Generalities}
+
+Google's code style guides, more for philosophy insight rather than any
+specific actionables:
+\begin{itemize}
+    \item Python style: \url{https://google.github.io/styleguide/pyguide.html}
+    \item Documentation style: \url{https://developers.google.com/style/}
+\end{itemize}
+See in particular the ``Parting Words'' in the Python style guide.
+
+``Maintenance cost is quadratic in number of features'':
+\url{https://statmodeling.stat.columbia.edu/2019/05/10/maintenance-cost-is-quadratic-in-the-number-of-features/#comments}
+To mitigate -- be clear about what use cases are supported or not -- reduce
+maintenance cost to linear (though for a tower of features, that also means
+code works only for one use case).
+
+\subsection{FLASH add-ons/edits}
+
+Try to follow the FLASH idiom.  Read (and maybe re-read) Chapter 4 of the FLASH
+manual before making large code changes.  Tips on FLASH architecture: \\
+\url{http://flash.uchicago.edu/site/flashcode/user_support/tipsDoc.py?submit=tips_arch.txt}
+
+Useful FLASH tutorial presentations:
+\begin{itemize}
+    \item FLASH center 2012: \url{http://flash.uchicago.edu/site/flashcode/user_support/tutorial_talks/home.py?submit=RAL_May2012.txt}
+    \item collective wisdom -- sfocu may be worth investigating for automated testing
+        \url{http://flash.uchicago.edu/site/flashcode/user_support/tutorial_talks/June2009/CollectiveWisdom.pdf}
+\end{itemize}
+
+To overwrite a FLASH-default file, you can put stuff in
+\texttt{Simulation/SimulationMain/YourProblem}.
+%Try to avoid putting in FLASH source if you can, it makes things messy.
+
+Idea: when you add a new FLASH sub-unit, it's easy to copy-paste a file and
+just add stuff to it.  But, it can be hard to maintain because you're
+duplicating code:
+\begin{verbatim}
+    Foo/
+        Foo.F90
+        Foo_bar.F90
+        Foo_interface.F90
+        FooMain/
+            Foo.F90
+            Foo_bar.F90
+            FooLoremIpsum/
+                Foo.F90      # contains lots of duplicate code
+                Foo_bar.F90
+\end{verbatim}
+
+Consider trying:
+\begin{verbatim}
+    Foo/
+        Foo.F90
+        Foo_bar.F90
+        Foo_lorem.F90
+        Foo_ipsum.F90
+        Foo_interface.F90
+        FooMain/
+            Foo.F90          # modify to allow for LoremIpsum features
+            Foo_bar.F90
+            FooLoremIpsum/
+                Foo_lorem.F90  # no duplication!
+                Foo_ipsum.F90
+\end{verbatim}
+
+
+Config file directives:
+\url{http://flash.uchicago.edu/site/flashcode/user_support/flash4_ug_4p5/node35.html#SECTION03252000000000000000}
+
+PARAMESH manual is no longer posted online, but available on the Wayback
+machine.  Last snapshot was 2016 April 21.
+Visit
+\url{https://web.archive.org/web/*/http://www.physics.drexel.edu/~olson/paramesh-doc/Users_manual/amr.html}
+
+Some thoughts on community code development:
+\url{https://extremecomputingtraining.anl.gov//files/2015/03/commcodesAnshu-aug8-830.pdf}
+\url{http://flash.uchicago.edu/cc2012/}
+
+The FLASH center uses 3 space indents.  No tabs, 2 space continuations(?).
+JW/JCIM/CB/MKRJ seem to use some mix of 2 space, 4 space, and tab.
+
+Git forking workflow: in your forked repo, do NOT press the SYNC button on
+bitbucket to grab upstream commits.
+It generates an extra merge commit, cluttering history.
+Maybe there's a workaround and I haven't discovered it.
+It's easier to do \texttt{git merge upstream/master};
+so long as you didn't touch master (don't touch master!!) it will do a
+fast-forward merge and life will be good.
+
+
+% -------------
+% Pull Requests
+% -------------
+\subsection{Pull Requests}
+
+To submit a pull request, you'll generally want to make a branch, do some work,
+then push to your local repo.
+
+We are following the Git forking workflow, see:
+\url{https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow}
+and
+\url{https://gist.github.com/Chaser324/ce0505fbed06b947d962}
+
+If possible, try to rebase to most recent commit before you submit PR.
+
+To clean now-removed remote branch pointers, do \texttt{git remote prune origin}.
+
+
+% =====================================
+% Lessons Learned, Cheatsheets, and FAQ
+% =====================================
+\section{Lessons Learned, Cheatsheets, and FAQ}
+
+% ------------------------
+% FLASH runtime parameters
+% ------------------------
+\subsection{FLASH Misc Gotchas}
+
+Warning: sanitizing doesn't do anything apparently?
+All the fixing up comes from floors (smlrho, smallp, etc).
+Sources: Josh said so, and also
+\url{http://flash.uchicago.edu/pipermail/flash-users/2009-May/000467.html}
+
+Some snags with USM and paramesh
+\begin{itemize}
+    \item checkerboard B field structure with USM:
+        \url{http://flash.uchicago.edu/pipermail/flash-users/2017-October/002427.html}
+
+    \item spurious waves at refinement boundaries:
+        \url{http://flash.uchicago.edu/pipermail/flash-users/2016-May/001956.html}
+
+    \item more discussion about refinement boundary noise with usm...
+        \url{http://flash.uchicago.edu/pipermail/flash-users/2019-March/002823.html}
+\end{itemize}
+
+%Important change: in the file
+%\texttt{Grid/GridMain/paramesh/interpolation/Paramesh4/prolong/Config},
+%comment out
+%\texttt{PPDEFINE PM\_OPTIMIZE\_MORTONBND\_FETCHLIST}
+%to prevent weird segfaults.  See the FLASH-USERS thread:
+%\url{http://flash.uchicago.edu/pipermail/flash-users/2019-May/002901.html}
+
+
+% ------------------------
+% FLASH runtime parameters
+% ------------------------
+%\subsection{FLASH runtime parameters}
+
+
+% ---------------------
+% FLASH ifdef variables
+% ---------------------
+\subsection{FLASH ifdef variables}
+
+\texttt{PE\_HEAT} indicates whether code tracks FUV photons or not; A.~Tran
+changed behavior from toggling PE heating in general to only toggling FUV
+photon heating from stars, because we need to be able to put in background PE
+heating separate from stars as well.
+
+
+% ---------------
+% FLASH variables
+% ---------------
+\subsection{FLASH variable cheat sheet}
+
+\subsubsection{FLASH field variables}
+
+First grouped by unit, then ordered alphabetically?
+
+\begin{verbatim}
+PHIO_VAR    photoionization rate [1/s],                      ParticlesMain/ray_pe/MultiSourceSimple
+PHHE_VAR    photoionization heating rate [erg/s],            ParticlesMain/ray_pe/MultiSourceSimple
+PEFL_VAR    photoelectric flux [Habing units, scaled erg/s], ParticlesMain/ray_pe/MultiSourceSimple
+UVFL_VAR    scratch var for photoionizing flux [erg/s],      ParticlesMain/ray_pe/MultiSourceSimple
+FUFL_VAR    scratch var for photoelectric flux [erg/s],      ParticlesMain/ray_pe/MultiSourceSimple
+\end{verbatim}
+
+Gravity unit and Torch star-(sink,gas) bridge variables
+
+\begin{verbatim}
+BGPT_VAR    grav potential of star prtl, from Poisson eqn
+BGAX_VAR    grav accel due to star prtl, x-component
+BGAY_VAR    grav accel due to star prtl, y-component
+BGAZ_VAR    grav accel due to star prtl, z-component
+DENS_VAR    density of gas
+GPOT_VAR    grav potential of gas (DENS_VAR)
+PDEN_VAR    density of star prtl, mapped to mesh
+SGAX_VAR    grav accel due to sinks, x-component
+SGAY_VAR    grav accel due to sinks, y-component
+SGAZ_VAR    grav accel due to sinks, z-component
+\end{verbatim}
+
+\subsubsection{FLASH particle variables}
+
+Superbubble particles introduce several properties:
+
+\begin{verbatim}
+NSN_PART_PROP       number of SN in SB              ParticlesMain/sb
+TCRT_PART_PROP      creation time of SB             ParticlesMain/sb
+TSN_PART_PROP       time interval between SNe       ParticlesMain/sb
+SBID_PART_PROP      SB unique identifier            ParticlesMain/sb
+\end{verbatim}
+
+In the supernova unit code, tracer particles overload some particle properties
+in order to grab information about the surrounding gas.
+The mesh-to-particle map happens in
+\texttt{ParticlesMapping/Particles\_mapFromMesh.F90} ; the overloaded
+properties are:
+
+\begin{verbatim}
+NSN_PART_PROP       maps to grid's TEMP_VAR        ParticlesInitialization/pt_setDataStructures
+MASS_PART_PROP      maps to grid's DENS_VAR        ParticlesInitialization/pt_setDataStructures
+\end{verbatim}
+
+OK stuff for radiation and amuse coupling
+
+\begin{verbatim}
+EION_PART_PROP      energy of ionizing photons
+NION_PART_PROP      number of ionizing photons
+SIGH_PART_PROP      gas cross-section to ionizing radiation
+EPEP_PART_PROP      Average energy of PE photon
+NPEP_PART_PROP      number of PE photons
+SIGD_PART_PROP      dust cross-section to PE photons
+\end{verbatim}
+
+Stuff for winds coupled to AMUSE
+
+\begin{verbatim}
+DMDT_PART_PROP      wind mass loss rate
+VELW_PART_PROP      wind mass loss rate
+\end{verbatim}
+
+%\subsubsection{FLASH species variables}
+
+% ---------------
+% Frequently asked questions
+% ---------------
+\subsection{Frequently asked questions}
+
+\begin{itemize}
+
+    \item \textbf{Question:} How long does a run take?
+
+    \textbf{Answer:} on Columbia University's cluster ``Habanero'' (Intel
+    E5-2650v4, 2.2GHz; 5.3 GB/core; 24 cores/node; EDR Infiniband), with 6
+    refinement levels, block size $16^3$, and 186 cores, evolving JUST GAS (no
+    N-body, no feedback) to $3 \unit{Myr}$ took $10 \unit{days}$ wall clock
+    time or $\abt 50,000$ CPU-hours.
+    This was a very crude test run, not sure if I used bridge code or plain
+    FLASH.  Not using parallel HDF5.
+    A production run will take $100,000$s of CPU-hours.
+
+    \item \textbf{Question:} How do I add a new runtime parameter?
+
+    \textbf{Answer:}
+        \begin{enumerate}
+            \item define in \texttt{Simulation\_data.F90}
+            \item define and document in \texttt{Config}
+            \item in \texttt{Simulation\_init.F90}, call \texttt{RuntimeParameters\_get(...)}
+            \item add to your \texttt{flash.par}
+        \end{enumerate}
+
+    \item \textbf{Question:} How do I track down a variable or error message?
+
+    \textbf{Answer:} in your object directory, do something like
+        \texttt{grep -rinT -I "INSERT ERROR MESSAGE" *}
+
+    \item \textbf{Question:} How do I decipher FLASH units, runtime parameters,
+        and setup calls?
+
+    \textbf{Answer:} look at
+        \texttt{bin/setup\_shortcuts.txt},
+        \texttt{object/setup\_call},
+        \texttt{object/setup\_params},
+        \texttt{object/setup\_units}.
+
+    \item \textbf{Question:} How much memory does FLASH use?
+
+    \textbf{Answer:} estimate as:
+    \begin{align*}
+        8 \unit{bytes}
+        &\times \left( \mathtt{NUNK\_VARS} + \mathtt{NFACEVAR} + \mathtt{NFLUXVAR} \right) \\
+        &\times \left( \mathtt{NXB} + 2\times\mathtt{GUARDCELLS} \right)
+        \left( \mathtt{NYB} + 2\times\mathtt{GUARDCELLS} \right)
+        \left( \mathtt{NZB} + 2\times\mathtt{GUARDCELLS} \right) \\
+        &\times \mathtt{MAXBLOCKS}
+    \end{align*}
+    These variables are defined by \texttt{Flash.h}, in the object directory.
+    For the simulation \texttt{Cube} with unsplit MHD solver,
+    $16^3$ blocks, and \texttt{MAXBLOCKS=300}, the memory usage is:
+    \[
+        8 \unit{bytes} \times (46 + 2 + 12) \times (16 + 12)^3 \times 300
+        \approx 3.2 \unit{GB}
+    \]
+
+    \item \textbf{Question:} with FLASH4.2.2, how do I compile with large
+        values of MAXBLOCKS?  Setup works, but make fails.
+
+    \textbf{Answer:} in \texttt{Makefile.h}, request the compiler flag
+        \texttt{-mcmodel=medium}.  Search flash-users mailing list for
+        ``mcmodel'' to learn more.
+
+    \item \textbf{Question:} ``needed full blk... but could not find it or only
+        found part of it in the message buffer. Contact PARAMESH developers for
+        help.''
+
+    \textbf{Answer:}
+    \url{http://flash.uchicago.edu/pipermail/flash-users/2015-February/001637.html}
+    See also
+    \url{http://flash.uchicago.edu/pipermail/flash-users/2017-April/002262.html}
+
+    \item \textbf{Question:} when restarting, what numbers should I use for
+        checkpoints and plotfiles?
+
+    \textbf{Answer:} checkpoints, use the files you want to restart from.
+        Plot files, use the next plot file numbers to create.
+
+    \item \textbf{Question:} FLASH performance?
+
+    \textbf{Answer:} Mordecai's proposal quotes 150e-6 core-seconds per zone
+    update.  I (AT) measured very similar on Habanero cluster at Columbia,
+    which is Intel Xeon E5-2650v4.
+
+    Sean Couch reports on FLASH users list (November 2014) that TACC Stampede
+    (Intel) gave 1e-8 core-hours per zone update, with near-perfect weak
+    scaling up to 4096 cores.  Translation is 36e-6 core-seconds per zone.
+    So, Torch with all its bells+whistles is about 4x slower.
+    Not unexpected w/ radiative transfer, detailed heat/cool, wind deposition
+    etc.
+
+\item \textbf{Question:} when to do EOS update?  How?
+
+    \textbf{Partial answer:}
+    \url{http://flash.uchicago.edu/pipermail/flash-users/2017-May/002336.html}
+
+\end{itemize}
+
+
+% ============================
+% Josh's old runs on Cartesius
+% ============================
+\section{Catalog of Josh's runs on Cartesius}
+
+The Torch collaboration has project space on the supercomputer Cartesius,
+located at the path \texttt{/lustre2/0/flashrad/}.
+
+Josh has archived the following runs, here listed alphabetically with last-modified dates:
+\begin{verbatim}
+   4096 Jun 23  2018 DracoM3V02B							only "chk_0002"
+ 434176 Jun 28  2018 DracoM3V02BW
+   4096 Aug 25  2018 M3V02AWL10_USM							empty
+ 147456 Aug 31  2018 M3V02AW_USM
+ 360448 Jan  1  2019 M3V02BWL10_USM
+   4096 Aug 31  2018 M3V02BWL8_USM							empty
+
+ 344064 Aug  2  2018 M4V02A_cloud_evaporated
+1261568 Mar 20  2019 M4V02AW
+ 540672 Feb 19  2019 M4V02AW_bad_IGIMF
+ 503808 Jul 24  2018 M4V02AWL10
+   4096 Aug 25  2018 M4V02AWL10_USM
+ 786432 Jul 14  2018 M4V02AWL10_with_ndens_for_molcool_1e3
+ 544768 Aug 30  2018 M4V02AW_USM
+ 360448 Nov 21  2018 M4V02BWL10_USM
+   4096 Aug 31  2018 M4V02BWL8_USM
+
+ 159744 Jun 23  2018 M5V02A
+ 270336 Oct 12  2018 M5V02AL8noFB_USM
+   4096 Feb  7  2019 M5V02AW
+ 548864 Oct 18  2018 M5V02AWL10_USM
+1175552 Feb 14  2019 M5V02AW_restart
+ 385024 Aug 27  2018 M5V02AW_USM
+   4096 Sep  1  2018 M5V02BWL10_USM
+   4096 Aug 31  2018 M5V02BWL8_USM
+
+   4096 Mar 19  2019 M8e3_a08_x60_y370_z30					stratified box run from Juan Camilo Ibanez-Mejia
+
+ 196608 Jun 23  2018 oldDracoM3V02B
+   4096 Mar  5  2019 radtest
+      6 Jun 23  2018 test
+   4096 Jun 23  2018 wrong_rad
+\end{verbatim}
+
+Several exist on the Drexel Univ cluster ``Draco'' as well.
+
+Information about run wall-clock time used:
+
+\begin{verbatim}
+Here's an empirical measurement from one of Josh's 1e4 Msun runs (M4V02BWL10_USM).
+It has 8 levels of refinement (lrefine_max=9), domain +/-24 pc, so max resolution 0.012 pc.
+Note: this is NOT the run shown in Josh's paper.
+
+    $ stat turbsph_hdf5_plt_cnt_2009
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2009
+        file modification time: 2018-11-21 04:50:04.000000000 +0100
+        time = 1.06826e+14
+        dt = 5.73224e+09
+
+    $ stat turbsph_hdf5_plt_cnt_2011
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2011
+        file modification time: 2018-11-21 05:41:34.000000000 +0100
+        time = 1.06887e+14
+        dt = 6.04403e+09
+
+This run used 8641 blocks of size 16^3, with 475 processors for hydro.
+Advancing two plots (~2000 years) required ~50 wall-clock minutes and ~10 hydro steps.
+One hydro step = ~5 wall-clock min, at 475 procs with ~18 blocks/core.
+\end{verbatim}
+
+Information about run disk usage:
+
+\begin{verbatim}
+Josh's 1e3-1e4 Msun runs reached, at the last plotted timestep in each run:
+
+    Cloud   Plot    Plot    Plot        Chkpt   Chkpt   Chkpt     Last      Total   Run
+    (Msun)  size    file#   interval    size    file#   interval  time      usage   directory
+    ----------------------------------------------------------------------------------------------
+    1e3     1.8G    2175    0.001 Myr   9.1G    71      0.1 Myr   5.4 Myr   1.7T    M3V02BWL10_USM  (Sep-Dec 2018)
+    1e4     2.6G    2011    0.001 Myr   14G     360     0.01 Myr  3.4 Myr   4.4T    M4V02BWL10_USM  (Sep-Nov 2018)
+    1e4     233M    1929    0.001 Myr   1.1G    3194    0.1 Myr   9.1 Myr   3.6T    M4V02AW         (Jun-Jul 2018)
+\end{verbatim}
+
+Notes:
+disk space usage includes some analysis products/plots.
+Plotfile sizes are adjustable (choose which FLASH fields to dump).
+Particle file sizes are negligible (~1 MB or less).
+Josh must have raised the plot frequency after the first star formed.
+
+Tentatively, several to ~10 TB seems good for one production run at Josh's resolution, out to t=10 Myr.
+On Cartesius, Josh applied for and got 400 TB.
+As of October 2019, we are using 44 TB in total.
+
+\end{document}

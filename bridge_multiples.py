@@ -3446,10 +3446,11 @@ try:
                                     # Here the injected mass is the current mass minus the remnant mass.
                                     inj_mass = (star_mass[part] - st_mass).in_(units.g)
                                     #inj_mass = (stars.mass[part] - st_mass).in_(units.g)
-                                    # This should never be more than 10 solar masses though.
-                                    if (inj_mass.value_in(units.MSun) > 10.0):
-                                        print "[bridge:SN]: WARNING! SN MASS > 10 MSun!"
-                                        inj_mass = 10.0 | units.MSun
+                                    if (inj_mass.value_in(units.MSun) > 15.0):
+                                        # expected upper limit for SeBa tracks; see
+                                        # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                                        print "[bridge:SN]: WARNING! SN MASS {:g} > 15 MSun!".format(inj_mass.value_in(units.MSun))
+                                        inj_mass = 15.0 | units.MSun
                                     print "Injection mass is", inj_mass.in_(units.MSun)
 
                                     dt =  min(dt.value_in(units.s), hydro.energy_injection(tot_e, fracKin, inj_mass, inj_x, inj_y, inj_z).value_in(units.s)) | units.s
