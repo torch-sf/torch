@@ -17,8 +17,8 @@ def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
 
     # Now use that to sample the IMF.
     masses     = np.zeros(n_stars.sum())
-    positions  = np.zeros((n_stars.sum(),3))
-    velocities = np.zeros((n_stars.sum(),3)) #Make sure positions and velocities have 3 components
+    positions  = np.zeros((n_stars.sum(), 3))
+    velocities = np.zeros((n_stars.sum(), 3)) #Make sure positions and velocities have 3 components
     k = 0
     for i, n in enumerate(n_stars):
         #print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]

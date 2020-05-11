@@ -231,7 +231,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             tprint("... sink tag {}".format(sink_tag), end='')
             print(" queued {} stars,".format(len(new_masses)), end='')
             print(" mass {},".format(np.sum(new_masses)), end='')
-            print(" max mass {}".format(np.amax(new_masses)))
+            print(" max mass {}".format(np.amax(new_masses)), end='')
+            print(" rel. pos. of 1st queued star {}".format(new_positions[0]))
 
             state.all_masses[sink_tag]     = np.concatenate((state.all_masses[sink_tag], new_masses))
             state.system_masses[sink_tag]  = np.concatenate((state.system_masses[sink_tag], new_system_masses))
@@ -283,9 +284,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
         spawn_masses     = state.all_masses[sink_tag][:i]
+        spawn_systems    = state.system_masses[sink_tag][:i]
         spawn_positions  = state.all_positions[sink_tag][:i]
         spawn_velocities = state.all_velocities[sink_tag][:i]
         nnew = len(spawn_masses)
+
+        nbin = nnew - np.count_nonzero(spawn_systems)
+        nsin = nnew - 2 * nbin
 
         if nnew == 0:
 
@@ -295,15 +300,20 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
             print(" {} stars,".format(nnew), end='')
+            print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries      
+            print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" due to absence of nearby cold gas")
 
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
-            print(" {} stars,".format(nnew), end='')
+            print(" {} stars".format(nnew), end='')
+            print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
+            print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
-            print(" max mass {}".format(np.amax(spawn_masses)))
+            print(" max mass {}".format(np.amax(spawn_masses)), end='')
+            print(" sink position for consistency: {}".format(sink_pos))
 
             formed_stars = True
 
@@ -319,13 +329,28 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             star          = Particles(nnew)
             star.mass     = spawn_masses | units.MSun
-            # Isothermal spherical distribution.
-            star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)
-            # Gaussian distribution satisfying <vx**2> = sink_cs**2
-            # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2
-            # matches gas specific energy P/rho/(gamma-1) for gamma=5/3
+
+            # For-loop to use the same random position/velocity for stars in a binary
+            # COM positions come from an isothermal spherical distribution
+            # COM velocities come from a Gaussian distribution satisfying <vx**2> = sink_cs**2
+            # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2                                           
+            # matches gas specific energy P/rho/(gamma-1) for gamma=5/3                                              
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
-            star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s) + (spawn_velocities | units.cm/units.s)
+            for j in range(len(star)):
+                spawn_position = spawn_positions[j]
+                spawn_velocity = spawn_velocities[j]
+                if spawn_systems[j] == 0:
+                    star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
+                    star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
+                else:
+                    random_pos = sink_rad*np.random.rand()*random_three_vector()
+                    random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
+                    star[j].position = sink_pos + (spawn_positions[j] | units.cm)
+                    #star[j].position = sink_pos + random_pos + (np.zeros(3) | units.cm)
+                    star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
+
+            # star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)
+            # star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s) + (spawn_velocities | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -345,15 +370,16 @@ def random_three_vector(n=1):
     Generates a random 3D unit vector (direction) with a uniform spherical distribution
     Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
     """
-    three_vector = np.zeros((n,3))
+    #three_vector = np.zeros((n,3))
+    three_vector = np.zeros(3) #Modified by CCC to "unvectorize" it -- is now designed to be used for each formed star individually
 
     phi = np.random.uniform(0,np.pi*2,n)
     costheta = np.random.uniform(-1,1,n)
 
     theta = np.arccos( costheta )
-    three_vector[:,0] = np.sin( theta) * np.cos( phi )
-    three_vector[:,1] = np.sin( theta) * np.sin( phi )
-    three_vector[:,2] = np.cos( theta )
+    three_vector[0] = np.sin( theta) * np.cos( phi )
+    three_vector[1] = np.sin( theta) * np.sin( phi )
+    three_vector[2] = np.cos( theta )
     return three_vector
 
 
