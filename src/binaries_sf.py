@@ -231,8 +231,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             tprint("... sink tag {}".format(sink_tag), end='')
             print(" queued {} stars,".format(len(new_masses)), end='')
             print(" mass {},".format(np.sum(new_masses)), end='')
-            print(" max mass {}".format(np.amax(new_masses)), end='')
-            print(" rel. pos. of 1st queued star {}".format(new_positions[0]))
+            print(" max mass {}".format(np.amax(new_masses)))
 
             state.all_masses[sink_tag]     = np.concatenate((state.all_masses[sink_tag], new_masses))
             state.system_masses[sink_tag]  = np.concatenate((state.system_masses[sink_tag], new_system_masses))
@@ -312,8 +311,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
             print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
-            print(" max mass {}".format(np.amax(spawn_masses)), end='')
-            print(" sink position for consistency: {}".format(sink_pos))
+            print(" max mass {}".format(np.amax(spawn_masses)))
 
             formed_stars = True
 

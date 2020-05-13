@@ -8,6 +8,7 @@ from __future__ import division
 
 import numpy as np
 from scipy.integrate import quad
+from primordial_binaries import orbits
 
 
 def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
@@ -17,8 +18,8 @@ def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
 
     # Now use that to sample the IMF.
     masses     = np.zeros(n_stars.sum())
-    positions  = np.zeros((n_stars.sum(), 3))
-    velocities = np.zeros((n_stars.sum(), 3)) #Make sure positions and velocities have 3 components
+    #positions  = np.zeros((n_stars.sum(), 3))
+    #velocities = np.zeros((n_stars.sum(), 3)) #Make sure positions and velocities have 3 components
     k = 0
     for i, n in enumerate(n_stars):
         #print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]
@@ -40,8 +41,8 @@ def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
         masses = collect_small_stars_mass(masses)
 
     np.random.shuffle(masses)
-
-    system_masses = masses
+    masses, system_masses, positions, velocities = orbits(masses)
+    #system_masses = masses
 
     return masses, system_masses, positions, velocities
 
