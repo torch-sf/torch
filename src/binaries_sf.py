@@ -343,7 +343,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
                 else:
                     random_pos = sink_rad*np.random.rand()*random_three_vector()
                     random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
-                    star[j].position = sink_pos + (spawn_positions[j] | units.cm)
+                    star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                     #star[j].position = sink_pos + random_pos + (np.zeros(3) | units.cm)
                     star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
 
