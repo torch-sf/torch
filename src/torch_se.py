@@ -53,9 +53,12 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # query star age may not agree exactly.
     t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
 
-    # Update ALL the star properties in bulk for consistentcy
-    new_type = state.stars.stellar_type
-    new_mass = np.zeros(len(state.stars)) | units.MSun
+    # Update ALL the star properties in bulk for consistency.
+    # Keep the old mass and type (in case we exit loop early, as for SN)
+    new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
+    new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
+    # If you toggle off feedback when restarting a run, Torch zeros out all
+    # feedback properties; stars stop depositing energy/radiation.
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -84,26 +87,21 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
         if s.mass >= min_feedback_mass:
 
-            if went_supernova(se_type):
+            if with_sn and went_supernova(se_type):
 
-                if with_sn:
-                    inj_mass = s.mass - se_mass  # minus stellar remnant's mass
-                    if inj_mass > 15.0|units.MSun:
-                        # expected upper limit for SeBa tracks; see
-                        # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                        tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
-                        inj_mass = 15.0|units.MSun
-                    # inject energy and mass onto grid
-                    _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
-                    se_dt = min(se_dt, _tmp)
-                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                inj_mass = s.mass - se_mass  # minus stellar remnant's mass
+                if inj_mass > 15.0|units.MSun:
+                    # expected upper limit for SeBa tracks; see
+                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                    inj_mass = 15.0|units.MSun
 
-                nion[i] = 0.0 | units.s**-1
-                eion[i] = 0.0 | units.erg
-                npe[i] = 0.0 | units.s**-1
-                epe[i] = 0.0 | units.eV
-                dm_dt[i] = 0.0 | units.g / units.s
-                vterm[i] = 0.0 | units.cm / units.s
+                # inject energy and mass onto grid
+                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                se_dt = min(se_dt, _tmp)
+                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+
+                # implicitly zeros out feedback properties by not setting
 
             else:
 
