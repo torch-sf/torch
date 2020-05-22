@@ -57,8 +57,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Keep the old mass and type (in case we exit loop early, as for SN)
     new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
     new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    # If you toggle off feedback when restarting a run, Torch zeros out all
-    # feedback properties; stars stop depositing energy/radiation.
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
