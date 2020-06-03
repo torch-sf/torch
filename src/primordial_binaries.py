@@ -1,6 +1,8 @@
 """
-Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017), Duchene & Kraus (2013) and Winters et al. (2019)
+Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017) and Winters et al. (2019)
 Claude Cournoyer-Cloutier, McMaster University, 2020
+The functions get_multiplicity, get_period and get_eccentricity have been reworked
+There is still some work to be done on get_companion_masses, which still defaults the gamma (June 3, 2020)
 """
 
 import numpy as np
@@ -11,720 +13,403 @@ from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_ecce
 
 def get_multiplicity(m_arr):
 
+    def interpolate(m_low, m_high, CF_low, CF_high, m):
+        a = (CF_high - CF_low) / (m_high - m_low)
+        b = CF_high - a * m_high
+        return a * m + b
+
     def companion_frequency(m):
-
-        if 0.01 <= m < 0.1:
-            CF = 0.22  # DK
-
-        if 0.1 <= m < 0.5:
-            CF = 0.33  # DK
-
-        if 0.5 <= m < 0.8:
-            a = (0.5 - 0.33) / (0.8 - 0.5)
-            b = 0.5 - a * 0.8
-            CF = a * m + b
-
+    
+        """
+        For masses below 0.6 M_sun, we use the primary mass dependent binary fraction from Winters et al. (2020)
+        Above 0.8 M_sun, we use these from Moe & Di Stefano (2017) -- we use binary fraction + triple/quad frac
+        Between mass bins, we interpolate
+        """
+            
+            
+        if m < 0.15:
+            CF = 0.16
+                
+        if 0.15 <= m < 0.3:
+            CF = 0.214
+                        
+        if 0.3 <= m < 0.6:
+            CF = 0.282
+                                
+        if 0.6 <= m < 0.8:
+            CF = interpolate(0.6, 0.8, 0.282, 0.4, m)
+                                        
         if 0.8 <= m < 1.2:
-            CF = 0.5  # MDS
-
+            CF = 0.4
+                                                
         if 1.2 <= m < 2:
-            a = (0.84 - 0.5) / (2 - 1.2)
-            b = 0.84 - a * 2
-            CF = a * m + b
-
+            CF = interpolate(1.2, 2, 0.4, 0.59, m)
+                                                        
         if 2 <= m < 5:
-            CF = 0.84  # MDS
-
+            CF = 0.59
+                                                                
         if 5 <= m < 9:
-            CF = 1.3  # MDS
-
+            CF = 0.76
+                                                                        
         if 9 <= m < 16:
-            CF = 1.6  # MDS
-
+            CF = 0.84
+                                                                                
         if m >= 16:
-            CF = 2.1  # MDS
+            CF = 0.94
+                                                                                        
+        return CF
 
-        return round(CF, 2)
 
     multiplicity = []
-    for i in m_arr:
-        N    = 100
-        K    = int(companion_frequency(i) * 100)  # K ones, N-K zeros
-        rd   = random.randint(0, 99)
-        bin  = np.array([0] * (N - K) + [1] * (K))[rd]
-        multiplicity.append(bin)
+    singles      = []
+    primaries    = []
 
-    indices_b = np.nonzero(multiplicity)
-    binaries = []
-    for j in indices_b:
-        binaries.extend(m_arr[j])
+    for m in m_arr:
+        mult_prob = random.random()
+        if mult_prob <= companion_frequency(m):
+            multiplicity.append(1)
+            primaries.append(m)
+        else:
+            multiplicity.append(0)
+            singles.append(m)
 
-    minus_mult = []
-    for k in range(len(multiplicity)):
-        minus_mult.append(multiplicity[k - 1] - 1)
-
-    indices_s = np.nonzero(minus_mult)
-    singles = []
-    for j in indices_s:
-        singles.extend(m_arr[j])
-
-    return multiplicity, singles, binaries
+    return multiplicity, singles, primaries
 
 
 
 def get_period(mass):
-
-    def period(m):
-
-        if 0.01 <= m < 0.15:
-
-            P_years = (10 ** (np.random.normal(0.845, 1.04))) ** (3. / 2)
-            P = np.log10(P_years * 365.25)
-
-            if 0.5 <= P <= 7.5:
-                period = P
-
-            elif P < 0.5:
-                period = 0.5
-
-            elif P > 7.5:
-                P_years = (10 ** (np.random.normal(0.845, 1.04))) ** (3. / 2)
-                P = np.log10(P_years * 365.25)
-
-                if 0.5 <= P <= 7.5:
-                    period = P
-
-                elif P < 0.5:
-                    period = 0.5
-
-                elif P > 7.5:
-                    P_years = (10 ** (np.random.normal(0.845, 1.04))) ** (3. / 2)
-                    P = np.log10(P_years * 365.25)
-
-                    if 0.5 <= P <= 7.5:
-                        period = P
-
-                    elif P < 0.5:
-                        period = 0.5
-
-                    elif P > 7.5:
-                        # random within 2 std
-                        P_years = (10 ** (random.randint(-124, 293) / 100)) ** (3. / 2)
-                        P = np.log10(P_years * 365.25)
-                        period = P
-
-
-        elif 0.15 <= m < 0.30:
-
-            P_years = (10 ** (np.random.normal(1.04, 1.21))) ** (3. / 2)
-
-            P = np.log10(P_years * 365.25)
-
-            if 0.5 <= P <= 7.5:
-
-                period = P
-
-
-            elif P < 0.5:
-
-                period = 0.5
-
-
-            elif P > 7.5:
-
-                P_years = (10 ** (np.random.normal(1.04, 1.21))) ** (3. / 2)
-
-                P = np.log10(P_years * 365.25)
-
-                if 0.5 <= P <= 7.5:
-
-                    period = P
-
-
-                elif P < 0.5:
-
-                    period = 0.5
-
-
-                elif P > 7.5:
-
-                    P_years = (10 ** (np.random.normal(1.04, 1.21))) ** (3. / 2)
-
-                    P = np.log10(P_years * 365.25)
-
-                    if 0.5 <= P <= 7.5:
-
-                        period = P
-
-
-                    elif P < 0.5:
-
-                        period = 0.5
-
-
-                    elif P > 7.5:
-
-                        # random within 2 std
-
-                        P_years = (10 ** (random.randint(-138, 346) / 100)) ** (3. / 2)
-
-                        P = np.log10(P_years * 365.25)
-
-                        period = P
-
-
-        elif 0.30 <= m < 0.60:
-
-            P_years = (10 ** (np.random.normal(1.69, 1.48))) ** (3. / 2)
-            P = np.log10(P_years * 365.25)
-
-            if 0.5 <= P <= 7.5:
-                period = P
-
-            elif P < 0.5:
-                period = 0.5
-
-            elif P > 7.5:
-                P_years = (10 ** (np.random.normal(1.69, 1.48))) ** (3. / 2)
-                P = np.log10(P_years * 365.25)
-
-                if 0.5 <= P <= 7.5:
-                    period = P
-
-                elif P < 0.5:
-                    period = 0.5
-
-                elif P > 7.5:
-                    P_years = (10 ** (np.random.normal(1.69, 1.48))) ** (3. / 2)
-                    P = np.log10(P_years * 365.25)
-
-                    if 0.5 <= P <= 7.5:
-                        period = P
-
-                    elif P < 0.5:
-                        period = 0.5
-
-                    elif P > 7.5:
-                        # random within 2 std
-                        P_years = (10 ** (random.randint(-135, 474) / 100)) ** (3. / 2)
-                        P = np.log10(P_years * 365.25)
-                        period = P
-
-        else:
-            prob = period_prob(m)
-            rd = random.randint(0, len(prob) - 1)
-            period = prob[rd]
-
-        return period
-
-    def period_func(m, x):
-
-        # if 0.6 <= m < 0.8:
-
-        if 0.6 <= m < 2:
-
-            if 0.6 <= np.log10(x) < 1.5:
-                prob = 0.027
-
-            elif 1.5 <= np.log10(x) < 2.5:
-                a = (0.057 - 0.027) / (10 ** (2.5) - 10 ** (1.5))
-                b = 0.057 - a * 10 ** (2.5)
-                prob = a * x + b
-
-            elif 2.5 <= np.log10(x) < 3.5:
-                prob = 0.057
-
-            elif 3.5 <= np.log10(x) < 4.5:
-                a = (0.095 - 0.057) / (10 ** (4.5) - 10 ** (3.5))
-                b = 0.095 - a * 10 ** (4.5)
-                prob = a * x + b
-
-            elif 4.5 <= np.log10(x) < 5.5:
-                prob = 0.095
-
-            elif 5.5 <= np.log10(x) < 6.5:
-                a = (0.075 - 0.095) / (10 ** (6.5) - 10 ** (5.5))
-                b = 0.075 - a * 10 ** (6.5)
-                prob = a * x + b
-
-            elif 6.5 <= np.log10(x) < 7.5:
-                prob = 0.075
-
-            else:
-                prob = 0
-
-            return round(prob, 3) * 1000
-
-
-        # elif 1.2 <= m < 2:
-
-        elif 2 <= m < 5:
-
-            if 0.5 <= np.log10(x) < 1.5:
-                prob = 0.07
-
-            elif 1.5 <= np.log10(x) < 2.5:
-                a = (0.12 - 0.07) / (10 ** (2.5) - 10 ** (1.5))
-                b = 0.12 - a * 10 ** (2.5)
-                prob = a * x + b
-
-            elif 2.5 <= np.log10(x) < 3.5:
-                prob = 0.12
-
-            elif 3.5 <= np.log10(x) < 4.5:
-                a = (0.13 - 0.12) / (10 ** (4.5) - 10 ** (3.5))
-                b = 0.13 - a * 10 ** (4.5)
-                prob = a * x + b
-
-            elif 4.5 <= np.log10(x) < 5.5:
-                prob = 0.13
-
-            elif 5.5 <= np.log10(x) < 6.5:
-                a = (0.09 - 0.13) / (10 ** (6.5) - 10 ** (5.5))
-                b = 0.09 - a * 10 ** (6.5)
-                prob = a * x + b
-
-            elif 6.5 <= np.log10(x) < 7.5:
-                prob = 0.09
-
-            else:
-                prob = 0
-
-            return round(prob, 2) * 100
-
-
-
-        elif 5 <= m < 9:
-
-            if 0.5 <= np.log10(x) < 1.5:
+    
+    """
+    For masses below 0.6 M_sun, we use the lognormal period distributions from Winters et al.
+    For masses above 0.6 M_sun, we use the period distributions from Moe & Di Stefano
+    We extend the period distrbutions up and down to 1.6 M_sun from 1.2 and 2 M_sun
+    """
+    
+    def interpolate(p_high, p_low, prob_high, prob_low, p):
+        a = (prob_high - prob_low) / (10 ** p_high - 10 ** p_low)
+        b = prob_high - a * p_high
+        return a * p + b
+    
+    
+    def m_dwarfs(m):
+        
+        def probability(m):
+            
+            if m < 0.15:
+                log_period = np.log10(365.25) + (3./2) * np.random.normal(0.845, 1.04)
+            elif 0.15 <= m < 0.30:
+                log_period = np.log10(365.25) + (3./2) * np.random.normal(1.04, 1.21)
+            elif 0.30 <= m < 0.60:
+                log_period = np.log10(365.25) + (3./2) * np.random.normal(1.69, 1.48)
+            
+            return log_period
+        
+        def period(m):
+            
+            p = 0
+            while (p < 0.5) or (p > 7.5):
+                p = probability(m)
+            
+            return p
+        
+        period_m_dwarf = period(m)
+        return period_m_dwarf
+    
+    
+    def solar_and_above(m):
+        
+        # Out of all the probabilities defined below, the maximum is 0.32
+        
+        def probability(m, x):
+            
+            if 0.6 <= m < 1.6:
+                if 0.5 <= np.log10(x) < 1.5:
+                    prob = 0.027
+                elif 1.5 <= np.log10(x) < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.057, 0.027, x)
+                elif 2.5 <= np.log10(x) < 3.5:
+                    prob = 0.057
+                elif 3.5 <= np.log10(x) < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.095, 0.057, x)
+                elif 4.5 <= np.log10(x) < 5.5:
+                    prob = 0.095
+                elif 5.5 <= np.log10(x) < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.075, 0.095, x)
+                elif 6.5 <= np.log10(x) < 7.5:
+                    prob = 0.075
+                else:
+                    prob = 0
+        
+        
+            elif 1.6 <= m < 5:
+                if 0.5 <= np.log10(x) < 1.5:
+                    prob = 0.07
+                elif 1.5 <= np.log10(x) < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.12, 0.07, x)
+                elif 2.5 <= np.log10(x) < 3.5:
+                    prob = 0.12
+                elif 3.5 <= np.log10(x) < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.13, 0.12, x)
+                elif 4.5 <= np.log10(x) < 5.5:
+                    prob = 0.13
+                elif 5.5 <= np.log10(x) < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.09, 0.13, x)
+                elif 6.5 <= np.log10(x) < 7.5:
+                    prob = 0.09
+                else:
+                    prob = 0
+    
+            elif 5 <= m < 9:
+                if 0.5 <= np.log10(x) < 1.5:
                 prob = 0.14
-
-            elif 1.5 <= np.log10(x) < 2.5:
-                a = (0.22 - 0.14) / (10 ** (2.5) - 10 ** (1.5))
-                b = 0.22 - a * 10 ** (2.5)
-                prob = a * x + b
-
-            elif 2.5 <= np.log10(x) < 3.5:
-                prob = 0.22
-
-            elif 3.5 <= np.log10(x) < 4.5:
-                a = (0.20 - 0.22) / (10 ** (4.5) - 10 ** (3.5))
-                b = 0.20 - a * 10 ** (4.5)
-                prob = a * x + b
-
-            elif 4.5 <= np.log10(x) < 5.5:
-                prob = 0.20
-
-            elif 5.5 <= np.log10(x) < 6.5:
-                a = (0.11 - 0.20) / (10 ** (6.5) - 10 ** (5.5))
-                b = 0.11 - a * 10 ** (6.5)
-                prob = a * x + b
-
-            elif 6.5 <= np.log10(x) < 7.5:
-                prob = 0.11
-
-            else:
-                prob = 0
-
-            return round(prob, 2) * 100
-
-
-
-        elif 9 <= m < 16:
-
-            if 0.5 <= np.log10(x) < 1.5:
-                prob = 0.19
-
-            elif 1.5 <= np.log10(x) < 2.5:
-                a = (0.26 - 0.19) / (10 ** (2.5) - 10 ** (1.5))
-                b = 0.26 - a * 10 ** (2.5)
-                prob = a * x + b
-
-            elif 2.5 <= np.log10(x) < 3.5:
-                prob = 0.26
-
-            elif 3.5 <= np.log10(x) < 4.5:
-                a = (0.23 - 0.26) / (10 ** (4.5) - 10 ** (3.5))
-                b = 0.23 - a * 10 ** (4.5)
-                prob = a * x + b
-
-            elif 4.5 <= np.log10(x) < 5.5:
-                prob = 0.23
-
-            elif 5.5 <= np.log10(x) < 6.5:
-                a = (0.13 - 0.23) / (10 ** (6.5) - 10 ** (5.5))
-                b = 0.13 - a * 10 ** (6.5)
-                prob = a * x + b
-
-            elif 6.5 <= np.log10(x) < 7.5:
-                prob = 0.13
-
-            else:
-                prob = 0
-
-            return round(prob, 2) * 100
-
-
-
-        elif m >= 16:
-
-            if 0.5 <= np.log10(x) < 1.5:
-                prob = 0.29
-
-            elif 1.5 <= np.log10(x) < 2.5:
-                a = (0.32 - 0.29) / (10 ** (2.5) - 10 ** (1.5))
-                b = 0.29 - a * 10 ** (2.5)
-                prob = a * x + b
-
-            elif 2.5 <= np.log10(x) < 3.5:
-                prob = 0.32
-
-            elif 3.5 <= np.log10(x) < 4.5:
-                a = (0.30 - 0.32) / (10 ** (4.5) - 10 ** (3.5))
-                b = 0.30 - a * 10 ** (4.5)
-                prob = a * x + b
-
-            elif 4.5 <= np.log10(x) < 5.5:
-                prob = 0.30
-
-            elif 5.5 <= np.log10(x) < 6.5:
-                a = (0.18 - 0.30) / (10 ** (6.5) - 10 ** (5.5))
-                b = 0.18 - a * 10 ** (6.5)
-                prob = a * x + b
-
-            elif 6.5 <= np.log10(x) < 7.5:
-                prob = 0.18
-
-            else:
-                prob = 0
-
-            return round(prob, 2) * 100
-
-
-
-        else:
-            prob = 0
+                elif 1.5 <= np.log10(x) < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.22, 0.14, x)
+                elif 2.5 <= np.log10(x) < 3.5:
+                    prob = 0.22
+                elif 3.5 <= np.log10(x) < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.20, 0.22, x)
+                elif 4.5 <= np.log10(x) < 5.5:
+                    prob = 0.20
+                elif 5.5 <= np.log10(x) < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.11, 0.20, x)
+                elif 6.5 <= np.log10(x) < 7.5:
+                    prob = 0.11
+                else:
+                    prob = 0
+                        
+            elif 9 <= m < 16:
+                if 0.5 <= np.log10(x) < 1.5:
+                    prob = 0.19
+                elif 1.5 <= np.log10(x) < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.26, 0.19, x)
+                elif 2.5 <= np.log10(x) < 3.5:
+                    prob = 0.26
+                elif 3.5 <= np.log10(x) < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.23, 0.26, x)
+                elif 4.5 <= np.log10(x) < 5.5:
+                    prob = 0.23
+                elif 5.5 <= np.log10(x) < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.13, 0.23, x)
+                elif 6.5 <= np.log10(x) < 7.5:
+                    prob = 0.13
+                else:
+                    prob = 0
+                                                                                            
+            elif m >= 16:
+                if 0.5 <= np.log10(x) < 1.5:
+                    prob = 0.29
+                elif 1.5 <= np.log10(x) < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.32, 0.29, x)
+                elif 2.5 <= np.log10(x) < 3.5:
+                    prob = 0.32
+                elif 3.5 <= np.log10(x) < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.30, 0.32, x)
+                elif 4.5 <= np.log10(x) < 5.5:
+                    prob = 0.30
+                elif 5.5 <= np.log10(x) < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.18, 0.30, x)
+                elif 6.5 <= np.log10(x) < 7.5:
+                    prob = 0.18
+                else:
+                    prob = 0
+                                                                                                                                                                
             return prob
+                                                                                                                                                                    
+                                                                                                                                                                    
+        def period(m):
+                                                                                                                                                                        
+            p = 1
+            h = 1
+            while probability(m, p) < h:
+                 p = random.uniform(0.5, 7.5)
+                 h = random.uniform(0, 0.32)
+                                                                                                                                                                                        
+            return p
 
-    def period_prob(m):
+        period_above_solar = period(m)
+        return period_above_solar
 
-        if 0.6 <= m:
-
-            # Getting weird decimals here
-            periods_err = np.arange(0.5, 7.6, 0.1)
-            # Doing weird stuff to get rid of the weird decimals
-            periods = []
-            for i in periods_err:
-                value = int(i * 10) / 10.
-                periods.append(value)
-
-            prob = []
-
-            for i in periods:
-                value = period_func(m, 10 ** i)
-                val = int(value)
-                norm = np.array([i] * val)
-                prob.extend(norm)
-
-            return prob
-
-        else:
-            prob = 0
-            return prob
-
-    #periods = []
-    #for i in range(len(m_arr)):
-        #periods.append(period(m_arr[i]))
-
-    return period(mass)
-
+    if mass < 0.6:
+        p = m_dwarfs(mass)
+    else:
+        p = solar_and_above(mass)
+            
+    return p
 
 
 def get_companion_mass(mass, period):
-
-    q = np.arange(0.1, 1.01, 0.01)
-
-
-    # ---------------------------------------------------------
-    # Solar-type, extended from 0.5 M_sun to 2 M_sun
-    # ---------------------------------------------------------
-
-    # Power-law slope for large and small mass ratios
+    
+    """
+    All from Moe & Di Stefano, due to incompleteness of mass ratio distribution for M-dwarfs
+    The solar-type distribution is extended down to 0.08 M_sun
+    """
+    
+    def interpolate(p_low, p_high, g_low, g_high, g):
+        a = (g_high - g_low) / (10 ** p_high - 10 ** p_low)
+        b = g_high - a * p_high
+        return a * g + b
+    
+    
     def gamma_solar(P, x):
-    # We extend the 3-1 slope down to 0.5, and the 7-5 up to 7.5
-        if 0.3 <= x < 1:
-            # Large q
-            #if 0.5 <= P <= 5:
+        
+        if 0.3 <= x:
             if P <= 5:
                 gamma = -0.5
-                return gamma
-
-            #elif 5 < P <= 7.5:
             elif 5 < P:
-                a = (-1.1+0.5)/(10**7 - 10**5)
-                b = -1.1 - a * 10**7
-                gamma = a * x + b
-                return gamma
+                gamma = interpolate(5, 7, -0.5, -1.1, x)
 
-        if 0.1 <= x < 0.3:
-            # Small q
+        elif x < 0.3:
             gamma = 0.3
-            return gamma
-
-    # Non-normalized probability, as a function of period and mass ratio
-    def prob_func_solar(P,x):
-
-        prob = []
-        if x > 0.94:
-            if P <=2 :
-                prob.append(np.round(130 * x ** (gamma_solar(P,x))))
-            elif 2 < P <= 4:
-                prob.append(np.round(120 * x ** (gamma_solar(P, x))))
-            elif 4 < P <= 6:
-                prob.append(np.round(110 * x ** (gamma_solar(P, x))))
-            else:
-                prob.append(np.round(100 * x ** (gamma_solar(P, x))))
+        
         else:
-            prob.append(np.round(100 * x ** (gamma_solar(P, x))))
-        return prob
+            print('Err. in gamma solar, default to gamma=0 !')
+            print('Period =', P, 'and q =', x)
+            gamma = 0
 
-    # Non-normalized probability, as a function of period and for the complete array of mass ratios
-    def prob_solar(P):
-        prob = []
-        for i in range(len(q)):
-            prob.append(prob_func_solar(P, q[i]))
-        return prob
-
-
-
-    # ---------------------------------------------------------
-    # A/late B, from 2 M_sun to 5 M_sun
-    # ---------------------------------------------------------
-
-    # Power-law slope for large and small mass ratios
+        return gamma
+    
+    
     def gamma_AB(P, x):
-    # (Maybe) temporarily, we use step functions
-    # We extend P=1 from 0.5 to 2, P=3 from 2 to 4...
+        
         if 0.3 <= x < 1:
-            # Large q
-            #if 0.5 <= P < 2:
-            if P < 2:
+            if P < 1.5:
                 gamma = -0.5
-                return gamma
-
-            elif 2 <= P < 4:
+            elif 1.5 <= P < 2.5:
+                gamma = interpolate(1.5, 2.5, -0.5, -0.9, x)
+            elif 2.5 <= P < 3.5:
                 gamma = -0.9
-                return gamma
-
-            elif 4 <= P < 6:
+            elif 3.5 <= P < 4.5:
+                gamma = interpolate(3.5, 4.5, -0.9, -1.4, x)
+            elif 4.5 <= P < 5.5:
                 gamma = -1.4
-                return gamma
-
-            elif 6 <= P < 7.5:
+            elif 5.5 <= P < 6.5:
+                gamma = interpolate(5.5, 6.5, -1.4, -2.0, x)
+            elif 6 <= P <= 7.5:
                 gamma = -2.0
-                return gamma
-
-        if 0.1 <= x < 0.3:
-            # Small q
-            #if 0.5 <= P < 2:
-            if P < 2:
+    
+        elif 0.1 <= x < 0.3:
+            if P < 1.5:
                 gamma = 0.2
-                return gamma
-
-            elif 2 <= P < 4:
+            elif 1.5 <= P < 2.5:
+                gamma = interpolate(1.5, 2.5, 0.2, 0.1, x)
+            elif 2.5 <= P < 3.5:
                 gamma = 0.1
-                return gamma
-
-            elif 4 <= P < 6:
+            elif 3.5 <= P < 4.5:
+                gamma = interpolate(3.5, 4.5, 0.1, -0.5, x)
+            elif 4.5 <= P < 5.5:
                 gamma = -0.5
-                return gamma
-
-            elif 6 <= P < 7.5:
+            elif 5.5 <= P < 6.5:
+                gamma = interpolate(5.5, 6.5, -0.5, -1.0, x)
+            elif 6 <= P <= 7.5:
                 gamma = -1.0
-                return gamma
 
-    # Non-normalized probability, as a function of period and mass ratio
-    def prob_func_AB(P,x):
-
-        prob = []
-        if x > 0.94:
-            if P <= 2:
-                prob.append(np.round(122 * x ** (gamma_AB(P,x))))
-            elif 2 < P <= 4:
-                prob.append(np.round(110 * x ** (gamma_AB(P,x))))
-            else:
-                prob.append(np.round(100 * x ** (gamma_AB(P, x))))
         else:
-            prob.append(np.round(100 * x ** (gamma_AB(P, x))))
-        return prob
+            print('Err. in gamma AB, default to gamma=0 !')
+            print('Period =', P, 'and q =', x)
+            gamma = 0
 
-    # Non-normalized probability, as a function of period and for the complete array of mass ratios
-    def prob_AB(P):
-        prob = []
-        for j in range(len(q)):
-            prob.append(prob_func_AB(P, q[j]))
-        return prob
-
-
-
-    # ---------------------------------------------------------
-    # Mid-B, Early-B and O, above 5 M_sun
-    # ---------------------------------------------------------
-
-    # Power-law slope for large and small mass ratios
+        return gamma
+                                
+                                
     def gamma_early(P, x):
-    # (Maybe) temporarily, we use step functions
-    # We extend P=1 from 0.5 to 2, P=3 from 2 to 4...
+                                    
         if 0.3 <= x < 1:
-            # Large q
-            if 0.5 <= P < 2:
+            if 0.5 <= P < 1.5:
                 gamma = -0.5
-                return gamma
-
-            elif 2 <= P < 4:
+            elif 1.5 <= P < 2.5:
+                gamma = interpolate(1.5, 2.5, -0.5, -1.7, x)
+            elif 2.5 <= P < 3.5:
                 gamma = -1.7
-                return gamma
-
-            elif 4 <= P < 7.5:
+            elif 3.5 <= P < 4.5:
+                gamma = interpolate(3.5, 4.5, -1.7, -2.0, x)
+            elif 4.5 <= P <= 7.5:
                 gamma = -2.0
-                return gamma
-
-        if 0.1 <= x < 0.3:
-            # Small q
-            if 0.5 <= P < 2:
+                                                                                
+        elif 0.1 <= x < 0.3:
+            if 0.5 <= P < 1.5:
                 gamma = 0.1
-                return gamma
-
-            elif 2 <= P < 4:
+            elif 1.5 <= P < 2.5:
+                gamma = interpolate(1.5, 2.5, 0.1, -0.2, x)
+            elif 2.5 <= P < 3.5:
                 gamma = -0.2
-                return gamma
-
-            elif 4 <= P < 6:
+            elif 3.5 <= P < 4.5:
+                gamma = interpolate(3.5, 4.5, -0.2, -1.2, x)
+            elif 4.5 <= P < 5.5:
                 gamma = -1.2
-                return gamma
-
-            elif 6 <= P < 7.5:
+            elif 5.5 <= P < 6.5:
+                gamma = interpolate(5.5, 6.5, -1.2, -1.5, x)
+            elif 6.5 <= P <= 7.5:
                 gamma = -1.5
-                return gamma
-
-    # Non-normalized probability, as a function of period and mass ratio
-    def prob_func_early(P,x):
-
-        prob = []
-        if x > 0.94:
-            if P <= 2:
-                prob.append(np.round(113 * x ** (gamma_early(P,x))))
-            else:
-                prob.append(np.round(100 * x ** (gamma_early(P,x))))
+                                                                                                                                            
         else:
-            prob.append(np.round(100 * x ** (gamma_early(P, x))))
-        return prob
-
-    # Non-normalized probability, as a function of period and for the complete array of mass ratios
-    def prob_early(P):
-        prob = []
-        for j in range(len(q)):
-            prob.append(prob_func_early(P,q[j]))
-        return prob
+            print('Err. in gamma early, default to gamma=0 !')
+            print('Period =', P, 'and q =', x)
+            gamma = 0
+                                                                                                                                                    
+        return gamma
 
 
-
-    # ---------------------------------------------------------
-    # Express as function of mass, and as a probability function
-    # ---------------------------------------------------------
-    def non_norm_prob(P,m):
-
-        if m < 2:
-            return np.array(prob_solar(P))[:,0]
-
-        elif 2 <= m <= 5:
-            return np.array(prob_AB(P))[:,0]
-
-        elif m > 5:
-            return np.array(prob_early(P))[:,0]
-
-    def prob(P,m):
-
-        prob = []
-
-        for k in range(len(non_norm_prob(P,m))):
-            np.array(prob.append([k] * int(non_norm_prob(P,m)[k])))
-
-        flat = []
-        for sublist in prob:
-            for item in sublist:
-                flat.append(item)
-
-        rd  = random.randint(0, len(flat)-1)
-        val = flat[rd]
-
-        mass_ratio = q[val]
-
+    def mass_ratio(m, P):
+        q = 1
+        h = 10
+        g = 0
+        while (q ** g) < h:
+            low = np.max([0.1, 0.08 / m])
+            q = random.uniform(low, 1)
+            if m <= 2:
+                g = gamma_solar(P, q)
+                h = random.uniform(0, low ** g)
+            if 2 < m <= 5:
+                g = gamma_AB(P, q)
+                h = random.uniform(0, low ** g)
+            if 5 < m:
+                g = gamma_early(P, q)
+                h = random.uniform(0, low ** g)
+            mass_ratio = q
         return mass_ratio
 
-    return prob(period, mass) * mass
+    
+    mr = mass_ratio(mass, period)
+    cm = mass * mr
+    
+    return cm
+
 
 
 def get_eccentricity(mass, period):
-
-    ecc_x = np.arange(0.005, 1.00, 0.005)
-
+    
     def ecc_max(p):
-
-        e_max = 1 - (10 ** p / 2.0) ** (-2 / 3.0)
+        e_max = 1 - (10 ** p / 2) ** (-2 / 3)
         return e_max
-
-    def prob_ecc(e, m, p):
-
-        if m <= 3:
+    
+    def prob_eta(m, p):
+        if m <= 5:
             eta = 0.6 - 0.7 / (p - 0.5)
-
-        elif m > 7:
+        else:
             eta = 0.9 - 0.2 / (p - 0.5)
-
-        elif 3 < m <= 7:
-            eta = -0.225 - 0.075 * m + (-0.125 + 0.475) / (p - 0.5)
-
-        prob = int(100 * e ** eta)
-        return prob
-
-    # Make sure all arrays have a reasonable size
-    # We want to avoid memory overflow errors
-
-    if period > 0.6:
-        prob_arr = []
-        for d in range(len(ecc_x)):
-            prob_arr.append(prob_ecc(ecc_x[d], mass, period))
-        digits = int(np.log10(np.max(prob_arr))) + 1
-        if digits <= 2:
-            all_prob = prob_arr
+        return eta
+    
+    def get_ecc(m, P):
+        if P <= 0.55:
+            ecc = random.uniform(0, ecc_max(P))
         else:
-            all_prob = []
-            for c in prob_arr:
-                all_prob.append(c / (10 ** (digits - 2)))
-
-        all_prob = np.array(all_prob)
-        prob_arr = []
-        for dd in range(len(ecc_x)):
-            arr = np.array([ecc_x[dd]] * all_prob)
-            prob_arr.extend(arr)
-        rd = random.randint(0, len(prob_arr) - 1)
-        ecc = prob_arr[rd]
-        if ecc <= ecc_max(period):
-            eccentricity = ecc
-        else:
-            eccentricity = ecc_max(period)
-
-    elif period <= 0.6:
-        dd = np.random.randint(0, 100 * ecc_max(period))
-        eccentricity = dd / 100
+            t = 0
+            e = 1
+            h = 10
+            n = 0
+            while (e ** n) < h:
+                emax = ecc_max(P)
+                ecc  = random.uniform(0, emax)
+                n    = prob_eta(m, P)
+                h    = random.uniform(0, emax ** n)
+        return ecc
+    
+    eccentricity = get_ecc(mass, period)
 
     return eccentricity
 
 
-##################################
-# Fifth function to call, orbits #
-##################################
+
 def orbits(mass_array):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
@@ -742,9 +427,8 @@ def orbits(mass_array):
 
     def generate_binaries_with_orientation(mass_array = mass_array):
         """
-        Generates binaries from arrays of masses and orbital elements
-        The input arrays have no units
-        The function returns sets of two particles, containing the primary and companion
+        Generates binaries from arrays of masses
+        The input array has no units
         """
 
         multiplicity  = get_multiplicity(mass_array)[0]
@@ -795,10 +479,6 @@ def orbits(mass_array):
         return masses, system_masses, positions, velocities
     
     binaries = generate_binaries_with_orientation()
-    #np.savetxt('masses.txt', binaries[0])
-    #np.savetxt('system_masses.txt', binaries[1])
-    #np.savetxt('positions.txt', binaries[2])
-    #np.savetxt('velocities.txt', binaries[3])
     
     return binaries
 
