@@ -308,7 +308,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
             print(" {} stars".format(nnew), end='')
-            print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
+            print(" ({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
             print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" max mass {}".format(np.amax(spawn_masses)))
