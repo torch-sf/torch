@@ -111,7 +111,7 @@ real(dp), save :: gamma_
 
 
 integer :: injBlkNum
-real(dp) :: blkCenterDist(3), blkRadDist , blkCornerDist(3)
+real(dp) :: blkCtr(3), blkSize(3)  ! code requires MDIM=3
 real(dp), parameter :: yr = (60.0_dp**2.0)*24.0_dp*365.25_dp, pc = 3.086e18
 real(dp), parameter :: solarMass = 1.989d33, mu = 1.3*1.6726e-24
 
@@ -136,6 +136,7 @@ end if
 
 iHaveInjectBlk = .false.
 useTimeStep = .true.
+bgDens = 0.0_dp
 sumOverlap = 0.0_dp
 sumMass = 0.0_dp
 
@@ -194,23 +195,19 @@ print*, "loc =", loc, gr_meshMe
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
 injBlkNum = 0
-blkCenterDist = 0.0d0
 do blockID = 1, lnblocks
     if(nodetype(blockID) == LEAF) then
-        
-        blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-        blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-            
-        if (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + & 
-            blkCornerDist(3)**2.0 <= (injectRadius)**2.0) then 
-
+        ! exact collision detection for sphere and rectangular prism
+        ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+        call Grid_getBlkCenterCoords(blockID,blkCtr)
+        call Grid_getBlkPhysicalSize(blockID,blkSize)
+        ! point within block that is closest to SN location
+        x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+        y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+        z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+        if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
             injBlkNum = injBlkNum + 1
-            
-#ifdef DEBUG2
-            print*, "injBlkNum =", injBlkNum
-#endif
             iHaveInjectBlk = .true.
-
         end if
     end if
 end do
@@ -243,15 +240,17 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
     n = 1
     do blockID = 1, lnblocks
         if(nodetype(blockID) == LEAF) then
-            blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-            blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-
-            if ((blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + &
-            blkCornerDist(3)**2.0) <= (injectRadius)**2.0) then
-
+            ! exact collision detection for sphere and rectangular prism
+            ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+            call Grid_getBlkCenterCoords(blockID,blkCtr)
+            call Grid_getBlkPhysicalSize(blockID,blkSize)
+            ! point within block that is closest to SN location
+            x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+            y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+            z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+            if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
                 localInjectBlocks(n) = blockID
                 n = n + 1
-
             end if
         end if
     end do
@@ -398,19 +397,19 @@ if (fracKin .lt. 0.0) then
   ! Also note that tPDS is in units of 10^3 years.
   tPDS = 26.5*((energy/1e51)**(3.0/14.0))*((bgDens/mu)**(-4.0/7.0))
 #ifdef DEBUG_ENERGY
-  print*, "tPDS =", tPDS
+  if (gr_meshMe == 0) print*, "tPDS =", tPDS
 #endif
   ! Then calculate the radius of the SN front at this time.
   ! rPDS is in units of parsecs.
   rPDS = 18.5*((energy/1e51)**(2.0/7.0))*((bgDens/mu)**(-3.0/7.0))
 #ifdef DEBUG_ENERGY
-  print*, "rPDS= ", rPDS
+  if (gr_meshMe == 0) print*, "rPDS= ", rPDS
 #endif
   ! Finally calculate the kinetic fraction. Here we assume mean molecular weight of 1.0
   fracKin = 3.97e-6*(bgDens/mu)*(rPDS**7.0)*(tPDS**(-2.0))*((SNdelta(1)/pc)**(-2.0))*((energy/1e51)**(-1.0))
   if (four_point_five_dx < (rPDS*pc)) fracKin = 0.0d0
 #ifdef DEBUG_ENERGY
-  print*, "fracKin", fracKin
+  if (gr_meshMe == 0) print*, "fracKin", fracKin
 #endif
 end if
 
@@ -692,13 +691,13 @@ call MPI_ALLREDUCE(MPI_IN_PLACE, sumMass, 1, MPI_DOUBLE_PRECISION, &
         emech = InjectEnergyIn
         pmech = sqrt(2.0 * injectMassIn * fracKin* InjectEnergyIn)
         write(*,'(A,ES10.3,A)') "We got ", globalDeltaE, "ergs"
-        write(*,'(A,F10.3,A)') "Error in injected wind total E is ", abs(globalDeltaE - emech)/emech*100, "%"
+        write(*,'(A,F10.3,A)') "Error in injected SN total E is ", abs(globalDeltaE - emech)/emech*100, "%"
         write(*,'(A,F10.3,A)') "Percentage of energy that is thermal is ", globalTE/globalDeltaE*100.0, "%"
         write(*,'(A,F10.3,A)') "Percentage of energy that is kinetic is ", globalKE/globalDeltaE*100.0, "%"
-        if (pmech .ne. 0.0d0) write(*,'(A,F10.3,A)') "Error in injected wind P is ", abs(globalDeltaP - pmech)/pmech*100, "%"
+        if (pmech .ne. 0.0d0) write(*,'(A,F10.3,A)') "Error in injected SN pressure is ", abs(globalDeltaP - pmech)/pmech*100, "%"
         write(*,'(A,ES10.3e2,A)') "Largest TE is ", largestTE
         write(*,'(A,ES10.3e2,A)') "Largest KE is ", largestKE
-        write(*,'(A,ES10.3e2,X,A,ES10.3e2)') "Total mass from wind is ", injectMass, "Injected mass is ", sumMass
+        write(*,'(A,ES10.3e2,X,A,ES10.3e2)') "Total mass from SN is ", injectMass, "Injected mass is ", sumMass
     end if
 #endif
 
@@ -776,13 +775,13 @@ call MPI_ALLREDUCE(MPI_IN_PLACE, dt, 1, MPI_DOUBLE_PRECISION, &
                                             
 if (useTimeStep .and. gr_meshMe == 0) then
 #ifdef DEBUG_ENERGY
-    write(*,'(A,ES10.3)') "Timestep set by inject_direct = ", dt
+    write(*,'(A,ES10.3)') "Timestep set by Particles_energyInjection = ", dt
 #endif
 end if
 
 call Grid_fillGuardCells(CENTER, ALLDIR) !, eosMode=MODE_DENS_EI, doEos=.true.)
 
 #ifdef DEBUG2
-print *, "Exiting inject_direct for proc", gr_meshMe
+print *, "Exiting Particles_energyInjection for proc", gr_meshMe
 #endif
 end subroutine Particles_energyInjection
