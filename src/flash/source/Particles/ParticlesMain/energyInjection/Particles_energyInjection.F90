@@ -136,6 +136,7 @@ end if
 
 iHaveInjectBlk = .false.
 useTimeStep = .true.
+bgDens = 0.0_dp
 sumOverlap = 0.0_dp
 sumMass = 0.0_dp
 
