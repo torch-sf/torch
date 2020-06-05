@@ -247,6 +247,12 @@ def lum_wl_cs(l, l_max, T):
     Note I left out sig0 here b/c we divide this by lum_wl_cs_per_ph that would
     also have sig0 in it.
     """
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0)
     return L
 
@@ -256,6 +262,12 @@ def lum_wl_cs_per_ph(l, l_max, T):
     Determine the number count of photons at a particular wavelength, temperature and cross section.
     Uses the standard blackbody curve and incorporates the cross section as a function of wavelength.
     """
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
     return L
 
@@ -265,6 +277,12 @@ def lum_wl(l, l_max, T):
     Determine the stellar luminosity at a particular wavelength and temp.
     Uses the standard blackbody curve.
     """
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0)
     return L
 
@@ -274,6 +292,12 @@ def lum_wl_per_ph(l, l_max, T):
     Determine the number count of photons at a particular wavelength and temp.
     Uses the standard blackbody curve.
     """
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
     return L
 
