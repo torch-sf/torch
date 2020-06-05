@@ -84,9 +84,18 @@ def lum_wl_cs(l, l_max, T):
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
 
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
+
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0)
 
     return L
+
+
 # Function to determine the number count of photons at a particular wavelength, temperature and cross section.
 # Uses the standard blackbody curve and incorporates the cross section as a function of wavelength.
 def lum_wl_cs_per_ph(l, l_max, T):
@@ -94,6 +103,13 @@ def lum_wl_cs_per_ph(l, l_max, T):
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
+
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
 
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
 
@@ -108,9 +124,18 @@ def lum_wl(l, l_max, T):
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
 
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
+
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0)
 
     return L
+
+
 # Function to determine the number count of photons at a particular wavelength and temp.
 # Uses the standard blackbody curve.
 def lum_wl_per_ph(l, l_max, T):
@@ -118,6 +143,13 @@ def lum_wl_per_ph(l, l_max, T):
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
+
+    # suppress numpy "RuntimeWarning: overflow encountered in exp"
+    # which occurs for some, but not all, numpy builds
+    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
+    # exp(...) overflow to +inf is harmless for l > 1e-50
+    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
+        return 0
 
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
 
