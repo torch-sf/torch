@@ -111,7 +111,7 @@ real(dp), save :: gamma_
 
 
 integer :: injBlkNum
-real(dp) :: blkCenterDist(3), blkRadDist , blkCornerDist(3)
+real(dp) :: blkCtr(3), blkSize(3)  ! code requires MDIM=3
 real(dp), parameter :: yr = (60.0_dp**2.0)*24.0_dp*365.25_dp, pc = 3.086e18
 real(dp), parameter :: solarMass = 1.989d33, mu = 1.3*1.6726e-24
 
@@ -194,23 +194,19 @@ print*, "loc =", loc, gr_meshMe
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
 injBlkNum = 0
-blkCenterDist = 0.0d0
 do blockID = 1, lnblocks
     if(nodetype(blockID) == LEAF) then
-        
-        blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-        blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-            
-        if (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + & 
-            blkCornerDist(3)**2.0 <= (injectRadius)**2.0) then 
-
+        ! exact collision detection for sphere and rectangular prism
+        ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+        call Grid_getBlkCenterCoords(blockID,blkCtr)
+        call Grid_getBlkPhysicalSize(blockID,blkSize)
+        ! point within block that is closest to SN location
+        x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+        y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+        z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+        if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
             injBlkNum = injBlkNum + 1
-            
-#ifdef DEBUG2
-            print*, "injBlkNum =", injBlkNum
-#endif
             iHaveInjectBlk = .true.
-
         end if
     end if
 end do
@@ -243,15 +239,17 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
     n = 1
     do blockID = 1, lnblocks
         if(nodetype(blockID) == LEAF) then
-            blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-            blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-
-            if ((blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + &
-            blkCornerDist(3)**2.0) <= (injectRadius)**2.0) then
-
+            ! exact collision detection for sphere and rectangular prism
+            ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+            call Grid_getBlkCenterCoords(blockID,blkCtr)
+            call Grid_getBlkPhysicalSize(blockID,blkSize)
+            ! point within block that is closest to SN location
+            x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+            y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+            z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+            if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
                 localInjectBlocks(n) = blockID
                 n = n + 1
-
             end if
         end if
     end do
