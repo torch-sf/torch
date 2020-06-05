@@ -222,9 +222,9 @@ def compute_epe_npe(se_temp, se_radius):
     l_max_dust = h*c/(5.6*E_ev) # wavelength at 5.6 eV
 
     # First integrate the power from the BB curve at this stars temp.
-    [power, err] = quad(lum_wl, l_min_dust, l_max_dust, args=(l_max_dust, se_temp.value_in(units.K)))
+    [power, err] = quad(lum_wl, l_min_dust, l_max_dust, args=(se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
-    [per_ph, err] = quad(lum_wl_per_ph, l_min_dust, l_max_dust, args=(l_max_dust, se_temp.value_in(units.K)))
+    [per_ph, err] = quad(lum_wl_per_ph, l_min_dust, l_max_dust, args=(se_temp.value_in(units.K)))
 
     avg_E = power/per_ph / E_ev
 
@@ -253,7 +253,7 @@ def lum_wl_cs(l, l_max, T):
     # exp(...) overflow to +inf is harmless for l > 1e-50
     if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
         return 0
-    L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0)
+    L = (2*h*c**2/l**5) * (l/l_max)**3 / (np.exp(h*c/(l*k*T)) - 1)
     return L
 
 
@@ -268,11 +268,11 @@ def lum_wl_cs_per_ph(l, l_max, T):
     # exp(...) overflow to +inf is harmless for l > 1e-50
     if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
         return 0
-    L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
+    L = (2*h*c**2/l**5) * (l/l_max)**3 / (np.exp(h*c/(l*k*T)) - 1) / (h*c/l)
     return L
 
 
-def lum_wl(l, l_max, T):
+def lum_wl(l, T):
     """
     Determine the stellar luminosity at a particular wavelength and temp.
     Uses the standard blackbody curve.
@@ -283,11 +283,11 @@ def lum_wl(l, l_max, T):
     # exp(...) overflow to +inf is harmless for l > 1e-50
     if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
         return 0
-    L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0)
+    L = (2*h*c**2/l**5) / (np.exp(h*c/(l*k*T)) - 1)
     return L
 
 
-def lum_wl_per_ph(l, l_max, T):
+def lum_wl_per_ph(l, T):
     """
     Determine the number count of photons at a particular wavelength and temp.
     Uses the standard blackbody curve.
@@ -298,7 +298,7 @@ def lum_wl_per_ph(l, l_max, T):
     # exp(...) overflow to +inf is harmless for l > 1e-50
     if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
         return 0
-    L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
+    L = (2*h*c**2/l**5) / (np.exp(h*c/(l*k*T)) - 1) / (h*c/l)
     return L
 
 
