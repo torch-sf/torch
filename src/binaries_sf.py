@@ -195,7 +195,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, sum_small=False,
-                sample_imf_bins=10):
+                binaries=True, sample_imf_bins=10):
     """Check hydro for new sinks, queue stars for spawning"""
 
     hydro.set_particle_pointers('sink')
@@ -215,8 +215,6 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             state.system_masses[sink_tag]  = np.array([]) #Added by CCC for binaries, May 4, 2020
             state.all_positions[sink_tag]  = np.empty([0,3]) #Added by CCC for binaries, May 7, 2020 (below too)
             state.all_velocities[sink_tag] = np.empty([0,3])
-            #state.all_positions[sink_tag]  = np.array([])
-            #state.all_velocities[sink_tag] = np.array([])
             tprint("... new sink tag {}".format(sink_tag))
 
         while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
@@ -225,7 +223,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             num_bins=sample_imf_bins,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
-                            sum_small=sum_small,
+                            sum_small=sum_small, binaries=binaries
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')

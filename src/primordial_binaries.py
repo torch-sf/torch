@@ -11,7 +11,7 @@ from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
 
-def get_multiplicity(m_arr):
+def get_multiplicity(m_arr, binaries=True):
 
     def interpolate(m_low, m_high, CF_low, CF_high, m):
         a = (CF_high - CF_low) / (m_high - m_low)
@@ -64,12 +64,18 @@ def get_multiplicity(m_arr):
     singles      = []
     primaries    = []
 
-    for m in m_arr:
-        mult_prob = random.random()
-        if mult_prob <= companion_frequency(m):
-            multiplicity.append(1)
-            primaries.append(m)
-        else:
+    if (binaries):
+        for m in m_arr:
+            mult_prob = random.random()
+            if mult_prob <= companion_frequency(m):
+                multiplicity.append(1)
+                primaries.append(m)
+            else:
+                multiplicity.append(0)
+                singles.append(m)
+                
+    else:
+        for m in m_arr:
             multiplicity.append(0)
             singles.append(m)
 
@@ -161,7 +167,7 @@ def get_period(mass):
     
             elif 5 <= m < 9:
                 if 0.5 <= np.log10(x) < 1.5:
-                prob = 0.14
+                    prob = 0.14
                 elif 1.5 <= np.log10(x) < 2.5:
                     prob = interpolate(2.5, 1.5, 0.22, 0.14, x)
                 elif 2.5 <= np.log10(x) < 3.5:
@@ -410,7 +416,7 @@ def get_eccentricity(mass, period):
 
 
 
-def orbits(mass_array):
+def orbits(mass_array, binaries=True):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
         """
@@ -425,13 +431,13 @@ def orbits(mass_array):
         return semi_major_axis.as_quantity_in(units.AU)
 
 
-    def generate_binaries_with_orientation(mass_array = mass_array):
+    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries):
         """
         Generates binaries from arrays of masses
         The input array has no units
         """
 
-        multiplicity  = get_multiplicity(mass_array)[0]
+        multiplicity  = get_multiplicity(mass_array, binaries)[0]
         masses        = []
         system_masses = []
         positions     = []

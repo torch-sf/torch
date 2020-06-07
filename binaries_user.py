@@ -264,6 +264,7 @@ def user_parameters():
     p['sample_imf_bins'] = 10
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False
+    p['binaries'] = True
 
     # <job>
 

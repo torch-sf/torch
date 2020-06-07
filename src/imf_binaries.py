@@ -12,14 +12,12 @@ from primordial_binaries import orbits
 
 
 def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False):
+                              max_samp_mass=150.0, sum_small=False, binaries=True):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
     # Now use that to sample the IMF.
     masses     = np.zeros(n_stars.sum())
-    #positions  = np.zeros((n_stars.sum(), 3))
-    #velocities = np.zeros((n_stars.sum(), 3)) #Make sure positions and velocities have 3 components
     k = 0
     for i, n in enumerate(n_stars):
         #print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]
@@ -41,8 +39,7 @@ def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
         masses = collect_small_stars_mass(masses)
 
     np.random.shuffle(masses)
-    masses, system_masses, positions, velocities = orbits(masses)
-    #system_masses = masses
+    masses, system_masses, positions, velocities = orbits(masses, binaries = binaries)
 
     return masses, system_masses, positions, velocities
 
