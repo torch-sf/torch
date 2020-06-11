@@ -35,6 +35,9 @@
 
 subroutine Particles_advance (dtOld,dtNew)
   
+#ifdef DEBUG_PARTICLES
+  use Driver_data, ONLY: dr_globalMe
+#endif
   use Particles_data, ONLY: particles, pt_numLocal, pt_maxPerProc, useParticles, & 
        pt_gcMaskForAdvance, pt_gcMaskSizeForAdvance, pt_meshMe, pt_typeInfo,&
        pt_indexList, pt_indexCount, pt_keepLostParticles, pt_numLost, &
