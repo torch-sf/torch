@@ -26,15 +26,15 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 
 # for FLASH4.5 and earlier only, fixed in FLASH4.6
 # -O prevents wget from writing fname.1, fname.2, etc on successive calls
-wget -nv http://flash.uchicago.edu/site/flashcode/user_support/FLASH4.5-a.diff -O FLASH4.5-a.diff || { echo $errstr; exit 255; }
+# wget -nv http://flash.uchicago.edu/site/flashcode/user_support/FLASH4.5-a.diff -O FLASH4.5-a.diff || { echo $errstr; exit 255; }
 # this will return exit code >0 when patch is skipped over, so cannot exit on
 # error code here, and cannot use "set -e" in this script.
-patch -p0 -r - --forward < FLASH4.5-a.diff
+# patch -p0 -r - --forward < FLASH4.5-a.diff
 
 # Patch for parallel HDF5 1.10.x, fixed in FLASH4.6
 # http://flash.uchicago.edu/pipermail/flash-users/2018-May/002626.html
-wget -nv http://flash.uchicago.edu/pipermail/flash-users/attachments/20180519/fdf3cd9b/attachment.obj -O FLASH4.5_parallelHDF5.diff || { echo $errstr; exit 255; }
-patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
+# wget -nv http://flash.uchicago.edu/pipermail/flash-users/attachments/20180519/fdf3cd9b/attachment.obj -O FLASH4.5_parallelHDF5.diff || { echo $errstr; exit 255; }
+# patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
 
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
 
@@ -58,11 +58,11 @@ cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 25
 # Point AMUSE Makefile to FLASH directory via symlink
 # TODO will not work? if user placed FLASH4.5/ in ${adest}/src
 echo -n "Linking: "
-ln -sfv ${FLASH_DIR}                    ${adest}/src/FLASH4.5 || { echo $errstr; exit 255; }
+ln -sfv ${FLASH_DIR}                    ${adest}/src/FLASH4.6.2 || { echo $errstr; exit 255; }
 echo "Setting drive_loc in ${adest}/Makefile"
 # "sed -i" doesn't work for BSD sed (e.g. on OS X), use a workaround from
 # https://stackoverflow.com/a/44877280
-sed "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.5\/object/" ${adest}/Makefile > ${adest}/Makefile.$$ \
+sed "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.6.2\/object/" ${adest}/Makefile > ${adest}/Makefile.$$ \
   && mv "${adest}/Makefile.$$" "${adest}/Makefile" \
   || { echo $errstr; exit 255; }
 
