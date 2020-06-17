@@ -35,6 +35,7 @@ subroutine Driver_finalizeSourceTerms( restart)
   use EnergyDeposition_interface, ONLY : EnergyDeposition_finalize
   use Deleptonize_interface, ONLY : Deleptonize_finalize
   use RadTrans_interface, ONLY : RadTrans_finalize
+  use SN_interface, ONLY : SN_finalize
 
   implicit none
   
@@ -44,6 +45,7 @@ subroutine Driver_finalizeSourceTerms( restart)
   call Stir_finalize()
   call Cool_finalize()
   call Diffuse_finalize()
+  call SN_finalize()
   call Heat_finalize()
   call Heatexchange_finalize()
   call EnergyDeposition_finalize()

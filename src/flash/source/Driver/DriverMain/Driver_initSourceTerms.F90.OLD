@@ -36,6 +36,8 @@ subroutine Driver_initSourceTerms( restart)
   use RadTrans_interface, ONLY : RadTrans_init
   use EnergyDeposition_interface, ONLY : EnergyDeposition_init
   use Deleptonize_interface, ONLY : Deleptonize_init
+  use GridInject_interface, ONLY : GridInject_init
+  use SN_interface, ONLY : SN_init
 
   implicit none
   
@@ -46,6 +48,8 @@ subroutine Driver_initSourceTerms( restart)
   call Cool_init()
   call Diffuse_init()
   call Heat_init()
+  call GridInject_init()
+  call SN_init()
   call Heatexchange_init( restart)
   call Ionize_init()
   call Burn_init()
