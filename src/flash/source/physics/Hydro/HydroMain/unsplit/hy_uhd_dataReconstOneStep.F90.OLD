@@ -100,14 +100,13 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
                                      hy_SpcR,hy_SpcL,hy_SpcSig)
 
   use Hydro_data,        ONLY : hy_cfl,hy_cfl_original,hy_wenoMethod,&
-                                hy_cflFallbackFactor,    &
-                                hy_fallbackLowerCFL,     &
-                                hy_meshMe, hy_gp_radius, &
+                                hy_cflFallbackFactor,&
+                                hy_fallbackLowerCFL, &
+                                hy_meshMe, &
                                 hy_fullSpecMsFluxHandling,hy_numXN,&
                                 hy_useHybridOrder,hy_shockDetectOn,&
                                 hy_hybridOrderKappa,hy_eswitch, &
-                                hy_useAuxEintEqn, hy_gp_radius
-
+                                hy_useAuxEintEqn, hy_radiusGP
 #ifdef FLASH_USM_MHD
   use Hydro_data,        ONLY : hy_killdivb
 #endif
@@ -125,7 +124,6 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
   use hy_uhd_interface,  ONLY : hy_uhd_checkRHjumpCond,&
                                 MH   => hy_uhd_DataReconstructNormalDir_MH,&
                                 PPM  => hy_uhd_DataReconstructNormalDir_PPM,&
-                                PCM  => hy_uhd_DataReconstructNormalDir_PCM,&
                                 WENO => hy_uhd_DataReconstructNormalDir_WENO,&
                                 GP   => hy_uhd_DataReconstructNormalDir_GP
 
@@ -300,28 +298,22 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
 
   !! Set indices for 1D stencil arrays
   !! Stencil size for reconstruction: [i-kOrder:i+kOrder]
-  if (order .ne. 6) then
-     !non GP stencils, do as before
-     if (NGUARD == 4) then 
-        if (order <= 2) then
-           ! Second order MH method
-           kOrder = 1
-        elseif (order > 2) then
-           ! PPM with 4 guardcells
-           kOrder = 2
-        endif
-     elseif (NGUARD == 6) then
-        if (order <=2) then
-           kOrder = 1
-        elseif (order > 2) then !if (order > 2) then
-           ! PPM, WENO, GP with 6 guardcells
-           kOrder = 3
-        endif
+  if (NGUARD == 4) then 
+     if (order <= 2) then
+        ! Second order MH method
+        kOrder = 1
+     elseif (order > 2) then
+        ! PPM with 4 guardcells
+        kOrder = 2
      endif
-  else
-     !GP stencil is size 2R+1: [i-R:i+R]
-     kOrder = hy_gp_radius
-  end if
+  elseif (NGUARD == 6) then
+     if (order <=2) then
+        kOrder = 1
+     elseif (order > 2) then !if (order > 2) then
+        ! PPM, WENO, GP with 6 guardcells
+        kOrder = 3
+     endif
+  endif
   kOrder_orig = kOrder
 
   !! Array bound check for hybrid order in checking DivU
@@ -456,7 +448,53 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
   !! (I) Perform data reconstruction in each normal direction    !
   !!*************************************************************!
 
- 
+  !! PREPARE FOR GP RECONSTRUCTION
+  if (order == 6) then
+     ! GP radius
+     radius = int(hy_radiusGP)
+
+#if NDIM == 2
+     DataMultiD => U(:,ix-radius:ix+radius,&
+                       iy-radius:iy+radius,&
+                       iz)
+#elif NDIM == 3
+     DataMultiD => U(:,ix-radius:ix+radius,&
+                       iy-radius:iy+radius,&
+                       iz-radius:iz+radius)
+#endif
+
+     iSizeGC = blkLimitsGC(HIGH,IAXIS)-blkLimitsGC(LOW,IAXIS)+1
+     if (NDIM > 1) &
+     jSizeGC = blkLimitsGC(HIGH,JAXIS)-blkLimitsGC(LOW,JAXIS)+1
+     if (NDIM == 3) &
+     kSizeGC = blkLimitsGC(HIGH,KAXIS)-blkLimitsGC(LOW,KAXIS)+1
+    
+     call Grid_getCellCoords(IAXIS,blockID, CENTER, .true.,xCenter,iSizeGC)
+    if (NDIM > 1) &
+     call Grid_getCellCoords(JAXIS,blockID, CENTER, .true.,yCenter,jSizeGC)
+     if (NDIM == 3) &
+     call Grid_getCellCoords(KAXIS,blockID, CENTER, .true.,zCenter,kSizeGC)
+
+     x1 => xCenter(ix-radius:ix+radius)
+     if (NDIM > 1) &
+     x2 => yCenter(iy-radius:iy+radius)
+     if (NDIM == 3) &
+     x3 => zCenter(iz-radius:iz+radius)
+
+#ifdef SHOK_VAR
+#if NDIM == 2
+     shockSwitchGP = maxval(U(SHOK_VAR,ix-radius:ix+radius,&
+                                       iy-radius:iy+radius,&
+                                       iz))
+#elif NDIM == 3
+     shockSwitchGP = maxval(U(SHOK_VAR,ix-radius:ix+radius,&
+                                       iy-radius:iy+radius,&
+                                       iz-radius:iz+radius))
+#endif
+#else
+     shockSwitchGP = 0.0        !fallback if there is no SHOK_VAR
+#endif
+  endif !END OF GP PREPARATION
 
 
   !! Begin reconstruction
@@ -532,20 +570,6 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
                  Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
                  SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
 
-        else if (order == 4) then
-           call PCM&
-                (hy_wenoMethod,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-                 FlatCoeff(iDim,ix,iy,iz), &
-                 Trans_updateOnly(iDim),&
-                 lambda (  1,iDim),&
-                 leftEig(1,1,iDim),&
-                 rghtEig(1,1,iDim),&
-                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-                 dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-                 Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-                 Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-                 SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))        
-
         else if (order == 5) then
            !! wenoMethod = "WENO5" (or "weno5") will call weno5 by Jiang and Shu.
            !! wenoMethod = "WENOZ" (or "wenoz") will call weno-Z by Borges et al.
@@ -566,9 +590,14 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
            ! check if we are near shocks:
            ! (1) use GP if not near shocks when shockDetect = .true., or
            ! (2) use GP everywhere when shockDetect = .false.
-           !Instead let's do GP just as WENO
-           call GP&
-                (kOrder,iDim,dt,del(iDim),Data1D,DataGrav1D,&
+           IF (.not. hy_shockDetectOn .or. &
+                (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
+#ifdef GPRO_VAR
+              U(GPRO_VAR,ix,iy,iz) = 1.
+#endif
+              call GP&
+                (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
+                 x1,x2,x3,radius,&
                  FlatCoeff(iDim,ix,iy,iz), &
                  Trans_updateOnly(iDim),&
                  lambda (  1,iDim),&
@@ -579,38 +608,20 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
                  Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
                  Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
                  SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           IF (.not. hy_shockDetectOn .or. &
-!!$                (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
-!!$#ifdef GPRO_VAR
-!!$              U(GPRO_VAR,ix,iy,iz) = 1.
-!!$#endif
-!!$              call GP&
-!!$                (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
-!!$                 x1,x2,x3,radius,&
-!!$                 FlatCoeff(iDim,ix,iy,iz), &
-!!$                 Trans_updateOnly(iDim),&
-!!$                 lambda (  1,iDim),&
-!!$                 leftEig(1,1,iDim),&
-!!$                 rghtEig(1,1,iDim),&
-!!$                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$                 dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-!!$                 Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-!!$                 Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-!!$                 SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           ELSE !use PPM instead near shocks
-!!$              call PPM&
-!!$                (iDim,dt,del(iDim),Data1D,DataGrav1D,&
-!!$                 FlatCoeff(iDim,ix,iy,iz), &
-!!$                 Trans_updateOnly(iDim),&
-!!$                 lambda (  1,iDim),&
-!!$                 leftEig(1,1,iDim),&
-!!$                 rghtEig(1,1,iDim),&
-!!$                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$                 dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-!!$                 Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-!!$                 Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-!!$                 SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           ENDIF
+           ELSE !use PPM instead near shocks
+              call PPM&
+                (iDim,dt,del(iDim),Data1D,DataGrav1D,&
+                 FlatCoeff(iDim,ix,iy,iz), &
+                 Trans_updateOnly(iDim),&
+                 lambda (  1,iDim),&
+                 leftEig(1,1,iDim),&
+                 rghtEig(1,1,iDim),&
+                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+                 dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
+                 Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
+                 Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
+                 SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
+           ENDIF
         endif ! if (order = 2, 3, 5, or 6)
      elseif (order == 2) then
         !! For second-order MH
@@ -637,20 +648,6 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
               dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
               SpcSig=SpcSigPtr)
 
-     elseif (order == 4) then
-        call PCM&
-             (hy_wenoMethod,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-              FlatCoeff(iDim,ix,iy,iz), &
-              Trans_updateOnly(iDim),&
-              lambda (  1,iDim),&
-              leftEig(1,1,iDim),&
-              rghtEig(1,1,iDim),&
-              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-              dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-              SpcSig=SpcSigPtr)    
-        
-
-        
      elseif (order == 5) then
         !! wenoMethod = "WENO5" (or "weno5") will call weno5 by Jiang and Shu
         !! wenoMethod = "WENOZ" (or "wenoz") will call weno-Z by Borges et al.
@@ -669,45 +666,34 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
         ! check if we are near shocks:
         ! (1) use GP if not near shocks when shockDetect = .true., or
         ! (2) use GP everywhere when shockDetect = .false.
-        !Instead let's do GP just as WENO
+        IF (.not. hy_shockDetectOn .or. &
+            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
+#ifdef GPRO_VAR
+           U(GPRO_VAR,ix,iy,iz) = 1.
+#endif
            call GP&
-                (kOrder,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-                 FlatCoeff(iDim,ix,iy,iz), &
-                 Trans_updateOnly(iDim),&
-                 lambda (  1,iDim),&
-                 leftEig(1,1,iDim),&
-                 rghtEig(1,1,iDim),&
-                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-                 dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-                 SpcSig=SpcSigPtr)
-!!$        IF (.not. hy_shockDetectOn .or. &
-!!$            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
-!!$#ifdef GPRO_VAR
-!!$           U(GPRO_VAR,ix,iy,iz) = 1.
-!!$#endif
-!!$           call GP&
-!!$             (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
-!!$              x1,x2,x3,radius,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-!!$              SpcSig=SpcSigPtr)
-!!$        ELSE !use PPM instead near shocks
-!!$           call PPM&
-!!$             (iDim,dt,del(iDim),Data1D,DataGrav1D,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
-!!$              SpcSig=SpcSigPtr)
-!!$        ENDIF
+             (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
+              x1,x2,x3,radius,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
+              SpcSig=SpcSigPtr)
+        ELSE !use PPM instead near shocks
+           call PPM&
+             (iDim,dt,del(iDim),Data1D,DataGrav1D,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              dnBnormal=dnBn(iDim),aBnormal=aBn(1,iDim),&
+              SpcSig=SpcSigPtr)
+        ENDIF
      endif ! if (order = 2, 3, 5, or 6)
 #endif
 
@@ -745,21 +731,6 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
               Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
               SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
 
-
-        elseif (order == 4) then
-           call PCM&
-             (hy_wenoMethod,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-              FlatCoeff(iDim,ix,iy,iz), &
-              Trans_updateOnly(iDim),&
-              lambda (  1,iDim),&
-              leftEig(1,1,iDim),&
-              rghtEig(1,1,iDim),&
-              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-              Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-              Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-              SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-
-
         elseif (order == 5) then
         !! wenoMethod = "WENO5" (or "weno5") will call weno5 by Jiang and Shu
         !! wenoMethod = "WENOZ" (or "wenoz") will call weno-Z by Borges et al.
@@ -778,49 +749,37 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
         elseif (order == 6) then ! GP
         ! check if we are near shocks:
         ! (1) use GP if not near shocks when shockDetect = .true., or
-           ! (2) use GP everywhere when shockDetect = .false.
-           !Instead let's do GP just as WENO
-           call GP&
-                (kOrder,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-                 FlatCoeff(iDim,ix,iy,iz), &
-                 Trans_updateOnly(iDim),&
-                 lambda (  1,iDim),&
-                 leftEig(1,1,iDim),&
-                 rghtEig(1,1,iDim),&
-                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-                 Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-                 Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-                 SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           IF (.not. hy_shockDetectOn .or. &
-!!$            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
-!!$#ifdef GPRO_VAR
-!!$              U(GPRO_VAR,ix,iy,iz) = 1.
-!!$#endif
-!!$              call GP&
-!!$                   (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
-!!$              x1,x2,x3,radius,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-!!$              Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-!!$              SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           ELSE !use PPM instead near shocks
-!!$              call PPM&
-!!$                   (iDim,dt,del(iDim),Data1D,DataGrav1D,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
-!!$              Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
-!!$              SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
-!!$           ENDIF
+        ! (2) use GP everywhere when shockDetect = .false.
+           IF (.not. hy_shockDetectOn .or. &
+            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
+#ifdef GPRO_VAR
+              U(GPRO_VAR,ix,iy,iz) = 1.
+#endif
+              call GP&
+                   (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
+              x1,x2,x3,radius,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
+              Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
+              SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
+           ELSE !use PPM instead near shocks
+              call PPM&
+                   (iDim,dt,del(iDim),Data1D,DataGrav1D,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              Sr    =hy_SpcR  (:,ix,iy,iz,iDim),&
+              Sl    =hy_SpcL  (:,ix,iy,iz,iDim),&
+              SpcSig=hy_SpcSig(:,ix,iy,iz,iDim))
+           ENDIF
 
         endif ! if (order = 2, 3, 5, or 6)
 
@@ -852,19 +811,6 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
               Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
               SpcSig=SpcSigPtr)
 
-
-        elseif (order == 4) then
-           call PCM&
-             (hy_wenoMethod,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-              FlatCoeff(iDim,ix,iy,iz), &
-              Trans_updateOnly(iDim),&
-              lambda (  1,iDim),&
-              leftEig(1,1,iDim),&
-              rghtEig(1,1,iDim),&
-              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-              SpcSig=SpcSigPtr)
-
-           
         elseif (order == 5) then
         !! wenoMethod = "WENO5" (or "weno5") will call weno5 by Jiang and Shu
         !! wenoMethod = "WENOZ" (or "wenoz") will call weno-Z by Borges et al.
@@ -881,43 +827,33 @@ Subroutine hy_uhd_dataReconstOneStep(blockID,blkLimitsGC,order,ix,iy,iz, &
         elseif (order == 6) then ! GP
         ! check if we are near shocks:
         ! (1) use GP if not near shocks when shockDetect = .true., or
-           ! (2) use GP everywhere when shockDetect = .false.
-           !Instead let's do GP just as WENO
-           call GP&
-                (kOrder,iDim,dt,del(iDim),Data1D,DataGrav1D,&
-                 FlatCoeff(iDim,ix,iy,iz), &
-                 Trans_updateOnly(iDim),&
-                 lambda (  1,iDim),&
-                 leftEig(1,1,iDim),&
-                 rghtEig(1,1,iDim),&
-                 Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-                 SpcSig=SpcSigPtr)
-!!$           IF (.not. hy_shockDetectOn .or. &
-!!$            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
-!!$#ifdef GPRO_VAR
-!!$              U(GPRO_VAR,ix,iy,iz) = 1.
-!!$#endif
-!!$              call GP&
-!!$                   (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
-!!$              x1,x2,x3,radius,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              SpcSig=SpcSigPtr)
-!!$           ELSE !use PPM instead near shocks
-!!$              call PPM&
-!!$                   (iDim,dt,del(iDim),Data1D,DataGrav1D,&
-!!$              FlatCoeff(iDim,ix,iy,iz), &
-!!$              Trans_updateOnly(iDim),&
-!!$              lambda (  1,iDim),&
-!!$              leftEig(1,1,iDim),&
-!!$              rghtEig(1,1,iDim),&
-!!$              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
-!!$              SpcSig=SpcSigPtr)
-!!$           ENDIF
+        ! (2) use GP everywhere when shockDetect = .false.
+           IF (.not. hy_shockDetectOn .or. &
+            (hy_shockDetectOn .and. shockSwitchGP == 0.)) THEN
+#ifdef GPRO_VAR
+              U(GPRO_VAR,ix,iy,iz) = 1.
+#endif
+              call GP&
+                   (iDim,dt,del(iDim),DataMultiD,DataGravMultiD,&
+              x1,x2,x3,radius,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              SpcSig=SpcSigPtr)
+           ELSE !use PPM instead near shocks
+              call PPM&
+                   (iDim,dt,del(iDim),Data1D,DataGrav1D,&
+              FlatCoeff(iDim,ix,iy,iz), &
+              Trans_updateOnly(iDim),&
+              lambda (  1,iDim),&
+              leftEig(1,1,iDim),&
+              rghtEig(1,1,iDim),&
+              Wp(1,iDim),Wn(1,iDim),sig(1,iDim),&
+              SpcSig=SpcSigPtr)
+           ENDIF
 
         endif ! if (order = 2, 3, 5, or 6)
      end if
