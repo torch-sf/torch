@@ -154,8 +154,7 @@ Python package manager with some adjustments.
 \begin{itemize}
 %\item \texttt{FLASH4.5} repo commit \texttt{68dfed1},
 %    \url{https://bitbucket.org/joshuawall/FLASH4.5}
-\item FLASH 4.5 (not 4.6 or 4.6.1):
-    \url{http://flash.uchicago.edu/site/flashcode}
+\item FLASH 4.5 (support for 4.6.2 is coming soon): \url{http://flash.uchicago.edu/site/flashcode}
 \item AMUSE: \url{https://github.com/amusecode/amuse}
 \item Torch: \url{https://bitbucket.org/torch-sf/torch}
 \item Conda / Python 2.7
@@ -186,11 +185,7 @@ MPI and HDF5 may be pre-installed if you are using a cluster.  If not, you will
 have to install these packages from source.  Be sure to use the same compiler
 set that you will use for the rest of this Torch build.
 
-To install MPI from source, we recommend OpenMPI 4.x (latest stable).
-Torch is known to work with OpenMPI 2.x, 3.x, and 4.x.
-
-To install HDF5 from source, we recommend HDF5 1.10.x (latest stable).
-Torch is known to work with HDF5 1.8.x and 1.10.x.
+Torch is known to work with OpenMPI 2.x, 3.x, and 4.x; HDF5 1.8.x and 1.10.x.
 
 \texttt{git} and \texttt{wget}, if not already provided by your system, can be
 installed in your custom conda environment (see next section) with
@@ -205,21 +200,35 @@ Start a new shell session.  You may want to check your \texttt{.bashrc} for any
 old MPI or HDF5 configuration that could conflict with Torch setup -- module
 load commands, environment variable exports, et cetera -- and comment them out.
 
-Load MPI into your environment.  If you have MPI pre-installed on a cluster, do:
+Load MPI and HDF5 into your environment.  If you're using shared cluster builds, do something like:
 \begin{lstlisting}[language=bash]
 module load OpenMPI/x.y.z/blah  # for clusters with lmod
+module load HDF5/x.y.z/blah
 \end{lstlisting}
 
-Else, if you built MPI from scratch, set your environment like so:
+Else, if you built MPI or HDF5 from scratch, set your environment manually.
+You can check what environment variables might be needed by calling
+\texttt{module show} on existing HDF5 or MPI builds on your cluster.
+An example for one cluster is below:
 \begin{lstlisting}[language=bash]
-export MPI_HOME={path/to/your/mpi/home}
-export MPI_RUN={path/to/your/mpi/run}
-
+export MPI_HOME=/path/to/openmpi-x.y.z
+export MPI_RUN=/path/to/openmpi-x.y.z/bin/mpirun
 export PATH=$MPI_HOME/bin:$PATH
 export MANPATH=$MPI_HOME/share/man:$MANPATH
 export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
 export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
 export CPATH=$MPI_HOME/include:$CPATH
+
+export HDF5_HOME=/path/to/hdf5-x.y.z
+export HDF5DIR=/path/to/hdf5-x.y.z/lib
+export HDF5INCLUDE=/path/to/hdf5-x.y.z/include
+export HDF5LIB="hdf5_fortran -lhdf5"
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
 \end{lstlisting}
 
 Setup a clean, isolated Python environment for AMUSE:
