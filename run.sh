@@ -7,6 +7,10 @@ mpiexec --mca orte_base_help_aggregate 0 -n 1 python bridge_multiples.py
 
 # Some MPI call options for experimenting
 
+# OpenMPI 4.x or newer defaults to UCX rather than infiniband ports,
+# you may need to override that policy
+#mpiexec  --mca btl_openib_allow_ib 1 -n 1 python bridge_multiples.py
+
 # OpenMPI
 #export OMPI_MCA_mpi_warn_on_fork=0
 #mpirun --mca orte_base_help_aggregate 0 --mca btl_openib_warn_no_device_params_found 0 -n 1 python bridge_multiples.py
