@@ -250,19 +250,21 @@ def get_companion_mass(mass, period):
     The solar-type distribution is extended down to 0.08 M_sun
     """
     
-    def interpolate(p_low, p_high, g_low, g_high, g):
+    def interpolate(p_low, p_high, g_low, g_high, p):
         a = (g_high - g_low) / (10 ** p_high - 10 ** p_low)
         b = g_high - a * p_high
-        return a * g + b
+        return a * 10**p + b
     
     
     def gamma_solar(P, x):
-        
+        """
+        Returns the power law exponent for stellar masses between 0.08 MSun and 1.6 MSun
+        """        
         if 0.3 <= x:
             if P <= 5:
                 gamma = -0.5
             elif 5 < P:
-                gamma = interpolate(5, 7, -0.5, -1.1, x)
+                gamma = interpolate(5, 7, -0.5, -1.1, P)
 
         elif x < 0.3:
             gamma = 0.3
@@ -276,20 +278,22 @@ def get_companion_mass(mass, period):
     
     
     def gamma_AB(P, x):
-        
+        """
+        Returns the power law exponent for stellar masses between 1.6 MSun and 5 MSun
+        """        
         if 0.3 <= x < 1:
             if P < 1.5:
                 gamma = -0.5
             elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, -0.5, -0.9, x)
+                gamma = interpolate(1.5, 2.5, -0.5, -0.9, P)
             elif 2.5 <= P < 3.5:
                 gamma = -0.9
             elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -0.9, -1.4, x)
+                gamma = interpolate(3.5, 4.5, -0.9, -1.4, P)
             elif 4.5 <= P < 5.5:
                 gamma = -1.4
             elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -1.4, -2.0, x)
+                gamma = interpolate(5.5, 6.5, -1.4, -2.0, P)
             elif 6 <= P <= 7.5:
                 gamma = -2.0
     
@@ -297,15 +301,15 @@ def get_companion_mass(mass, period):
             if P < 1.5:
                 gamma = 0.2
             elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, 0.2, 0.1, x)
+                gamma = interpolate(1.5, 2.5, 0.2, 0.1, P)
             elif 2.5 <= P < 3.5:
                 gamma = 0.1
             elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, 0.1, -0.5, x)
+                gamma = interpolate(3.5, 4.5, 0.1, -0.5, P)
             elif 4.5 <= P < 5.5:
                 gamma = -0.5
             elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -0.5, -1.0, x)
+                gamma = interpolate(5.5, 6.5, -0.5, -1.0, P)
             elif 6 <= P <= 7.5:
                 gamma = -1.0
 
@@ -318,16 +322,18 @@ def get_companion_mass(mass, period):
                                 
                                 
     def gamma_early(P, x):
-                                    
+        """
+        Returns the power law exponent for stellar masses above 5 MSun
+        """                                    
         if 0.3 <= x < 1:
             if 0.5 <= P < 1.5:
                 gamma = -0.5
             elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, -0.5, -1.7, x)
+                gamma = interpolate(1.5, 2.5, -0.5, -1.7, P)
             elif 2.5 <= P < 3.5:
                 gamma = -1.7
             elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -1.7, -2.0, x)
+                gamma = interpolate(3.5, 4.5, -1.7, -2.0, P)
             elif 4.5 <= P <= 7.5:
                 gamma = -2.0
                                                                                 
@@ -335,15 +341,15 @@ def get_companion_mass(mass, period):
             if 0.5 <= P < 1.5:
                 gamma = 0.1
             elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, 0.1, -0.2, x)
+                gamma = interpolate(1.5, 2.5, 0.1, -0.2, P)
             elif 2.5 <= P < 3.5:
                 gamma = -0.2
             elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -0.2, -1.2, x)
+                gamma = interpolate(3.5, 4.5, -0.2, -1.2, P)
             elif 4.5 <= P < 5.5:
                 gamma = -1.2
             elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -1.2, -1.5, x)
+                gamma = interpolate(5.5, 6.5, -1.2, -1.5, P)
             elif 6.5 <= P <= 7.5:
                 gamma = -1.5
                                                                                                                                             
@@ -355,23 +361,121 @@ def get_companion_mass(mass, period):
         return gamma
 
 
+    def twin_solar(m, P):
+        """
+        Returns the excess twin fraction for stellar masses between 0.08 MSun and 1.6 MSun
+        """
+        if P <= 1.5:
+            twin = 0.3
+        elif 1.5 < P <= 2.5:
+            twin = interpolate(2.5, 1.5, 0.2, 0.3, P)
+        elif 2.5 < P <= 3.5:
+            twin = 0.2
+        elif 3.5 < P <= 4.5:
+            twin = interpolate(4.5, 3.5, 0.1, 0.2, P)
+        elif 4.5 < P <= 5.5:
+            twin = 0.1
+        elif 5.5 < P <= 6.5:
+            twin = interpolate(6.5, 5.5, 0, 0.1, P)
+        else:
+            twin = 0
+        return twin
+    
+    
+    def twin_AB(m, P):
+        """
+        Returns the excess twin fraction for stellar masses between 1.6 MSun and 5 MSun
+        """
+        if P <= 1.5:
+            twin = 0.22
+        elif 1.5 < P <= 2.5:
+            twin = interpolate(2.5, 1.5, 0.1, 0.22, P)
+        elif 2.5 < P <= 3.5:
+            twin = 0.1
+        elif 3.5 < P <= 4.5:
+            twin = interpolate(4.5, 3.5, 0, 0.1, P)
+        else:
+            twin = 0
+        return twin
+    
+    
+    def twin_midB(m, P):
+        """
+        Returns the excess twin fraction for stellar masses between 5 MSun and 9 MSun
+        """
+        if P <= 1.5:
+            twin = 0.17
+        elif 1.5 < P <= 2.5:
+            twin = interpolate(2.5, 1.5, 0, 0.17, P)
+        else:
+            twin = 0
+        return twin
+    
+    
+    def twin_earlyB(m, P):
+        """
+        Returns the excess twin fraction for stellar masses between 9 MSun and 16 MSun
+        """
+        if P <= 1.5:
+            twin = 0.14
+        elif 1.5 < P <= 2.5:
+            twin = interpolate(2.5, 1.5, 0, 0.14, P)
+        else:
+            twin = 0
+        return twin
+    
+    
+    def twin_O(m, P):
+        """
+        Returns the excess twin fraction for stellar masses above 16 MSun
+        """
+        if P <= 1.5:
+            twin = 0.08
+        elif 1.5 < P <= 2.5:
+            twin = interpolate(2.5, 1.5, 0, 0.08, P)
+        else:
+            twin = 0
+        return twin
+
+
     def mass_ratio(m, P):
         q = 1
         h = 10
         g = 0
-        while (q ** g) < h:
+        t = 0
+
+        def prob(q, g, t):
+            if q < 0.95:
+                prob = q ** g
+            else:
+                prob = q ** g + t
+            return prob
+
+        while prob(q, g, t) < h:
             low = np.max([0.1, 0.08 / m])
             q = random.uniform(low, 1)
-            if m <= 2:
+            if m <= 1.6:
                 g = gamma_solar(P, q)
+                t = twin_solar(m, P)
                 h = random.uniform(0, low ** g)
-            if 2 < m <= 5:
+            if 1.6 < m <= 5:
                 g = gamma_AB(P, q)
+                t = twin_AB(m, P)
                 h = random.uniform(0, low ** g)
-            if 5 < m:
+            if 5 < m <= 9:
                 g = gamma_early(P, q)
+                t = twin_midB(m, P)
+                h = random.uniform(0, low ** g)
+            if 9 < m <= 16:
+                g = gamma_early(P, q)
+                t = twin_earlyB(m, P)
+                h = random.uniform(0, low ** g)
+            if 16 < m:
+                g = gamma_early(P, q)
+                t = twin_O(m, P)
                 h = random.uniform(0, low ** g)
             mass_ratio = q
+        
         return mass_ratio
 
     
