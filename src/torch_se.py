@@ -136,19 +136,16 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
     # FLASH worker has its own unit converter.  -AT, 2019Oct14
-    if with_lyc:
-        hydro.set_particle_nion(state.stars.tag, nion)
-        hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))
-        hydro.set_particle_sigh(state.stars.tag, sigh)
+    hydro.set_particle_nion(state.stars.tag, nion)
+    hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))
+    hydro.set_particle_sigh(state.stars.tag, sigh)
 
-    if with_pe_heat:
-        hydro.set_particle_npep(state.stars.tag, npe)
-        hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
-        hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
+    hydro.set_particle_npep(state.stars.tag, npe)
+    hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
+    hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
 
-    if with_winds:
-        hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
-        hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+    hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
+    hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     return se_dt
 
