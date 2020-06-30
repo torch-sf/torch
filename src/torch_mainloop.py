@@ -174,7 +174,7 @@ def evolve(state, hydro, grav, mult, se):
 
     # worker setup
     if num_stars > 0:  # restart or user initial conditions
-        add_particles_to_grav(state, hydro, grav, mult)
+        add_particles_to_grav(state, hydro, grav, mult, se)
 
     if USER['evolve_async']:
         from amuse.rfi.async_request import AsyncRequestsPool
@@ -344,7 +344,7 @@ def evolve(state, hydro, grav, mult, se):
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
-            add_particles_to_grav(state, hydro, grav, mult)  # push stars hydro->amuse, hydro->grav
+            add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
         ### ----------------------------
         ### Remove stars outside domain.

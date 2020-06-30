@@ -18,7 +18,7 @@ from torch_stdout import tprint
 from imf_sample import sample_stellar_mass
 
 
-def add_particles_to_grav(state, hydro, grav, mult):
+def add_particles_to_grav(state, hydro, grav, mult, se):
     """
     Send prtl from hydro to grav + AMUSE
 
@@ -31,6 +31,9 @@ def add_particles_to_grav(state, hydro, grav, mult):
 
     Treat hydro as main fount of knowledge; copy stars from hydro to
     AMUSE and grav.
+
+    se (SeBa or other stellar evolution worker) is only used to get
+    correct stellar type for restarts; newborn stars are assumed to be on ZAMS
 
     postcondition:
         stars updated
@@ -85,6 +88,15 @@ def add_particles_to_grav(state, hydro, grav, mult):
     #if with_wind:
 #    add_star.dm_dt = 0.0 | units.g/units.s
 #    add_star.vterm = 0.0 | units.cm/units.s
+
+    # fast-forward stellar evolution to get current stellar type, because
+    # torch_sf looks for change in stellar type to decide when to deposit SN
+    if add_parts_restart:
+        t_evol = hydro.get_time() - hydro.get_particle_creation_time(newtags)
+        # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
+        _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
+        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
+        add_star.stellar_type = se_type
 
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
