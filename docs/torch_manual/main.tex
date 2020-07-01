@@ -561,14 +561,57 @@ called anywhere in FLASH code.
 - AT, 2019 May 09.
 
 
-% =========================
-% Sinks and stars
-% =========================
-\section{Sinks and stars}
+% ==========================
+% Particles: sinks and stars
+% ==========================
+\section{Particles: sinks and stars}
 
-% -------------------------
+% --------------------------------------------
+% Particle data structures, generally speaking
+% --------------------------------------------
+\subsection{Particle data structures}
+
+\texttt{Particles\_data.F90} provides:
+\begin{verbatim}
+    particles(:,:)      (NPART_PROPS, MAX_PARTICLES_PER_PROCESSOR=pt_maxPerProc)
+    pt_typeInfo(:,:)    (PART_TYPE_INFO_SIZE, NPART_TYPES)
+\end{verbatim}
+
+All properties are shared by all particle types.  The \texttt{particles} is
+manually sorted by prtl type, then by blk, at various points in the FLASH
+evolution loop.
+
+\texttt{pt\_typeInfo} holds metadata about each particle type.
+These metadata properties are declared in \texttt{Particles.h}, they may include some of:
+\begin{verbatim}
+    PART_TYPE = type of particle
+    PART_MAPMETHOD = method to map to/from mesh
+    PART_TYPE_BEGIN = starting index of particle type in particles(:,:) array
+    PART_INITMETHOD
+    PART_LOCAL = local number of this type of particle
+    PART_LOCAL_MAX = maximum of this type allowed on proc
+    PART_ADVMETHOD
+    PART_INTEGRATE_METHOD = time integration algorithm
+\end{verbatim}
+Example: to iterate over the stars (active particles), you can do:
+\begin{lstlisting}[language=Fortran]
+    p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
+    p_num = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)  ! number of stars on current proc
+    do p = p_begin, p_begin+p_num-1
+        print*, "Particle mass =", particles(MASS_PART_PROP, p)
+    end do
+\end{lstlisting}
+
+\texttt{Particles\_sinkData.F90} provides:
+\begin{verbatim}
+    particles_local(:,:)        (pt_sinkParticleProps, sink_maxSinks)
+    particles_global(:,:)       (pt_sinkParticleProps, sink_maxSinks)
+\end{verbatim}
+
+
+% ------------------------
 % Star/sink data structures
-% -------------------------
+% ------------------------
 \subsection{Star/sink data structures}
 
 The AMUSE interface to FLASH uses pointers to get/set different particle types.
