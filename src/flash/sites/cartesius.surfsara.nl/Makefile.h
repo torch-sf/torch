@@ -88,6 +88,8 @@ CFLAGS_DEBUG = -ggdb -c -O0 -Wno-div-by-zero -Wundef \
 
 CFLAGS_TEST = -ggdb -O0 -c
 
+CFLAGS_HYPRE = -I${HYPRE_PATH}/include
+
 
 # if we are using HDF5, we need to specify the path to the include files
 CFLAGS_HDF5 = -I${HDF5_PATH}/include -DH5_USE_16_API
