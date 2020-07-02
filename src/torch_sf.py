@@ -213,6 +213,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
     if num_sinks == 0:
+        hydro.set_particle_pointers('mass')
         return
 
     sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))  # does not work with empty list
@@ -241,7 +242,6 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             print(" max mass {}".format(np.amax(new_masses)))
 
             state.all_masses[sink_tag] = np.concatenate((state.all_masses[sink_tag], new_masses))
-
 
     hydro.set_particle_pointers('mass')
 
