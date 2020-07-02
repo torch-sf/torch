@@ -174,6 +174,9 @@ def evolve(state, hydro, grav, mult, se):
 
     # worker setup
     if num_stars > 0:  # restart or user initial conditions
+        # if this is a restart, FLASH may still have all the
+        # particles mis-sorted in the particles array. -JW
+        hydro.particles_sort()
         add_particles_to_grav(state, hydro, grav, mult, se)
 
     if USER['evolve_async']:
