@@ -131,13 +131,21 @@ def initialize_workers():
         se = SeBa()
         se.initialize_code()
 
-    hydro = Flash(
-        unit_converter=convert2,
-        number_of_workers=USER['num_hy_workers'],
-        redirection='file',
-        redirect_stdout_file='flash_worker.out',
-        redirect_stderr_file='flash_worker.err',
-    )
+    if USER['evolve_async']:
+        hydro = Flash(
+            unit_converter=convert2,
+            number_of_workers=USER['num_hy_workers'],
+            redirection='file',
+            redirect_stdout_file='flash_worker.out',
+            redirect_stderr_file='flash_worker.err',
+        )
+    else:
+        hydro = Flash(
+            unit_converter=convert2,
+            number_of_workers=USER['num_hy_workers'],
+            redirection='none',
+        )
+
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
