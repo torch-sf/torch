@@ -199,9 +199,6 @@ if (first_call) then
         if (gr_meshMe == 0) print*, "[inject_direct]: Reference velocity for wind is", &
                                      refVel, "for reference temp", wind_target_temp
      end if
-    ! Initialize the random seed in case we are using
-    ! perturb velocity...
-    call random_seed()
     first_call = .false.
     
 end if
@@ -449,6 +446,11 @@ if (mass_load) then
     endif
 end if
 
+if (perturb_velocity) then
+    ! all procs compute to keep random stream synchronized
+    pertVelocity = norm_rand(injectVelocity, injectVelocity*perturb_std_dev)
+end if
+
 #ifdef DEBUG_ENERGY
 if (gr_meshMe == 0) then
     write(*,'(A,ES10.3)') "Mass load factor = ", mass_load_factor
@@ -582,7 +584,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     endif
                     ! velocity of the wind points radially outwards
                     if (perturb_velocity) then ! Perturb radial velocity?
-                      pertVelocity = norm_rand(injectVelocity, injectVelocity*perturb_std_dev)
                       xvel = idir * pertVelocity
                       yvel = jdir * pertVelocity
                       zvel = kdir * pertVelocity
