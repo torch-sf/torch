@@ -3401,7 +3401,7 @@ try:
 
                         if (with_massloss and (massloss_method == 'seba' or st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun))):
                             if (debug_se): print "using seba method"
-                            dm_dt[part] = ((stars.mass[part]-st_mass)/st_time).in_(units.g / units.s)
+                            dm_dt[part] = ((stars.mass[part]-st_mass)/dt).in_(units.g / units.s)
                             # If below the mass cutoff for feedback, no wind present.
                             if (st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun)):
                                 vterm[part] = 0.0 | units.km/units.s
