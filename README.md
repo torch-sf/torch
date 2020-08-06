@@ -9,6 +9,7 @@ Set the environment variables:
     export AMUSE_DIR=/path/to/amuse
     export FLASH_DIR=/path/to/FLASH4.5
     export TORCH_DIR=/path/to/torch
+    export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 
 Then, run the script:
 
@@ -32,7 +33,7 @@ simulations:
     cube128
     flash.par.radtest
     flash.par.turbsph_standard
-    ionizingflux.py
+    torch_user.py   # beta-release update of bridge_multiples.py
 
 And, some code to create turbulent initial conditions (dens, pres, vel, etc.)
 for your simulations:
@@ -41,6 +42,16 @@ for your simulations:
     turb-sphere.py
     turb-velbox.py
     weighscale.py
+
+The path `src/` holds Python modules used by the top-level Torch code, which
+perfoms a coupled FLASH and N-body simulation using the AMUSE framework.
+Some stand-alone utility modules used by Torch are also included.
+
+    src/
+        torch_mainloop.py
+        torch_param.py
+        torch_se.py
+        ...
 
 The path `src/amuse/` holds AMUSE interface files, which are installed to
 `$AMUSE_DIR/src/amuse/community/flash/`.

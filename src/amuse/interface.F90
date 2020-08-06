@@ -376,7 +376,8 @@ FUNCTION get_timestep(value)
 !!! Here it makes more sense to get it in Driver
 !!! also, since a sim is already likely running.
 
-  value = dr_dtAdvect
+  value = dr_dt  ! changed from dr_dtAdvect - AT, 2019 nov 26
+  !value = dr_dtAdvect
   !value = min(dr_dtMin,dr_dtAdvect)
   get_timestep=0
 END FUNCTION
