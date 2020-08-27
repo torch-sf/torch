@@ -86,12 +86,12 @@ class TorchState(object):
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'r') as f:
+                with open(rstatefile, 'rb') as f:
                     rnd_state = pickle.load(f)
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'r') as f:
+                with open(massesfile, 'rb') as f:
                     self.all_masses = pickle.load(f)
                 tprint("Loaded all_masses dictionary from "+massesfile)
 
