@@ -114,17 +114,17 @@ if __name__=="__main__":
     Rstar = 3.9 | units.RSun
     Teff = 25000 | units.K
 
-    print 'Mstar                =', Mstar
-    print 'Rstar                =', Rstar
-    print 'Teff                 =', Teff
+    print('Mstar                =', Mstar) # Edited print statements for py3 test - SCL 2020AUG26
+    print('Rstar                =', Rstar)
+    print('Teff                 =', Teff)
 
     flux = ionizing_photon_flux(Mstar, Rstar, Teff)
-    print 'ionizing photon flux =', flux.in_(units.cm**-2*units.s**-1)
-    print 'log(flux)            =', \
-                numpy.log10(flux.value_in(units.cm**-2*units.s**-1))
+    print('ionizing photon flux =', flux.in_(units.cm**-2*units.s**-1))
+    print('log(flux)            =', \
+                numpy.log10(flux.value_in(units.cm**-2*units.s**-1)))
     lump = ionizing_photon_luminosity(Mstar, Rstar, Teff)
-    print 'ionizing photon lum  =', lump
-    print 'ionizing photon lum  =', lump.in_(units.s**-1)
+    print('ionizing photon lum  =', lump)
+    print('ionizing photon lum  =', lump.in_(units.s**-1))
     lum = ionizing_luminosity(Mstar, Rstar, Teff)
-    print 'ionizing lum         =', lum.in_(units.W)
-    print 'ionizing lum         =', lum.in_(units.LSun)
+    print('ionizing lum         =', lum.in_(units.W))
+    print('ionizing lum         =', lum.in_(units.LSun))

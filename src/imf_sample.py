@@ -149,7 +149,7 @@ def kroupa(m,a):
     elif (0.5 <= m):
         k = a*(0.08*0.5)*m**(-2.3)
     else:
-        print "Invalid mass range!"
+        print("Invalid mass range!") # Edited for py3 test - SCL 2020AUG26
         k=0
     return k
 
@@ -163,7 +163,7 @@ def mkroupa(m,a):
     elif (0.5 <= m):
         k = m*a*(0.08*0.5)*m**(-2.3)
     else:
-        print "Invalid mass range!"
+        print("Invalid mass range!") # Edited for py3 test - SCL 2020AUG26
         k=0
     return k
 
