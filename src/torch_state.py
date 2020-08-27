@@ -175,7 +175,7 @@ class TorchState(object):
         assert attr in ["mass", "velocity"]
 
         for s in self.stars:
-            for root, tree in self.mult.root_to_tree.iteritems():
+            for root, tree in self.mult.root_to_tree.items(): # Changed .iteritems() to .items() - SCL 2020aug27
                 leaves = tree.get_leafs_subset()
                 if s in leaves:
                     if attr == "mass":
@@ -191,7 +191,7 @@ def update_roots_from_leaves(mult, grav):
     Update the center of mass particles from
     the leaves properties (in all codes!).
     """
-    for root, tree in mult.root_to_tree.iteritems():
+    for root, tree in mult.root_to_tree.items(): # Changed .iteritems() to .items() - SCL 2020aug27
         leaves = tree.get_leafs_subset()
         msum    = leaves.mass.sum()
         com = leaves.center_of_mass().as_quantity_in(units.cm)
