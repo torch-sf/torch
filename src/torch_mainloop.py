@@ -391,7 +391,7 @@ def evolve(state, hydro, grav, mult, se):
         ### ---------------------------------------------
 
         tprint("Output check")
-        state.output()
+        state.output(overwite=USER['overwrite'])
 
         ### ----------------------
         ### Prepare for next loop.

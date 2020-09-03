@@ -285,6 +285,10 @@ def user_parameters():
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
+    # <amuse file overwrite>
+
+    p['overwrite'] = True # Amuse by default will not overwrite data output. <True> checks filepath before output and removes conflicting file.
+
     # <job>
 
     ntasks = get_ntasks_from_run_script("submit")

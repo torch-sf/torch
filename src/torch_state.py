@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 
 import numpy as np
-from os import path
+from os import path, remove
 import pickle
 
 from amuse.datamodel import Particles
@@ -110,7 +110,7 @@ class TorchState(object):
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
-    def output(self):
+    def output(self, overwrite=False):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
         """
@@ -127,7 +127,7 @@ class TorchState(object):
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
-            self.out_stars()
+            self.out_stars(overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
@@ -148,10 +148,19 @@ class TorchState(object):
             pickle.dump(np.random.get_state(), f)
         tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
-    def out_stars(self):
+    def out_stars(self, overwrite=False):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
+        tprint("AMUSE overwrite = {}".format(overwrite))
+        if(overwrite):
+            if path.exists(stars_fname):
+                tprint("AMUSE file {:s} already exists, removing...".format(stars_fname))
+                remove(stars_fname)
+            else:
+                tprint("AMSUE file {:s} DNE yet, continuing...".format(stars_fname))
+        else:
+            None
         write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
