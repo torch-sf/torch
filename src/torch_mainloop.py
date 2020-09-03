@@ -391,7 +391,7 @@ def evolve(state, hydro, grav, mult, se):
         ### ---------------------------------------------
 
         tprint("Output check")
-        state.output(overwite=USER['overwrite'])
+        state.output(overwrite=USER['overwrite'])
 
         ### ----------------------
         ### Prepare for next loop.
@@ -446,6 +446,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     tprint("Num hydro workers: {:d}".format(USER['num_hy_workers']))
     tprint("Num grav workers: {:d}".format(USER['num_grav_workers']))
+    tprint("AMUSE overwrite: {}".format(USER['overwrite']))
 
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
@@ -454,7 +455,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     state = TorchState(hydro, grav, mult)
 
-    state.initial_io(refresh=USER['restart_with_new_rng'])
+    state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
 
     if not state.restart:
         user_initial_conditions(state, hydro)

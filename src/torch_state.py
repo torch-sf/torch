@@ -51,8 +51,12 @@ class TorchState(object):
 
         self.output_dir = hydro.get_output_dir()
 
-    def initial_io(self, refresh=False):
+    def initial_io(self, overwrite, refresh=False):
         """Load restart files or write starting Torch state
+        Args:
+            overwrite: for data output,
+            ... overwrite AMUSE starXXXX.amuse files.
+            ... If False, assume usual AMUSE anti-overwrite behavior.
         Kwargs:
             refresh (False): for restarts,
             ... use new random number generator state.
@@ -76,7 +80,7 @@ class TorchState(object):
         #     ...
         # mirror flash logic in our writing/loading of RNG state.
         # and tracking of output mtimes
-
+        
         if self.restart:
 
             if not refresh:
@@ -103,14 +107,14 @@ class TorchState(object):
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
             # and hy_pltnum != self.pltnum, so we will write torch files.
-            self.output()
+            self.output(overwrite)
 
         # After FLASH inits (whether restart or not), it increments
         # io_checkpointFileNumber for the /next/ file write.
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
-    def output(self, overwrite=False):
+    def output(self, overwrite):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
         """
@@ -148,17 +152,15 @@ class TorchState(object):
             pickle.dump(np.random.get_state(), f)
         tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
-    def out_stars(self, overwrite=False):
+    def out_stars(self, overwrite):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
-        tprint("AMUSE overwrite = {}".format(overwrite))
         if(overwrite):
             if path.exists(stars_fname):
-                tprint("AMUSE file {:s} already exists, removing...".format(stars_fname))
                 remove(stars_fname)
             else:
-                tprint("AMSUE file {:s} DNE yet, continuing...".format(stars_fname))
+                None
         else:
             None
         write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
