@@ -287,7 +287,7 @@ def user_parameters():
 
     # <amuse file overwrite>
 
-    p['overwrite'] = False # Amuse by default will not overwrite data output. <True> checks filepath before output and removes conflicting file.
+    p['overwrite'] = True # Amuse by default will not overwrite data output. <True> checks filepath before output and removes conflicting file.
 
     # <job>
 

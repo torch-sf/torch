@@ -156,14 +156,7 @@ class TorchState(object):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
-        if(overwrite):
-            if path.exists(stars_fname):
-                remove(stars_fname)
-            else:
-                None
-        else:
-            None
-        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
