@@ -25,7 +25,7 @@ def energy_flux(T, lowfreq=0.|units.s**-1, N=100000):
     b=pi*B_nu(nu,T)
     return (b[1:]+b[:-1]).sum()/2*(nu[1]-nu[0])
 
-temp=map(lambda x: float( 27500 + x*2500 ), range(12)  ) # temperature [K]
+temp=[float( 27500 + x*2500 ) for x in range(12)] # temperature [K]
 
 tempmin=27500.
 tempmax=55000.
@@ -33,7 +33,7 @@ dtemp=2500.
 imintemp=0
 imaxtemp=11
 
-logg=map(lambda x: 3.+ x*0.25, range(8) )  # log g [cgs]
+logg=[3.+ x*0.25 for x in range(8)]  # log g [cgs]
 
 loggmin=3.
 dlogg=0.25
@@ -114,17 +114,17 @@ if __name__=="__main__":
     Rstar = 3.9 | units.RSun
     Teff = 25000 | units.K
 
-    print 'Mstar                =', Mstar
-    print 'Rstar                =', Rstar
-    print 'Teff                 =', Teff
+    print('Mstar                =', Mstar)
+    print('Rstar                =', Rstar)
+    print('Teff                 =', Teff)
 
     flux = ionizing_photon_flux(Mstar, Rstar, Teff)
-    print 'ionizing photon flux =', flux.in_(units.cm**-2*units.s**-1)
-    print 'log(flux)            =', \
-                numpy.log10(flux.value_in(units.cm**-2*units.s**-1))
+    print('ionizing photon flux =', flux.in_(units.cm**-2*units.s**-1))
+    print('log(flux)            =', \
+                numpy.log10(flux.value_in(units.cm**-2*units.s**-1)))
     lump = ionizing_photon_luminosity(Mstar, Rstar, Teff)
-    print 'ionizing photon lum  =', lump
-    print 'ionizing photon lum  =', lump.in_(units.s**-1)
+    print('ionizing photon lum  =', lump)
+    print('ionizing photon lum  =', lump.in_(units.s**-1))
     lum = ionizing_luminosity(Mstar, Rstar, Teff)
-    print 'ionizing lum         =', lum.in_(units.W)
-    print 'ionizing lum         =', lum.in_(units.LSun)
+    print('ionizing lum         =', lum.in_(units.W))
+    print('ionizing lum         =', lum.in_(units.LSun))
