@@ -2876,7 +2876,7 @@ else:
     grav.parameters.begin_time=hydro_time
     grav.evolve_model(hydro_time)
 
-logname = "profiler"+repr(num_hy_workers)+".log"
+logname = "profiler"+str(num_hy_workers)+".log"
 ### Add the star particles to both codes.
 
 #grav.particles.add_particles(stars)
@@ -3032,7 +3032,7 @@ time_in_hydro = 0.0
 time_in_grav  = 0.0
 
 log = logfile(filename=logname)
-log.write("Number of hydro threads = "+repr(num_hy_workers))
+log.write("Number of hydro threads = "+str(num_hy_workers))
 log.write("Step\t Tot time\t \t Hyd time\t \t Grav time\t \t Script time")
 
 hydro.set_particle_pointers('mass')
@@ -3300,7 +3300,7 @@ try:
                     print("Total time in N-body = %f s" %time_in_grav)
                     print("Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro))
 
-                    log.write(repr(i)+"\t \t"+"{0:.2e}".format(total_time)+
+                    log.write(str(i)+"\t \t"+"{0:.2e}".format(total_time)+
                       "\t \t"+"{0:.2e}".format(time_in_hydro)+
                       "\t \t" +"{0:.2e}".format(time_in_grav)
                       + "\t \t" + "{0:.2e}".format(total_time - time_in_grav - time_in_hydro))
@@ -4463,7 +4463,7 @@ try:
         #            print "Num in hydro = ", hydro.get_number_of_particles()
         #            sys.exit()
 
-            log.write(repr(i)+"\t \t"+"{0:.2e}".format(total_time)+
+            log.write(str(i)+"\t \t"+"{0:.2e}".format(total_time)+
                       "\t \t"+"{0:.2e}".format(time_in_hydro)+
                       "\t \t" +"{0:.2e}".format(time_in_grav)
                       + "\t \t" + "{0:.2e}".format(total_time - time_in_grav - time_in_hydro))
