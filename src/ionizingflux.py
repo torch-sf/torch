@@ -1,3 +1,5 @@
+from __future__ import division, print_function
+
 import numpy, getopt, sys
 
 from amuse import datamodel

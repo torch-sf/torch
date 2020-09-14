@@ -4,7 +4,7 @@ Generate samples from initial mass function (IMF).
 Joshua Wall, Drexel University
 """
 
-from __future__ import division
+from __future__ import division, print_function
 
 import numpy as np
 from scipy.integrate import quad
