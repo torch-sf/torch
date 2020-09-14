@@ -114,7 +114,7 @@ if __name__=="__main__":
     Rstar = 3.9 | units.RSun
     Teff = 25000 | units.K
 
-    print('Mstar                =', Mstar) # Edited print statements for py3 test - SCL 2020AUG26
+    print('Mstar                =', Mstar)
     print('Rstar                =', Rstar)
     print('Teff                 =', Teff)
 

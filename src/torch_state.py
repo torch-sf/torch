@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 
 import numpy as np
-from os import path, remove
+from os import path
 import pickle
 
 from amuse.datamodel import Particles
@@ -80,7 +80,7 @@ class TorchState(object):
         #     ...
         # mirror flash logic in our writing/loading of RNG state.
         # and tracking of output mtimes
-        
+
         if self.restart:
 
             if not refresh:
@@ -179,7 +179,7 @@ class TorchState(object):
         assert attr in ["mass", "velocity"]
 
         for s in self.stars:
-            for root, tree in self.mult.root_to_tree.items(): # Changed .iteritems() to .items() - SCL 2020aug27
+            for root, tree in self.mult.root_to_tree.items():
                 leaves = tree.get_leafs_subset()
                 if s in leaves:
                     if attr == "mass":
@@ -195,7 +195,7 @@ def update_roots_from_leaves(mult, grav):
     Update the center of mass particles from
     the leaves properties (in all codes!).
     """
-    for root, tree in mult.root_to_tree.items(): # Changed .iteritems() to .items() - SCL 2020aug27
+    for root, tree in mult.root_to_tree.items():
         leaves = tree.get_leafs_subset()
         msum    = leaves.mass.sum()
         com = leaves.center_of_mass().as_quantity_in(units.cm)
