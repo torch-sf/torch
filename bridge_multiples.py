@@ -4,6 +4,8 @@
 ### Joshua Wall
 ### Drexel University
 
+from __future__ import division, print_function
+
 print("At the top")
 
 from amuse.lab import *
