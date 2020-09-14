@@ -176,13 +176,13 @@ def load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart):
     if (restart and not refresh_rand_seed_on_restart):
 
             print(rstatefile)
-            with open(rstatefile, 'r') as f:
+            with open(rstatefile, 'rb') as f:
                 rnd_state = pickle.load(f)
             np.random.set_state(rnd_state)
             print("Random state set with file # "+rstatefile)
 
             print(massesfile)
-            with open(massesfile, 'r') as f:
+            with open(massesfile, 'rb') as f:
                 all_masses = pickle.load(f)
             print("Loaded all_masses dictionary from file # "+massesfile)
             print("all_masses =", all_masses)
