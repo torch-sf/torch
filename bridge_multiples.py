@@ -4409,9 +4409,9 @@ try:
                 if (hy_pltnum > pltnum):
                     if (write_psets):
                         stars.dt = dt
-                        write_set_to_file(stars, pdir+'/stars{:04d}.amuse'.format(pltnum))
+                        write_set_to_file(stars, pdir+'/stars{:04d}.amuse'.format(pltnum), overwrite_file=True)
                         multstars = mult_grav.stars.copy_to_new_particles()
-                        write_set_to_file(multstars, pdir+'/mult{:04d}.amuse'.format(pltnum))
+                        write_set_to_file(multstars, pdir+'/mult{:04d}.amuse'.format(pltnum), overwrite_file=True)
                     pltnum = hy_pltnum  # must increment after write
                 elif (hy_pltnum < pltnum):
                     raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, pltnum))
