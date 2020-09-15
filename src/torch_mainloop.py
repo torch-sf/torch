@@ -162,12 +162,8 @@ def evolve(state, hydro, grav, mult, se):
     hy_max_time     = hydro.get_end_time()
 
     # grav loop control
-    if USER['with_ph4']:
-        grav.parameters.begin_time  = hy_time
-        grav.parameters.sync_time   = hy_time
-    else:
-        grav.parameters.begin_time  = hy_time
-        grav.evolve_model(hy_time)
+    grav.parameters.begin_time  = hy_time
+    grav.evolve_model(hy_time)
     gr_time = grav.get_time()
 
     # stellar evolution timestep (hack for SN)
@@ -332,12 +328,8 @@ def evolve(state, hydro, grav, mult, se):
             # 2. had stars, but they all escaped
             # not sure if below code works with case 2 of stars -> no stars
             hy_time = hydro.get_time()
-            if USER['with_ph4']:
-                grav.parameters.begin_time  = hy_time
-                grav.parameters.sync_time   = hy_time
-            else:
-                grav.parameters.begin_time  = hy_time
-                grav.evolve_model(hy_time)
+            grav.parameters.begin_time  = hy_time
+            grav.evolve_model(hy_time)
 
         ### --------------------------------
         ### Queue and create star particles.
