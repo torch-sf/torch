@@ -510,7 +510,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                                  sign(abs(y) + 0.5*delta(2), y), &
                                  sign(abs(z) + 0.5*delta(3), z) ]
 
-                    rad2 = dx**2.0 + dy**2.0 + dz**2.0
+                    rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
                     ! normalized components of the star --> cell center vector 
@@ -554,11 +554,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                       call overlap(1, injectRadius, loc, cell_bot, &
                                     cell_top, 20, overlap_frac)
 
-#ifdef DEBUG
-                    !write(*,*) "Calling sphere_and_cell_frac."
-#endif
-                    !call sphere_and_cell_frac(overlap_frac,injectRadius,dx,dy,dz,delta(1))
-                    
                     ! Get the background density to estimate what the inject
                     ! radius should be physically. - JW
                     if (calcBgDens) &

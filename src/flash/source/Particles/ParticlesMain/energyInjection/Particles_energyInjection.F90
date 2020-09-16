@@ -276,11 +276,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     dx = x - loc(1)
                     dy = y - loc(2)
                     dz = z - loc(3)
-#ifdef DEBUG2                    
-                    print*, "dx=", dx
-                    print*, "dy=", dy
-                    print*, "dz=", dz
-#endif
 
                     cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
                                  sign(abs(y) - 0.5*delta(2), y), &
@@ -289,24 +284,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
                                  sign(abs(y) + 0.5*delta(2), y), &
                                  sign(abs(z) + 0.5*delta(3), z) ]
-#ifdef DEBUG2                    
-                    print*, "cell_top=", cell_top
-                    print*, "cell_bot=", cell_bot
-#endif
-                    rad = sqrt(dx**2.0 + dy**2.0 + dz**2.0)
-                    
-#ifdef DEBUG2       
-                    print*, "rad=", rad
-#endif
-!                    r1  = sqrt(sum((cell_top-loc)**2.0))
-!                    r2  = sqrt(sum((cell_bot-loc)**2.0))
-!                    ! Shortest distance to outer edge for this injection cell, which might be to injectRadius
-!                    delr = min(abs(r2-r1), abs(injectRadius-min(r2,r1)))
-!                    ! Amount of mass to place in this cell at this radius (not normalized yet).
-!                    ! Note here this is mass, not density (yet!).
-!                    densArray(n,i,j,k) = injectMass *abs(r2-r1)*delta(1)**2.0 / (rad**3.0_dp)
-!                    sumMass = sumMass + densArray(n,i,j,k) ! Use to normalize mass if needed.
 
+                    rad = sqrt(dx**2 + dy**2 + dz**2)
+                    
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
                     
@@ -340,11 +320,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     call overlap(1, injectRadius, loc, cell_bot, &
                                     cell_top, 50, overlap_frac)
                     
-#ifdef DEBUG2
-                    print*, "overlap_frac=", overlap_frac
-#endif
-                    !call sphere_and_cell_frac(overlap_frac,injectRadius,dx,dy,dz,delta(1))
-                    
                     ! Get the background density to estimate what the inject
                     ! radius should be physically. - JW
 
@@ -352,10 +327,11 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     ! sum all weightings for normalization later
 
-                    sumOverlap = sumOverlap + overlap_frac
-                    injectDataOverlap(n,i,j,k) = overlap_frac
-                    if (overlap_frac .gt. 0.0d0) &
+                    if (overlap_frac .gt. 0.0d0) then
+                        sumOverlap = sumOverlap + overlap_frac
+                        injectDataOverlap(n,i,j,k) = overlap_frac
                         injectDataVel(n,i,j,k,1:3) = [xvel,yvel,zvel]
+                    end if
                 end do
             end do
         end do
