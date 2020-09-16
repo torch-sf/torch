@@ -22,6 +22,8 @@
 !!
 !!  Only works for 3-D.
 !!
+!!  WARNING - does not work with periodic boundary conditions
+!!
 !! ARGUMENTS
 !!
 !!  xloc      : x-coordinate of injection sphere center
@@ -62,6 +64,8 @@ subroutine GridInject_getInjBlks (xloc, yloc, zloc, radius, injBlks, InjBlkNum)
 
     call Grid_getBlkCenterCoords(blockID,blkCtr)
     call Grid_getBlkPhysicalSize(blockID,blkSize)
+
+    ! WARNING - does not work with periodic boundary conditions
 
     ! If all three directions of the block have been pierced by the injection
     ! sphere then this is an injection block.
