@@ -541,9 +541,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
     do n = 1, injBlkNum
         blockID = localInjectBlocks(n)
         call Grid_getBlkPtr(blockID, solndata)
-        do i = GRID_ILO, GRID_IHI
+        do k = GRID_KLO, GRID_KHI
             do j = GRID_JLO, GRID_JHI
-                do k = GRID_KLO, GRID_KHI
+                do i = GRID_ILO, GRID_IHI
                     ! since we have checked that all cells are refined, use
                     ! mindelta
 
@@ -682,9 +682,9 @@ if (iHaveInjectBlk) then
             call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
             call Grid_getBlkPtr(blockID, solndata)
 
-            do i = GRID_ILO,GRID_IHI
+            do k = GRID_KLO, GRID_KHI
                 do j = GRID_JLO, GRID_JHI
-                    do k = GRID_KLO, GRID_KHI
+                    do i = GRID_ILO, GRID_IHI
                       
                       ! Round off errors in calculations lead to small
                       ! changes in thermal energy that have big
@@ -857,9 +857,9 @@ if (iHaveInjectBlk) then
             call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
             call Grid_getBlkPtr(blockID, solndata)
 
-            do i = GRID_ILO,GRID_IHI
+            do k = GRID_KLO, GRID_KHI
                 do j = GRID_JLO, GRID_JHI
-                    do k = GRID_KLO, GRID_KHI
+                    do i = GRID_ILO, GRID_IHI
                         
                       dDens   = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
                       oldDens = solndata(DENS_VAR,i,j,k)
