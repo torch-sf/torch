@@ -158,6 +158,7 @@ Python package manager with some adjustments.
 \item AMUSE: \url{https://github.com/amusecode/amuse}
 \item Torch: \url{https://bitbucket.org/torch-sf/torch}
 \item Conda / Python 2.7
+\item Python 3.X (for Torch \texttt{refactor} only)
 \item MPI
 \item HDF5
 \item git, wget
@@ -919,5 +920,32 @@ directory where you ran the script. The most useful file is the one named
 \texttt{slurm-\#\#\#\#\#.out} which is where your screen output is redirected
 to. I check this periodically to see what simulation time my run has achieved,
 how many stars I've made, if it is hung up on a process, etc.
+
+\subsection{Cartesius - Refactor}
+The refactored version of Torch (on git branch \texttt{refactor}) uses the latest AMUSE commit on branch \texttt{master} which requires Python 3.X as well as FLASH version 4.6.2. The setup for the refactored version of Torch on Cartesius is largely the same as the \texttt{master} branch as described in this document but with a dew caveats. 
+
+Firstly, make sure you download and unzip FLASH4.6.2. This can be done from the same FLASH distribution webpage from which FLASH4.5 or earlier versions can be accessed. 
+
+Second, make sure to have the AMUSE \texttt{master} branch checked out and is at the most recent commit.
+
+In order to satisfy AMUSE's Python 3.X requirements, we will need to establish a module environment that's a bit different from the one described in Appendix B.1:
+\begin{lstlisting}[language=bash]
+module load 2019
+module load foss/2018b
+
+module load Python/3.6.6-fosscuda-2018b
+module load HDF5/1.10.2-foss-2018b
+module load h5py/2.10.0-fosscuda-2018b-Python-3.6.6
+module load GSL/2.5-iccifort-2018.3.222-GCC-7.3.0-2.30
+module load pytest/4.4.0-fosscuda-2018b-Python-3.6.6
+
+export MODLOC=/sw/arch/RedHatEnterpriseServer7/EB_production/2019/software
+export MPIHOME=$MODLOC/OpenMPI/3.1.1-GCC-7.3.0-2.30
+export OMPI_MCA_mpi_warn_on_fork=0
+\end{lstlisting}
+
+In addition to this slightly altered environment, the Cartesius Python 3.6.6 module does not currently have the \texttt{matplotlib} and \texttt{docutils} libraries installed. This is okay, we can just install them ourselves in our user environment using \texttt{pip install --user matplotlib docutils} after loading the Python/3.6.6-fosscuda-2018b module.
+
+Finally, if running this module environment setup reports any error (such as "XYZ module cannot load due to conflict") try running the same environment setup file again and there should be no issue.
 
 \end{document}
