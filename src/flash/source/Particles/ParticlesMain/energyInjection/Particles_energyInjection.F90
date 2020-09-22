@@ -282,22 +282,21 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     zcoll = max(z-0.5*delta(3),min(loc(3),z+0.5*delta(3)))
                     d2coll = (xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2
 
-                    ! cell is outside the sphere
+                    ! is cell outside injection sphere?
                     if (d2coll > injectRadius**2) then
                         cycle
-                    ! cell overlaps sphere
-                    else
-                        cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
-                                     sign(abs(y) - 0.5*delta(2), y), &
-                                     sign(abs(z) - 0.5*delta(3), z) ]
-                        cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
-                                     sign(abs(y) + 0.5*delta(2), y), &
-                                     sign(abs(z) + 0.5*delta(3), z) ]
-                        ! get overlapping volume of inject sphere and this cell,
-                        ! modified by a tapered center-weighting within overlap(..)
-                        call overlap(1, injectRadius, loc, cell_bot, &
-                                     cell_top, 10, overlap_frac)
                     end if
+
+                    ! get overlapping volume of inject sphere and this cell,
+                    ! modified by a tapered center-weighting within overlap(..)
+                    cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
+                                 sign(abs(y) - 0.5*delta(2), y), &
+                                 sign(abs(z) - 0.5*delta(3), z) ]
+                    cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
+                                 sign(abs(y) + 0.5*delta(2), y), &
+                                 sign(abs(z) + 0.5*delta(3), z) ]
+                    call overlap(1, injectRadius, loc, cell_bot, &
+                                 cell_top, 10, overlap_frac)
 
                     dx = x - loc(1)
                     dy = y - loc(2)
