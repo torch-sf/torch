@@ -296,7 +296,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ! get overlapping volume of inject sphere and this cell,
                         ! modified by a tapered center-weighting within overlap(..)
                         call overlap(1, injectRadius, loc, cell_bot, &
-                                     cell_top, 50, overlap_frac)
+                                     cell_top, 10, overlap_frac)
                     end if
 
                     dx = x - loc(1)
