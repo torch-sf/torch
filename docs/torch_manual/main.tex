@@ -3,7 +3,7 @@
 \usepackage[margin=0.75in, letterpaper]{geometry}
 \usepackage{parskip}
 
-\usepackage{amsthm, amsmath, amssymb}
+\usepackage{amsthm, amsmath, amssymb, mathtools}
 \usepackage[pdftex]{graphicx}
 \usepackage{hyperref}
 
@@ -1587,6 +1587,8 @@ Implemented in: \\
 source/Particles/ParticlesMain/active/Sink/Couple\_AMUSE/wind
 }
 
+\subsection{General remarks}
+
 Star particles have the following important properties:
 \begin{verbatim}
     BGDY_PART_PROP              background gas density at time of wind start
@@ -1620,6 +1622,68 @@ relatively new.  Josh has some comments to this effect,
 correct amount of thermal energy to add is not 100\% clear.
 Commit is FLASH4.5 \texttt{00272ec}.
 
+\subsection{Overlap function kernel}
+
+The overlap routine is center-weighted and tapered; it does NOT return the
+volume overlap between a cell and sphere.
+Consider a point at distance $r$ from an injection sphere of radius $R_\mt{inj}$.
+A simple top-hat weighting (is the point inside or outside?) is:
+\[
+    f = \begin{cases}
+        1 & \mt{if}\quad r/R_\mt{inj} \leq 1\\
+        0 & \mt{if}\quad r/R_\mt{inj} > 1
+    \end{cases}
+\]
+
+When Josh and Andrew Pellegrino wrote the wind module,
+they
+\href{https://bitbucket.org/joshuawall/flash4.2.2-rad/commits/e133c54a4a#Lsource/Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind/overlap.F90F72}{modified the overlap function}
+to use the following weighting:
+\[
+    f = \begin{dcases}
+        1                              & \mt{if}\quad r/R_\mt{inj} \leq \sqrt{\frac{1}{3}} \\
+        3 \left(\frac{R_\mt{inj}/\sqrt{3}}{r}\right) - 2  & \mt{if}\quad \sqrt{\frac{1}{3}} < r/R_\mt{inj} \leq \sqrt{\frac{2}{3}} \\
+        \left(\frac{3}{\sqrt{2}} - 2\right)
+            \left( \frac{1 - r/R_\mt{inj}}{1-\sqrt{2/3}} \right)^2
+            & \mt{if}\quad \sqrt{\frac{2}{3}} < r/R_\mt{inj} \leq 1 \\
+        0 & \mt{if}\quad r / R_\mt{inj} > 1
+    \end{dcases}
+\]
+Shown as just a scaling:
+\[
+    f \propto \begin{dcases}
+        1         & \mt{if}\quad r/R_\mt{inj} \leq \sqrt{\frac{1}{3}} \\
+        r^{-1}    & \mt{if}\quad \sqrt{\frac{1}{3}} < r/R_\mt{inj} \leq \sqrt{\frac{2}{3}} \\
+        (1 - r)^2 & \mt{if}\quad \sqrt{\frac{2}{3}} < r/R_\mt{inj} \leq 1 \\
+        0         & \mt{if}\quad r / R_\mt{inj} > 1
+    \end{dcases}
+\]
+
+The outer-layer volume ($r/R_\mt{inj} \in [\sqrt{2/3}, 1]$) has a total weight
+of $\sim 5\%$, so the injection kernel size is effectively something like
+$R_\mt{inj}\sqrt{1/3}$ or $R_\mt{inj} \sqrt{2/3}$.
+
+Andrew Pellegrino explains the overlap kernel design motivation as follows:
+``given a sphere of radius $r$ centered on the location of a cube of side length
+$2 R_\mt{inj}/\sqrt{3}$, ... find the fraction of the surface area of the sphere
+that lies inside the cube. The $\sim 1/r$ piece of the function checks out using the
+sum of the zones that stick out of the cube, although I don't remember how I
+derived the piece for when the zones start to overlap with each other'' (2020
+Sep email).
+
+For $r/R_\mt{inj} \in [\sqrt{1/3}, \sqrt{2/3}]$, the extruding zones have
+surface area $12 \pi r \left(r - R_\mt{inj}/\sqrt{3}\right)$
+(see \href{https://mathworld.wolfram.com/Zone.html}{Wolfram MathWorld's Zone article}).
+The fractional surface area contained within the cube is therefore
+\[
+    1 - \frac{12 \pi r \left(r - R_\mt{inj}/\sqrt{3}\right)}{4\pi r^2}
+    = 3 \left( \frac{R_\mt{inj}/\sqrt{3}}{r} \right) - 2 .
+\]
+For $r/R_\mt{inj} \in [\sqrt{2/3}, 1]$, the cube's corners point out of the
+sphere in an awkward way and the area calculation is not straightforward.
+ATr suspects that the $(1-r)^2$ piece may not come from the same surface area
+calculation, perhaps it is just a way to taper the function to zero.
+
 
 % ========================
 % Random Supernova Driving
@@ -1634,6 +1698,9 @@ Commit is FLASH4.5 \texttt{00272ec}.
 \texttt{
 source/Particles/ParticlesMain/energyInjection
 }
+
+Uses the same center-weighted/tapered overlap function as for stellar winds.
+The stencil is thus rather different from that of Simpson et al.~(2015).
 
 % ----------------------------------------
 % Joung/M-MML/Baczynski thermal SN driving
