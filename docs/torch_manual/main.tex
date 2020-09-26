@@ -2092,6 +2092,100 @@ Section 4.3:
 
 
 % ================
+% Code performance
+% ================
+\section{Code performance}
+
+
+\subsection{How fast does Torch run?}
+
+An old (2017) estimate from M-MML is 150e-6 core-seconds per zone update;
+doubles to 300e-6 with radiation.  I (ATr) measured similar on Columbia's
+Habanero cluster (Intel Xeon E5-2650v4/broadwell).
+
+Josh measured weak and strong scaling on Cartesius, see plots.
+
+Comparison to almost pure FLASH (hydro, grav):
+see \href{http://flash.uchicago.edu/pipermail/flash-users/2014-September/001525.html}{Sean Couch thread on FLASH users list}
+(September 2014) with TACC Stampede (Intel) benchmarks.  1e-8 core-hours per
+zone update (36e-6 core-sec per zone), near perfect weak scaling to 4096
+cores.
+
+Here's an empirical measurement from one of Josh's 1e4 Msun runs
+(\texttt{M4V02BWL10\_USM}, not shown in Josh's papers).
+This run has $8641$ blocks for 475 hydro processors (probably 480 = 20
+Cartesius nodes total for all AMUSE workers).
+
+I (ATr) estimate an actual cost of up to 4000e-6 core-seconds per "zone update"
+(see Oct 2019 email).  This includes everything: AMUSE, ph4/multiples,
+raytracing, file write, etc.
+I estimate wall-clock cost is at least 42 days, possibly 130+ days, to push
+this 1e4 Msun run from $t=0$ to $t=10 \unit{Myr}$ with 475 procs.
+
+\begin{itemize}
+    \item Advancing two plots ($\sim2000$ years) required $\sim50$ wall-clock
+        minutes and $\sim10$ hydro steps.  One hydro step = $\sim5$ wall-clock min.
+        Thus, $300 \unit{sec} \times 475 \unit{core}/(16^3 \times 8641) = 0.004 \unit{core-sec/zone}$.
+    \item The run took 14d to reach t = 3.4 Myr.
+        If average holds, total time is 42d to reach t = 10 Myr.
+        This is an underestimate, since early steps were cheaper.
+    \item If run is pushed from current point to tmax=10 Myr, with fixed dt=6e9 and
+        steady block count (not clear that that is true), the run needs $\sim34700$ more
+        steps $\sim$ 2892 wall-clock hr = 121 days.
+        Total time would be $\sim135$ days $\sim$ 4.5 months.
+        If gas is expelled quickly and required resolution drops, the later times might become cheap again.
+    \item Misc: this run has 8 refinement levels (\texttt{lrefine\_max=9}),
+        domain full width $24\unit{pc}$, block size $16^3$, so max resolution
+        $0.006\unit{pc}$.
+    \item Source: metadata from plotfiles 2009, 2011
+\begin{verbatim}
+    $ stat turbsph_hdf5_plt_cnt_2009
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2009
+        file modification time: 2018-11-21 04:50:04.000000000 +0100
+        time = 1.06826e+14
+        dt = 5.73224e+09
+    $ stat turbsph_hdf5_plt_cnt_2011
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2011
+        file modification time: 2018-11-21 05:41:34.000000000 +0100
+        time = 1.06887e+14
+        dt = 6.04403e+09
+\end{verbatim}
+\end{itemize}
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.45\textwidth]{{fig/weak_scaling_cart}.png}
+    \includegraphics[width=0.45\textwidth]{{fig/strong_scaling_cart}.png}
+    \caption{Weak and strong scaling of Torch on Cartesius, from Josh}
+\end{figure}
+
+\subsection{Disk usage?}
+
+Information about run disk usage.
+Josh's 1e3-1e4 Msun runs reached, at the last plotted timestep in each run:
+
+\begin{verbatim}
+Cloud   Plot  Plot   Plot    Chk   Chk   Chkpt     Last     Total   Run
+(Msun)  size  file#  intv    size  file# intv      time     usage   dir
+----------------------------------------------------------------------------------------
+1e3     1.8G  2175   1 kyr   9.1G  71    0.1 Myr   5.4 Myr  1.7T    M3V02BWL10_USM  (Sep-Dec 2018)
+1e4     2.6G  2011   1 kyr   14G   360   0.01 Myr  3.4 Myr  4.4T    M4V02BWL10_USM  (Sep-Nov 2018)
+1e4     233M  1929   1 kyr   1.1G  3194  0.1 Myr   9.1 Myr  3.6T    M4V02AW  (Jun-Jul 2018)
+\end{verbatim}
+
+Notes:
+\begin{itemize}
+\item Total disk space usage includes some analysis products/plots
+\item Plotfile sizes are adjustable (choose which FLASH fields to dump)
+\item Particle file sizes are negligible (1 MB or less)
+\item Josh must have raised the plot frequency after the first star formed.
+\end{itemize}
+Tentatively, several to $\sim10$ TB seems good for one production run at Josh's resolution, out to t=10 Myr.
+On Cartesius, Josh applied for and got 400 TB.
+In October 2019, we were using 44 TB total on Cartesius.
+
+
+% ================
 % Code development
 % ================
 \section{Code development}
@@ -2337,17 +2431,6 @@ VELW_PART_PROP      wind mass loss rate
 
 \begin{itemize}
 
-    \item \textbf{Question:} How long does a run take?
-
-    \textbf{Answer:} on Columbia University's cluster ``Habanero'' (Intel
-    E5-2650v4, 2.2GHz; 5.3 GB/core; 24 cores/node; EDR Infiniband), with 6
-    refinement levels, block size $16^3$, and 186 cores, evolving JUST GAS (no
-    N-body, no feedback) to $3 \unit{Myr}$ took $10 \unit{days}$ wall clock
-    time or $\abt 50,000$ CPU-hours.
-    This was a very crude test run, not sure if I used bridge code or plain
-    FLASH.  Not using parallel HDF5.
-    A production run will take $100,000$s of CPU-hours.
-
     \item \textbf{Question:} How do I add a new runtime parameter?
 
     \textbf{Answer:}
@@ -2413,19 +2496,6 @@ VELW_PART_PROP      wind mass loss rate
     \textbf{Answer:} checkpoints, use the files you want to restart from.
         Plot files, use the next plot file numbers to create.
 
-    \item \textbf{Question:} FLASH performance?
-
-    \textbf{Answer:} Mordecai's proposal quotes 150e-6 core-seconds per zone
-    update.  I (AT) measured very similar on Habanero cluster at Columbia,
-    which is Intel Xeon E5-2650v4.
-
-    Sean Couch reports on FLASH users list (November 2014) that TACC Stampede
-    (Intel) gave 1e-8 core-hours per zone update, with near-perfect weak
-    scaling up to 4096 cores.  Translation is 36e-6 core-seconds per zone.
-    So, Torch with all its bells+whistles is about 4x slower.
-    Not unexpected w/ radiative transfer, detailed heat/cool, wind deposition
-    etc.
-
 \item \textbf{Question:} when to do EOS update?  How?
 
     \textbf{Partial answer:}
@@ -2439,7 +2509,7 @@ VELW_PART_PROP      wind mass loss rate
 % ============================
 \section{Catalog of Josh's runs on Cartesius}
 
-The Torch collaboration has project space on the supercomputer Cartesius,
+We have project space on the supercomputer Cartesius,
 located at the path \texttt{/lustre2/0/flashrad/}.
 
 Josh has archived the following runs, here listed alphabetically with last-modified dates:
@@ -2480,51 +2550,5 @@ Josh has archived the following runs, here listed alphabetically with last-modif
 
 Several exist on the Drexel Univ cluster ``Draco'' as well.
 
-Information about run wall-clock time used:
-
-\begin{verbatim}
-Here's an empirical measurement from one of Josh's 1e4 Msun runs (M4V02BWL10_USM).
-It has 8 levels of refinement (lrefine_max=9), domain +/-24 pc, so max resolution 0.012 pc.
-Note: this is NOT the run shown in Josh's paper.
-
-    $ stat turbsph_hdf5_plt_cnt_2009
-    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2009
-        file modification time: 2018-11-21 04:50:04.000000000 +0100
-        time = 1.06826e+14
-        dt = 5.73224e+09
-
-    $ stat turbsph_hdf5_plt_cnt_2011
-    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2011
-        file modification time: 2018-11-21 05:41:34.000000000 +0100
-        time = 1.06887e+14
-        dt = 6.04403e+09
-
-This run used 8641 blocks of size 16^3, with 475 processors for hydro.
-Advancing two plots (~2000 years) required ~50 wall-clock minutes and ~10 hydro steps.
-One hydro step = ~5 wall-clock min, at 475 procs with ~18 blocks/core.
-\end{verbatim}
-
-Information about run disk usage:
-
-\begin{verbatim}
-Josh's 1e3-1e4 Msun runs reached, at the last plotted timestep in each run:
-
-    Cloud   Plot    Plot    Plot        Chkpt   Chkpt   Chkpt     Last      Total   Run
-    (Msun)  size    file#   interval    size    file#   interval  time      usage   directory
-    ----------------------------------------------------------------------------------------------
-    1e3     1.8G    2175    0.001 Myr   9.1G    71      0.1 Myr   5.4 Myr   1.7T    M3V02BWL10_USM  (Sep-Dec 2018)
-    1e4     2.6G    2011    0.001 Myr   14G     360     0.01 Myr  3.4 Myr   4.4T    M4V02BWL10_USM  (Sep-Nov 2018)
-    1e4     233M    1929    0.001 Myr   1.1G    3194    0.1 Myr   9.1 Myr   3.6T    M4V02AW         (Jun-Jul 2018)
-\end{verbatim}
-
-Notes:
-disk space usage includes some analysis products/plots.
-Plotfile sizes are adjustable (choose which FLASH fields to dump).
-Particle file sizes are negligible (~1 MB or less).
-Josh must have raised the plot frequency after the first star formed.
-
-Tentatively, several to ~10 TB seems good for one production run at Josh's resolution, out to t=10 Myr.
-On Cartesius, Josh applied for and got 400 TB.
-As of October 2019, we are using 44 TB in total.
 
 \end{document}
