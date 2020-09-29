@@ -1,6 +1,7 @@
 
 
-!!! Overlap between a cell and a sphere or right cylinder.
+!!! Overlap between a cell and a sphere or right cylinder, modified by
+!!! a tapered center-weighting.
 !!! Adapted from the function of the same name written in Fortran 77
 !!! by David Clarke, originally included in ZEUS-MP.
 
@@ -11,6 +12,12 @@
 !!! Drexel University
 !!! June 2016
 
+!!! 2016 August: Andrew Pellegrino (Drexel University) applied a tapered
+!!! center-weighting to the overlap fraction.
+!!!   overlap weight = 1       for         0 < r/rad < sqrt(1/3),
+!!!   overlap weight ~ 1/r     for sqrt(1/3) < r/rad < sqrt(2/3),
+!!!   overlap weight ~ (1-r^2) for sqrt(2/3) < r/rad < 1
+
 !!! inputs:
 !!! integer :: ishp [1 for sphere, 2 for right cylinder] 
 !!! real    :: rad  [ radius of the sphere/cylinder]
@@ -20,7 +27,8 @@
 !!! integer :: nstep [ number of points in x,y,z to sample in the cell]
 
 !!! output:
-!!! real    :: overlap [the fractional volume overlap of the object and cell]
+!!! real    :: overlap [the fractional volume overlap of the object and cell,
+!!!                     modified by a tapered center-weighting]
 
 subroutine overlap(ishp, rad, center, cell_bot, cell_top, nsteps, overlap_vol)
 

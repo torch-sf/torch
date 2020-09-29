@@ -1,0 +1,10 @@
+README
+
+An attempt to refactor parts of the following units:
+
+    Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind
+    Particles/ParticlesMain/energyInjection
+    physics/sourceTerms/SN
+
+working to some degree, but not complete.  Not tested or used in production.
+-- Aaron Tran (aaron.tran@columbia.edu), Summer 2019

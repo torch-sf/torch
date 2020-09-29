@@ -90,6 +90,7 @@ real(dp) :: newVel(3), totP(3), totE, globalDeltaE, globalDeltaP, emech, pmech
 real(dp) :: oldE, newE, oldP, newP
 real(dp) :: oldVel(3), injVel(3), newVelSq(3)
 real(dp) :: idir, jdir, kdir, rad, xvel, yvel, zvel
+real(dp) :: xcoll, ycoll, zcoll, d2coll
 
 integer :: blkLimits(2,MDIM), blkLimitsGC(2,MDIM), blockID, procID
 integer :: i, j, k, m, n
@@ -202,10 +203,10 @@ do blockID = 1, lnblocks
         call Grid_getBlkCenterCoords(blockID,blkCtr)
         call Grid_getBlkPhysicalSize(blockID,blkSize)
         ! point within block that is closest to SN location
-        x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
-        y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
-        z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
-        if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
+        xcoll = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+        ycoll = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+        zcoll = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+        if ((xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2<injectRadius**2) then
             injBlkNum = injBlkNum + 1
             iHaveInjectBlk = .true.
         end if
@@ -245,10 +246,10 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
             call Grid_getBlkCenterCoords(blockID,blkCtr)
             call Grid_getBlkPhysicalSize(blockID,blkSize)
             ! point within block that is closest to SN location
-            x = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
-            y = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
-            z = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
-            if ((x-loc(1))**2+(y-loc(2))**2+(z-loc(3))**2<injectRadius**2) then
+            xcoll = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+            ycoll = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+            zcoll = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
+            if ((xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2<injectRadius**2) then
                 localInjectBlocks(n) = blockID
                 n = n + 1
             end if
@@ -263,9 +264,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
         blockID = localInjectBlocks(n)
         call Grid_getDeltas(blockID,delta)
         call Grid_getBlkPtr(blockID, solndata)
-        do i = GRID_ILO, GRID_IHI
+        do k = GRID_KLO, GRID_KHI
             do j = GRID_JLO, GRID_JHI
-                do k = GRID_KLO, GRID_KHI
+                do i = GRID_ILO, GRID_IHI
                     ! since we have checked that all cells are refined, use
                     ! mindelta
 
@@ -273,40 +274,36 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     y = (j - NGUARD - NYB/2.0 - 0.5)*delta(2) + coord(2,blockID)
                     z = (k - NGUARD - NZB/2.0 - 0.5)*delta(3) + coord(3,blockID)
 
-                    dx = x - loc(1)
-                    dy = y - loc(2)
-                    dz = z - loc(3)
-#ifdef DEBUG2                    
-                    print*, "dx=", dx
-                    print*, "dy=", dy
-                    print*, "dz=", dz
-#endif
+                    ! exact collision detection for sphere and rectangular prism
+                    ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+                    ! point within cell that is closest to SN location
+                    xcoll = max(x-0.5*delta(1),min(loc(1),x+0.5*delta(1)))
+                    ycoll = max(y-0.5*delta(2),min(loc(2),y+0.5*delta(2)))
+                    zcoll = max(z-0.5*delta(3),min(loc(3),z+0.5*delta(3)))
+                    d2coll = (xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2
 
+                    ! is cell outside injection sphere?
+                    if (d2coll > injectRadius**2) then
+                        cycle
+                    end if
+
+                    ! get overlapping volume of inject sphere and this cell,
+                    ! modified by a tapered center-weighting within overlap(..)
                     cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
                                  sign(abs(y) - 0.5*delta(2), y), &
                                  sign(abs(z) - 0.5*delta(3), z) ]
-
                     cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
                                  sign(abs(y) + 0.5*delta(2), y), &
                                  sign(abs(z) + 0.5*delta(3), z) ]
-#ifdef DEBUG2                    
-                    print*, "cell_top=", cell_top
-                    print*, "cell_bot=", cell_bot
-#endif
-                    rad = sqrt(dx**2.0 + dy**2.0 + dz**2.0)
-                    
-#ifdef DEBUG2       
-                    print*, "rad=", rad
-#endif
-!                    r1  = sqrt(sum((cell_top-loc)**2.0))
-!                    r2  = sqrt(sum((cell_bot-loc)**2.0))
-!                    ! Shortest distance to outer edge for this injection cell, which might be to injectRadius
-!                    delr = min(abs(r2-r1), abs(injectRadius-min(r2,r1)))
-!                    ! Amount of mass to place in this cell at this radius (not normalized yet).
-!                    ! Note here this is mass, not density (yet!).
-!                    densArray(n,i,j,k) = injectMass *abs(r2-r1)*delta(1)**2.0 / (rad**3.0_dp)
-!                    sumMass = sumMass + densArray(n,i,j,k) ! Use to normalize mass if needed.
+                    call overlap(1, injectRadius, loc, cell_bot, &
+                                 cell_top, 10, overlap_frac)
 
+                    dx = x - loc(1)
+                    dy = y - loc(2)
+                    dz = z - loc(3)
+
+                    rad = sqrt(dx**2 + dy**2 + dz**2)
+                    
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
                     
@@ -333,17 +330,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 !                           sqrt(xvel**2.0_dp+yvel**2.0_dp+zvel**2.0_dp), injectVelocity
 !                      stop
 !                    end if
-        
-                    overlap_frac = 0.0
-
-                    ! Now calculate the overlapping areas of the sphere and this cell.
-                    call overlap(1, injectRadius, loc, cell_bot, &
-                                    cell_top, 50, overlap_frac)
-                    
-#ifdef DEBUG2
-                    print*, "overlap_frac=", overlap_frac
-#endif
-                    !call sphere_and_cell_frac(overlap_frac,injectRadius,dx,dy,dz,delta(1))
                     
                     ! Get the background density to estimate what the inject
                     ! radius should be physically. - JW
@@ -352,10 +338,11 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     ! sum all weightings for normalization later
 
-                    sumOverlap = sumOverlap + overlap_frac
-                    injectDataOverlap(n,i,j,k) = overlap_frac
-                    if (overlap_frac .gt. 0.0d0) &
+                    if (overlap_frac .gt. 0.0d0) then
+                        sumOverlap = sumOverlap + overlap_frac
+                        injectDataOverlap(n,i,j,k) = overlap_frac
                         injectDataVel(n,i,j,k,1:3) = [xvel,yvel,zvel]
+                    end if
                 end do
             end do
         end do
@@ -434,9 +421,9 @@ if (iHaveInjectBlk) then
             call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
             call Grid_getBlkPtr(blockID, solndata)
 
-            do i = GRID_ILO,GRID_IHI
+            do k = GRID_KLO, GRID_KHI
                 do j = GRID_JLO, GRID_JHI
-                    do k = GRID_KLO, GRID_KHI
+                    do i = GRID_ILO, GRID_IHI
                       
                       ! Round off errors in calculations lead to small
                       ! changes in thermal energy that have big
@@ -590,9 +577,9 @@ if (iHaveInjectBlk) then
 !            call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
 !            call Grid_getBlkPtr(blockID, solndata)
 
-!            do i = GRID_ILO,GRID_IHI
+!            do k = GRID_KLO, GRID_KHI
 !                do j = GRID_JLO, GRID_JHI
-!                    do k = GRID_KLO, GRID_KHI
+!                    do i = GRID_ILO, GRID_IHI
                         
 !                      dDens   = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
 !                      oldDens = solndata(DENS_VAR,i,j,k)
@@ -634,9 +621,9 @@ if (iHaveInjectBlk) then
     !        blockID = localInjectBlocks(n)
     !        call Grid_getBlkPtr(blockID, solndata)
 
-    !        do i = GRID_ILO,GRID_IHI
+    !        do k = GRID_KLO, GRID_KHI
     !            do j = GRID_JLO, GRID_JHI
-    !                do k = GRID_KLO, GRID_KHI
+    !                do i = GRID_ILO, GRID_IHI
     !                    
     !                  dDens = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
     !                  oldDens = solndata(DENS_VAR,i,j,k)

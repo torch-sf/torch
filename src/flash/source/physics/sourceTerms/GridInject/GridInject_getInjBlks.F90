@@ -17,18 +17,17 @@
 !!
 !! DESCRIPTION
 !!
-!!  Find all leaf blocks ON THIS PROC that overlap injection region.
-!!  Injection region is a cube of width 2*radius centered on (xloc,yloc,zloc)
-!!  for fast collision detection.
+!!  Find all leaf blocks ON THIS PROC that overlap injection sphere
+!!  specified by (xloc, yloc, zloc, radius).
 !!
 !!  Only works for 3-D.
 !!
 !! ARGUMENTS
 !!
-!!  xloc      : x-coordinate of injection cube center
-!!  yloc      : y-coordinate of injection cube center
-!!  zloc      : z-coordinate of injection cube center
-!!  radius    : half-width of injection cube
+!!  xloc      : x-coordinate of injection sphere center
+!!  yloc      : y-coordinate of injection sphere center
+!!  zloc      : z-coordinate of injection sphere center
+!!  radius    : injection sphere radius
 !!  injBlks   : array of overlapping blockIDs (stored in 1:injBlkNum)
 !!  injBlkNum : number of overlapping blocks
 !!
