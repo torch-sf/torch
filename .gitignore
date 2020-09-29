@@ -53,7 +53,7 @@ tags
 !docs/torch_manual/quickstart-dens-slice.pdf
 
 # Images NOT to be ignored
-!docs/torch_manual/fig/gas_atomic_cool.png
+!docs/torch_manual/fig/*.png
 !docs/sinks/fig/isothermal.png
 
 # Tars and zips

@@ -40,7 +40,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, starMass, twind
 !#define DEBUG
 #define DEBUG_ENERGY
 
-use Grid_data, ONLY: gr_meshComm, gr_meshMe
+use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
 use Hydro_data, ONLY: hy_cfl, hy_eswitch
 
@@ -85,7 +85,10 @@ logical :: rampVelocity
 logical, save :: isRestart
 logical :: useTimeStep
 
-real(dp) :: injectMass, injectVelocity, pertVelocity
+real(dp) :: injectMass, injectVelocity
+integer  :: ip, nOverlap, nOverlapTot, nOverlapArr(gr_globalNumProcs)
+logical  :: perturbUsedFullChunk
+real, allocatable, dimension(:) :: perturbScale
 
 real(dp) :: star_x, star_y, star_z, loc(3)
 
@@ -99,6 +102,7 @@ real(dp) :: newVel(3), totP(3), totE, globalDeltaE, globalDeltaP, emech, pmech
 real(dp) :: oldE, newE, oldP, newP
 real(dp) :: oldVel(3), injVel(3), newVelSq(3)
 real(dp) :: idir, jdir, kdir, rad, rad2, del2, xvel, yvel, zvel
+real(dp) :: xcoll, ycoll, zcoll, d2coll
 
 integer :: blkLimits(2,MDIM), blkLimitsGC(2,MDIM), blockID
 integer :: i, j, k, m, n
@@ -128,7 +132,7 @@ real(dp), save :: rampVelStep = 3.0d6 ! cm/s
 real(dp) :: injectVelocityMax
 character(len=10), save :: conserved_quant
 integer :: injBlkNum
-real(dp) :: blkCenterDist(3), blkRadDist , blkCornerDist(3)
+real(dp) :: blkCtr(3), blkSize(3)  ! code requires MDIM=3
 real(dp), parameter :: yr = (60.0_dp**2.0)*24.0_dp*365.25_dp
 real(dp), parameter :: solarMass = 1.989d33
 
@@ -155,7 +159,7 @@ real(dp), save :: refVel
 real(dp) :: R_1
 
 real, save :: injectRadiusMax
-logical  :: calcBgDens, star_in_block
+logical  :: calcBgDens
 
 
 !integer  :: blkStar, iStar, jStar, kStar
@@ -199,9 +203,6 @@ if (first_call) then
         if (gr_meshMe == 0) print*, "[inject_direct]: Reference velocity for wind is", &
                                      refVel, "for reference temp", wind_target_temp
      end if
-    ! Initialize the random seed in case we are using
-    ! perturb velocity...
-    call random_seed()
     first_call = .false.
     
 end if
@@ -345,46 +346,19 @@ end if
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
 injBlkNum = 0
-blkCenterDist = 0.0d0
 do blockID = 1, lnblocks
     if(nodetype(blockID) == LEAF) then
-        star_in_block = .false.
-        blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-!        blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-!        print*, "Hi ", (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + &
-!            blkCornerDist(3)**2.0),  injectRadiusMax**2.0, gr_meshMe
-            
-!        if (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + & 
-!            blkCornerDist(3)**2.0 <= (injectRadiusMax)**2.0) then ! + sqrt(3.0_dp)*delta(1)
-! If all three directions of the block have been pierced by the injection sphere
-! then this is an injection block. Note the previous method missed some cases
-! where the sphere was totally contained in the block, such as:
-! blk_low_left_corner = (0.0, 0.0, 0.0)
-! blk_cent            = (1.0, 1.0, 1.0)
-! blk_size            = (2.0, 2.0, 2.0)
-! star_loc            = (0.5, 0.5, 0.0)
-! inj_rad             = 0.1
-!
-! sum(blkCornerDist**2.0) = 0.5
-! inj_rad**2.0            = 0.01
-! sum(blkCornerDist**2.0) < inj_rad**2.0 = False in this case! - JW
-        if (blkCenterDist(1) .le. 0.5*bsize(1,blockID) .and. &
-            blkCenterDist(2) .le. 0.5*bsize(2,blockID) .and. &
-            blkCenterDist(3) .le. 0.5*bsize(3,blockID)) then
-            ! Then the star is already in this block.
-            star_in_block = .true.
-        else
-            blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))        
+        ! exact collision detection for sphere and rectangular prism
+        ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+        call Grid_getBlkCenterCoords(blockID,blkCtr)
+        call Grid_getBlkPhysicalSize(blockID,blkSize)
+        ! point within block that is closest to SN location
+        xcoll = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+        ycoll = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+        zcoll = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
 
-            if ((blkCornerDist(1) .le. injectRadiusMax) .and. &
-                 (blkCornerDist(2) .le. injectRadiusMax) .and. &
-                 (blkCornerDist(3) .le. injectRadiusMax)) then
-                ! Then the star is in a different block but the sphere hits this block.
-                star_in_block = .true.
-            end if
-        end if
-                
-        if (star_in_block) then
+        if ((xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2<injectRadiusMax**2) then
+
             injBlkNum = injBlkNum + 1
             
 #ifdef DEBUG_MPI
@@ -489,43 +463,16 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
     n = 1
     do blockID = 1, lnblocks
         if(nodetype(blockID) == LEAF) then
-            star_in_block = .false.
-            blkCenterDist(:) = abs(coord(:,blockID) - loc(:))
-    !        blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))
-    !        print*, "Hi ", (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + &
-    !            blkCornerDist(3)**2.0),  injectRadiusMax**2.0, gr_meshMe
-                
-    !        if (blkCornerDist(1)**2.0 + blkCornerDist(2)**2.0 + & 
-    !            blkCornerDist(3)**2.0 <= (injectRadiusMax)**2.0) then ! + sqrt(3.0_dp)*delta(1)
-    ! If all three directions of the block have been pierced by the injection sphere
-    ! then this is an injection block. Note the previous method missed some cases
-    ! where the sphere was totally contained in the block, such as:
-    ! blk_low_left_corner = (0.0, 0.0, 0.0)
-    ! blk_cent            = (1.0, 1.0, 1.0)
-    ! blk_size            = (2.0, 2.0, 2.0)
-    ! star_loc            = (0.5, 0.5, 0.0)
-    ! inj_rad             = 0.1
-    !
-    ! sum(blkCornerDist**2.0) = 0.5
-    ! inj_rad**2.0            = 0.01
-    ! sum(blkCornerDist**2.0) < inj_rad**2.0 = False in this case! - JW
-            if (blkCenterDist(1) .le. 0.5*bsize(1,blockID) .and. &
-                blkCenterDist(2) .le. 0.5*bsize(2,blockID) .and. &
-                blkCenterDist(3) .le. 0.5*bsize(3,blockID)) then
-                ! Then the star is already in this block.
-                star_in_block = .true.
-            else
-                blkCornerDist    = blkCenterDist(:)-abs(0.5*bsize(:,blockID))        
+            ! exact collision detection for sphere and rectangular prism
+            ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+            call Grid_getBlkCenterCoords(blockID,blkCtr)
+            call Grid_getBlkPhysicalSize(blockID,blkSize)
+            ! point within block that is closest to SN location
+            xcoll = max(blkCtr(1)-0.5*blkSize(1),min(loc(1),blkCtr(1)+0.5*blkSize(1)))
+            ycoll = max(blkCtr(2)-0.5*blkSize(2),min(loc(2),blkCtr(2)+0.5*blkSize(2)))
+            zcoll = max(blkCtr(3)-0.5*blkSize(3),min(loc(3),blkCtr(3)+0.5*blkSize(3)))
 
-                if ((blkCornerDist(1) .le. injectRadiusMax) .and. &
-                     (blkCornerDist(2) .le. injectRadiusMax) .and. &
-                     (blkCornerDist(3) .le. injectRadiusMax)) then
-                    ! Then the star is in a different block but the sphere hits this block.
-                    star_in_block = .true.
-                end if
-            end if
-                    
-            if (star_in_block) then
+            if ((xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2<injectRadiusMax**2) then
              
                 localInjectBlocks(n) = blockID
                 n = n + 1
@@ -541,9 +488,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
     do n = 1, injBlkNum
         blockID = localInjectBlocks(n)
         call Grid_getBlkPtr(blockID, solndata)
-        do i = GRID_ILO, GRID_IHI
+        do k = GRID_KLO, GRID_KHI
             do j = GRID_JLO, GRID_JHI
-                do k = GRID_KLO, GRID_KHI
+                do i = GRID_ILO, GRID_IHI
                     ! since we have checked that all cells are refined, use
                     ! mindelta
 
@@ -551,19 +498,35 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     y = (j - NGUARD - NYB/2.0 - 0.5)*delta(2) + coord(2,blockID)
                     z = (k - NGUARD - NZB/2.0 - 0.5)*delta(3) + coord(3,blockID)
 
+                    ! exact collision detection for sphere and rectangular prism
+                    ! https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection#Sphere_vs._AABB
+                    ! point within cell that is closest to star
+                    xcoll = max(x-0.5*delta(1),min(loc(1),x+0.5*delta(1)))
+                    ycoll = max(y-0.5*delta(2),min(loc(2),y+0.5*delta(2)))
+                    zcoll = max(z-0.5*delta(3),min(loc(3),z+0.5*delta(3)))
+                    d2coll = (xcoll-loc(1))**2+(ycoll-loc(2))**2+(zcoll-loc(3))**2
+
+                    ! is cell outside injection sphere?
+                    if (d2coll > injectRadius**2) then
+                        cycle
+                    end if
+
+                    ! get overlapping volume of inject sphere and this cell,
+                    ! modified by a tapered center-weighting within overlap(..)
+                    cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
+                                 sign(abs(y) - 0.5*delta(2), y), &
+                                 sign(abs(z) - 0.5*delta(3), z) ]
+                    cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
+                                 sign(abs(y) + 0.5*delta(2), y), &
+                                 sign(abs(z) + 0.5*delta(3), z) ]
+                    call overlap(1, injectRadius, loc, cell_bot, &
+                                 cell_top, 10, overlap_frac)
+
                     dx = x - loc(1)
                     dy = y - loc(2)
                     dz = z - loc(3)
 
-                    cell_bot = [ sign(abs(x) - 0.5*delta(1), x), &
-                                 sign(abs(y) - 0.5*delta(2), y), &
-                                 sign(abs(z) - 0.5*delta(3), z) ]
-
-                    cell_top = [ sign(abs(x) + 0.5*delta(1), x), &
-                                 sign(abs(y) + 0.5*delta(2), y), &
-                                 sign(abs(z) + 0.5*delta(3), z) ]
-
-                    rad2 = dx**2.0 + dy**2.0 + dz**2.0
+                    rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
                     ! normalized components of the star --> cell center vector 
@@ -581,37 +544,11 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                       
                     endif
                     ! velocity of the wind points radially outwards
-                    if (perturb_velocity) then ! Perturb radial velocity?
-                      pertVelocity = norm_rand(injectVelocity, injectVelocity*perturb_std_dev)
-                      xvel = idir * pertVelocity
-                      yvel = jdir * pertVelocity
-                      zvel = kdir * pertVelocity
-                    else                        
-                      xvel = idir * injectVelocity
-                      yvel = jdir * injectVelocity
-                      zvel = kdir * injectVelocity
-                    end if
+                    xvel = idir * injectVelocity
+                    yvel = jdir * injectVelocity
+                    zvel = kdir * injectVelocity
                     
-                    if (abs(sqrt(xvel**2.0_dp+yvel**2.0_dp+zvel**2.0_dp) &
-                        - injectVelocity*(1.0+5.0*perturb_std_dev)) &
-                        /(injectVelocity*(1.0+5.0*perturb_std_dev))> 5.0d-1) then
-                      write(*,'(A,2ES13.3E3)') "vels don't match: calc vel, inj vel= ",  &
-                           sqrt(xvel**2.0_dp+yvel**2.0_dp+zvel**2.0_dp), injectVelocity
-                      write(*,'(A,3ES13.3E3)') "xvel, yvel zvel =", xvel, yvel, zvel
-                      stop
-                    end if
-        
-                    overlap_frac = 0.0
 
-                      ! Now calculate the overlapping areas of the sphere and this cell.
-                      call overlap(1, injectRadius, loc, cell_bot, &
-                                    cell_top, 20, overlap_frac)
-
-#ifdef DEBUG
-                    !write(*,*) "Calling sphere_and_cell_frac."
-#endif
-                    !call sphere_and_cell_frac(overlap_frac,injectRadius,dx,dy,dz,delta(1))
-                    
                     ! Get the background density to estimate what the inject
                     ! radius should be physically. - JW
                     if (calcBgDens) &
@@ -628,6 +565,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     if (rad .ge. min_radius) then
                         if (overlap_frac .gt. 0.0d0) then
                             sumOverlap = sumOverlap + overlap_frac
+                            nOverlap = nOverlap + 1
                             injectDataOverlap(n,i,j,k) = overlap_frac
                             injectDataVel(n,i,j,k,1:3) = [xvel,yvel,zvel]
                         end if
@@ -647,6 +585,75 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
+
+if (perturb_velocity) then
+
+  ! calculate perturbed velocities on ALL procs (including procs that don't
+  ! overlap inject sphere) in order to keep random number stream synchronized.
+  call MPI_ALLGATHER(nOverlap, 1, MPI_INTEGER, nOverlapArr, 1, MPI_INTEGER, &
+                     gr_meshcomm, ierr)
+  nOverlapTot = sum(nOverlapArr)
+
+  allocate(perturbScale(nOverlapTot))
+  do ip = 1, nOverlapTot
+    perturbScale(ip) = norm_rand(1.0, perturb_std_dev)
+  end do
+
+  ! Example: suppose nOverlapArr = (1, 10, 0, 1) for ranks 0-3.
+  ! Then perturbScale will be a 12-element array, and ranks 0,1,2,3 should have
+  ! ip=1,2,12,12, so each rank gets a disjoint chunk of perturbScale.
+  ip = 1
+  if (gr_meshMe > 0) then
+    ! gr_meshMe starts at 0, sum(nOverlapArr(1:0)) should give 0, so we may not
+    ! need this case logic.  But I'm not sure if the behavior of (1:0) slice is
+    ! specified by Fortran standard. -ATr,2020aug27
+    ip = 1 + sum( nOverlapArr(1:gr_meshMe) )
+  end if
+
+  do n = 1, injBlkNum
+    do k = GRID_KLO, GRID_KHI
+      do j = GRID_JLO, GRID_JHI
+        do i = GRID_ILO, GRID_IHI
+          if (injectDataOverlap(n,i,j,k) > 0.0) then
+
+            injectDataVel(n,i,j,k,1:3) = injectDataVel(n,i,j,k,1:3) * perturbScale(ip)
+            ip = ip + 1
+
+            if (abs(sqrt(sum(injectDataVel(n,i,j,k,:)**2)) &
+                - injectVelocity*(1.0+5.0*perturb_std_dev)) &
+                /(injectVelocity*(1.0+5.0*perturb_std_dev))> 5.0d-1) then
+              write(*,'(A,2ES13.3E3)') "vels don't match: calc vel, inj vel= ",  &
+                   sqrt(sum(injectDataVel(n,i,j,k,:)**2)), injectVelocity
+              write(*,'(A,3ES13.3E3)') "xvel, yvel zvel =", &
+                injectDataVel(n,i,j,k,1), injectDataVel(n,i,j,k,2), injectDataVel(n,i,j,k,3)
+              stop
+            end if
+
+          end if
+        end do
+      end do
+    end do
+  end do
+
+  perturbUsedFullChunk = .true.
+  if (ip /= 1 + sum(nOverlapArr(1:gr_meshMe+1))) then
+    perturbUsedFullChunk = .false.
+  end if
+  call MPI_ALLREDUCE(MPI_IN_PLACE, perturbUsedFullChunk, 1, MPI_LOGICAL, &
+                     MPI_LAND, gr_meshComm, ierr)
+
+  ! every value in perturbScale should be used exactly once; i.e., procs must
+  ! take disjoint chunks from perturbScale that cover the entire array; i.e.,
+  ! the chunks are an exact cover.
+  if (.not. perturbUsedFullChunk) then
+    if (gr_meshMe == 0) then
+      print*, "Error in wind velocity perturbation, RNG stream sampled wrongly"
+    end if
+    call Driver_abortFlash("Error in wind velocity perturbation, RNG stream sampled wrongly")
+    return
+  end if
+
+end if
 
 if (var_radius .and. calcBgDens) then
 
@@ -682,9 +689,9 @@ if (iHaveInjectBlk) then
             call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
             call Grid_getBlkPtr(blockID, solndata)
 
-            do i = GRID_ILO,GRID_IHI
+            do k = GRID_KLO, GRID_KHI
                 do j = GRID_JLO, GRID_JHI
-                    do k = GRID_KLO, GRID_KHI
+                    do i = GRID_ILO, GRID_IHI
                       
                       ! Round off errors in calculations lead to small
                       ! changes in thermal energy that have big
@@ -857,9 +864,9 @@ if (iHaveInjectBlk) then
             call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
             call Grid_getBlkPtr(blockID, solndata)
 
-            do i = GRID_ILO,GRID_IHI
+            do k = GRID_KLO, GRID_KHI
                 do j = GRID_JLO, GRID_JHI
-                    do k = GRID_KLO, GRID_KHI
+                    do i = GRID_ILO, GRID_IHI
                         
                       dDens   = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
                       oldDens = solndata(DENS_VAR,i,j,k)

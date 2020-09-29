@@ -5,7 +5,7 @@
 
 MPI_PATH   = ${I_MPI_ROOT}
 HDF4_PATH  =
-HDF5_PATH  = ${HDF5}
+HDF5_PATH  = ${EBROOTHDF5}
 HYPRE_PATH = /usr/local/hypre 
 
 ZLIB_PATH  =
@@ -69,7 +69,7 @@ CFLAGS_OPT   = -c -O3 -g -D_LARGEFILE64_SOURCE -D_FORTIFY_SOURCE=2 \
 CFLAGS_DEBUG = -c -O0 -g -traceback -debug all -debug extended \
 -D_LARGEFILE64_SOURCE -diag-disable 10120 -ftrapuv -fp-stack-check
 CFLAGS_TEST  = ${CFLAGS_OPT} -fp-model precise
-
+CFLAGS_HYPRE = -I${HYPRE_PATH}/include
 CFLAGS_HDF5  = -I${HDF5_PATH}/include -DH5_USE_16_API
 CFLAGS_NCMPI = -I$(NCMPI_PATH)/include
 CFLAGS_MPI   = -I$(MPI_PATH)/include
@@ -97,10 +97,12 @@ LFLAGS_TEST  = ${LFLAGS_OPT}
 #----------------------------------------------------------------------------
 
 LIB_HDF4 =
+# Suggested at http://flash.uchicago.edu/pipermail/flash-users/2013-July/001322.html
 LIB_HDF5 = -L$(HDF5_PATH)/lib -Wl,-rpath,${HDF5_PATH}/lib -lhdf5_fortran -lhdf5 -lz
 LIB_PNG  = -lpng
 
-LIB_MPI   = -L/opt/intel/parallel_studio_xe_2017/compilers_and_libraries_2017/linux/lib/intel64 -L${MPI_PATH}/lib -Wl,-rpath,${MPI_PATH}/lib -lmpi -lz
+# Suggested at http://flash.uchicago.edu/pipermail/flash-users/2013-July/001322.html
+LIB_MPI   = -L${MPI_PATH}/lib -Wl,-rpath,${MPI_PATH}/lib -lmpi -lz
 LIB_NCMPI = -L$(NCMPI_PATH)/lib -lpnetcdf
 LIB_MPE   = -L$(MPI_PATH)/lib -lmpe
 LIB_HYPRE = -L${HYPRE_PATH}/lib -lHYPRE

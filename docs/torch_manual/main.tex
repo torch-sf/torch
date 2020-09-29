@@ -3,7 +3,7 @@
 \usepackage[margin=0.75in, letterpaper]{geometry}
 \usepackage{parskip}
 
-\usepackage{amsthm, amsmath, amssymb}
+\usepackage{amsthm, amsmath, amssymb, mathtools}
 \usepackage[pdftex]{graphicx}
 \usepackage{hyperref}
 
@@ -131,20 +131,26 @@ not even work.
 \textbf{Torch} is distributed in the public repository:
 \url{https://bitbucket.org/torch-sf/torch}
 
-Old versions of the code exist in private repositories:
+Code development history before Fall 2019:
 \begin{itemize}
-    \item Aaron, Spring-Summer 2019: \url{https://bitbucket.org/aarontran/flash4.5-rad}
-    \item Josh, Fall 2018 - Spring 2019: \url{https://bitbucket.org/joshuawall/flash4.5}
-    \item Josh, Fall 2016 - Fall 2018: \url{https://bitbucket.org/joshuawall/flash4.2.2-rad}
-    \item Juan+Christian, Spring 2013 - Spring 2016: \url{https://bitbucket.org/mordecai/flash4-ita-amnh-jcim}
-    \item Christian, Spring 2013 - Spring 2014: \url{https://bitbucket.org/mordecai/flash4-ita-cb}
+    \item Josh+Aaron, Fall 2018 - Summer 2019: \url{https://bitbucket.org/torch-sf/flash4.5-rad}
+        \begin{itemize}
+            \item forked from \url{https://bitbucket.org/joshuawall/flash4.5},
+                see also some \href{https://bitbucket.org/joshuawall/flash4.5/pull-requests/?state=MERGED}{pull request history}
+        \end{itemize}
+    \item Josh, Fall 2016 - Fall 2018: \url{https://bitbucket.org/torch-sf/flash4.2.2-rad}
+        \begin{itemize}
+            \item forked from \url{https://bitbucket.org/joshuawall/flash4.2.2-rad}
+        \end{itemize}
+    \item Juan+Christian, Spring 2013 - Spring 2016: \url{https://bitbucket.org/torch-sf/flash4-ita-amnh-jcim}
+    \item Christian, Spring 2013 - Spring 2014: \url{https://bitbucket.org/torch-sf/flash4-ita-cb}
 \end{itemize}
-
-To get access to old repositories, contact the devs.
-
 The version \texttt{flash4.2.2-rad} contains many add-ons and units accumulated
-from the mid-2000s to present; many add-ons are NOT yet ported into the public
-Torch repository.
+from the mid-2000s to the present, some of which are NOT yet ported into the
+public Torch repository.
+You must be a member of the \texttt{torch-sf} Bitbucket workspace to access
+these archived repositories.
+
 
 % =================================
 % What is added onto vanilla FLASH?
@@ -561,14 +567,57 @@ called anywhere in FLASH code.
 - AT, 2019 May 09.
 
 
-% =========================
-% Sinks and stars
-% =========================
-\section{Sinks and stars}
+% ==========================
+% Particles: sinks and stars
+% ==========================
+\section{Particles: sinks and stars}
 
-% -------------------------
+% --------------------------------------------
+% Particle data structures, generally speaking
+% --------------------------------------------
+\subsection{Particle data structures}
+
+\texttt{Particles\_data.F90} provides:
+\begin{verbatim}
+    particles(:,:)      (NPART_PROPS, MAX_PARTICLES_PER_PROCESSOR=pt_maxPerProc)
+    pt_typeInfo(:,:)    (PART_TYPE_INFO_SIZE, NPART_TYPES)
+\end{verbatim}
+
+All properties are shared by all particle types.  The \texttt{particles} is
+manually sorted by prtl type, then by blk, at various points in the FLASH
+evolution loop.
+
+\texttt{pt\_typeInfo} holds metadata about each particle type.
+These metadata properties are declared in \texttt{Particles.h}, they may include some of:
+\begin{verbatim}
+    PART_TYPE = type of particle
+    PART_MAPMETHOD = method to map to/from mesh
+    PART_TYPE_BEGIN = starting index of particle type in particles(:,:) array
+    PART_INITMETHOD
+    PART_LOCAL = local number of this type of particle
+    PART_LOCAL_MAX = maximum of this type allowed on proc
+    PART_ADVMETHOD
+    PART_INTEGRATE_METHOD = time integration algorithm
+\end{verbatim}
+Example: to iterate over the stars (active particles), you can do:
+\begin{lstlisting}[language=Fortran]
+    p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
+    p_num = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)  ! number of stars on current proc
+    do p = p_begin, p_begin+p_num-1
+        print*, "Particle mass =", particles(MASS_PART_PROP, p)
+    end do
+\end{lstlisting}
+
+\texttt{Particles\_sinkData.F90} provides:
+\begin{verbatim}
+    particles_local(:,:)        (pt_sinkParticleProps, sink_maxSinks)
+    particles_global(:,:)       (pt_sinkParticleProps, sink_maxSinks)
+\end{verbatim}
+
+
+% ------------------------
 % Star/sink data structures
-% -------------------------
+% ------------------------
 \subsection{Star/sink data structures}
 
 The AMUSE interface to FLASH uses pointers to get/set different particle types.
@@ -1544,6 +1593,8 @@ Implemented in: \\
 source/Particles/ParticlesMain/active/Sink/Couple\_AMUSE/wind
 }
 
+\subsection{General remarks}
+
 Star particles have the following important properties:
 \begin{verbatim}
     BGDY_PART_PROP              background gas density at time of wind start
@@ -1577,6 +1628,68 @@ relatively new.  Josh has some comments to this effect,
 correct amount of thermal energy to add is not 100\% clear.
 Commit is FLASH4.5 \texttt{00272ec}.
 
+\subsection{Overlap function kernel}
+
+The overlap routine is center-weighted and tapered; it does NOT return the
+volume overlap between a cell and sphere.
+Consider a point at distance $r$ from an injection sphere of radius $R_\mt{inj}$.
+A simple top-hat weighting (is the point inside or outside?) is:
+\[
+    f = \begin{cases}
+        1 & \mt{if}\quad r/R_\mt{inj} \leq 1\\
+        0 & \mt{if}\quad r/R_\mt{inj} > 1
+    \end{cases}
+\]
+
+When Josh and Andrew Pellegrino wrote the wind module,
+they
+\href{https://bitbucket.org/joshuawall/flash4.2.2-rad/commits/e133c54a4a#Lsource/Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind/overlap.F90F72}{modified the overlap function}
+to use the following weighting:
+\[
+    f = \begin{dcases}
+        1                              & \mt{if}\quad r/R_\mt{inj} \leq \sqrt{\frac{1}{3}} \\
+        3 \left(\frac{R_\mt{inj}/\sqrt{3}}{r}\right) - 2  & \mt{if}\quad \sqrt{\frac{1}{3}} < r/R_\mt{inj} \leq \sqrt{\frac{2}{3}} \\
+        \left(\frac{3}{\sqrt{2}} - 2\right)
+            \left( \frac{1 - r/R_\mt{inj}}{1-\sqrt{2/3}} \right)^2
+            & \mt{if}\quad \sqrt{\frac{2}{3}} < r/R_\mt{inj} \leq 1 \\
+        0 & \mt{if}\quad r / R_\mt{inj} > 1
+    \end{dcases}
+\]
+Shown as just a scaling:
+\[
+    f \propto \begin{dcases}
+        1         & \mt{if}\quad r/R_\mt{inj} \leq \sqrt{\frac{1}{3}} \\
+        r^{-1}    & \mt{if}\quad \sqrt{\frac{1}{3}} < r/R_\mt{inj} \leq \sqrt{\frac{2}{3}} \\
+        (1 - r)^2 & \mt{if}\quad \sqrt{\frac{2}{3}} < r/R_\mt{inj} \leq 1 \\
+        0         & \mt{if}\quad r / R_\mt{inj} > 1
+    \end{dcases}
+\]
+
+The outer-layer volume ($r/R_\mt{inj} \in [\sqrt{2/3}, 1]$) has a total weight
+of $\sim 5\%$, so the injection kernel size is effectively something like
+$R_\mt{inj}\sqrt{1/3}$ or $R_\mt{inj} \sqrt{2/3}$.
+
+Andrew Pellegrino explains the overlap kernel design motivation as follows:
+``given a sphere of radius $r$ centered on the location of a cube of side length
+$2 R_\mt{inj}/\sqrt{3}$, ... find the fraction of the surface area of the sphere
+that lies inside the cube. The $\sim 1/r$ piece of the function checks out using the
+sum of the zones that stick out of the cube, although I don't remember how I
+derived the piece for when the zones start to overlap with each other'' (2020
+Sep email).
+
+For $r/R_\mt{inj} \in [\sqrt{1/3}, \sqrt{2/3}]$, the extruding zones have
+surface area $12 \pi r \left(r - R_\mt{inj}/\sqrt{3}\right)$
+(see \href{https://mathworld.wolfram.com/Zone.html}{Wolfram MathWorld's Zone article}).
+The fractional surface area contained within the cube is therefore
+\[
+    1 - \frac{12 \pi r \left(r - R_\mt{inj}/\sqrt{3}\right)}{4\pi r^2}
+    = 3 \left( \frac{R_\mt{inj}/\sqrt{3}}{r} \right) - 2 .
+\]
+For $r/R_\mt{inj} \in [\sqrt{2/3}, 1]$, the cube's corners point out of the
+sphere in an awkward way and the area calculation is not straightforward.
+ATr suspects that the $(1-r)^2$ piece may not come from the same surface area
+calculation, perhaps it is just a way to taper the function to zero.
+
 
 % ========================
 % Random Supernova Driving
@@ -1591,6 +1704,9 @@ Commit is FLASH4.5 \texttt{00272ec}.
 \texttt{
 source/Particles/ParticlesMain/energyInjection
 }
+
+Uses the same center-weighted/tapered overlap function as for stellar winds.
+The stencil is thus rather different from that of Simpson et al.~(2015).
 
 % ----------------------------------------
 % Joung/M-MML/Baczynski thermal SN driving
@@ -1976,6 +2092,100 @@ Section 4.3:
 
 
 % ================
+% Code performance
+% ================
+\section{Code performance}
+
+
+\subsection{How fast does Torch run?}
+
+An old (2017) estimate from M-MML is 150e-6 core-seconds per zone update;
+doubles to 300e-6 with radiation.  I (ATr) measured similar on Columbia's
+Habanero cluster (Intel Xeon E5-2650v4/broadwell).
+
+Josh measured weak and strong scaling on Cartesius, see plots.
+
+Comparison to almost pure FLASH (hydro, grav):
+see \href{http://flash.uchicago.edu/pipermail/flash-users/2014-September/001525.html}{Sean Couch thread on FLASH users list}
+(September 2014) with TACC Stampede (Intel) benchmarks.  1e-8 core-hours per
+zone update (36e-6 core-sec per zone), near perfect weak scaling to 4096
+cores.
+
+Here's an empirical measurement from one of Josh's 1e4 Msun runs
+(\texttt{M4V02BWL10\_USM}, not shown in Josh's papers).
+This run has $8641$ blocks for 475 hydro processors (probably 480 = 20
+Cartesius nodes total for all AMUSE workers).
+
+I (ATr) estimate an actual cost of up to 4000e-6 core-seconds per "zone update"
+(see Oct 2019 email).  This includes everything: AMUSE, ph4/multiples,
+raytracing, file write, etc.
+I estimate wall-clock cost is at least 42 days, possibly 130+ days, to push
+this 1e4 Msun run from $t=0$ to $t=10 \unit{Myr}$ with 475 procs.
+
+\begin{itemize}
+    \item Advancing two plots ($\sim2000$ years) required $\sim50$ wall-clock
+        minutes and $\sim10$ hydro steps.  One hydro step = $\sim5$ wall-clock min.
+        Thus, $300 \unit{sec} \times 475 \unit{core}/(16^3 \times 8641) = 0.004 \unit{core-sec/zone}$.
+    \item The run took 14d to reach t = 3.4 Myr.
+        If average holds, total time is 42d to reach t = 10 Myr.
+        This is an underestimate, since early steps were cheaper.
+    \item If run is pushed from current point to tmax=10 Myr, with fixed dt=6e9 and
+        steady block count (not clear that that is true), the run needs $\sim34700$ more
+        steps $\sim$ 2892 wall-clock hr = 121 days.
+        Total time would be $\sim135$ days $\sim$ 4.5 months.
+        If gas is expelled quickly and required resolution drops, the later times might become cheap again.
+    \item Misc: this run has 8 refinement levels (\texttt{lrefine\_max=9}),
+        domain full width $24\unit{pc}$, block size $16^3$, so max resolution
+        $0.006\unit{pc}$.
+    \item Source: metadata from plotfiles 2009, 2011
+\begin{verbatim}
+    $ stat turbsph_hdf5_plt_cnt_2009
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2009
+        file modification time: 2018-11-21 04:50:04.000000000 +0100
+        time = 1.06826e+14
+        dt = 5.73224e+09
+    $ stat turbsph_hdf5_plt_cnt_2011
+    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2011
+        file modification time: 2018-11-21 05:41:34.000000000 +0100
+        time = 1.06887e+14
+        dt = 6.04403e+09
+\end{verbatim}
+\end{itemize}
+
+\begin{figure}
+    \center
+    \includegraphics[width=0.45\textwidth]{{fig/weak_scaling_cart}.png}
+    \includegraphics[width=0.45\textwidth]{{fig/strong_scaling_cart}.png}
+    \caption{Weak and strong scaling of Torch on Cartesius, from Josh}
+\end{figure}
+
+\subsection{Disk usage?}
+
+Information about run disk usage.
+Josh's 1e3-1e4 Msun runs reached, at the last plotted timestep in each run:
+
+\begin{verbatim}
+Cloud   Plot  Plot   Plot    Chk   Chk   Chkpt     Last     Total   Run
+(Msun)  size  file#  intv    size  file# intv      time     usage   dir
+----------------------------------------------------------------------------------------
+1e3     1.8G  2175   1 kyr   9.1G  71    0.1 Myr   5.4 Myr  1.7T    M3V02BWL10_USM  (Sep-Dec 2018)
+1e4     2.6G  2011   1 kyr   14G   360   0.01 Myr  3.4 Myr  4.4T    M4V02BWL10_USM  (Sep-Nov 2018)
+1e4     233M  1929   1 kyr   1.1G  3194  0.1 Myr   9.1 Myr  3.6T    M4V02AW  (Jun-Jul 2018)
+\end{verbatim}
+
+Notes:
+\begin{itemize}
+\item Total disk space usage includes some analysis products/plots
+\item Plotfile sizes are adjustable (choose which FLASH fields to dump)
+\item Particle file sizes are negligible (1 MB or less)
+\item Josh must have raised the plot frequency after the first star formed.
+\end{itemize}
+Tentatively, several to $\sim10$ TB seems good for one production run at Josh's resolution, out to t=10 Myr.
+On Cartesius, Josh applied for and got 400 TB.
+In October 2019, we were using 44 TB total on Cartesius.
+
+
+% ================
 % Code development
 % ================
 \section{Code development}
@@ -2221,17 +2431,6 @@ VELW_PART_PROP      wind mass loss rate
 
 \begin{itemize}
 
-    \item \textbf{Question:} How long does a run take?
-
-    \textbf{Answer:} on Columbia University's cluster ``Habanero'' (Intel
-    E5-2650v4, 2.2GHz; 5.3 GB/core; 24 cores/node; EDR Infiniband), with 6
-    refinement levels, block size $16^3$, and 186 cores, evolving JUST GAS (no
-    N-body, no feedback) to $3 \unit{Myr}$ took $10 \unit{days}$ wall clock
-    time or $\abt 50,000$ CPU-hours.
-    This was a very crude test run, not sure if I used bridge code or plain
-    FLASH.  Not using parallel HDF5.
-    A production run will take $100,000$s of CPU-hours.
-
     \item \textbf{Question:} How do I add a new runtime parameter?
 
     \textbf{Answer:}
@@ -2297,19 +2496,6 @@ VELW_PART_PROP      wind mass loss rate
     \textbf{Answer:} checkpoints, use the files you want to restart from.
         Plot files, use the next plot file numbers to create.
 
-    \item \textbf{Question:} FLASH performance?
-
-    \textbf{Answer:} Mordecai's proposal quotes 150e-6 core-seconds per zone
-    update.  I (AT) measured very similar on Habanero cluster at Columbia,
-    which is Intel Xeon E5-2650v4.
-
-    Sean Couch reports on FLASH users list (November 2014) that TACC Stampede
-    (Intel) gave 1e-8 core-hours per zone update, with near-perfect weak
-    scaling up to 4096 cores.  Translation is 36e-6 core-seconds per zone.
-    So, Torch with all its bells+whistles is about 4x slower.
-    Not unexpected w/ radiative transfer, detailed heat/cool, wind deposition
-    etc.
-
 \item \textbf{Question:} when to do EOS update?  How?
 
     \textbf{Partial answer:}
@@ -2323,7 +2509,7 @@ VELW_PART_PROP      wind mass loss rate
 % ============================
 \section{Catalog of Josh's runs on Cartesius}
 
-The Torch collaboration has project space on the supercomputer Cartesius,
+We have project space on the supercomputer Cartesius,
 located at the path \texttt{/lustre2/0/flashrad/}.
 
 Josh has archived the following runs, here listed alphabetically with last-modified dates:
@@ -2364,51 +2550,5 @@ Josh has archived the following runs, here listed alphabetically with last-modif
 
 Several exist on the Drexel Univ cluster ``Draco'' as well.
 
-Information about run wall-clock time used:
-
-\begin{verbatim}
-Here's an empirical measurement from one of Josh's 1e4 Msun runs (M4V02BWL10_USM).
-It has 8 levels of refinement (lrefine_max=9), domain +/-24 pc, so max resolution 0.012 pc.
-Note: this is NOT the run shown in Josh's paper.
-
-    $ stat turbsph_hdf5_plt_cnt_2009
-    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2009
-        file modification time: 2018-11-21 04:50:04.000000000 +0100
-        time = 1.06826e+14
-        dt = 5.73224e+09
-
-    $ stat turbsph_hdf5_plt_cnt_2011
-    $ h5dump -d "real scalars" turbsph_hdf5_plt_cnt_2011
-        file modification time: 2018-11-21 05:41:34.000000000 +0100
-        time = 1.06887e+14
-        dt = 6.04403e+09
-
-This run used 8641 blocks of size 16^3, with 475 processors for hydro.
-Advancing two plots (~2000 years) required ~50 wall-clock minutes and ~10 hydro steps.
-One hydro step = ~5 wall-clock min, at 475 procs with ~18 blocks/core.
-\end{verbatim}
-
-Information about run disk usage:
-
-\begin{verbatim}
-Josh's 1e3-1e4 Msun runs reached, at the last plotted timestep in each run:
-
-    Cloud   Plot    Plot    Plot        Chkpt   Chkpt   Chkpt     Last      Total   Run
-    (Msun)  size    file#   interval    size    file#   interval  time      usage   directory
-    ----------------------------------------------------------------------------------------------
-    1e3     1.8G    2175    0.001 Myr   9.1G    71      0.1 Myr   5.4 Myr   1.7T    M3V02BWL10_USM  (Sep-Dec 2018)
-    1e4     2.6G    2011    0.001 Myr   14G     360     0.01 Myr  3.4 Myr   4.4T    M4V02BWL10_USM  (Sep-Nov 2018)
-    1e4     233M    1929    0.001 Myr   1.1G    3194    0.1 Myr   9.1 Myr   3.6T    M4V02AW         (Jun-Jul 2018)
-\end{verbatim}
-
-Notes:
-disk space usage includes some analysis products/plots.
-Plotfile sizes are adjustable (choose which FLASH fields to dump).
-Particle file sizes are negligible (~1 MB or less).
-Josh must have raised the plot frequency after the first star formed.
-
-Tentatively, several to ~10 TB seems good for one production run at Josh's resolution, out to t=10 Myr.
-On Cartesius, Josh applied for and got 400 TB.
-As of October 2019, we are using 44 TB in total.
 
 \end{document}

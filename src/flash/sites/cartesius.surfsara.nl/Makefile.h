@@ -3,9 +3,9 @@
 # Set the HDF5/MPI library paths -- these need to be updated for your system
 #----------------------------------------------------------------------------
 
-MPI_PATH   = ${MPIHOME}
+MPI_PATH   = ${EBROOTOPENMPI}
 HDF4_PATH  =
-HDF5_PATH  = ${HDF5}
+HDF5_PATH  = ${EBROOTHDF5}
 HYPRE_PATH = /usr/local/hypre
 
 ZLIB_PATH  =
@@ -87,6 +87,8 @@ CFLAGS_DEBUG = -ggdb -c -O0 -Wno-div-by-zero -Wundef \
 
 
 CFLAGS_TEST = -ggdb -O0 -c
+
+CFLAGS_HYPRE = -I${HYPRE_PATH}/include
 
 
 # if we are using HDF5, we need to specify the path to the include files

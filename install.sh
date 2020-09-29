@@ -58,7 +58,7 @@ cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 25
 # Point AMUSE Makefile to FLASH directory via symlink
 # TODO will not work? if user placed FLASH4.5/ in ${adest}/src
 echo -n "Linking: "
-ln -sfv ${FLASH_DIR}                    ${adest}/src/FLASH4.5 || { echo $errstr; exit 255; }
+ln -sfTv ${FLASH_DIR}                    ${adest}/src/FLASH4.5 || { echo $errstr; exit 255; }
 echo "Setting drive_loc in ${adest}/Makefile"
 # "sed -i" doesn't work for BSD sed (e.g. on OS X), use a workaround from
 # https://stackoverflow.com/a/44877280

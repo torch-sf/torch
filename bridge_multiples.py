@@ -2963,7 +2963,6 @@ i = 0                  # Step number for bridge.
 tags_keys = np.empty(0)# Tags (ID in Flash) and keys (ID in AMUSE) for all particles.
 first_loop = True
 made_stars = False
-gridChanged = True
 
 max_ref  = hydro.get_max_refinement()
 sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
@@ -3022,6 +3021,16 @@ print "dt in secs: %3.3e s" % dt.value_in(units.s)
 print "End time in secs: %3.3e s" %tmax.value_in(units.s)
 
 first_step = True
+gridChanged = True
+if restart:
+    if start_with_star or start_with_cluster:
+        print "WARNING: restart AND adding new particles, so recomputing grav accel"
+    else:
+        # restarts: don't re-compute grav accel during very 1st bridge kick
+        #   because we can read it from file. this matches normal bridge loop
+        #   logic and is necessary for bitwise agreement between
+        #   ab initio vs. restart simulation -ATr,2020 Jul 29
+        gridChanged = False
 
 i = int(t/dt)
 
@@ -3401,7 +3410,7 @@ try:
 
                         if (with_massloss and (massloss_method == 'seba' or st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun))):
                             if (debug_se): print "using seba method"
-                            dm_dt[part] = ((stars.mass[part]-st_mass)/st_time).in_(units.g / units.s)
+                            dm_dt[part] = ((stars.mass[part]-st_mass)/dt).in_(units.g / units.s)
                             # If below the mass cutoff for feedback, no wind present.
                             if (st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun)):
                                 vterm[part] = 0.0 | units.km/units.s
@@ -3597,11 +3606,8 @@ try:
                                     npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
                         if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
-                            if (st_type.value_in(units.stellar_type) == 1):
-                                star_mass[part] = ((stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
                             # Note other evolutionary things besides winds could have reduced the stars mass.
-                            else:
-                                star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
+                            star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
                         else:
                             star_mass[part] = st_mass
 
