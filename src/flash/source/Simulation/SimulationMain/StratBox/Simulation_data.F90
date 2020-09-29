@@ -43,4 +43,7 @@ module Simulation_data
 
   logical, save :: sim_withStaticGrav
 
+  logical, save :: sim_stirLayer
+  real, save :: sim_stirH
+
 end module Simulation_data

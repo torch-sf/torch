@@ -77,4 +77,8 @@ subroutine Simulation_init()
   ! stratbox, toggle staticgrav
   call RuntimeParameters_get('sim_withStaticGrav', sim_withStaticGrav)
 
+  ! stratbox, turbulent stirring
+  call RuntimeParameters_get('sim_stirLayer', sim_stirLayer)
+  call RuntimeParameters_get('sim_stirH', sim_stirH)
+
 end subroutine Simulation_init
