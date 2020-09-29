@@ -1,13 +1,4 @@
-all: main.pdf quickstart-web.pdf
-#quickstart-cca.pdf
-
-quickstart-cca.pdf: quickstart-cca.tex fig/torch-features.pdf fig/quickstart-particles.pdf fig/quickstart-dens-slice.pdf
-	pdflatex quickstart-cca.tex
-	pdflatex quickstart-cca.tex
-
-quickstart-web.pdf: quickstart-web.tex fig/torch-features.pdf fig/quickstart-particles.pdf fig/quickstart-dens-slice.pdf
-	pdflatex quickstart-web.tex
-	pdflatex quickstart-web.tex
+all: main.pdf
 
 main.pdf: main.tex Makefile fig/pe_heating.pdf fig/gas_cool.pdf fig/recombination_case_b.pdf fig/dust_opacity.pdf fig/dust_heat_cool_Tgas10.pdf fig/dust_heat_cool_Tgas10000.pdf fig/gas_atomic_cool.png fig/strong_scaling_cart.png fig/weak_scaling_cart.png
 	pdflatex main.tex
@@ -42,11 +33,3 @@ clean:
 	rm -f main.out
 	rm -f main.pdf
 	rm -f main.toc
-	rm -f quickstart-web.aux
-	rm -f quickstart-web.log
-	rm -f quickstart-web.out
-	rm -f quickstart-web.pdf
-	rm -f quickstart-web.toc
-#rm ${FNAME}.bbl
-#rm ${FNAME}.blg
-#rm ${FNAME}Notes.bib

@@ -48,9 +48,9 @@ tags
 *.PDF
 
 # PDF files NOT to be ignored
-!docs/torch_manual/torch-features.pdf
-!docs/torch_manual/quickstart-particles.pdf
-!docs/torch_manual/quickstart-dens-slice.pdf
+!docs/quickstart/fig/torch-features.pdf
+!docs/quickstart/fig/quickstart-particles.pdf
+!docs/quickstart/fig/quickstart-dens-slice.pdf
 
 # Images NOT to be ignored
 !docs/torch_manual/fig/*.png
