@@ -3597,11 +3597,8 @@ try:
                                     npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
                         if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
-                            if (st_type.value_in(units.stellar_type) == 1):
-                                star_mass[part] = ((stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
                             # Note other evolutionary things besides winds could have reduced the stars mass.
-                            else:
-                                star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
+                            star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
                         else:
                             star_mass[part] = st_mass
 
