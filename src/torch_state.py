@@ -51,8 +51,12 @@ class TorchState(object):
 
         self.output_dir = hydro.get_output_dir()
 
-    def initial_io(self, refresh=False):
+    def initial_io(self, overwrite, refresh=False):
         """Load restart files or write starting Torch state
+        Args:
+            overwrite: for data output,
+            ... overwrite AMUSE starXXXX.amuse files.
+            ... If False, assume usual AMUSE anti-overwrite behavior.
         Kwargs:
             refresh (False): for restarts,
             ... use new random number generator state.
@@ -86,12 +90,12 @@ class TorchState(object):
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'r') as f:
+                with open(rstatefile, 'rb') as f:
                     rnd_state = pickle.load(f)
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'r') as f:
+                with open(massesfile, 'rb') as f:
                     self.all_masses = pickle.load(f)
                 tprint("Loaded all_masses dictionary from "+massesfile)
 
@@ -103,14 +107,14 @@ class TorchState(object):
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
             # and hy_pltnum != self.pltnum, so we will write torch files.
-            self.output()
+            self.output(overwrite)
 
         # After FLASH inits (whether restart or not), it increments
         # io_checkpointFileNumber for the /next/ file write.
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
-    def output(self):
+    def output(self, overwrite):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
         """
@@ -127,7 +131,7 @@ class TorchState(object):
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
-            self.out_stars()
+            self.out_stars(overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
@@ -148,11 +152,11 @@ class TorchState(object):
             pickle.dump(np.random.get_state(), f)
         tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
-    def out_stars(self):
+    def out_stars(self, overwrite):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
-        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
@@ -175,7 +179,7 @@ class TorchState(object):
         assert attr in ["mass", "velocity"]
 
         for s in self.stars:
-            for root, tree in self.mult.root_to_tree.iteritems():
+            for root, tree in self.mult.root_to_tree.items():
                 leaves = tree.get_leafs_subset()
                 if s in leaves:
                     if attr == "mass":
@@ -191,7 +195,7 @@ def update_roots_from_leaves(mult, grav):
     Update the center of mass particles from
     the leaves properties (in all codes!).
     """
-    for root, tree in mult.root_to_tree.iteritems():
+    for root, tree in mult.root_to_tree.items():
         leaves = tree.get_leafs_subset()
         msum    = leaves.mass.sum()
         com = leaves.center_of_mass().as_quantity_in(units.cm)

@@ -53,8 +53,7 @@ from amuse.lab import *
 from amuse.community.flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
-#from amuse.couple import multiples
-import multiples_mod as multiples # TODO -AT,2019oct30, edits to fold into AMUSE repo after testing
+from amuse.couple import multiples
 
 from torch_se import stellar_evolution
 from torch_sf import (
@@ -163,12 +162,8 @@ def evolve(state, hydro, grav, mult, se):
     hy_max_time     = hydro.get_end_time()
 
     # grav loop control
-    if USER['with_ph4']:
-        grav.parameters.begin_time  = hy_time
-        grav.parameters.sync_time   = hy_time
-    else:
-        grav.parameters.begin_time  = hy_time
-        grav.evolve_model(hy_time)
+    grav.parameters.begin_time  = hy_time
+    grav.evolve_model(hy_time)
     gr_time = grav.get_time()
 
     # stellar evolution timestep (hack for SN)
@@ -333,12 +328,8 @@ def evolve(state, hydro, grav, mult, se):
             # 2. had stars, but they all escaped
             # not sure if below code works with case 2 of stars -> no stars
             hy_time = hydro.get_time()
-            if USER['with_ph4']:
-                grav.parameters.begin_time  = hy_time
-                grav.parameters.sync_time   = hy_time
-            else:
-                grav.parameters.begin_time  = hy_time
-                grav.evolve_model(hy_time)
+            grav.parameters.begin_time  = hy_time
+            grav.evolve_model(hy_time)
 
         ### --------------------------------
         ### Queue and create star particles.
@@ -390,7 +381,7 @@ def evolve(state, hydro, grav, mult, se):
         ### ---------------------------------------------
 
         tprint("Output check")
-        state.output()
+        state.output(overwrite=USER['overwrite'])
 
         ### ----------------------
         ### Prepare for next loop.
@@ -445,6 +436,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     tprint("Num hydro workers: {:d}".format(USER['num_hy_workers']))
     tprint("Num grav workers: {:d}".format(USER['num_grav_workers']))
+    tprint("AMUSE overwrite: {}".format(USER['overwrite']))
 
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
@@ -453,7 +445,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     state = TorchState(hydro, grav, mult)
 
-    state.initial_io(refresh=USER['restart_with_new_rng'])
+    state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
 
     if not state.restart:
         user_initial_conditions(state, hydro)

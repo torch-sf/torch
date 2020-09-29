@@ -4,7 +4,7 @@ Generate samples from initial mass function (IMF).
 Joshua Wall, Drexel University
 """
 
-from __future__ import division
+from __future__ import division, print_function
 
 import numpy as np
 from scipy.integrate import quad
@@ -149,7 +149,7 @@ def kroupa(m,a):
     elif (0.5 <= m):
         k = a*(0.08*0.5)*m**(-2.3)
     else:
-        print "Invalid mass range!"
+        print("Invalid mass range!")
         k=0
     return k
 
@@ -163,7 +163,7 @@ def mkroupa(m,a):
     elif (0.5 <= m):
         k = m*a*(0.08*0.5)*m**(-2.3)
     else:
-        print "Invalid mass range!"
+        print("Invalid mass range!")
         k=0
     return k
 

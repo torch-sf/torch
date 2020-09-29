@@ -27,6 +27,8 @@ Module Grid_interface
   integer,parameter :: GRID_PDE_BND_GIVENVAL  = 4
   integer,parameter :: GRID_PDE_BND_GIVENGRAD = 5
 
+  integer,parameter :: GRID_PDE_DIFFCOEF_NCOMP = 3
+
 #include "FortranLangFeatures.fh"
 
   interface Grid_ascGetBlkPtr
@@ -634,6 +636,23 @@ Module Grid_interface
        integer, intent(IN), OPTIONAL :: iFactorC
        integer, intent(IN), OPTIONAL :: iFactorD   
      end subroutine Grid_advanceDiffusion
+     subroutine Grid_advanceAnisoDiffusion (iVar, iSrc, iFactorsB, iFactorA, bcTypes, bcValues, dt, chi, scaleFact, &
+          theta, solnIsDelta, iFactorC, iFactorD)
+       implicit none
+       integer, intent(IN) :: iVar
+       integer, intent(IN) :: iSrc
+       integer, intent(IN) :: iFactorsB(:)
+       integer, intent(IN) :: iFactorA
+       real, intent(IN)    :: dt 
+       real, intent(IN)    :: chi
+       real, intent(IN)    :: scaleFact
+       real, intent(IN)    :: theta
+       logical, intent(IN) :: solnIsDelta
+       integer, dimension(6),  intent(IN) :: bcTypes
+       real   , dimension(2,6),intent(IN) :: bcValues
+       integer, intent(IN), OPTIONAL :: iFactorC
+       integer, intent(IN), OPTIONAL :: iFactorD   
+     end subroutine Grid_advanceAnisoDiffusion
      subroutine Grid_advanceDiffusionFcB (iVar, iSrc, iFactorA, bcTypes, bcValues, dt, chi, scaleFact, &
           theta, solnIsDelta, iFactorC, iFactorD, pass)       
        implicit none
@@ -1164,14 +1183,14 @@ Module Grid_interface
        real,OPTIONAL,intent(OUT) :: velIOut,velJOut,velKOut
      end subroutine Grid_coordTransfm
   end interface
-  
+
   interface
      subroutine Grid_checkGridVar(gridInd, limit, gridVal, x, y, z, ion_frac)
-	   implicit none
-	   integer, intent(in)				:: gridInd ! Index of grid variable
-	   character(len=3), intent(in)		:: limit ! max or min
-       real, intent(out) 				:: gridVal, x, y, z, ion_frac
+       implicit none
+       integer, intent(in) :: gridInd ! Index of grid variable
+       character(len=3), intent(in) :: limit ! max or min
+       real, intent(out) :: gridVal, x, y, z, ion_frac
      end subroutine Grid_checkGridVar
   end interface
-
+  
 end Module Grid_interface
