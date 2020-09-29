@@ -27,7 +27,7 @@ def energy_flux(T, lowfreq=0.|units.s**-1, N=100000):
     b=pi*B_nu(nu,T)
     return (b[1:]+b[:-1]).sum()/2*(nu[1]-nu[0])
 
-temp=map(lambda x: float( 27500 + x*2500 ), range(12)  ) # temperature [K]
+temp=[float( 27500 + x*2500 ) for x in range(12)] # temperature [K]
 
 tempmin=27500.
 tempmax=55000.
@@ -35,7 +35,7 @@ dtemp=2500.
 imintemp=0
 imaxtemp=11
 
-logg=map(lambda x: 3.+ x*0.25, range(8) )  # log g [cgs]
+logg=[3.+ x*0.25 for x in range(8)]  # log g [cgs]
 
 loggmin=3.
 dlogg=0.25
