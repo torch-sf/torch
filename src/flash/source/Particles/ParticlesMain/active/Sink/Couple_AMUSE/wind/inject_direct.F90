@@ -40,7 +40,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, starMass, twind
 !#define DEBUG
 #define DEBUG_ENERGY
 
-use Grid_data, ONLY: gr_meshComm, gr_meshMe
+use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
 use Hydro_data, ONLY: hy_cfl, hy_eswitch
 
@@ -85,7 +85,10 @@ logical :: rampVelocity
 logical, save :: isRestart
 logical :: useTimeStep
 
-real(dp) :: injectMass, injectVelocity, pertVelocity
+real(dp) :: injectMass, injectVelocity
+integer  :: ip, nOverlap, nOverlapTot, nOverlapArr(gr_globalNumProcs)
+logical  :: perturbUsedFullChunk
+real, allocatable, dimension(:) :: perturbScale
 
 real(dp) :: star_x, star_y, star_z, loc(3)
 
@@ -199,9 +202,6 @@ if (first_call) then
         if (gr_meshMe == 0) print*, "[inject_direct]: Reference velocity for wind is", &
                                      refVel, "for reference temp", wind_target_temp
      end if
-    ! Initialize the random seed in case we are using
-    ! perturb velocity...
-    call random_seed()
     first_call = .false.
     
 end if
@@ -581,26 +581,10 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                       
                     endif
                     ! velocity of the wind points radially outwards
-                    if (perturb_velocity) then ! Perturb radial velocity?
-                      pertVelocity = norm_rand(injectVelocity, injectVelocity*perturb_std_dev)
-                      xvel = idir * pertVelocity
-                      yvel = jdir * pertVelocity
-                      zvel = kdir * pertVelocity
-                    else                        
-                      xvel = idir * injectVelocity
-                      yvel = jdir * injectVelocity
-                      zvel = kdir * injectVelocity
-                    end if
+                    xvel = idir * injectVelocity
+                    yvel = jdir * injectVelocity
+                    zvel = kdir * injectVelocity
                     
-                    if (abs(sqrt(xvel**2.0_dp+yvel**2.0_dp+zvel**2.0_dp) &
-                        - injectVelocity*(1.0+5.0*perturb_std_dev)) &
-                        /(injectVelocity*(1.0+5.0*perturb_std_dev))> 5.0d-1) then
-                      write(*,'(A,2ES13.3E3)') "vels don't match: calc vel, inj vel= ",  &
-                           sqrt(xvel**2.0_dp+yvel**2.0_dp+zvel**2.0_dp), injectVelocity
-                      write(*,'(A,3ES13.3E3)') "xvel, yvel zvel =", xvel, yvel, zvel
-                      stop
-                    end if
-        
                     overlap_frac = 0.0
 
                       ! Now calculate the overlapping areas of the sphere and this cell.
@@ -628,6 +612,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     if (rad .ge. min_radius) then
                         if (overlap_frac .gt. 0.0d0) then
                             sumOverlap = sumOverlap + overlap_frac
+                            nOverlap = nOverlap + 1
                             injectDataOverlap(n,i,j,k) = overlap_frac
                             injectDataVel(n,i,j,k,1:3) = [xvel,yvel,zvel]
                         end if
@@ -647,6 +632,75 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
+
+if (perturb_velocity) then
+
+  ! calculate perturbed velocities on ALL procs (including procs that don't
+  ! overlap inject sphere) in order to keep random number stream synchronized.
+  call MPI_ALLGATHER(nOverlap, 1, MPI_INTEGER, nOverlapArr, 1, MPI_INTEGER, &
+                     gr_meshcomm, ierr)
+  nOverlapTot = sum(nOverlapArr)
+
+  allocate(perturbScale(nOverlapTot))
+  do ip = 1, nOverlapTot
+    perturbScale(ip) = norm_rand(1.0, perturb_std_dev)
+  end do
+
+  ! Example: suppose nOverlapArr = (1, 10, 0, 1) for ranks 0-3.
+  ! Then perturbScale will be a 12-element array, and ranks 0,1,2,3 should have
+  ! ip=1,2,12,12, so each rank gets a disjoint chunk of perturbScale.
+  ip = 1
+  if (gr_meshMe > 0) then
+    ! gr_meshMe starts at 0, sum(nOverlapArr(1:0)) should give 0, so we may not
+    ! need this case logic.  But I'm not sure if the behavior of (1:0) slice is
+    ! specified by Fortran standard. -ATr,2020aug27
+    ip = 1 + sum( nOverlapArr(1:gr_meshMe) )
+  end if
+
+  do n = 1, injBlkNum
+    do k = GRID_KLO, GRID_KHI
+      do j = GRID_JLO, GRID_JHI
+        do i = GRID_ILO, GRID_IHI
+          if (injectDataOverlap(n,i,j,k) > 0.0) then
+
+            injectDataVel(n,i,j,k,1:3) = injectDataVel(n,i,j,k,1:3) * perturbScale(ip)
+            ip = ip + 1
+
+            if (abs(sqrt(sum(injectDataVel(n,i,j,k,:)**2)) &
+                - injectVelocity*(1.0+5.0*perturb_std_dev)) &
+                /(injectVelocity*(1.0+5.0*perturb_std_dev))> 5.0d-1) then
+              write(*,'(A,2ES13.3E3)') "vels don't match: calc vel, inj vel= ",  &
+                   sqrt(sum(injectDataVel(n,i,j,k,:)**2)), injectVelocity
+              write(*,'(A,3ES13.3E3)') "xvel, yvel zvel =", &
+                injectDataVel(n,i,j,k,1), injectDataVel(n,i,j,k,2), injectDataVel(n,i,j,k,3)
+              stop
+            end if
+
+          end if
+        end do
+      end do
+    end do
+  end do
+
+  perturbUsedFullChunk = .true.
+  if (ip /= 1 + sum(nOverlapArr(1:gr_meshMe+1))) then
+    perturbUsedFullChunk = .false.
+  end if
+  call MPI_ALLREDUCE(MPI_IN_PLACE, perturbUsedFullChunk, 1, MPI_LOGICAL, &
+                     MPI_LAND, gr_meshComm, ierr)
+
+  ! every value in perturbScale should be used exactly once; i.e., procs must
+  ! take disjoint chunks from perturbScale that cover the entire array; i.e.,
+  ! the chunks are an exact cover.
+  if (.not. perturbUsedFullChunk) then
+    if (gr_meshMe == 0) then
+      print*, "Error in wind velocity perturbation, RNG stream sampled wrongly"
+    end if
+    call Driver_abortFlash("Error in wind velocity perturbation, RNG stream sampled wrongly")
+    return
+  end if
+
+end if
 
 if (var_radius .and. calcBgDens) then
 

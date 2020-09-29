@@ -1,5 +1,6 @@
 module normal_rand
 
+use mtmod, ONLY: grnd
 implicit none
 
 contains
@@ -17,19 +18,23 @@ function norm_rand(mean, std_dev)
     real :: norm_rand
     real, intent(in) :: mean, std_dev
     real :: x, y, r
-    real, save :: spare
-    logical, save :: has_spare
-    ! use a spare saved from a previous run if one exists
-    if (has_spare) then
-        has_spare = .FALSE.
-        norm_rand = mean + (std_dev * spare)
-        return
-    else
+    ! problem: spare is a part of RNG state that isn't saved in our checkpoints,
+    ! so disable spare feature entirely. -ATr, 2020 July 28
+!    real, save :: spare
+!    logical, save :: has_spare
+!    ! use a spare saved from a previous run if one exists
+!    if (has_spare) then
+!        has_spare = .FALSE.
+!        norm_rand = mean + (std_dev * spare)
+!        return
+!    else
         r = 1.0
         do while ( r >= 1.0 )
             ! generate random number pair between 0 and 1
-            call random_number(x)
-            call random_number(y)
+            !call random_number(x)
+            !call random_number(y)
+            x = grnd()
+            y = grnd()
             ! normalise random numbers to be in square of side-length = R
             x = (x * 2.0) - 1.0
             y = (y * 2.0) - 1.0
@@ -41,10 +46,10 @@ function norm_rand(mean, std_dev)
         r = sqrt((-2.0 * log(r)) / r)
 
         norm_rand = mean + (std_dev * x * r)
-        spare = y * r
-        has_spare = .TRUE.
+!        spare = y * r
+!        has_spare = .TRUE.
         return
-    end if
+!    end if
 end function norm_rand
 
 end module normal_rand
