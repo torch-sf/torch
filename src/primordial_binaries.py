@@ -73,7 +73,14 @@ def get_multiplicity(m_arr, binaries='field'):
             else:
                 multiplicity.append(0)
                 singles.append(m)
-                
+    
+    # 'Dynamicist' prescription for binaries, fixed binary fraction
+    if binaries.startswith('d'):
+        comp_freq = np.full(len(m_arr),float(binaries[1:])/100)
+        mult_prob = np.random.rand(len(m_arr))
+        multiplicity = (np.greater_equal(comp_freq, mult_prob) * 11) - 1
+        multiplicity[-1] = -1
+
     else:
         for m in m_arr:
             multiplicity.append(0)
@@ -242,6 +249,17 @@ def get_period(mass):
             
     return p
 
+
+
+def dyn_period():
+    """
+    Log-flat period distribution, between 0.5 and 7.5
+    """
+
+    p = random.uniform(0.5, 7.5)
+    
+    return p
+    
 
 def get_companion_mass(mass, period):
     
@@ -519,6 +537,27 @@ def get_eccentricity(mass, period):
     return eccentricity
 
 
+def dyn_eccentricity(period):
+    """
+    Thermal eccentricity distribution
+    """
+    
+    def get_ecc(P):
+        if P <= 0.55:
+            e = 0
+        else:
+            h = 10
+            e = 1
+            while e < h:
+                e = random.random()
+                h = random.random()
+        return e
+        
+    eccentricity = get_ecc(period)
+
+    return eccentricity
+
+
 
 def orbits(mass_array, binaries='field'):
 
@@ -546,15 +585,35 @@ def orbits(mass_array, binaries='field'):
         system_masses = []
         positions     = []
         velocities    = []
+        
 
         for i in range(len(multiplicity)):
 
-            if multiplicity[i] == 1:
-                primary_mass    = mass_array[i]
-                log_period      = get_period(primary_mass)
-                companion_mass  = get_companion_mass(primary_mass, log_period) | units.MSun
-                eccentricity    = get_eccentricity(primary_mass, log_period)
-                primary_mass    = primary_mass | units.MSun
+            if multiplicity[i] <= 0:
+                if multiplicity[i-1] == 10:
+                    pass
+                else:
+                    mass = mass_array[i]
+                    masses.append(mass)
+                    system_masses.append(mass)
+                    positions.append([0, 0, 0])
+                    velocities.append([0, 0 ,0])
+
+            else:
+
+                if multiplicity[i] == 1:
+                    primary_mass    = mass_array[i]
+                    log_period      = get_period(primary_mass)
+                    companion_mass  = get_companion_mass(primary_mass, log_period) | units.MSun
+                    eccentricity    = get_eccentricity(primary_mass, log_period)
+                    primary_mass    = primary_mass | units.MSun
+                
+                if multiplicity[i] == 10:
+                    primary_mass   = mass_array[i] | units.MSun
+                    companion_mass = mass_array[i+1] | units.MSun
+                    log_period     = dyn_period()
+                    eccentricity   = dyn_eccentricity(log_period)
+
                 semi_major_axis = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
                 E = random.uniform(-1 * np.pi, np.pi)
@@ -578,13 +637,6 @@ def orbits(mass_array, binaries='field'):
                 positions.append(companion.position.value_in(units.cm))
                 velocities.append(primary.velocity.value_in(units.cm / units.s))
                 velocities.append(companion.velocity.value_in(units.cm / units.s))
-
-            else:
-                mass = mass_array[i]
-                masses.append(mass)
-                system_masses.append(mass)
-                positions.append([0, 0, 0])
-                velocities.append([0, 0 ,0])
 
         return masses, system_masses, positions, velocities
     
