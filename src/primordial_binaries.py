@@ -11,7 +11,7 @@ from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
 
-def get_multiplicity(m_arr, binaries=True):
+def get_multiplicity(m_arr, binaries='field'):
 
     def interpolate(m_low, m_high, CF_low, CF_high, m):
         a = (CF_high - CF_low) / (m_high - m_low)
@@ -64,7 +64,7 @@ def get_multiplicity(m_arr, binaries=True):
     singles      = []
     primaries    = []
 
-    if (binaries):
+    if binaries in ['field', 'Field', 'FIELD']:
         for m in m_arr:
             mult_prob = random.random()
             if mult_prob <= companion_frequency(m):
@@ -520,7 +520,7 @@ def get_eccentricity(mass, period):
 
 
 
-def orbits(mass_array, binaries=True):
+def orbits(mass_array, binaries='field'):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
         """

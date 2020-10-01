@@ -131,13 +131,20 @@ def initialize_workers():
         se = SeBa()
         se.initialize_code()
 
-    hydro = Flash(
-        unit_converter=convert2,
-        number_of_workers=USER['num_hy_workers'],
-        redirection='file',
-        redirect_stdout_file='flash_worker.out',
-        redirect_stderr_file='flash_worker.err',
-    )
+    if USER['evolve_async']:
+        hydro = Flash(
+            unit_converter=convert2,
+            number_of_workers=USER['num_hy_workers'],
+            redirection='file',
+            redirect_stdout_file='flash_worker.out',
+            redirect_stderr_file='flash_worker.err',
+        )
+    else:
+        hydro = Flash(
+            unit_converter=convert2,
+            number_of_workers=USER['num_hy_workers'],
+            redirection='none',
+        )
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
@@ -187,7 +194,10 @@ def evolve(state, hydro, grav, mult, se):
 
     # worker setup
     if num_stars > 0:  # restart or user initial conditions
-        add_particles_to_grav(state, hydro, grav, mult)
+        # if this is a restart, FLASH may still have all the
+        # particles mis-sorted in the particles array. -JW
+        hydro.particles_sort()
+        add_particles_to_grav(state, hydro, grav, mult, se)
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
@@ -346,7 +356,7 @@ def evolve(state, hydro, grav, mult, se):
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
-            add_particles_to_grav(state, hydro, grav, mult)  # push stars hydro->amuse, hydro->grav
+            add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
         ### ---------------------------------------------
         ### Output FLASH and Torch plot,checkpoint files.
