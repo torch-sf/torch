@@ -160,9 +160,11 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
     if len(stars_rem) > 0:
 
-        tprint("Removing", len(stars_rem), "star(s) outside bndbox")
+        if mult is None:
 
-        if mult is not None:
+            tprint("Removing", len(stars_rem), "star(s) outside bndbox")
+
+        else:
 
             root_rem = Particles(0)
 
@@ -296,16 +298,16 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         elif np.isnan(sink_cs.value_in(units.cm/units.s)):
 
             tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
-            print(" {} stars,".format(nnew), end='')
-            print(" total mass {},".format(np.sum(spawn_masses)), end='')
+            print(" {:d} stars,".format(nnew), end='')
+            print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
             print(" due to absence of nearby cold gas")
 
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
-            print(" {} stars,".format(nnew), end='')
-            print(" total mass {},".format(np.sum(spawn_masses)), end='')
-            print(" max mass {}".format(np.amax(spawn_masses)))
+            print(" {:d} stars,".format(nnew), end='')
+            print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
+            print(" max mass {:.2f}".format(np.amax(spawn_masses)))
 
             formed_stars = True
 

@@ -123,6 +123,7 @@ class TorchState(object):
         # If a checkpoint file was written, dump all Torch state files
         # conditional allows for possibility of rolling chk
         if hy_chknum != self.chknum:
+            tprint("*** wrote chk {:04d} ***".format(self.chknum))
             self.out_mass()
             self.out_rnd()
             self.chknum = hy_chknum
@@ -131,6 +132,7 @@ class TorchState(object):
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
+            tprint("*** wrote plt {:04d} ***".format(self.pltnum))
             self.out_stars(overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
@@ -142,7 +144,6 @@ class TorchState(object):
                           "all_masses{:04d}.pickle".format(self.chknum))
         with open(fname, 'wb') as f:
             pickle.dump(self.all_masses, f)
-        tprint("*** Wrote queued stars to {:s} ****".format(fname))
 
     def out_rnd(self):
         """Write current random number state to pickle"""
@@ -150,7 +151,6 @@ class TorchState(object):
                           "rnd_state{:04d}.pickle".format(self.chknum))
         with open(fname, 'wb') as f:
             pickle.dump(np.random.get_state(), f)
-        tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
     def out_stars(self, overwrite):
         """Write star particles to AMUSE file"""
@@ -161,7 +161,6 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
-        tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
 
     def stars_to_mult_grav_copy(self, attr):
         """

@@ -200,10 +200,14 @@ def evolve(state, hydro, grav, mult, se):
             it, hy_time.value_in(units.s), dt.value_in(units.s),
         ))
         tprint("... Hydro step:", hy_step)
-        tprint("... Num stars in hydro:", num_stars)
         if USER['with_multiples']:
-            tprint("... Num in grav:", len(grav.particles))
-            tprint("... Num in mult.root_to_tree:", len(mult.root_to_tree))
+            tprint("... Num stars: {:d} (singles {:d}, multiples {:d})".format(
+                    num_stars,
+                    len(grav.particles) - len(mult.root_to_tree),
+                    len(mult.root_to_tree)
+            ))
+        else:
+            tprint("... Num stars:", num_stars)
 
         if num_stars > 0:
 
