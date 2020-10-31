@@ -50,7 +50,7 @@ subroutine Simulation_initBlock (blockId)
   real,allocatable,dimension(:) :: xCoord,yCoord,zCoord
   integer,dimension(2,MDIM) :: blkLimits,blkLimitsGC
   integer :: sizeX,sizeY,sizeZ
-  real, dimension(:,:,:,:),pointer :: solnData
+  real, dimension(:,:,:,:),pointer :: solnData, facexData, faceyData, facezData
   integer,dimension(MDIM) :: startingPos
   real          :: del(MDIM)
   real, dimension(NSPECIES) :: massFrac_box
@@ -77,7 +77,10 @@ subroutine Simulation_initBlock (blockId)
   call Grid_getDeltas(blockId,del)
 
   call Grid_getBlkPtr(blockId,solnData)
-
+  ! Generate separate pointers for Blk faces for B-field assignment - SCL 10/2020
+  call Grid_getBlkPtr(blockID,facexData,FACEX)
+  call Grid_getBlkPtr(blockID,faceyData,FACEY)
+  call Grid_getBlkPtr(blockID,facezData,FACEZ)
 #ifdef IHP_SPEC
   massFrac_box(IHP_SPEC-SPECIES_BEGIN+1)    = sim_init_Hp 
   massFrac_box(IHA_SPEC-SPECIES_BEGIN+1)    = (1.0 - sim_init_Hp)
@@ -211,9 +214,13 @@ subroutine Simulation_initBlock (blockId)
         solnData(TDUS_VAR,i,j,k)=sim_tdust
 #endif
 #ifdef MAGX_VAR
+        ! Assing Bfield data to centers and faces
         solnData(MAGX_VAR,i,j,k)= sim_magx
         solnData(MAGY_VAR,i,j,k)= sim_magy
         solnData(MAGZ_VAR,i,j,k)= sim_magz
+        facexData(:,:,:,:)=sim_magx
+        faceyData(:,:,:,:)=sim_magy
+        facezData(:,:,:,:)=sim_magz
 #endif
 
 #ifdef IHP_SPEC
@@ -228,7 +235,11 @@ subroutine Simulation_initBlock (blockId)
       enddo
     enddo
   enddo
+! Release all block pointers
   call Grid_releaseBlkPtr(blockID, solnData)
+  call Grid_releaseBlkPtr(blockID,facexData,FACEX)
+  call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+  call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
   call Eos_wrapped(MODE_DENS_PRES, blkLimitsGC, blockID)
   deallocate(xCoord)
   deallocate(yCoord)
