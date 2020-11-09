@@ -83,6 +83,7 @@ subroutine Simulation_initBlock (blockId)
      call Grid_getBlkPtr(blockID,facexData,FACEX)
      call Grid_getBlkPtr(blockID,faceyData,FACEY)
      if (NDIM == 3) call Grid_getBlkPtr(blockID,facezData,FACEZ)
+  endif
 #endif
   
 #ifdef IHP_SPEC
@@ -230,6 +231,7 @@ subroutine Simulation_initBlock (blockId)
      facexData(MAG_FACE_VAR,i,j,k)=sim_magx
      faceyData(MAG_FACE_VAR,i,j,k)=sim_magy
      if (NDIM == 3) facezData(MAG_FACE_VAR,i,j,k)=sim_magz
+  endif
 #endif
 
 #ifdef IHP_SPEC
@@ -251,6 +253,7 @@ subroutine Simulation_initBlock (blockId)
      call Grid_releaseBlkPtr(blockID,facexData,FACEX)
      call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
      call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+  endif
 #endif
      
   call Eos_wrapped(MODE_DENS_PRES, blkLimitsGC, blockID)
