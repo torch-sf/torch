@@ -77,10 +77,14 @@ subroutine Simulation_initBlock (blockId)
   call Grid_getDeltas(blockId,del)
 
   call Grid_getBlkPtr(blockId,solnData)
-  ! For B-field assignment - SCL 10/2020
-  call Grid_getBlkPtr(blockID,facexData,FACEX)
-  call Grid_getBlkPtr(blockID,faceyData,FACEY)
-  call Grid_getBlkPtr(blockID,facezData,FACEZ)
+
+#if NFACE_VARS > 0  ! For B-field assignment - SCL 10/2020
+  if (sim_killdivb) then
+     call Grid_getBlkPtr(blockID,facexData,FACEX)
+     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     if (NDIM == 3) call Grid_getBlkPtr(blockID,facezData,FACEZ)
+#endif
+  
 #ifdef IHP_SPEC
   massFrac_box(IHP_SPEC-SPECIES_BEGIN+1)    = sim_init_Hp 
   massFrac_box(IHA_SPEC-SPECIES_BEGIN+1)    = (1.0 - sim_init_Hp)
@@ -214,13 +218,18 @@ subroutine Simulation_initBlock (blockId)
         solnData(TDUS_VAR,i,j,k)=sim_tdust
 #endif
 #ifdef MAGX_VAR
-        ! Adding Bfield data to centers and faces
+        ! Adding Bfield data to block centers
         solnData(MAGX_VAR,i,j,k)= sim_magx
         solnData(MAGY_VAR,i,j,k)= sim_magy
         solnData(MAGZ_VAR,i,j,k)= sim_magz
-        facexData(:,:,:,:)=sim_magx
-        faceyData(:,:,:,:)=sim_magy
-        facezData(:,:,:,:)=sim_magz
+#endif
+
+#if NFACE_VARS > 0
+  ! Adding Bfield data to block faces - SCL 10/2020
+  if (sim_killdivb) then      
+     facexData(:,:,:,:)=sim_magx
+     faceyData(:,:,:,:)=sim_magy
+     if (NDIM == 3) facezData(:,:,:,:)=sim_magz
 #endif
 
 #ifdef IHP_SPEC
@@ -236,9 +245,14 @@ subroutine Simulation_initBlock (blockId)
     enddo
   enddo
   call Grid_releaseBlkPtr(blockID, solnData)
-  call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-  call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
-  call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+
+#if NFACE_VARS > 0
+  if (sim_killdivb) then
+     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
+     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+#endif
+     
   call Eos_wrapped(MODE_DENS_PRES, blkLimitsGC, blockID)
   deallocate(xCoord)
   deallocate(yCoord)
