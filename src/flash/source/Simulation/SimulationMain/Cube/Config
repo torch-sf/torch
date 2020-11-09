@@ -29,7 +29,6 @@ PARAMETER bx0 REAL 0.0
 PARAMETER by0 REAL 0.0
 PARAMETER bz0 REAL 0.0
 
-PARAMETER sim_killdivb BOOL TRUE
 # For radiation
 
 # average molecular weights, if negative, calculated from chemistry data
