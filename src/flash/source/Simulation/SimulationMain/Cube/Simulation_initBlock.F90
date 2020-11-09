@@ -78,7 +78,8 @@ subroutine Simulation_initBlock (blockId)
 
   call Grid_getBlkPtr(blockId,solnData)
 
-#if NFACE_VARS > 0  ! For B-field assignment - SCL 10/2020
+#if NFACE_VARS > 0  
+  ! For B-field assignment - SCL 10/2020
   if (sim_killdivb) then
      call Grid_getBlkPtr(blockID,facexData,FACEX)
      call Grid_getBlkPtr(blockID,faceyData,FACEY)
