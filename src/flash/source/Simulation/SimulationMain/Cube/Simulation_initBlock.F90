@@ -229,9 +229,9 @@ subroutine Simulation_initBlock (blockId)
 #if NFACE_VARS > 0
   ! Adding Bfield data to block faces - SCL 10/2020
   if (sim_killdivb) then      
-     facexData(MAG_FACE_VAR,i,j,k)=sim_magx
-     faceyData(MAG_FACE_VAR,i,j,k)=sim_magy
-     if (NDIM == 3) facezData(MAG_FACE_VAR,i,j,k)=sim_magz
+     facexData(:,:,:,:)=sim_magx
+     faceyData(:,:,:,:)=sim_magy
+     if (NDIM == 3) facezData(:,:,:,:)=sim_magz
   endif
 #endif
 
