@@ -52,7 +52,7 @@ module Simulation_data
    real, save :: sim_abundM, sim_metal
    
    real, save :: sim_magx, sim_magy, sim_magz
-
+   logical, save :: sim_killdivb
 ! New Parameterized heating and cooling parameters
 !  real, save :: sim_Z, sim_G0, sim_pe_h, sim_cr_h
 !  logical, save :: sim_stratify_heating, sim_constant_heating
