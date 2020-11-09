@@ -77,7 +77,7 @@ subroutine Simulation_initBlock (blockId)
   call Grid_getDeltas(blockId,del)
 
   call Grid_getBlkPtr(blockId,solnData)
-  ! Generate separate pointers for Blk faces for B-field assignment - SCL 10/2020
+  ! For B-field assignment - SCL 10/2020
   call Grid_getBlkPtr(blockID,facexData,FACEX)
   call Grid_getBlkPtr(blockID,faceyData,FACEY)
   call Grid_getBlkPtr(blockID,facezData,FACEZ)
@@ -214,7 +214,7 @@ subroutine Simulation_initBlock (blockId)
         solnData(TDUS_VAR,i,j,k)=sim_tdust
 #endif
 #ifdef MAGX_VAR
-        ! Assing Bfield data to centers and faces
+        ! Adding Bfield data to centers and faces
         solnData(MAGX_VAR,i,j,k)= sim_magx
         solnData(MAGY_VAR,i,j,k)= sim_magy
         solnData(MAGZ_VAR,i,j,k)= sim_magz
@@ -235,7 +235,6 @@ subroutine Simulation_initBlock (blockId)
       enddo
     enddo
   enddo
-! Release all block pointers
   call Grid_releaseBlkPtr(blockID, solnData)
   call Grid_releaseBlkPtr(blockID,facexData,FACEX)
   call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
