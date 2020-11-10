@@ -52,7 +52,7 @@ subroutine Simulation_initBlock(blockId)
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
   real :: ekinZone, eBZone, eintZone
   real, allocatable,dimension(:) :: xCoord,yCoord,zCoord
-  real, pointer, dimension(:,:,:,:) :: solnData
+  real, pointer, dimension(:,:,:,:) :: solnData, facexData, faceyData, facezData
   logical :: getGuardCells = .true.
 
   real, dimension(NSPECIES) :: massFrac_box  ! Multispecies
@@ -88,6 +88,14 @@ subroutine Simulation_initBlock(blockId)
 
   call Grid_getBlkPtr(blockID,solnData,CENTER)
 
+#if NFACE_VARS > 0
+  if (sim_killdivb) then
+     call Grid_getBlkPtr(blockID,facexData,FACEX)
+     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     if (NDIM == 3) call Grid_getBlkPtr(blockID,facezData,FACEZ)
+  endif
+#endif
+  
   do k = blkLimitsGC(LOW,KAXIS),blkLimitsGC(HIGH,KAXIS)
      do j = blkLimitsGC(LOW,JAXIS),blkLimitsGC(HIGH,JAXIS)
         do i = blkLimitsGC(LOW,IAXIS),blkLimitsGC(HIGH,IAXIS)
@@ -114,6 +122,15 @@ subroutine Simulation_initBlock(blockId)
           eBZone = 0
 #endif
 
+#if NFACE_VARS > 0
+  ! Adding Bfield data to block faces - SCL 10/2020
+  if (sim_killdivb) then      
+     facexData(:,:,:,:)=sim_magx
+     faceyData(:,:,:,:)=sim_magy
+     if (NDIM == 3) facezData(:,:,:,:)=sim_magz
+  endif
+#endif
+     
           ekinZone = 0.5 * dot_product(solnData(VELX_VAR:VELZ_VAR,i,j,k),&
                                        solnData(VELX_VAR:VELZ_VAR,i,j,k))
 
@@ -141,6 +158,14 @@ subroutine Simulation_initBlock(blockId)
      enddo
   enddo
 
+#if NFACE_VARS > 0
+  if (sim_killdivb) then
+     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
+     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+  endif
+#endif
+  
   call Eos_wrapped(MODE_DENS_PRES, blkLimitsGC, blockID)
 
   ! Release pointer

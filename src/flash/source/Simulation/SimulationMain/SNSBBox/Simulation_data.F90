@@ -28,5 +28,6 @@ module Simulation_data
   real, save :: sim_init_Hp, sim_tdust
   real, save :: sim_abundM, sim_metal
   real, save :: sim_abar  ! required by rt_init.F90
+  logical, save :: sim_killdivb
 
 end module Simulation_data
