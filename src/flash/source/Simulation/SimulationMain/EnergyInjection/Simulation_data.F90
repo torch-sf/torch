@@ -31,5 +31,6 @@ module Simulation_data
 ! for chemistry: more gammas more fun
   real, save :: sim_A_n, sim_gamma_n, sim_A_i, sim_gamma_i
   real, save :: sim_abundM, sim_metal
+  logical, save :: sim_killdivb
 
 end module Simulation_data
