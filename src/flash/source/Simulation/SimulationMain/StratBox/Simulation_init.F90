@@ -77,4 +77,6 @@ subroutine Simulation_init()
   ! stratbox, toggle staticgrav
   call RuntimeParameters_get('sim_withStaticGrav', sim_withStaticGrav)
 
+  call RuntimeParameters_get('killdivb', sim_killdivb)
+
 end subroutine Simulation_init

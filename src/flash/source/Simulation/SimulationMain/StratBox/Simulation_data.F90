@@ -43,4 +43,6 @@ module Simulation_data
 
   logical, save :: sim_withStaticGrav
 
+  logical, save :: sim_killdivb
+
 end module Simulation_data

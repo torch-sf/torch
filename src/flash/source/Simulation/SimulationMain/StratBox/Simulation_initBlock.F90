@@ -47,7 +47,7 @@ subroutine Simulation_initBlock(blockId)
   logical :: gcell = .true.
   real    :: xx, yy, zz
   real,allocatable,dimension(:) :: xCoord, yCoord, zCoord
-  real, dimension(:,:,:,:),pointer :: solnData
+  real, dimension(:,:,:,:),pointer :: solnData, facexData, faceyData, facezData
   real, dimension(NSPECIES) :: massFrac_box  ! Multispecies
   real :: pres, rho, eint, ek, eB, integratedGz, expV  ! stratbox setup
 
@@ -78,6 +78,15 @@ subroutine Simulation_initBlock(blockId)
   ! http://flash.uchicago.edu/pipermail/flash-users/2016-December/002142.html
   call Grid_getBlkPtr(blockId,solnData)
 
+#if NFACE_VARS > 0  
+  ! For B-field assignment - SCL 10/2020
+  if (sim_killdivb) then
+     call Grid_getBlkPtr(blockID,facexData,FACEX)
+     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     if (NDIM == 3) call Grid_getBlkPtr(blockID,facezData,FACEZ)
+  endif
+#endif
+  
   ! -------------------
   ! init stratified box
   ! -------------------
@@ -124,6 +133,16 @@ subroutine Simulation_initBlock(blockId)
 #else
           eB = 0
 #endif
+
+#if NFACE_VARS > 0
+  ! Adding Bfield data to block faces - SCL 10/2020
+  if (sim_killdivb) then      
+     facexData(:,:,:,:)=sim_magx
+     faceyData(:,:,:,:)=sim_magy
+     if (NDIM == 3) facezData(:,:,:,:)=sim_magz
+  endif
+#endif
+
           ek = 0.5 * dot_product(solnData(VELX_VAR:VELZ_VAR,i,j,k),&
                                    solnData(VELX_VAR:VELZ_VAR,i,j,k))
           eint = pres/(sim_gamma-1.)/rho  ! _specific_ internal energy
@@ -152,7 +171,15 @@ subroutine Simulation_initBlock(blockId)
   call Eos_wrapped(MODE_DENS_PRES, blkLimitsGC, blockID)
 
   call Grid_releaseBlkPtr(blockID, solnData)
-
+  
+#if NFACE_VARS > 0
+  if (sim_killdivb) then
+     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
+     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+  endif
+#endif
+  
   deallocate(xCoord)
   deallocate(yCoord)
   deallocate(zCoord)
