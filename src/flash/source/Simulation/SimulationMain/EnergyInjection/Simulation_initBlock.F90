@@ -165,6 +165,13 @@ subroutine Simulation_initBlock(blockID)
            call Grid_putPointData(blockId, CENTER, MAGY_VAR, EXTERIOR, axis, sim_magy)
            call Grid_putPointData(blockId, CENTER, MAGZ_VAR, EXTERIOR, axis, sim_magz)
 #endif
+#if NFACE_VARS > 0
+           if (sim_killdivb) then
+              call Grid_putPointData(blockId, FACEX, MAGX_VAR, EXTERIOR, axis, sim_magx)
+              call Grid_putPointData(blockId, FACEY, MAGY_VAR, EXTERIOR, axis, sim_magy)
+              if (NDIM == 3) call Grid_putPointData(blockId, FACEZ, MAGZ_VAR, EXTERIOR, axis, sim_magz)
+           endif
+#endif
         end do
      end do
   end do
