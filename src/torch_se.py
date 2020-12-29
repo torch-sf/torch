@@ -206,6 +206,8 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
     sig = sig0*(h*avg_nu/E_lyc)**(-3)
 
     eion = (avg_E | units.eV) - (13.6 |units.eV)
+    # Calculate total number of photons from stellar surface with stellar radius.
+    # Since flux is interpolated from OSTAR2002, no extra factor of pi needed.
     nion = (flux*4*np.pi*se_radius**2).as_quantity_in(units.s**-1)
     sigh = sig | units.cm**2
 
@@ -228,7 +230,8 @@ def compute_epe_npe(se_temp, se_radius):
     # actual average energy of the photons WITH the ionizing potential still in there!
     epe = avg_E | units.eV # should be around 8 eV
     # Calculate total number of photons from stellar surface with stellar radius.
-    npe = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*se_radius**2).as_quantity_in(units.s**-1)
+    # Extra factor of pi from solid angle integration of blackbody curve. 
+    npe = (np.pi*(per_ph | units.cm**-2*units.s**-1)*4*np.pi*se_radius**2).as_quantity_in(units.s**-1)
 
     return epe, npe
 
