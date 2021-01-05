@@ -161,6 +161,8 @@ if (rt_meshMe .eq. MASTER_PE) &
       call Grid_getBlkPtr(tmpID,solnData)
       solnData(UVFL_VAR,:,:,:) = 0.0
       solnData(FUFL_VAR,:,:,:) = 0.0
+      solnData(AUVFL_VAR,:,:,:) = 0.0
+      solnData(AFUFL_VAR,:,:,:) = 0.0
       call Grid_releaseBlkPtr(tmpID,solnData)
     end do
   

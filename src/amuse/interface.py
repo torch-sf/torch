@@ -18,6 +18,7 @@ potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
 potential = generic_unit_system.potential
+flux = energy / time / length ** 2
 
 class FlashInterface(CodeInterface, HydrodynamicsInterface):
 
@@ -167,6 +168,28 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         function.addParameter('rho', dtype='d', direction=function.IN)
+        function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def get_grid_flux_photoelectric():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        for x in ['i','j','k', 'index_of_grid','nproc']:
+            function.addParameter(x, dtype='i', direction=function.IN)
+        function.addParameter('flux_pe', dtype='d', direction=function.IN)
+        function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def get_grid_flux_ionizing():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        for x in ['i','j','k', 'index_of_grid','nproc']:
+            function.addParameter(x, dtype='i', direction=function.IN)
+        function.addParameter('flux_ion', dtype='d', direction=function.IN)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
@@ -1283,6 +1306,18 @@ class Flash(CommonCode):
         )
 
         object.add_method(
+            'get_grid_flux_photoelectric',
+            (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
+            (flux, object.ERROR_CODE,)
+        )
+
+        object.add_method(
+            'get_grid_flux_ionizing',
+            (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
+            (flux, object.ERROR_CODE,)
+        )
+
+        object.add_method(
             'get_number_of_procs',
             (),
             (object.NO_UNIT, object.ERROR_CODE)
@@ -1753,6 +1788,9 @@ class Flash(CommonCode):
         definition.add_getter('get_grid_energy_density', names=('energy',))
         definition.add_setter('set_grid_energy_density', names=('energy',))
 
+        definition.add_setter('get_grid_flux_photoelectric', names=('flux_photoelectric',))
+        definition.add_setter('get_grid_flux_photoelectric', names=('flux_ionizing',))
+
 
 #       definition.add_getter('get_grid_gravitational_potential', names=('gravitational_potential',))
 #       definition.add_getter('get_grid_gravitational_acceleration', names=('gravitational_acceleration_x','gravitational_acceleration_y','gravitational_acceleration_z',))
@@ -1836,6 +1874,8 @@ class Flash(CommonCode):
                     'set_grid_momentum_density',
                     'get_grid_velocity',
                     'set_grid_velocity',
+                    'get_grid_flux_photoelectric',
+                    'get_grid_flux_ionizing',
                     'get_position_of_index',
                     'get_index_of_position',
                     'get_max_refinement',

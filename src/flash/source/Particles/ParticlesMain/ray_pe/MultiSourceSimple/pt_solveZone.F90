@@ -68,6 +68,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   logical :: stoppH, fully_ionized
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
+  real    :: DNambient, ambientFlux
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -196,6 +197,12 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
   call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
+
+  ! Store unabsorbed (ambient) flux similarly. - MW
+  Flux = (Nion-DNionHI)*dr/(dtin*Vpix)
+  call Grid_getPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, cellFlux)
+  Flux = Flux + cellFlux
+  call Grid_putPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, Flux)
 #endif
   Flux = 0.0d0
 
@@ -247,11 +254,15 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 
 ! number of photons that strike dust grains. - JW
   DNdust = Nion*(1d0-dexp(-DtauDust))
+
+! the rest of the photons, which form the ambient FUV field. - MW
+  DNambient = Nion - DNdust
   
 ! Convert this number into a flux by multiplying by the
 ! average energy of a photon in this bin. - JW
 
   Flux = DNdust*FullEion/dtin
+  ambientFlux = DNambient*FullEion/dtin
 
 ! Now convert this to a Habing 1968 (G_conv = 1.6 x 10^-3 ergs cm^-2 s^-1) normalized flux as
 ! described in Baczynski 2015. Note we can probably do
@@ -261,6 +272,8 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! Also note, implict assumption here that cells are cubes! - JW
   Flux = Flux / (1.6d-3 * zone_size**2.0)
   GFlux = GFlux + Flux
+
+  ambientFlux = ambientFlux / (1.6d-3 * zone_size**2.0)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &
@@ -291,7 +304,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     
         ! If flux on this cell and flux still in the ray are less than the background
         ! Draine field, terminate this ray.
-        if (Flux < bgFlux .and. (Nion-DNdust)*FullEion/dtin/(1.6d-3*zone_size**2.0) < bgFlux) then 
+        if (Flux < bgFlux .and. ambientFlux < bgFlux) then 
             !print*, "bgFlux =", bgFlux, "Flux =", Flux
             Nion = 0.0
             stopp = .true.
@@ -304,6 +317,11 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     call Grid_getPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, cellFlux)
     Flux = Flux*1.6d-3 + cellFlux ! Convert back to ergs cm^-2 s^-1
     call Grid_putPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, Flux)
+
+    ! Unabsorbed, ambient flux, stored similarly.
+    call Grid_getPointData(blockID, CENTER, AFUFL_VAR, INTERIOR, ind, cellFlux)
+    ambientFlux = ambientFlux*1.6d-3 + cellFlux
+    call Grid_putPointData(blockID, CENTER, AFUFL_VAR, INTERIOR, ind, ambientFlux)
   end if
 #endif
 

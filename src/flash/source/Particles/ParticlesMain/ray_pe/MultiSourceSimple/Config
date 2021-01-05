@@ -37,6 +37,7 @@ VARIABLE phhe
 # (In Habing units)
 VARIABLE PEFL
 
+
 # Here we make a couple of scratch variables
 # to hold the flux in a cell. Note these
 # don't participate in guardcell fills and are
@@ -46,6 +47,12 @@ VARIABLE PEFL
 VARIABLE UVFL TYPE: GENERIC
 # photoelectric flux [ergs/s]
 VARIABLE FUFL TYPE: GENERIC
+
+# ambient fluxes, non-absorbed complement of above
+# ambient photoionizing flux [erg/s]
+VARIABLE AUVFL TYPE: GENERIC
+# ambient photoelectric flux [erg/s]
+VARIABLE AFUFL TYPE: GENERIC
 
 #for source coupling
 PARAMETER maxStars INTEGER 100
