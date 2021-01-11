@@ -451,12 +451,12 @@ end do
 END FUNCTION
 
 ! Gets the photoionizing flux of a block/grid.
-FUNCTION get_grid_flux_photoionizing(i, j, k, index_of_grid, nproc, flux_ion, n)
+FUNCTION get_grid_flux_ionizing(i, j, k, index_of_grid, nproc, flux_ion, n)
 
   INTEGER :: n, m, myProc, communicator, ierr
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: flux_ion(n)
-  INTEGER :: get_grid_flux_photoionizing
+  INTEGER :: get_grid_flux_ionizing
 
 
 call Driver_getComm(GLOBAL_COMM, communicator)
@@ -484,7 +484,7 @@ end do
   end if
 
 
-  get_grid_flux_photoionizing=0
+  get_grid_flux_ionizing=0
 END FUNCTION
 
 

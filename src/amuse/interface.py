@@ -18,7 +18,7 @@ potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
 potential = generic_unit_system.potential
-flux = energy / time / length ** 2
+flux = generic_unit_system.energy / time / length ** 2
 
 class FlashInterface(CodeInterface, HydrodynamicsInterface):
 
@@ -178,7 +178,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
-        function.addParameter('flux_pe', dtype='d', direction=function.IN)
+        function.addParameter('flux_pe', dtype='d', direction=function.OUT)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
@@ -189,7 +189,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
-        function.addParameter('flux_ion', dtype='d', direction=function.IN)
+        function.addParameter('flux_ion', dtype='d', direction=function.OUT)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
@@ -1788,8 +1788,8 @@ class Flash(CommonCode):
         definition.add_getter('get_grid_energy_density', names=('energy',))
         definition.add_setter('set_grid_energy_density', names=('energy',))
 
-        definition.add_setter('get_grid_flux_photoelectric', names=('flux_photoelectric',))
-        definition.add_setter('get_grid_flux_photoelectric', names=('flux_ionizing',))
+        definition.add_getter('get_grid_flux_photoelectric', names=('flux_photoelectric',))
+        definition.add_getter('get_grid_flux_ionizing', names=('flux_ionizing',))
 
 
 #       definition.add_getter('get_grid_gravitational_potential', names=('gravitational_potential',))

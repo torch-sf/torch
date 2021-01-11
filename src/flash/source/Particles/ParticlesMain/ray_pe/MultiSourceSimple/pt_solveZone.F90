@@ -199,7 +199,7 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
   call Grid_putPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 
   ! Store unabsorbed (ambient) flux similarly. - MW
-  Flux = (Nion-DNionHI)*dr/(dtin*Vpix)
+  Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
   call Grid_getPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, Flux)
