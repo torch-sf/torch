@@ -204,6 +204,14 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
 
+        for star in stars_rem:
+            star_in_ppds = ppds.star_particles.select(
+                lambda key: key == star.key, ['key'])
+            if len(star_in_ppds) > 0:
+                ppds.disks[star_in_ppds[0].disk_key].disk_ejected = True
+            else:
+                tprint("No disk found!!!")
+
     return
 
 
@@ -250,7 +258,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     return
 
 
-def make_stars_from_sinks(state, hydro, sink_rad=None):
+def make_stars_from_sinks(state, hydro, sink_rad=None, 
+        initial_disk_mass=lambda M: 0.):
     """
     Given an initial sampling of the IMF, distribute the stars randomly
     as sinks accrete the required mass to form them.
@@ -284,7 +293,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
 
         # get all the stars that we can form now
-        csum = np.cumsum(state.all_masses[sink_tag])
+        # mass of disk must also be present! - MW
+        csum = np.cumsum(state.all_masses[sink_tag] + initial_disk_mass(state.all_masses[sink_tag]))
         i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
         assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
@@ -315,7 +325,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
 
             # Remove the mass from the sink.
-            sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun)
+            # This includes the mass of the disk -MW
+            sink_mass = sink_mass - (np.sum(spawn_masses + initial_disk_mass(spawn_masses))|units.MSun)
             hydro.set_particle_mass(sink_tag, sink_mass)
 
             star          = Particles(nnew)

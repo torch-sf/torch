@@ -19,11 +19,12 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult):
+    def __init__(self, hydro, grav, mult, ppds):
 
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
+        self.ppds  = ppds
 
         # "Global" AMUSE-level data structures
         self.all_masses = {}
@@ -32,6 +33,10 @@ class TorchState(object):
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
+
+        if ppds is not None:
+            self.stars_to_ppds = self.stars.new_channel_to(ppds.star_particles)
+            self.ppds_to_stars = ppds.star_particles.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -161,6 +166,12 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
+
+    def out_disks(self, overwrite):
+        """"Write disk particles to AMUSE file"""
+        disks_fname = path.join(self.output_dir,
+                               "disks{:04d}.amuse".format(self.pltnum))
+        write_set_to_file(self.ppds.star_particles, disks_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)
 
     def stars_to_mult_grav_copy(self, attr):
         """

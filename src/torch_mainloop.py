@@ -148,7 +148,19 @@ def initialize_workers():
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
-    return hydro, grav, mult, se
+    if USER['with_ppds']:
+
+        ppds = PPD_population(number_of_workers=USER['num_viscous_workers'],
+            grid_hydro=hydro)
+
+        ppds.collision_detector = grav.stopping_conditions.collision_detection
+        ppds.collision_detector.enable()
+
+    else:
+
+        ppds = None
+
+    return hydro, grav, mult, se, ppds
 
 # ============================================================================
 
@@ -254,7 +266,15 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
-                state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
+                if USER['with_ppds']:
+                    # ppd code also needs stellar mass
+                    state.stars_to_ppds.copy_attributes(["mass"])
+                    # total mass = stellar mass + disk mass + accreted mass
+                    state.ppds_to_stars.copy_attributes(["total_mass"])
+                    state.stars_to_grav.copy_attributes(["total_mass"],
+                        target_names=["mass"])  # AMUSE -> grav singles
+                else:
+                    state.stars_to_grav.copy_attributes(["mass"])
                 if USER['with_multiples']:
                     mult.channel_from_code_to_memory.copy() # grav  -> multiples
                     state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
@@ -303,7 +323,55 @@ def evolve(state, hydro, grav, mult, se):
                 if USER['with_multiples']:
                     mult.evolve_model(hy_time+dt)
                 else:
-                    grav.evolve_model(hy_time+dt)
+                    # for now, ppds are only implemented for sequential evolution
+                    # and without multiples; not sure how to set up an event loop
+                    # with asynchronous evolution, and since it assumes no
+                    # primordial binaries, multiples shouldn't be necessary -MW
+                    if USER['with_ppds']:
+
+                        ppds.evolve_model(hy_time+dt/2.)
+                        state.ppds_to_stars.copy_attributes(
+                            ['total_mass', 'radius'],
+                            target_names=['total_mass', 'radius'])
+
+                        state.stars_to_grav.copy_attributes(
+                            ['total_mass', 'radius'], 
+                            target_names=['mass', 'radius'])
+                        grav.evolve_model(hy_time+dt)
+                        state.grav_to_stars.copy_attributes(
+                            ['x', 'y', 'z', 'vx', 'vy', 'vz'],
+                            target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
+
+                        while ppds.collision_detector.is_set():
+
+                            tprint("Encounter between stars!")
+
+                            state.stars_to_ppd.copy_attributes(
+                                ['x', 'y', 'z', 'vx', 'vy', 'vz'], 
+                                target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
+                            ppds.resolve_encounters()
+                            state.ppds_to_stars.copy_attributes(
+                                ['total_mass', 'radius'],
+                                target_names=['total_mass', 'radius'])
+
+                            grav.evolve_model(hy_time+dt)
+
+                            state.grav_to_stars.copy_attributes(
+                                ['x', 'y', 'z', 'vx', 'vy', 'vz'],
+                                target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
+
+                        state.stars_to_ppd.copy_attributes(['x', 'y', 'z'])
+                        ppds.evolve_model(hy_time+dt)
+                        state.ppds_to_stars.copy_attributes(
+                            ['total_mass', 'radius'],
+                            target_names=['total_mass', 'radius'])
+
+                        # update mass, because it's needed for kicks
+                        state.stars_to_grav.copy_attributes(['total_mass', 'mass'])
+
+                    else:
+                        grav.evolve_model(hy_time+dt)
+
                 tprint("Advance hydro")
                 hydro.evolve_model(hy_time+dt)
 
@@ -350,7 +418,11 @@ def evolve(state, hydro, grav, mult, se):
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
-            add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
+            if USER['with_ppds']:
+                # Version for ppds, because it also influences grav -MW
+                add_particles_to_grav_and_ppds(state, hydro, grav, mult, se, ppds)
+            else:
+                add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
         ### ----------------------------
         ### Remove stars outside domain.
@@ -445,9 +517,9 @@ def run_torch(user_initial_conditions, user_parameters):
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
 
-    hydro, grav, mult, se = initialize_workers()
+    hydro, grav, mult, se, ppds = initialize_workers()
 
-    state = TorchState(hydro, grav, mult)
+    state = TorchState(hydro, grav, mult, ppds)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
 
