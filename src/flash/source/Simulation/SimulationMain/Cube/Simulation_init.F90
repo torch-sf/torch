@@ -72,7 +72,7 @@ subroutine Simulation_init()
   call RuntimeParameters_get( 'bz0', sim_magz)
 
   call RuntimeParameters_get( 'sim_tdust', sim_tdust)
-
+  call RuntimeParameters_get('killdivb', sim_killdivb)
 ! New Parameterized heating and cooling
 !  call RuntimeParameters_get('sim_Z',  sim_Z)
 !  call RuntimeParameters_get('sim_G0', sim_G0)
