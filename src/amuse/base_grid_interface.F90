@@ -531,26 +531,39 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   get_index_of_position=0
 END FUNCTION
 
-FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z)
+FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z, n)
 
-  INTEGER :: i, j, k, index_of_grid, Proc_ID, myProc, ierr, communicator
-  DOUBLE PRECISION :: x, y, z , loc(3)
-  INTEGER :: get_position_of_index , indices(3)
-  loc=0.0
-  indices(1)=i; indices(2)=j; indices(3)=k;
+  INTEGER, intent(in) :: n
+  INTEGER, intent(in), dimension(n) :: i, j, k, index_of_grid, Proc_ID
+  DOUBLE PRECISION, intent(out), dimension(n) :: x, y, z
+  INTEGER :: get_position_of_index
+
+  INTEGER :: indices(3), ii, myProc, ierr, communicator
+  DOUBLE PRECISION :: loc(3)
+
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Driver_getComm(GLOBAL_COMM, communicator)
-  if (myProc == Proc_ID) then
-    call Grid_getSingleCellCoords(indices, index_of_grid, CENTER, INTERIOR, loc)
-  end if
 
-  if (MyProc == 0) then
-    call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-  else
-    call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-  end if
+  do ii = 1,n
+    loc=0.0
+    indices(1)=i(ii)
+    indices(2)=j(ii)
+    indices(3)=k(ii)
 
-  x=loc(1); y=loc(2); z=loc(3)
+    if (myProc == Proc_ID(ii)) then
+      call Grid_getSingleCellCoords(indices, index_of_grid(ii), CENTER, INTERIOR, loc)
+    end if
+
+    if (MyProc == 0) then
+      call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    else
+      call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    end if
+
+    x(ii)=loc(1)
+    y(ii)=loc(2)
+    z(ii)=loc(3)
+  end do
   get_position_of_index=0
 END FUNCTION
 

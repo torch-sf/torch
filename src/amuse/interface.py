@@ -230,12 +230,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         by the index_of_grid
         """
         function = LegacyFunctionSpecification()
+        function.must_handle_array = True
         for x in ['i','j','k']:
             function.addParameter(x, dtype='i', direction=function.IN)
         function.addParameter('index_of_grid', dtype='i', direction=function.IN, default = 1)
         function.addParameter('Proc_ID', dtype='i', direction=function.IN, default = 0)
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.OUT)
+        function.addParameter('n', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
 
