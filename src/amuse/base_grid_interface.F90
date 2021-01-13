@@ -449,13 +449,12 @@ END FUNCTION
 
 FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   use Grid_interface, only : Grid_getBlkIndexLimits
-  INTEGER :: index_of_grid
-  DOUBLE PRECISION :: x, y, z
-  INTEGER :: i, j, k
+  DOUBLE PRECISION, intent(in) :: x, y, z
+  INTEGER, intent(out) :: i, j, k, index_of_grid, Proc_ID
   DOUBLE PRECISION, DIMENSION(MDIM) :: loc, local_pos, blockCenter, &
              blockSize, delta, stride, cornerID, cornerIDMax
   INTEGER :: get_index_of_position, blockID, blkLimits(2,MDIM), &
-             blkLimitsGC(2,MDIM), Proc_ID, myProc, communicator
+             blkLimitsGC(2,MDIM), myProc, communicator
   INTEGER :: ii, ierr
 
   loc(1) = x; loc(2) = y; loc(3) = z
@@ -468,10 +467,6 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Grid_getBlkIDFromPos(loc, blockID, Proc_ID, communicator)
 
-  print*, "Comm = ", communicator
-  print*, "MyProc = ", myProc
-  print*, "Proc_ID = ", Proc_ID
-
   if (myProc == Proc_ID) then
 
       call Grid_getBlkCenterCoords(blockID, blockCenter)
@@ -480,17 +475,12 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
       call Grid_getBlkPhysicalSize(blockID, blockSize)
       call Grid_getDeltas(blockID, delta)
 
-    !write(*,*) MDIM
-
     do ii=1, MDIM
 
     !  delta(ii) = blockSize(ii)/(blkLimits(HIGH,ii) - blkLimits(LOW,ii))
       local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
 
     end do
-
-    !  write(*,*) loc, '\n', blockCenter, '\n', blockSize
-    !  write(*,*) local_pos, '\n', delta
 
       i = ceiling(local_pos(1)/delta(1))
 
@@ -507,8 +497,6 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
       end if
 
       index_of_grid = blockID
-
-    !    write(*,*) i,j,k, index_of_grid
 
   end if
 
