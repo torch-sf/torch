@@ -149,9 +149,18 @@ def initialize_workers():
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
     if USER['with_ppds']:
+        p = FlashPar("flash.par")
+        if not p['restart']:
+            if USER['rad_field_method'] == 'rad_trans':
+                ppds = PPD_population(
+                   number_of_workers=USER['num_viscous_workers'], grid_hydro=hydro)
+            elif USER['rad_field_method'] == 'geometric':
+                ppds = PPD_population(
+                   number_of_workers=USER['num_viscous_workers'])
 
-        ppds = PPD_population(number_of_workers=USER['num_viscous_workers'],
-            grid_hydro=hydro)
+        else:
+            reinitialize_ppds (hydro, p['plotFileNumber'],
+                USER['rad_field_method'], USER=['num_viscous_workers'])
 
         ppds.collision_detector = grav.stopping_conditions.collision_detection
         ppds.collision_detector.enable()
@@ -164,7 +173,7 @@ def initialize_workers():
 
 # ============================================================================
 
-def evolve(state, hydro, grav, mult, se):
+def evolve(state, hydro, grav, mult, se, ppds):
 
     # FLASH loop control
     hy_dt           = hydro.get_timestep()
@@ -192,7 +201,10 @@ def evolve(state, hydro, grav, mult, se):
         # if this is a restart, FLASH may still have all the
         # particles mis-sorted in the particles array. -JW
         hydro.particles_sort()
-        add_particles_to_grav(state, hydro, grav, mult, se)
+        if USER['with_ppds']:
+            add_particles_to_grav_and_ppd(state, hydro, grav, se, ppds)
+        else:
+            add_particles_to_grav(state, hydro, grav, mult, se)
 
     if USER['evolve_async']:
         from amuse.rfi.async_request import AsyncRequestsPool
@@ -354,6 +366,10 @@ def evolve(state, hydro, grav, mult, se):
                                 ['total_mass', 'radius'],
                                 target_names=['total_mass', 'radius'])
 
+                            state.star_to_grav.copy_attributes(
+                                ['total_mass', 'radius'], 
+                                target_names=['mass', 'radius'])
+
                             grav.evolve_model(hy_time+dt)
 
                             state.grav_to_stars.copy_attributes(
@@ -416,12 +432,13 @@ def evolve(state, hydro, grav, mult, se):
             sum_small=USER['sum_small'],
         )
 
-        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
-        if made_stars:
-            if USER['with_ppds']:
-                # Version for ppds, because it also influences grav -MW
-                add_particles_to_grav_and_ppds(state, hydro, grav, mult, se, ppds)
-            else:
+        # Version for ppds, as disk mass is being annoying... -MW
+        if USER['with_ppds']:
+            make_and_add_stars_with_ppds(state, hydro, grav, se, ppds, sink_rad=USER['sink_rad'])
+
+        else:
+            made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
+            if made_stars:
                 add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
         ### ----------------------------
@@ -534,7 +551,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     try:
 
-        evolve(state, hydro, grav, mult, se)
+        evolve(state, hydro, grav, mult, se, ppds)
 
     finally:
         pass

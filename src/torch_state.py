@@ -139,6 +139,7 @@ class TorchState(object):
         if hy_pltnum > self.pltnum:
             tprint("*** wrote plt {:04d} ***".format(self.pltnum))
             self.out_stars(overwrite)
+            self.out_viscous(overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
@@ -167,11 +168,11 @@ class TorchState(object):
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
 
-    def out_disks(self, overwrite):
-        """"Write disk particles to AMUSE file"""
-        disks_fname = path.join(self.output_dir,
-                               "disks{:04d}.amuse".format(self.pltnum))
-        write_set_to_file(self.ppds.star_particles, disks_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)
+    def out_viscous(self, overwrite):
+        """"Write viscous particles, disks, and parameters to files"""
+        self.ppds.output_counter = self.pltnum
+        self.ppds.write_out(self.output_dir, overwrite)
+        
 
     def stars_to_mult_grav_copy(self, attr):
         """
