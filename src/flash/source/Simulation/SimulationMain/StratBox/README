@@ -68,3 +68,14 @@ Simulation_interface.F90
 
     WARNING: CURRENTLY ONLY COMPATIBLE WITH MULTIGRID.
     FOR BHTREE, NEED A DIFFERENT VERSION OF GRAVITY_ACCELONEROW.F90
+
+st_calcAccel.F90
+
+    Taken from:
+        flash4.5-rad/source/physics/sourceTerms/Stir/StirMain/FromFile/
+
+    Modified to focus stirring into a finite layer in z.
+    2019 September 05, AT
+
+    Disable all z-acceleration forcing
+    2019 September 19, AT

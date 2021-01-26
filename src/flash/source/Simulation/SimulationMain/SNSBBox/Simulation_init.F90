@@ -43,5 +43,6 @@ subroutine Simulation_init()
 
   call RuntimeParameters_get('sim_tdust', sim_tdust)
   call RuntimeParameters_get('sim_init_Hp', sim_init_Hp)
+  call RuntimeParameters_get('killdivb', sim_killdivb)
 
 end subroutine Simulation_init

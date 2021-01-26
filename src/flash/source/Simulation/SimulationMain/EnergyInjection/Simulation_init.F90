@@ -50,6 +50,8 @@ subroutine Simulation_init()
 
   call RuntimeParameters_get( 'sim_tdust', sim_tdust)
 
+  call RuntimeParameters_get('killdivb', sim_killdivb)
+
   sim_abar = 1.0 + sim_abundM*sim_metal
 
 end

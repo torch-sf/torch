@@ -524,13 +524,12 @@ END FUNCTION
 
 FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   use Grid_interface, only : Grid_getBlkIndexLimits
-  INTEGER :: index_of_grid
-  DOUBLE PRECISION :: x, y, z
-  INTEGER :: i, j, k
+  DOUBLE PRECISION, intent(in) :: x, y, z
+  INTEGER, intent(out) :: i, j, k, index_of_grid, Proc_ID
   DOUBLE PRECISION, DIMENSION(MDIM) :: loc, local_pos, blockCenter, &
              blockSize, delta, stride, cornerID, cornerIDMax
   INTEGER :: get_index_of_position, blockID, blkLimits(2,MDIM), &
-             blkLimitsGC(2,MDIM), Proc_ID, myProc, communicator
+             blkLimitsGC(2,MDIM), myProc, communicator
   INTEGER :: ii, ierr
 
   loc(1) = x; loc(2) = y; loc(3) = z
@@ -543,10 +542,6 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Grid_getBlkIDFromPos(loc, blockID, Proc_ID, communicator)
 
-  print*, "Comm = ", communicator
-  print*, "MyProc = ", myProc
-  print*, "Proc_ID = ", Proc_ID
-
   if (myProc == Proc_ID) then
 
       call Grid_getBlkCenterCoords(blockID, blockCenter)
@@ -555,17 +550,12 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
       call Grid_getBlkPhysicalSize(blockID, blockSize)
       call Grid_getDeltas(blockID, delta)
 
-    !write(*,*) MDIM
-
     do ii=1, MDIM
 
     !  delta(ii) = blockSize(ii)/(blkLimits(HIGH,ii) - blkLimits(LOW,ii))
       local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
 
     end do
-
-    !  write(*,*) loc, '\n', blockCenter, '\n', blockSize
-    !  write(*,*) local_pos, '\n', delta
 
       i = ceiling(local_pos(1)/delta(1))
 
@@ -582,8 +572,6 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
       end if
 
       index_of_grid = blockID
-
-    !    write(*,*) i,j,k, index_of_grid
 
   end if
 
@@ -606,26 +594,39 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
   get_index_of_position=0
 END FUNCTION
 
-FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z)
+FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z, n)
 
-  INTEGER :: i, j, k, index_of_grid, Proc_ID, myProc, ierr, communicator
-  DOUBLE PRECISION :: x, y, z , loc(3)
-  INTEGER :: get_position_of_index , indices(3)
-  loc=0.0
-  indices(1)=i; indices(2)=j; indices(3)=k;
+  INTEGER, intent(in) :: n
+  INTEGER, intent(in), dimension(n) :: i, j, k, index_of_grid, Proc_ID
+  DOUBLE PRECISION, intent(out), dimension(n) :: x, y, z
+  INTEGER :: get_position_of_index
+
+  INTEGER :: indices(3), ii, myProc, ierr, communicator
+  DOUBLE PRECISION :: loc(3)
+
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Driver_getComm(GLOBAL_COMM, communicator)
-  if (myProc == Proc_ID) then
-    call Grid_getSingleCellCoords(indices, index_of_grid, CENTER, INTERIOR, loc)
-  end if
 
-  if (MyProc == 0) then
-    call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-  else
-    call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-  end if
+  do ii = 1,n
+    loc=0.0
+    indices(1)=i(ii)
+    indices(2)=j(ii)
+    indices(3)=k(ii)
 
-  x=loc(1); y=loc(2); z=loc(3)
+    if (myProc == Proc_ID(ii)) then
+      call Grid_getSingleCellCoords(indices, index_of_grid(ii), CENTER, INTERIOR, loc)
+    end if
+
+    if (MyProc == 0) then
+      call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    else
+      call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    end if
+
+    x(ii)=loc(1)
+    y(ii)=loc(2)
+    z(ii)=loc(3)
+  end do
   get_position_of_index=0
 END FUNCTION
 

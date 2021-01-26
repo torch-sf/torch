@@ -1,18 +1,5 @@
 README
 
-This manual contains:
-
-__Torch quickstart guide.__  Most recent version is "-web".  This is the
-quickstart guide posted at:
-[https://torch-sf.bitbucket.io/quickstart.pdf](https://torch-sf.bitbucket.io/quickstart.pdf).
-Relevant files are:
-
-	quickstart-cca.tex
-	quickstart-web.tex
-	quickstart-dens-slice.pdf
-	quickstart-particles.pdf
-	torch-features.pdf
-
 __Various notes on Torch ("A Torch Manual").__  Some overlap with
 quickstart (basically, a subset of these notes evolved into the quickstart).
 A copy is posted at:
@@ -21,7 +8,7 @@ Relevant files are:
 
 	main.tex
 
-Scripts to make figures in aforementioned notes:
+Scripts to make figures:
 
 	cool.dat
 	dust_heat_cool.py

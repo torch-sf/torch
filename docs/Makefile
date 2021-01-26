@@ -1,9 +1,10 @@
-SUBDIRS = git_workflow sinks torch_manual
+SUBDIRS = git_workflow sinks torch_manual quickstart
 
 all:
 	cd git_workflow && $(MAKE)
 	cd sinks && $(MAKE)
 	cd torch_manual && $(MAKE)
+	cd quickstart && $(MAKE)
 
 
 .PHONY: clean

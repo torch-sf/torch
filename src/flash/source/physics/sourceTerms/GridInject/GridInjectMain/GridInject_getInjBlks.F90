@@ -53,6 +53,7 @@ subroutine GridInject_getInjBlks (xloc, yloc, zloc, radius, injBlks, InjBlkNum)
   integer :: blockList(MAXBLOCKS)
   integer :: n, blockID
   real :: blkCtr(MDIM), blkSize(MDIM)
+  real :: xcoll, ycoll, zcoll
 
   injBlkNum = 0
   injBlks = 0
