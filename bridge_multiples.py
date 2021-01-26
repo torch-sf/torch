@@ -3026,7 +3026,7 @@ first_step = True
 gridChanged = True
 if restart:
     if start_with_star or start_with_cluster:
-        print "WARNING: restart AND adding new particles, so recomputing grav accel"
+        print("WARNING: restart AND adding new particles, so recomputing grav accel")
     else:
         # restarts: don't re-compute grav accel during very 1st bridge kick
         #   because we can read it from file. this matches normal bridge loop
