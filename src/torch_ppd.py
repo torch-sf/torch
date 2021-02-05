@@ -2,6 +2,20 @@
 Utility functions to handle protoplanetary disks
 """
 
+from __future__ import division, print_function
+
+import numpy as np
+
+from amuse.datamodel import Particles
+from amuse.units import units
+
+from torch_stdout import tprint
+from torch_sf import random_three_vector, queue_stars
+from imf_sample import sample_stellar_mass
+
+from ppd_population import initial_disk_mass, restart_population
+
+
 def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
     '''
     Replacement of make_stars_from_sinks and add_particles_to_grav for runs with
@@ -18,7 +32,7 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
     if num_sinks == 0:
         # can't get sink tags w/ empty list so need to exit early
         hydro.set_particle_pointers('mass')
-        return formed_stars
+        return
 
     add_star = Particles(0)
 
@@ -36,7 +50,8 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
         # get all the stars that we can form now
         # disk material must also be present! gas, and 1% dust
         csum = np.cumsum(state.all_masses[sink_tag] + \
-            initial_disk_mass(state.all_masses[sink_tag]*1.01)
+            initial_disk_mass(
+                state.all_masses[sink_tag]|units.MSun).value_in(units.MSun)*1.01)
         i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
         assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
@@ -85,26 +100,30 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
 
             # Prescribed disk mass is not exactly actual disk mass because
             # discretization, which might lead to negative or zero sink masses.
-            # The error is small though, so we readd it to the sink and remove it
+            # The error is small though, so we re-add it to the sink and remove it
             # from the last disk -MW
             if sink_mass < 1e-6 | units.MSun:
                 ppds.disks[-1].evaporate_mass( (1e-6|units.MSun) - sink_mass )
                 sink_mass = 1e-6 | units.MSun
             hydro.set_particle_mass(sink_tag, sink_mass)
 
-            star.total_mass = ppds.star_particles[start:].total_mass
+            star.gravity_mass = ppds.star_particles.gravity_mass[start:]
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
-            hydro.set_particle_mass(star_tag, star.total_mass)
+            hydro.set_particle_mass(star_tag, star.gravity_mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-            hydro.set_particle_oldmass(star_tag, star.total_mass)
+            hydro.set_particle_oldmass(star_tag, star.mass)
 
             add_star.add_particles(star)
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
+
+
+    if formed_stars == False:
+        return
 
 
     num_new_parts = hydro.get_number_of_new_tags()
@@ -126,7 +145,7 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
 
     start = len(grav.particles)
     grav.particles.add_particles(add_star)
-    grav.particles[start:].mass = add_star.total_mass
+    grav.particles[start:].mass = add_star.gravity_mass
 
     hydro.clear_new_tags()
 
@@ -134,6 +153,10 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
 
 
 def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
+    '''
+    Add stars to gravity and ppd population. This is only for pre-existing stars
+    (restart or ic), forming stars are handled in make_and_add_stars_with_ppds
+    '''
 
     add_parts_restart = False
     num_new_parts = hydro.get_number_of_new_tags()
@@ -144,8 +167,8 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
 
     else:
 
-        tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
-        tprint("add_particles_to_grav: sync all stars from Flash to grav.")
+        tprint("add_particles_to_grav_and_ppd: assuming restart because Flash reports no new particles!")
+        tprint("add_particles_to_grav_and_pdd: sync all stars from Flash to grav.")
         add_parts_restart = True
         num_new_parts = hydro.get_number_of_particles()
         newtags = hydro.get_particle_tags(range(1,num_new_parts+1))
@@ -184,13 +207,15 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
 
 
     else:
-
+        # this function assumes new disks, so must only be called if this is
+        # not a restart. Re-adding has already been handled before this function
         ppds.add_star_particles(add_star)
 
-    add_star.total_mass = ppds.star_particles.total_mass
 
-    hydro.set_particle_mass(newtags, add_star.total_mass)
-    hydro.set_particle_oldmass(newtags, add_star.total_mass)
+    # New particles need total mass, but some ppds might have left the box,
+    # so a simple assignment goes wrong. Channels figure out correct keys.
+    temp_channel = ppds.star_particles.new_channel_to(add_star)
+    temp_channel.copy_attributes(['gravity_mass'])
 
 
     # only used by ph4... without this, ph4 complains about reused user IDs
@@ -201,7 +226,7 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     state.stars = state.stars.sorted_by_attribute('tag')
 
     grav.particles.add_particles(add_star)
-    grav.particles.mass = add_star.total_mass
+    grav.particles.mass = add_star.gravity_mass
 
     if add_parts_restart:
         hydro.set_starting_local_tag_numbers()
@@ -214,6 +239,10 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
 
 
 def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers):
+    '''
+    Reinitialize a ppd population code. This is complicated by the internal
+    structure.
+    '''
 
     if rad_field_method == 'rad_trans':
 
@@ -224,5 +253,7 @@ def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers):
 
         ppds = restart_population(hydro.get_output_dir(), ppd_index, 
             number_of_workers=num_viscous_workers)
+
+    print ("No. disks, stars:", len(ppds.disks), len(ppds.star_particles), flush=True)
 
     return ppds

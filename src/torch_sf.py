@@ -123,7 +123,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     return
 
 
-def remove_particles_outside_bndbox(state, hydro, grav, mult):
+def remove_particles_outside_bndbox(state, hydro, grav, mult, ppds):
     """
     Remove any particles that have left the simulation.
     WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
@@ -204,13 +204,14 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
 
-        for star in stars_rem:
-            star_in_ppds = ppds.star_particles.select(
-                lambda key: key == star.key, ['key'])
-            if len(star_in_ppds) > 0:
-                ppds.disks[star_in_ppds[0].disk_key].disk_ejected = True
-            else:
-                tprint("No disk found!!!")
+        if ppds is not None:
+            for star in stars_rem:
+                star_in_ppds = ppds.star_particles.select(
+                    lambda key: key == star.key, ['key'])
+                if len(star_in_ppds) > 0:
+                    ppds.disks[star_in_ppds[0].disk_key].disk_ejected = True
+                else:
+                    tprint("No disk found!!!")
 
     return
 

@@ -69,6 +69,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
   real    :: DNambient, ambientFlux
+  real    :: surface_correction, phi, theta
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -200,9 +201,9 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 
   ! Store unabsorbed (ambient) flux similarly. - MW
   Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
-  call Grid_getPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, cellFlux)
+  call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
-  call Grid_putPointData(blockID, CENTER, AUVFL_VAR, INTERIOR, ind, Flux)
+  call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
 #endif
   Flux = 0.0d0
 
@@ -269,6 +270,29 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! better if we used the actual cell entry angle instead of face area, but
 ! good enough for now.
 
+  ! First order correction to effective surfaces of cells -MW
+  !phi = atan2(diry, dirx)
+  !theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
+  !surface_correction = 1.
+  !if (phi < -pi/2.) then
+  !  surface_correction = surface_correction * (-sin(phi) - cos(phi))
+  !else if (phi < 0.) then
+  !  surface_correction = surface_correction * (-sin(phi) + cos(phi))
+  !else if (phi < pi/2.) then
+  !  surface_correction = surface_correction * ( sin(phi) + cos(phi))
+  !else
+  !  surface_correction = surface_correction * ( sin(phi) - cos(phi))
+  !end if
+  !if (theta < -pi/2.) then
+  !  surface_correction = surface_correction * (-sin(theta) - cos(theta))
+  !else if (theta < 0.) then
+  !  surface_correction = surface_correction * (-sin(theta) + cos(theta))
+  !else if (theta < pi/2.) then
+  !  surface_correction = surface_correction * ( sin(theta) + cos(theta))
+  !else
+  !  surface_correction = surface_correction * ( sin(theta) - cos(theta))
+  !end if
+
 ! Also note, implict assumption here that cells are cubes! - JW
   Flux = Flux / (1.6d-3 * zone_size**2.0)
   GFlux = GFlux + Flux
@@ -319,9 +343,9 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     call Grid_putPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, Flux)
 
     ! Unabsorbed, ambient flux, stored similarly.
-    call Grid_getPointData(blockID, CENTER, AFUFL_VAR, INTERIOR, ind, cellFlux)
+    call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
     ambientFlux = ambientFlux*1.6d-3 + cellFlux
-    call Grid_putPointData(blockID, CENTER, AFUFL_VAR, INTERIOR, ind, ambientFlux)
+    call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
   end if
 #endif
 

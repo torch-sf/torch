@@ -429,8 +429,8 @@ do m=1, n
 
   if (myProc == nproc(m)) then
 
-    !call Grid_getBlkData(index_of_grid, CENTER, AFUFL_VAR, INTERIOR, [i,j,k], flux_pe)
-    call Grid_getPointData(index_of_grid(m), CENTER, AFUFL_VAR, INTERIOR, [i(m),j(m),k(m)], flux_pe(m))
+    !call Grid_getBlkData(index_of_grid, CENTER, AFUF_VAR, INTERIOR, [i,j,k], flux_pe)
+    call Grid_getPointData(index_of_grid(m), CENTER, AFUF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_pe(m))
 
   end if
 
@@ -466,8 +466,8 @@ do m=1, n
 
   if (myProc == nproc(m)) then
 
-    !call Grid_getBlkData(index_of_grid, CENTER, AUVFL_VAR, INTERIOR, [i,j,k], flux_ion)
-    call Grid_getPointData(index_of_grid(m), CENTER, AUVFL_VAR, INTERIOR, [i(m),j(m),k(m)], flux_ion(m))
+    !call Grid_getBlkData(index_of_grid, CENTER, AUVF_VAR, INTERIOR, [i,j,k], flux_ion)
+    call Grid_getPointData(index_of_grid(m), CENTER, AUVF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_ion(m))
 
   end if
 

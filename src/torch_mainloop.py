@@ -64,6 +64,14 @@ from torch_sf import (
 )
 from torch_state import TorchState
 from torch_stdout import tprint
+from torch_param import FlashPar
+from torch_ppd import (
+    make_and_add_stars_with_ppds, 
+    add_particles_to_grav_and_ppd, 
+    reinitialize_ppds,
+)
+
+from ppd_population import PPD_population
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -153,14 +161,16 @@ def initialize_workers():
         if not p['restart']:
             if USER['rad_field_method'] == 'rad_trans':
                 ppds = PPD_population(
-                   number_of_workers=USER['num_viscous_workers'], grid_hydro=hydro)
+                   number_of_workers=USER['num_viscous_workers'],
+                   fried_folder='./', grid_hydro=hydro)
             elif USER['rad_field_method'] == 'geometric':
                 ppds = PPD_population(
-                   number_of_workers=USER['num_viscous_workers'])
+                   number_of_workers=USER['num_viscous_workers'],
+                   fried_folder='./')
 
         else:
-            reinitialize_ppds (hydro, p['plotFileNumber'],
-                USER['rad_field_method'], USER=['num_viscous_workers'])
+            ppds = reinitialize_ppds (hydro, p['plotFileNumber'],
+                USER['rad_field_method'], USER['num_viscous_workers'])
 
         ppds.collision_detector = grav.stopping_conditions.collision_detection
         ppds.collision_detector.enable()
@@ -194,6 +204,10 @@ def evolve(state, hydro, grav, mult, se, ppds):
     # bridge loop control
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+    if USER['with_ppds'] and len(ppds.disked_stars) > 0:
+        # added 1 kyr as maximum, needed for ppd external photoevaporation 
+        # updates! -MW
+        dt = min(dt, 1.|units.kyr)
     num_stars = hydro.get_number_of_particles()
 
     # worker setup
@@ -217,6 +231,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 pool_table_hydro.append(i)
             elif name == "grav":
                 pool_table_grav.append(i)
+
+    ppds.model_time = hy_time
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
@@ -281,9 +297,11 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 if USER['with_ppds']:
                     # ppd code also needs stellar mass
                     state.stars_to_ppds.copy_attributes(["mass"])
+                    if USER['rad_field_method'] == 'geometric':
+                        state.stars_to_ppds.copy_attributes(["fuv_luminosity"])
                     # total mass = stellar mass + disk mass + accreted mass
-                    state.ppds_to_stars.copy_attributes(["total_mass"])
-                    state.stars_to_grav.copy_attributes(["total_mass"],
+                    state.ppds_to_stars.copy_attributes(["gravity_mass"])
+                    state.stars_to_grav.copy_attributes(["gravity_mass"],
                         target_names=["mass"])  # AMUSE -> grav singles
                 else:
                     state.stars_to_grav.copy_attributes(["mass"])
@@ -343,31 +361,32 @@ def evolve(state, hydro, grav, mult, se, ppds):
 
                         ppds.evolve_model(hy_time+dt/2.)
                         state.ppds_to_stars.copy_attributes(
-                            ['total_mass', 'radius'],
-                            target_names=['total_mass', 'radius'])
+                            ['gravity_mass', 'radius'],
+                            target_names=['gravity_mass', 'radius'])
 
                         state.stars_to_grav.copy_attributes(
-                            ['total_mass', 'radius'], 
+                            ['gravity_mass', 'radius'], 
                             target_names=['mass', 'radius'])
                         grav.evolve_model(hy_time+dt)
                         state.grav_to_stars.copy_attributes(
                             ['x', 'y', 'z', 'vx', 'vy', 'vz'],
                             target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
 
+                        # Event loop for dynamic interactions between disks
                         while ppds.collision_detector.is_set():
 
                             tprint("Encounter between stars!")
 
-                            state.stars_to_ppd.copy_attributes(
+                            state.stars_to_ppds.copy_attributes(
                                 ['x', 'y', 'z', 'vx', 'vy', 'vz'], 
                                 target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
                             ppds.resolve_encounters()
                             state.ppds_to_stars.copy_attributes(
-                                ['total_mass', 'radius'],
-                                target_names=['total_mass', 'radius'])
+                                ['gravity_mass', 'radius'],
+                                target_names=['gravity_mass', 'radius'])
 
-                            state.star_to_grav.copy_attributes(
-                                ['total_mass', 'radius'], 
+                            state.stars_to_grav.copy_attributes(
+                                ['gravity_mass', 'radius'], 
                                 target_names=['mass', 'radius'])
 
                             grav.evolve_model(hy_time+dt)
@@ -376,14 +395,15 @@ def evolve(state, hydro, grav, mult, se, ppds):
                                 ['x', 'y', 'z', 'vx', 'vy', 'vz'],
                                 target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
 
-                        state.stars_to_ppd.copy_attributes(['x', 'y', 'z'])
+                        state.stars_to_ppds.copy_attributes(['x', 'y', 'z'])
                         ppds.evolve_model(hy_time+dt)
                         state.ppds_to_stars.copy_attributes(
-                            ['total_mass', 'radius'],
-                            target_names=['total_mass', 'radius'])
+                            ['gravity_mass', 'radius'],
+                            target_names=['gravity_mass', 'radius'])
 
                         # update mass, because it's needed for kicks
-                        state.stars_to_grav.copy_attributes(['total_mass', 'mass'])
+                        state.stars_to_grav.copy_attributes(['gravity_mass'],
+                            target_names=['mass'])
 
                     else:
                         grav.evolve_model(hy_time+dt)
@@ -419,6 +439,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
             grav.parameters.begin_time  = hy_time
             grav.evolve_model(hy_time)
 
+            ppds.evolve_model(hy_time)
+
         ### --------------------------------
         ### Queue and create star particles.
         ### --------------------------------
@@ -446,7 +468,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
         ### ----------------------------
 
         # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(state, hydro, grav, mult)
+        remove_particles_outside_bndbox(state, hydro, grav, mult, ppds)
         hydro.particles_sort()  # also checks for stars outside domain
 
         ### -------------------
@@ -491,6 +513,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
         # bridge loop control
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+        if USER['with_ppds'] and len(ppds.disked_stars) > 0:
+            dt = min(dt, 1.|units.kyr)
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         assert abs(hy_time - gr_time) <= (1e4|units.s)

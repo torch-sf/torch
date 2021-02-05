@@ -290,12 +290,6 @@ def user_parameters():
 
     p['rad_field_method'] = 'rad_trans'  # method for computing disks' external radiation field; 'rad_trans' uses FLASH's radiation field, 'geometric' uses 1/r^2 attenuation from all sources
 
-    # Initial disk mass function, must be deterministic in host star mass (M)
-    if p['with_ppds']:
-        p['initial_disk_mass'] = lambda M: 0.1 * M
-    else:
-        p['initial_disk_mass'] = lambda M: 0.
-
     # <amuse file overwrite>
 
     p['overwrite'] = True # <True> Passes flag to AMUSE write_set_to_file(); allows .amuse files to be overwritten without warning.
