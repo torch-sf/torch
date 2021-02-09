@@ -488,14 +488,21 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID, n)
         local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
       end do
 
-      i(nn) = ceiling(local_pos(1)/delta(1))
+      ! x,y,z at bottom-left blk faces may give i,j,k=0;
+      ! max(...,1) ensures that x,y,z always maps to cells within blk
+      !
+      ! in principle, x,y,z at top-right blk faces may give i,j,k=nxb+1,...
+      ! but Grid_getBlkIDFromPos should preclude that scenario, because it
+      ! checks "onUpperBoundary"
+
+      i(nn) = max(ceiling(local_pos(1)/delta(1)), 1)
 
       if (MDIM .gt. 1) then
-        j(nn) = ceiling(local_pos(2)/delta(2))
+        j(nn) = max(ceiling(local_pos(2)/delta(2)), 1)
       end if
 
       if (MDIM .gt. 2) then
-        k(nn) = ceiling(local_pos(3)/delta(3))
+        k(nn) = max(ceiling(local_pos(3)/delta(3)), 1)
       end if
 
       index_of_grid(nn) = locBlkID
