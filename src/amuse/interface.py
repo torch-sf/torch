@@ -249,12 +249,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         processor number on which this grid resides.
         """
         function = LegacyFunctionSpecification()
+        function.must_handle_array = True
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.IN)
         for x in ['i','j','k']:
             function.addParameter(x, dtype='i', direction=function.OUT)
         function.addParameter('index_of_grid', dtype='i', direction=function.OUT)
         function.addParameter('Proc_ID', dtype='i', direction=function.OUT)
+        function.addParameter('n', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
 

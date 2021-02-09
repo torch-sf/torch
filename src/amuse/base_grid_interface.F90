@@ -447,73 +447,91 @@ END FUNCTION
 !!! started with. This is a "feature" that took me a while to
 !!! figure out. Working as intended! -Josh
 
-FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID)
+FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID, n)
   use Grid_interface, only : Grid_getBlkIndexLimits
-  DOUBLE PRECISION, intent(in) :: x, y, z
-  INTEGER, intent(out) :: i, j, k, index_of_grid, Proc_ID
-  DOUBLE PRECISION, DIMENSION(MDIM) :: loc, local_pos, blockCenter, &
-             blockSize, delta, stride, cornerID, cornerIDMax
-  INTEGER :: get_index_of_position, blockID, blkLimits(2,MDIM), &
-             blkLimitsGC(2,MDIM), myProc, communicator
-  INTEGER :: ii, ierr
+  INTEGER, intent(in) :: n
+  DOUBLE PRECISION, intent(in), dimension(n) :: x, y, z
+  INTEGER, intent(out), dimension(n) :: i, j, k, index_of_grid, Proc_ID
+  INTEGER :: get_index_of_position
 
-  loc(1) = x; loc(2) = y; loc(3) = z
-  i=0; j=0; k=0; local_pos=0.0; stride=0; cornerID=0; cornerIDMax=0
-  blockID=0; delta=0.0; blockSize=0.0; blockCenter=0.0;
-  blkLimits=0; blkLimitsGC=0;! Proc_ID=0; communicator=0
+  DOUBLE PRECISION, DIMENSION(MDIM) :: loc, local_pos, blockCenter, &
+                                       blockSize, delta
+  INTEGER :: locBlkID, myProc, locProc, communicator
+  INTEGER :: ii, nn, ierr
+
+  i = 0  ! we'll take advantage of zero-valued default during MPI_reduce
+  j = 0
+  k = 0
   index_of_grid = 0
+  Proc_ID = 0
 
   call Driver_getComm(GLOBAL_COMM, communicator)
   call Driver_getMype(GLOBAL_COMM, myProc)
-  call Grid_getBlkIDFromPos(loc, blockID, Proc_ID, communicator)
 
-  if (myProc == Proc_ID) then
+  do nn=1, n
 
-      call Grid_getBlkCenterCoords(blockID, blockCenter)
-    !  call Grid_getBlkCornerID(blockID, cornerID, stride, cornerIDMax)
-      call Grid_getBlkIndexLimits(blockID, blkLimits, blkLimitsGC)
-      call Grid_getBlkPhysicalSize(blockID, blockSize)
-      call Grid_getDeltas(blockID, delta)
+    loc(1) = x(nn)
+    loc(2) = y(nn)
+    loc(3) = z(nn)
+    call Grid_getBlkIDFromPos(loc, locBlkID, locProc, communicator)
 
-    do ii=1, MDIM
+    if (myProc == locProc) then
 
-    !  delta(ii) = blockSize(ii)/(blkLimits(HIGH,ii) - blkLimits(LOW,ii))
-      local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
+      call Grid_getBlkCenterCoords(locBlkID, blockCenter)
+      !call Grid_getBlkCornerID(locBlkID, cornerID, cornerIDMax)
+      !call Grid_getBlkIndexLimits(locBlkID, blkLimits, blkLimitsGC)
+      call Grid_getBlkPhysicalSize(locBlkID, blockSize)
+      call Grid_getDeltas(locBlkID, delta)
 
-    end do
+      do ii=1, MDIM
+        !delta(ii) = blockSize(ii)/(blkLimits(HIGH,ii) - blkLimits(LOW,ii))
+        local_pos(ii) = loc(ii) - blockCenter(ii) + blockSize(ii)/2.0
+      end do
 
-      i = ceiling(local_pos(1)/delta(1))
+      i(nn) = ceiling(local_pos(1)/delta(1))
 
       if (MDIM .gt. 1) then
-          j = ceiling(local_pos(2)/delta(2))
-      else
-          j = 0
+        j(nn) = ceiling(local_pos(2)/delta(2))
       end if
 
       if (MDIM .gt. 2) then
-          k = ceiling(local_pos(3)/delta(3))
-      else
-          k = 0
+        k(nn) = ceiling(local_pos(3)/delta(3))
       end if
 
-      index_of_grid = blockID
+      index_of_grid(nn) = locBlkID
+      Proc_ID(nn) = locProc
 
-  end if
+    end if
+
+  end do
 
   if (myProc == 0) then
-
-    call MPI_Reduce(MPI_IN_PLACE, i, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(MPI_IN_PLACE, j, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(MPI_IN_PLACE, k, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(MPI_IN_PLACE, index_of_grid, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-
+    call MPI_Reduce(MPI_IN_PLACE, i, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, j, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, k, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, index_of_grid, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, Proc_ID, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
   else
+    call MPI_Reduce(i, i, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(j, j, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(k, k, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(index_of_grid, index_of_grid, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(Proc_ID, Proc_ID, n, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
+  end if
 
-    call MPI_Reduce(i, i, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(j, j, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(k, k, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(index_of_grid, index_of_grid, 1, MPI_INTEGER, MPI_SUM, 0, communicator, ierr)
-
+  ! clean up for end-user: default values of 0 make MPI_REDUCE easier,
+  ! but NONEXISTENT (-1) is a more obvious warning value, and follows
+  ! convention from Grid_getBlkIDFromPos(...)
+  if (myProc == 0) then  ! after MPI_Reduce, only rank=0 has complete data
+    do nn=1,n
+      if (index_of_grid(nn) == 0) then  ! valid FLASH blockIDs start from 1
+        i(nn) = NONEXISTENT
+        j(nn) = NONEXISTENT
+        k(nn) = NONEXISTENT
+        index_of_grid(nn) = NONEXISTENT
+        Proc_ID(nn) = NONEXISTENT
+      end if
+    end do
   end if
 
   get_index_of_position=0
