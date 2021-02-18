@@ -438,11 +438,15 @@ end do
 
   if (myProc == 0) then
 
-    call MPI_Reduce(MPI_IN_PLACE, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !call MPI_Reduce(MPI_IN_PLACE, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !                0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, flux_pe, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   else
 
-    call MPI_Reduce(flux_pe, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !call MPI_Reduce(flux_pe, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !                0, communicator, ierr)
+    call MPI_Reduce(flux_pe, flux_pe, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   end if
 
@@ -475,11 +479,15 @@ end do
 
   if (myProc == 0) then
 
-    call MPI_Reduce(MPI_IN_PLACE, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !call MPI_Reduce(MPI_IN_PLACE, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !                0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, flux_ion, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   else
 
-    call MPI_Reduce(flux_ion, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !call MPI_Reduce(flux_ion, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    !                0, communicator, ierr)
+    call MPI_Reduce(flux_ion, flux_ion, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   end if
 

@@ -118,6 +118,8 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
 
             add_star.add_particles(star)
 
+            ppds.star_particles[start:].tag = star_tag
+
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
 
@@ -129,7 +131,7 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
     num_new_parts = hydro.get_number_of_new_tags()
     newtags = hydro.get_new_tags(range(1,num_new_parts+1))
 
-    newtags.sort()
+    #newtags.sort()
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
@@ -216,7 +218,6 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     # so a simple assignment goes wrong. Channels figure out correct keys.
     temp_channel = ppds.star_particles.new_channel_to(add_star)
     temp_channel.copy_attributes(['gravity_mass'])
-
 
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)

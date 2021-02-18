@@ -107,7 +107,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     @legacy_function
     def get_grid_velocity():
         function = LegacyFunctionSpecification()
-        function.can_handle_array = True
+        function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         for x in ['vx', 'vy', 'vz']:
@@ -119,7 +119,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     @legacy_function
     def set_grid_velocity():
         function = LegacyFunctionSpecification()
-        function.can_handle_array = True
+        function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         for x in ['vx', 'vy', 'vz']:
@@ -1774,8 +1774,8 @@ class Flash(CommonCode):
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
 
-        definition.add_getter('get_grid_density', names=('rho'))
-        definition.add_setter('set_grid_density', names=('rho'))
+        definition.add_getter('get_grid_density', names=('rho',))
+        definition.add_setter('set_grid_density', names=('rho',))
 
 #       if self.mode == self.MODE_SCALAR:
 #           definition.add_getter('get_grid_scalar', names=('scalar',))

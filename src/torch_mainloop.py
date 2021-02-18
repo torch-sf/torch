@@ -359,6 +359,14 @@ def evolve(state, hydro, grav, mult, se, ppds):
                     # primordial binaries, multiples shouldn't be necessary -MW
                     if USER['with_ppds']:
 
+                        for host_star in ppds.disked_stars:
+                            i,j,k,m,n = hydro.get_index_of_position(host_star.x, host_star.y, host_star.z)
+
+                            print ('Rad field main A:', hydro.get_grid_flux_photoelectric(i,j,k,m,n).value_in(1.6e-3*units.erg/units.s/units.cm**2), hydro.get_grid_density(i,j,k,m,n).value_in(units.amu/units.cm**3), flush=True)
+
+
+
+
                         ppds.evolve_model(hy_time+dt/2.)
                         state.ppds_to_stars.copy_attributes(
                             ['gravity_mass', 'radius'],
@@ -430,6 +438,9 @@ def evolve(state, hydro, grav, mult, se, ppds):
             ### --------------
 
             hydro.evolve_model(hy_time+dt)
+
+            i,j,k,m,n = hydro.get_index_of_position(1.|units.pc, 2.|units.pc, 3.|units.pc)
+            print ('Rad field main B:', hydro.get_grid_flux_photoelectric(i,j,k,m,n).value_in(1.6e-3*units.erg/units.s/units.cm**2), hydro.get_grid_density(i,j,k,m,n).value_in(units.amu/units.cm**3), flush=True)
 
             # two possible cases:
             # 1. no stars yet, so never called grav.evolve_model(...)

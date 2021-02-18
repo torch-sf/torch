@@ -132,7 +132,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
     state.stars.mass = new_mass
     state.stars.stellar_type = new_type
 
-    hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+    if state.ppds is None:
+        hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+    else:
+        hydro.set_particle_mass(state.stars.tag, state.stars.gravity_mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
     # FLASH worker has its own unit converter.  -AT, 2019Oct14

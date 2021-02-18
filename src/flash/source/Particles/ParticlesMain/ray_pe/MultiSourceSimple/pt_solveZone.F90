@@ -270,34 +270,34 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! better if we used the actual cell entry angle instead of face area, but
 ! good enough for now.
 
+  surface_correction = 1.
   ! First order correction to effective surfaces of cells -MW
-  !phi = atan2(diry, dirx)
-  !theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
-  !surface_correction = 1.
-  !if (phi < -pi/2.) then
-  !  surface_correction = surface_correction * (-sin(phi) - cos(phi))
-  !else if (phi < 0.) then
-  !  surface_correction = surface_correction * (-sin(phi) + cos(phi))
-  !else if (phi < pi/2.) then
-  !  surface_correction = surface_correction * ( sin(phi) + cos(phi))
-  !else
-  !  surface_correction = surface_correction * ( sin(phi) - cos(phi))
-  !end if
-  !if (theta < -pi/2.) then
-  !  surface_correction = surface_correction * (-sin(theta) - cos(theta))
-  !else if (theta < 0.) then
-  !  surface_correction = surface_correction * (-sin(theta) + cos(theta))
-  !else if (theta < pi/2.) then
-  !  surface_correction = surface_correction * ( sin(theta) + cos(theta))
-  !else
-  !  surface_correction = surface_correction * ( sin(theta) - cos(theta))
-  !end if
+  phi = atan2(diry, dirx)
+  theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
+  if (phi < -pi/2.) then
+    surface_correction = -sin(phi) - cos(phi)
+  else if (phi < 0.) then
+    surface_correction = -sin(phi) + cos(phi)
+  else if (phi < pi/2.) then
+    surface_correction =  sin(phi) + cos(phi)
+  else
+    surface_correction =  sin(phi) - cos(phi)
+  end if
+  if (theta < -pi/2.) then
+    surface_correction = surface_correction * (-sin(theta) - cos(theta))
+  else if (theta < 0.) then
+    surface_correction = surface_correction * (-sin(theta) + cos(theta))
+  else if (theta < pi/2.) then
+    surface_correction = surface_correction * ( sin(theta) + cos(theta))
+  else
+    surface_correction = surface_correction * ( sin(theta) - cos(theta))
+  end if
 
 ! Also note, implict assumption here that cells are cubes! - JW
-  Flux = Flux / (1.6d-3 * zone_size**2.0)
+  Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
   GFlux = GFlux + Flux
 
-  ambientFlux = ambientFlux / (1.6d-3 * zone_size**2.0)
+  ambientFlux = ambientFlux / (1.6d-3 * surface_correction*zone_size**2.0)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &
