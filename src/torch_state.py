@@ -123,6 +123,7 @@ class TorchState(object):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
         """
+
         hy_chknum = self.hydro.IO_out('chk')
 
         # If a checkpoint file was written, dump all Torch state files
@@ -131,6 +132,10 @@ class TorchState(object):
             tprint("*** wrote chk {:04d} ***".format(self.chknum))
             self.out_mass()
             self.out_rnd()
+            if self.ppds is not None:
+                self.ppds.output_counter = self.chknum
+                self.ppds.write_particles(self.output_dir, 'chk_', overwrite)
+                self.ppds.write_grids(self.output_dir, 'chk_', overwrite)
             self.chknum = hy_chknum
 
         hy_pltnum = self.hydro.IO_out('pltpart')
@@ -139,7 +144,9 @@ class TorchState(object):
         if hy_pltnum > self.pltnum:
             tprint("*** wrote plt {:04d} ***".format(self.pltnum))
             self.out_stars(overwrite)
-            self.out_viscous(overwrite)
+            if self.ppds is not None:
+                self.ppds.output_counter = self.pltnum
+                self.ppds.write_particles(self.output_dir, 'plt_', overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
@@ -166,13 +173,7 @@ class TorchState(object):
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
-        #write_set_to_file(multstars, mult_file)
-
-    def out_viscous(self, overwrite):
-        """"Write viscous particles, disks, and parameters to files"""
-        self.ppds.output_counter = self.pltnum
-        self.ppds.write_out(self.output_dir, overwrite)
-        
+        #write_set_to_file(multstars, mult_file)        
 
     def stars_to_mult_grav_copy(self, attr):
         """

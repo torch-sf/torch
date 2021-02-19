@@ -135,6 +135,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
     if state.ppds is None:
         hydro.set_particle_mass(state.stars.tag, state.stars.mass)
     else:
+        # Mass is no longer just stellar mass; first let ppds know new stellar
+        # mass, then copy back total (gravity) mass -MW
+        state.stars_to_ppds.copy_attributes(["mass"])
+        state.ppds_to_stars.copy_attributes(["gravity_mass"])
         hydro.set_particle_mass(state.stars.tag, state.stars.gravity_mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.

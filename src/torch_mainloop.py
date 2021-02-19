@@ -162,15 +162,17 @@ def initialize_workers():
             if USER['rad_field_method'] == 'rad_trans':
                 ppds = PPD_population(
                    number_of_workers=USER['num_viscous_workers'],
-                   fried_folder='./', grid_hydro=hydro)
+                   fried_folder=USER['fried_folder'], grid_hydro=hydro)
             elif USER['rad_field_method'] == 'geometric':
                 ppds = PPD_population(
                    number_of_workers=USER['num_viscous_workers'],
-                   fried_folder='./')
+                   fried_folder=USER['fried_folder'])
 
         else:
-            ppds = reinitialize_ppds (hydro, p['plotFileNumber'],
-                USER['rad_field_method'], USER['num_viscous_workers'])
+            ppds = reinitialize_ppds (hydro, p['checkpointFileNumber'],
+                USER['rad_field_method'], USER['num_viscous_workers'], 
+                USER['disk_alpha'], USER['disk_mu'], USER['disk_n_cells'],
+                USER['disk_r_min'], USER['disk_r_max'], USER['fried_folder'])
 
         ppds.collision_detector = grav.stopping_conditions.collision_detection
         ppds.collision_detector.enable()
@@ -296,11 +298,9 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 # sync mass to gravity code(s) from stars
                 if USER['with_ppds']:
                     # ppd code also needs stellar mass
-                    state.stars_to_ppds.copy_attributes(["mass"])
                     if USER['rad_field_method'] == 'geometric':
                         state.stars_to_ppds.copy_attributes(["fuv_luminosity"])
                     # total mass = stellar mass + disk mass + accreted mass
-                    state.ppds_to_stars.copy_attributes(["gravity_mass"])
                     state.stars_to_grav.copy_attributes(["gravity_mass"],
                         target_names=["mass"])  # AMUSE -> grav singles
                 else:
@@ -358,14 +358,6 @@ def evolve(state, hydro, grav, mult, se, ppds):
                     # with asynchronous evolution, and since it assumes no
                     # primordial binaries, multiples shouldn't be necessary -MW
                     if USER['with_ppds']:
-
-                        for host_star in ppds.disked_stars:
-                            i,j,k,m,n = hydro.get_index_of_position(host_star.x, host_star.y, host_star.z)
-
-                            print ('Rad field main A:', hydro.get_grid_flux_photoelectric(i,j,k,m,n).value_in(1.6e-3*units.erg/units.s/units.cm**2), hydro.get_grid_density(i,j,k,m,n).value_in(units.amu/units.cm**3), flush=True)
-
-
-
 
                         ppds.evolve_model(hy_time+dt/2.)
                         state.ppds_to_stars.copy_attributes(
@@ -427,6 +419,9 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # multiples AND grav singles -> AMUSE
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
+            # ppd evolution has altered disk masses -MW
+            if USER['with_ppds']:
+                hydro.set_particle_mass(state.stars.tag, state.stars.gravity_mass)
 
 
         else: # num_stars == 0
@@ -438,9 +433,6 @@ def evolve(state, hydro, grav, mult, se, ppds):
             ### --------------
 
             hydro.evolve_model(hy_time+dt)
-
-            i,j,k,m,n = hydro.get_index_of_position(1.|units.pc, 2.|units.pc, 3.|units.pc)
-            print ('Rad field main B:', hydro.get_grid_flux_photoelectric(i,j,k,m,n).value_in(1.6e-3*units.erg/units.s/units.cm**2), hydro.get_grid_density(i,j,k,m,n).value_in(units.amu/units.cm**3), flush=True)
 
             # two possible cases:
             # 1. no stars yet, so never called grav.evolve_model(...)
@@ -525,6 +517,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         if USER['with_ppds'] and len(ppds.disked_stars) > 0:
+            # maximum timestep for disk photoevaporation updates -MW
             dt = min(dt, 1.|units.kyr)
         num_stars = hydro.get_number_of_particles()  # loop variable
 

@@ -208,6 +208,14 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
         add_star.stellar_type = se_type
 
 
+        # set keys to old keys, as contained in ppds's star_particles
+        tags_viscous = ppds.star_particles.tag
+        ind_sorted_tags_viscous = np.argsort(tags_viscous)
+
+        # the tags of add_star are already sorted
+        add_star.key = ppds.star_particles.key[ ind_sorted_tags_viscous ]
+
+
     else:
         # this function assumes new disks, so must only be called if this is
         # not a restart. Re-adding has already been handled before this function
@@ -239,7 +247,8 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     return
 
 
-def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers):
+def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
+        alpha, mu, n_cells, r_min, r_max, fried_folder):
     '''
     Reinitialize a ppd population code. This is complicated by the internal
     structure.
@@ -247,12 +256,14 @@ def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers):
 
     if rad_field_method == 'rad_trans':
 
-        ppds = restart_population(hydro.get_output_dir(), ppd_index, 
+        ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
+            n_cells, r_min, r_max, fried_folder, label='chk_',
             number_of_workers=num_viscous_workers, grid_hydro=hydro)
 
     elif rad_field_method == 'geometric':
 
-        ppds = restart_population(hydro.get_output_dir(), ppd_index, 
+        ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
+            n_cells, r_min, r_max, fried_folder, label='chk_',
             number_of_workers=num_viscous_workers)
 
     print ("No. disks, stars:", len(ppds.disks), len(ppds.star_particles), flush=True)

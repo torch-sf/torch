@@ -289,6 +289,11 @@ def user_parameters():
     # <protoplanetary disks>
 
     p['rad_field_method'] = 'rad_trans'  # method for computing disks' external radiation field; 'rad_trans' uses FLASH's radiation field, 'geometric' uses 1/r^2 attenuation from all sources
+    p['disk_alpha'] = 1e-3 # disks' turbulent viscosity alpha parameter
+    p['disk_mu'] = 2.33 # disks' mean molecular weight
+    p['disk_r_min'] = 0.01  | units.AU # disks' inner grid edge
+    p['disk_r_max'] = 3000. | units.AU # disks' outer grid edge
+    p['disk_n_cells'] = 330 # disks' number of cells
 
     # <amuse file overwrite>
 

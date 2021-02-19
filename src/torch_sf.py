@@ -204,6 +204,8 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult, ppds):
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
 
+        # ppds can be evolved after their host has been ejected, we just
+        # assume minimal external photoevaporation
         if ppds is not None:
             for star in stars_rem:
                 star_in_ppds = ppds.star_particles.select(
