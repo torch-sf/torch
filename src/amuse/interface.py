@@ -1741,8 +1741,8 @@ class Flash(CommonCode):
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
 
-        definition.add_getter('get_grid_density', names=('rho'))
-        definition.add_setter('set_grid_density', names=('rho'))
+        definition.add_getter('get_grid_density', names=('rho',))
+        definition.add_setter('set_grid_density', names=('rho',))
 
 #       if self.mode == self.MODE_SCALAR:
 #           definition.add_getter('get_grid_scalar', names=('scalar',))
