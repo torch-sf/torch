@@ -88,7 +88,7 @@ class TorchState(object):
             loopfile = path.join(self.output_dir,
                 'torch_loop{:04d}.pickle'.format(self.chknum))
 
-            with open(loopfile, 'r') as f:
+            with open(loopfile, 'rb') as f:                  #Added b to avoid unicode errors, CCC 03/2021
                 self.loop = pickle.load(f)
             tprint("Loaded torch loop state from "+loopfile)
 
@@ -107,25 +107,25 @@ class TorchState(object):
                 velocitiesfile = path.join(self.output_dir,
                     'all_velocities{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'r') as f:
+                with open(rstatefile, 'rb') as f:     #Added b, CCC 03/2021
                     rnd_state = pickle.load(f)
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'r') as f:
+                with open(massesfile, 'rb') as f:     #Added b, CCC 03/2021
                     self.all_masses = pickle.load(f)
                 tprint("Loaded all_masses dictionary from "+massesfile)
                 
                 # Adding these to permit primordial binaries -CCC, May 3, 2020
-                with open(systemsfile, 'r') as f:
-                    self.system_masses = pickle.load(f)
+                with open(systemsfile, 'rb') as f:    #Added b, CCC 03/2021
+                    self.system_masses = pickle.load(f)   
                 tprint("Loaded system_masses dictionary from "+systemsfile)
                 
-                with open(positionsfile, 'r') as f:
+                with open(positionsfile, 'rb') as f:  #Added b, CCC 03/2021
                     self.all_positions = pickle.load(f)
                 tprint("Loaded all_positions dictionary from "+positionsfile)
                 
-                with open(velocitiesfile, 'r') as f:
+                with open(velocitiesfile, 'rb') as f: #Added b, CCC 03/2021
                     self.all_velocities = pickle.load(f)
                 tprint("Loaded all_velocities dictionary from "+velocitiesfile)
 
