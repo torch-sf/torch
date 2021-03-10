@@ -16,7 +16,8 @@ from imf_sample import sample_stellar_mass
 from ppd_population import initial_disk_mass, restart_population
 
 
-def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
+def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, max_frac=1.,
+        sink_rad=None):
     '''
     Replacement of make_stars_from_sinks and add_particles_to_grav for runs with
     ppds. Note that this is only for new stars and disks; for old stars and disks,
@@ -51,7 +52,8 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
         # disk material must also be present! gas, and 1% dust
         csum = np.cumsum(state.all_masses[sink_tag] + \
             initial_disk_mass(
-                state.all_masses[sink_tag]|units.MSun).value_in(units.MSun)*1.01)
+                state.all_masses[sink_tag]|units.MSun,
+                max_frac=max_frac).value_in(units.MSun)*1.01)
         i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
         assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
@@ -60,21 +62,21 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
 
         if nnew == 0:
 
-            tprint("... sink tag {} did not spawn stars".format(sink_tag))
+            tprint("... sink tag {} did not spawn stars, sink at {:.2f}/{:.2f} MSun".format(sink_tag, sink_mass.value_in(units.MSun), csum[0]))
 
         elif np.isnan(sink_cs.value_in(units.cm/units.s)):
 
             tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
             print(" {:d} stars,".format(nnew), end='')
             print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
-            print(" due to absence of nearby cold gas")
+            print(" due to absence of nearby cold gas", flush=True)
 
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
             print(" {:d} stars,".format(nnew), end='')
             print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
-            print(" max mass {:.2f}".format(np.amax(spawn_masses)))
+            print(" max mass {:.2f}".format(np.amax(spawn_masses)), flush=True)
 
             formed_stars = True
 
@@ -103,7 +105,10 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, sink_rad=None):
             # The error is small though, so we re-add it to the sink and remove it
             # from the last disk -MW
             if sink_mass < 1e-6 | units.MSun:
-                ppds.disks[-1].evaporate_mass( (1e-6|units.MSun) - sink_mass )
+                ind = -1
+                while ppds.disks[ind] is None:
+                    ind -= 1
+                ppds.disks[ind].evaporate_mass( (1e-6|units.MSun) - sink_mass )
                 sink_mass = 1e-6 | units.MSun
             hydro.set_particle_mass(sink_tag, sink_mass)
 
@@ -183,7 +188,19 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     initMass = hydro.get_particle_oldmass(newtags)
 
     # Make AMUSE particles for grav code.
-    add_star = Particles(num_new_parts)
+    if add_parts_restart:
+        # Particles need same amuse keys as in previous run because that's how
+        # the ppd population identifies them (and is needed for channels) -MW
+        non_ejected_stars = ppds.star_particles.select(lambda flag: flag == False, 
+            ['star_ejected'])
+
+        tags_viscous = non_ejected_stars.tag
+        ind_sorted_tags_viscous = np.argsort(tags_viscous)
+        new_keys = non_ejected_stars.key[ ind_sorted_tags_viscous ]
+    else:
+        new_keys = None
+
+    add_star = Particles(num_new_parts, keys=new_keys)
     add_star.mass = mass
     add_star.x    = position[:,0]
     add_star.y    = position[:,1]
@@ -206,15 +223,7 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
         _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
         se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
         add_star.stellar_type = se_type
-
-
-        # set keys to old keys, as contained in ppds's star_particles
-        tags_viscous = ppds.star_particles.tag
-        ind_sorted_tags_viscous = np.argsort(tags_viscous)
-
-        # the tags of add_star are already sorted
-        add_star.key = ppds.star_particles.key[ ind_sorted_tags_viscous ]
-
+        add_star.mass = se_mass
 
     else:
         # this function assumes new disks, so must only be called if this is
@@ -248,24 +257,27 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
 
 
 def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
-        alpha, mu, n_cells, r_min, r_max, fried_folder):
+        alpha, mu, n_cells, r_min, r_max, fried_folder, max_frac=1.):
     '''
     Reinitialize a ppd population code. This is complicated by the internal
-    structure.
+    structure of the disks
     '''
 
     if rad_field_method == 'rad_trans':
 
         ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
             n_cells, r_min, r_max, fried_folder, label='chk_',
-            number_of_workers=num_viscous_workers, grid_hydro=hydro)
+            number_of_workers=num_viscous_workers, grid_hydro=hydro,
+            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac)
 
     elif rad_field_method == 'geometric':
 
         ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
             n_cells, r_min, r_max, fried_folder, label='chk_',
-            number_of_workers=num_viscous_workers)
+            number_of_workers=num_viscous_workers,
+            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac)
 
-    print ("No. disks, stars:", len(ppds.disks), len(ppds.star_particles), flush=True)
+    print ("No. disks, stars:", len(ppds.disked_stars), len(ppds.star_particles), 
+        flush=True)
 
     return ppds

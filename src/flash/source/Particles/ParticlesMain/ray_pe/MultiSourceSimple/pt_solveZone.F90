@@ -69,7 +69,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
   real    :: DNambient, ambientFlux
-  real    :: surface_correction, phi, theta
+  real    :: surface_correction, atan2xy, costheta2
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -110,6 +110,43 @@ if (dr .le. 0.0d0) return
             write(*,'(A,ES13.3E3)') "[pt_solveZone]: Begin phi*rt_dt =", phih*rt_dt
             write(*,*) "[pt_solveZone]: fully_ionized=", fully_ionized
 #endif
+
+
+
+!surface_correction = 1.
+! First order correction to effective surfaces of cells -MW
+costheta2 = dirz*dirz/(dirx*dirx + diry*diry + dirz*dirz)
+atan2xy = atan2(dirx, diry)
+
+surface_correction = sqrt(1.-costheta2) + sqrt(costheta2)
+surface_correction = surface_correction*(abs(sin(atan2xy)) + abs(cos(atan2xy)))
+
+
+!phi = atan2(diry, dirx)
+!theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
+
+!surface_correction = abs(sin(phi)) + abs(cos(phi))
+!surface_correction = surface_correction*(abs(sin(theta)) + abs(cos(theta)))
+
+!if (phi < -pi/2.) then
+!  surface_correction = -sin(phi) - cos(phi)
+!else if (phi < 0.) then
+!  surface_correction = -sin(phi) + cos(phi)
+!else if (phi < pi/2.) then
+!  surface_correction =  sin(phi) + cos(phi)
+!else
+!  surface_correction =  sin(phi) - cos(phi)
+!end if
+!if (theta < -pi/2.) then
+!  surface_correction = surface_correction * (-sin(theta) - cos(theta))
+!else if (theta < 0.) then
+!  surface_correction = surface_correction * (-sin(theta) + cos(theta))
+!else if (theta < pi/2.) then
+!  surface_correction = surface_correction * ( sin(theta) + cos(theta))
+!else
+!  surface_correction = surface_correction * ( sin(theta) - cos(theta))
+!end if
+
 
 ! Select the correct bin before calculating ionization and heating. - JW
 if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
@@ -191,7 +228,8 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 !  call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 !#endif
 
-  Flux = phih*numdens*xH0*dr*FullEion
+  !Flux = phih*numdens*xH0*dr*FullEion
+  Flux = phih*numdens*xH0*FullEion * Vpix**(1./.3) / surface_correction
   
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
@@ -200,7 +238,8 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
   call Grid_putPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 
   ! Store unabsorbed (ambient) flux similarly. - MW
-  Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
+  !Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
+  Flux = (Nion-DNionHI)/(dtin*Vpix**(2./3.)*surface_correction) * FullEion
   call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
@@ -270,34 +309,13 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! better if we used the actual cell entry angle instead of face area, but
 ! good enough for now.
 
-  surface_correction = 1.
-  ! First order correction to effective surfaces of cells -MW
-  phi = atan2(diry, dirx)
-  theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
-  if (phi < -pi/2.) then
-    surface_correction = -sin(phi) - cos(phi)
-  else if (phi < 0.) then
-    surface_correction = -sin(phi) + cos(phi)
-  else if (phi < pi/2.) then
-    surface_correction =  sin(phi) + cos(phi)
-  else
-    surface_correction =  sin(phi) - cos(phi)
-  end if
-  if (theta < -pi/2.) then
-    surface_correction = surface_correction * (-sin(theta) - cos(theta))
-  else if (theta < 0.) then
-    surface_correction = surface_correction * (-sin(theta) + cos(theta))
-  else if (theta < pi/2.) then
-    surface_correction = surface_correction * ( sin(theta) + cos(theta))
-  else
-    surface_correction = surface_correction * ( sin(theta) - cos(theta))
-  end if
-
 ! Also note, implict assumption here that cells are cubes! - JW
   Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
+  !Flux = Flux / (1.6d-3 * Vpix/dr)
   GFlux = GFlux + Flux
 
   ambientFlux = ambientFlux / (1.6d-3 * surface_correction*zone_size**2.0)
+  !ambientFlux = ambientFlux / (1.6d-3 * Vpix/dr)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &

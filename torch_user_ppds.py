@@ -294,6 +294,8 @@ def user_parameters():
     p['disk_r_min'] = 0.01  | units.AU # disks' inner grid edge
     p['disk_r_max'] = 3000. | units.AU # disks' outer grid edge
     p['disk_n_cells'] = 330 # disks' number of cells
+    p['fried_folder'] = './' # file location of FRIED grid
+    p['disk_max_stable_fraction'] = 0.75 # disks' mass fraction of maximum stable mass
 
     # <amuse file overwrite>
 

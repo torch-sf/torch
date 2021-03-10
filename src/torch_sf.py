@@ -205,13 +205,13 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult, ppds):
             grav.particles.synchronize_to(mult._inmemory_particles)
 
         # ppds can be evolved after their host has been ejected, we just
-        # assume minimal external photoevaporation
+        # assume minimal external photoevaporation -MW
         if ppds is not None:
-            for star in stars_rem:
+            for star in grav_rem:
                 star_in_ppds = ppds.star_particles.select(
                     lambda key: key == star.key, ['key'])
                 if len(star_in_ppds) > 0:
-                    ppds.disks[star_in_ppds[0].disk_key].disk_ejected = True
+                    star_in_ppds[0].star_ejected = True
                 else:
                     tprint("No disk found!!!")
 

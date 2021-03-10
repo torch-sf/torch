@@ -152,7 +152,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
 
     # in geometric mode, ppds need the fuv luminosity -MW
-    state.stars.fuv_luminosity = epe*npe
+    if state.ppds is not None:
+        state.stars.fuv_luminosity = epe*npe
 
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
