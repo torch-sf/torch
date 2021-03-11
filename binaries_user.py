@@ -261,7 +261,7 @@ def user_parameters():
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 150.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 10
+    p['sample_imf_bins'] = 100
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False
     p['binaries'] = True      
