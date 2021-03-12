@@ -1,0 +1,236 @@
+##python:genLines
+
+def genLines(setupvars):
+    # Config file for Driver/DriverMain unit implementation directory
+
+    yield """
+
+REQUIRES Driver/localAPI
+
+DEFAULT Unsplit
+
+USESETUPVARS SplitDriver
+IF SplitDriver
+  DEFAULT Split
+ENDIF
+
+EXCLUSIVE Split Unsplit INSfracstep 
+CHILDORDER SolidMechanics_rbc INSfracstep 
+REQUIRES RuntimeParameters
+REQUESTS Grid
+REQUESTS monitors/Logfile
+REQUESTS PhysicalConstants
+REQUESTS flashUtilities/system/memoryUsage
+
+
+#We define FLASH_OPENMP when using any threading strategy.  This is a safety
+#measure which will ensure a correct noclobber build, i.e. a complete rebuild
+#when enabling/disabling threading and a fast rebuild when changing the
+#threading strategy.
+USESETUPVARS threadBlockList, threadWithinBlock, threadRayTrace, threadProtonTrace
+IF threadBlockList or threadWithinBlock or threadRayTrace or threadProtonTrace
+  PPDEFINE FLASH_OPENMP 1
+ENDIF
+
+IF threadBlockList
+  PARAMETER threadBlockListBuild BOOLEAN CONSTANT TRUE
+  PARAMETER threadDriverBlockList BOOLEAN TRUE
+ELSE
+  PARAMETER threadBlockListBuild BOOLEAN CONSTANT FALSE
+  PARAMETER threadDriverBlockList BOOLEAN FALSE
+ENDIF
+
+IF threadWithinBlock
+  PARAMETER threadWithinBlockBuild BOOLEAN CONSTANT TRUE
+  PARAMETER threadDriverWithinBlock BOOLEAN TRUE
+ELSE
+  PARAMETER threadWithinBlockBuild BOOLEAN CONSTANT FALSE
+  PARAMETER threadDriverWithinBlock BOOLEAN FALSE
+ENDIF
+
+IF threadRayTrace
+  PARAMETER threadRayTraceBuild BOOLEAN CONSTANT TRUE
+ELSE
+  PARAMETER threadRayTraceBuild BOOLEAN CONSTANT FALSE
+ENDIF
+
+IF threadBlockList or threadWithinBlock
+  REQUIRES Driver/DriverMain/multithreaded
+  CONFLICTS Driver/DriverMain/INSfracstep
+ENDIF
+
+
+# Lines that begin with 'D' as in 'Description' will end up as
+# comment lines in the setup_params file.  setup_params is
+# written by the setup script and holds all the default 
+# values of parameters.  
+
+# !!! If you add a parameter, please add a description line
+# Format is D <parameter name> <description>
+
+
+
+
+D dtinit             Initial timestep
+PARAMETER dtinit		REAL	1.E-10	
+
+
+D dtmin             Minimum timestep
+PARAMETER dtmin		REAL	1.E-10	
+
+D dtmax             Maximum timestep
+PARAMETER dtmax		REAL	1.E5	
+
+D dr_dtMinContinue  Minimum computed timestep to continue the simulation
+PARAMETER dr_dtMinContinue	REAL	0.0	[0.0 ...]
+
+D dr_dtMinBelowAction  Action to take when computed new timestep is below dr_dtMinContinue or above dr_dtMaxContinue.
+D & Use 0 for none (abort immediately), 1 for "write checkpoint then abort"
+PARAMETER dr_dtMinBelowAction	INTEGER	1	[0,1]
+
+D dr_dtMaxContinue  Maximum computed timestep to continue the simulation (to use with diffusive solver)                                                                                                                                                                        
+PARAMETER dr_dtMaxContinue      REAL    1.E14     [0.0 ...]  
+
+D nend              Maximum number of timesteps to take
+PARAMETER nend          INTEGER 100      
+
+D nbegin            First timestep
+PARAMETER nbegin        INTEGER 1  [ 1 to ]
+
+D tmax              Maximum simulation time     
+PARAMETER tmax          REAL    0.2    
+
+D tinitial          Initial simulation time
+PARAMETER tinitial      REAL    0.0
+
+D restart           Is this a restart run?
+PARAMETER restart       BOOLEAN FALSE
+
+
+D wall_clock_time_limit Total wall clock time limit (seconds).
+D & Use -1.0 for no limit.
+PARAMETER wall_clock_time_limit REAL 604800.  [-1.0, 0.0 ...]
+
+D tstep_change_factor The initial time step dt is multiplied with this factor at
+D                    & every timestep, until it is limited by CFL condition,
+D                    & allowing users to specify a very conservative initial dt
+D                    & and letting it grow by specifying a tstep_change_factor > 1.0.
+PARAMETER tstep_change_factor	REAL	2.0 [0.0+ ...]
+
+D dr_tstepSlowStartFactor The initial dt is set to be at most the timestep
+D & computed by CFL conditions applied to certain operators multiplied with this factor.
+PARAMETER dr_tstepSlowStartFactor	REAL	0.1 [0.0 ...]
+
+
+#D The timestep adjustment based on temperature is not yet implemented
+#D temp_factor maximum allowable change in the temperature in a zone &
+#D   &          See documentation in Flash2.5, Section 11.1.3.1
+#PARAMETER temp_factor           REAL    0.1   
+                                              
+D zInitial    The initial redshift in a simulation.  < 0 if not being used.
+PARAMETER zInitial  REAL -1.0
+
+D zFinal      The final redshift in a simulation.  The simulation will stop 
+D    when the redshift reaches this value. Default is 0.0.
+PARAMETER zFinal    REAL 0.0
+
+D sweepOrder Determine the order of the directional sweeps
+PARAMETER sweepOrder INTEGER 123	[123, 132, 213, 231, 312, 321]
+
+D printTStepLoc Should the line that is written to standard output at the end of
+D & each time step show the location of a cell that imposed the most restrictive
+D & limit in the computation of the size of the next time step?
+PARAMETER dr_printTStepLoc	     BOOLEAN TRUE
+
+D eachProcWritesOwnAbortLog    Should each process writes messages to its own log file when 
+D & Driver_abortFlash gets called to abnormally end execution?
+D & If true, each process in which Driver_abortFlash is
+D & called will attempt to write an explanatory message to its own log file, whether that
+D & file already existed or needs to be newly created.  If false, the Driver_abortFlash
+D & message will appear only in the regular log file (if the Logfile code unit is used),
+D & and normally only when Driver_abortFlash is called by the process with PE 0.
+PARAMETER eachProcWritesOwnAbortLog       BOOLEAN FALSE
+
+D dr_abortPause    When Driver_abortFlash is called to abnormally end execution,
+D & and dr_abortPause is grater than zero, the FLASH Driver_abortFlash code will sleep
+D & for dr_abortPause seconds after writing explanatory messages (to standard output
+D & and, possibly, to log files) but before calling MPI_ABORT.
+D & See also eachProcWritesOwnAbortLog for controlling the generation of per-processor
+D & log files.
+PARAMETER dr_abortPause 	INTEGER	2	[0 to ]
+
+D dr_usePosdefComputeDt turns positive-definite time step limiter on.
+PARAMETER dr_usePosdefComputeDt	BOOLEAN		FALSE
+
+D dr_posdefDtFactor Scaling factor for dt limit from positive-definite time step limiter.
+D & Similar to CFL factor. If set to -1, use CFL factor from Hydro.
+PARAMETER dr_posdefDtFactor	REAL	1.0	[-1.0, 0.0 to ]
+
+D dr_numPosdefVars number of variables for positive-definite time step limiter
+
+
+D useSTS		Do we want to use super time stepping (STS) algorithm?
+D useSTSforDiffusion	TRUE will use the STS algorithm to accelerate diffusion time advancement
+D allowDtSTSDominate	allow a situation in which dt_STS becomes larger than dt_Hydro (dt_advection) 
+D &                     (assuming that diffusion dt is smaller than advection dt) upto advection
+D &			one, but not faster than the advection advancement. This will be useful
+D &			in solving PDE systems that are hyperbolic + parabolic.
+D &			FALSE will use the STS algorithm to even accelerate advection time
+D &			advancement, which in turn, will use larger advection dt than
+D &			advection dt from CFL limits. This will be useful in solving
+D &			only hyperbolic PDE systems in general. When hyperbolic + parabolic
+D &			PDE system is to be solved, then we suggest that users use less agressive
+D &			super time stepping method by using useSTSforDiffusion = TRUE.
+D nuSTS			nu stability parameter for super time stepping algorithm
+D nstepSTS		number of substeps in super time stepping algorithm
+
+
+PARAMETER useSTS		BOOLEAN FALSE
+PARAMETER useSTSforDiffusion	BOOLEAN FALSE
+PARAMETER allowDtSTSDominate	BOOLEAN FALSE
+PARAMETER nuSTS			REAL 0.1
+PARAMETER nstepTotalSTS		INTEGER 5
+
+
+D dr_shortenLastStepBeforeTMax	If TRUE, make the dt for the last time step shorter
+D & if necassary so as to avoid overshooting tmax.
+
+PARAMETER dr_shortenLastStepBeforeTMax	BOOLEAN	FALSE
+
+D iProcs number of procs in the i dir
+PARAMETER iProcs INTEGER 1
+
+D jProcs number of procs in the j dir
+PARAMETER jProcs INTEGER 1
+
+D kProcs number of procs in the k dir
+PARAMETER kProcs INTEGER 1
+
+D meshCopyCount    The number of copies of full computational mesh that
+D                     will exist in the simulation
+PARAMETER meshCopyCount  INTEGER 1
+
+D drift_trunc_mantissa number of mantissa bits to exclude from hash (3 bits ~ 1 sigdig)
+PARAMETER drift_trunc_mantissa INTEGER 2
+
+D drift_verbose_step first drift instance that logs hashes per block
+PARAMETER drift_verbose_inst INTEGER 0
+
+D drift_break_inst 
+PARAMETER drift_break_inst INTEGER 0
+
+D drift_tuples should block data be written in python tuples format
+PARAMETER drift_tuples BOOLEAN FALSE
+"""
+
+    # Create storage for UNK variables for multigroup diffusion
+    if "dr_numposdefvars" in setupvars:
+        dr_numposdefvars = int(setupvars['dr_numposdefvars'])
+    else:
+        dr_numposdefvars = 4
+    yield 'PARAMETER dr_numPosdefVars INTEGER %d [0 to %d]' % (dr_numposdefvars,dr_numposdefvars)
+
+    # generate the parameters in a loop
+    for b in xrange(dr_numposdefvars):
+        yield 'D dr_posdefVar_%d variable # %d for positive-definite dt limiter' % (b+1,b+1)
+        yield 'PARAMETER dr_posdefVar_%d STRING "none"' % (b+1)

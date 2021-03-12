@@ -62,7 +62,8 @@ subroutine Driver_computeDt(nbegin, nstep, &
                           dr_printTStepLoc,                        &
                           dr_dtSTS, dr_useSTS, dr_globalMe, dr_globalComm,&
                           dr_dtAdvect, dr_dtDiffuse,               &
-                          dr_dtMinContinue, dr_dtMinBelowAction
+                          dr_dtMinContinue, dr_dtMinBelowAction,    &
+                          dr_dtMaxContinue
   use Driver_data, ONLY : dr_cflStencil, dr_reduceGcellFills, dr_usePosdefComputeDt
   use Driver_data, ONLY : dr_posdefGcMask
   use Driver_interface, ONLY : Driver_abortFlash
@@ -581,7 +582,14 @@ subroutine Driver_computeDt(nbegin, nstep, &
         print*,'        About to exit, computed time step is too small:',dtNew
      end if
   end if
-     
+
+  if (dtNew > dr_dtMaxContinue) then
+     endRun = .TRUE.
+     dtNewComputed = dtNew
+     if (dr_globalMe == MASTER_PE) then
+        print*,'        About to exit, computed time step is too large:',dtNew
+     end if
+  end if
 
   ! limit the timestep to increase by at most a factor of dr_tstepChangeFactor
 
@@ -842,11 +850,11 @@ subroutine Driver_computeDt(nbegin, nstep, &
      call Logfile_stamp(dtNewComputed, '[Driver_computeDt] Computed dtNew')
      call Logfile_stamp(dtNew        , '[Driver_computeDt] Next dtNew would be')
      if (dr_dtMinBelowAction==1) then
-        call Logfile_stamp( 'Writing additional checkpoint because of dr_dtMinBelowAction' , '[Driver_computeDt]')
+        call Logfile_stamp( 'Writing additional checkpoint for timestep restart' , '[Driver_computeDt]')
         call IO_writeCheckpoint()
      end if
-     call Logfile_stamp( 'Exiting simulation because dr_dtNew < dr_dtMinContinue' , '[Driver_computeDt]')
-     call Driver_abortFlash('Computed new time step smaller than dr_dtMinContinue!')
+     call Logfile_stamp( 'Exiting simulation because new dt is out of bounds' , '[Driver_computeDt]')
+     call Driver_abortFlash('Computed new time step smaller than dr_dtMinContinue or larger than dr_dtMaxContinue!')
   end if
 
   firstCall = .FALSE.
