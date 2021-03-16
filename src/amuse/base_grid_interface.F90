@@ -54,6 +54,7 @@ FUNCTION get_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
   INTEGER :: get_grid_energy_density
 
 en=0.0
+rho=0.0
 enrho=0.0
 
 call Driver_getComm(GLOBAL_COMM, communicator)
@@ -67,7 +68,7 @@ do m=1, n
     call Grid_getPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
     call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
 
-    enrho(n)=en*rho
+    enrho(m)=en*rho
 
   end if
 
@@ -79,7 +80,7 @@ end do
                     0, communicator, ierr)
   else
 
-    call MPI_Reduce(enrho, 0.0, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+    call MPI_Reduce(enrho, enrho, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   end if
 
@@ -113,8 +114,8 @@ do m=1, n
       call Grid_getPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, [i(m),j(m),k(m)], vz)
       call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
 
-      print*, "vx =", vx, "rho =", rho
-      print*, "vy =", vy, "rho =", rho
+      !print*, "vx =", vx, "rho =", rho
+      !print*, "vy =", vy, "rho =", rho
 
       rhovx(m) = rho*vx
       rhovy(m) = rho*vy
@@ -134,11 +135,11 @@ end do
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   else
 
-    call MPI_Reduce(rhovx, 0.0, n, &
+    call MPI_Reduce(rhovx, rhovx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(rhovy, 0.0, n, &
+    call MPI_Reduce(rhovy, rhovy, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(rhovz, 0.0, n, &
+    call MPI_Reduce(rhovz, rhovz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
   end if
 
@@ -196,6 +197,11 @@ FUNCTION get_grid_velocity(i, j, k, index_of_grid, nproc, &
   DOUBLE PRECISION, dimension(n) :: vx, vy, vz
   INTEGER :: get_grid_velocity, myProc, communicator, ierr
 
+vx = 0.0
+vy = 0.0
+vz = 0.0
+
+
 call Driver_getMype(GLOBAL_COMM, myProc)
 call Driver_getComm(GLOBAL_COMM, communicator)
 
@@ -224,11 +230,11 @@ if (myProc == 0) then
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
 else
 
-    call MPI_Reduce(vx, 0.0, n, &
+    call MPI_Reduce(vx, vx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(vy, 0.0, n, &
+    call MPI_Reduce(vy, vy, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    call MPI_Reduce(vz, 0.0, n, &
+    call MPI_Reduce(vz, vz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
 end if
 
@@ -312,11 +318,11 @@ end do
 
 if (myProc == 0) then
 
-  call MPI_Reduce(MPI_IN_PLACE, rho, 1, MPI_DOUBLE_PRECISION, &
+  call MPI_Reduce(MPI_IN_PLACE, rho, n, MPI_DOUBLE_PRECISION, &
                 MPI_SUM, 0, communicator, ierr)
 else
 
-  call MPI_Reduce(rho, rho, 1, MPI_DOUBLE_PRECISION, &
+  call MPI_Reduce(rho, rho, n, MPI_DOUBLE_PRECISION, &
                 MPI_SUM, 0, communicator, ierr)
 end if
 
@@ -401,12 +407,34 @@ end do
 
   if (myProc == 0) then
 
-    call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
-                    MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    !call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
+    !                MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, rhovx, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, rhovy, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, rhovz, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, rhoen, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(MPI_IN_PLACE, rho, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+
   else
 
-    call MPI_Reduce([rhovx, rhovy, rhovz, rhoen, rho], [0.0, 0.0, 0.0, 0.0, 0.0], 5, &
-                    MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    !call MPI_Reduce([rhovx, rhovy, rhovz, rhoen, rho], [0.0, 0.0, 0.0, 0.0, 0.0], 5, &
+    !                MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    call MPI_Reduce(rhovx, rhovx, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(rhovy, rhovy, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(rhovz, rhovz, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(rhoen, rhoen, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+    call MPI_Reduce(rho, rho, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, &
+        communicator, ierr)
+
   end if
 
   get_grid_state=0
@@ -415,11 +443,14 @@ END FUNCTION
 
 FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
   use Grid_interface, only : Grid_getBlkIndexLimits
-  INTEGER :: nx, ny, nz, nproc, myProc
+  INTEGER :: nx, ny, nz, nproc, myProc, communicator, ierr
   INTEGER :: index_of_grid, blkLimits(2,MDIM), blkLimitsGC(2,MDIM)
   INTEGER :: get_grid_range
 
+  call Driver_getComm(GLOBAL_COMM, communicator)
   call Driver_getMype(GLOBAL_COMM, myProc)
+
+  nx = 0; ny = 0; nz = 0
 
   if (myProc == nproc) then
 
@@ -430,8 +461,19 @@ FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
     !  imin = 1 !(blkLimitsGC(HIGH,IAXIS) - blkLimits(HIGH,IAXIS))/2 !Same here. -Josh
     !  jmin = 1 !(blkLimitsGC(HIGH,JAXIS) - blkLimits(HIGH,JAXIS))/2
     !  kmin = 1 !(blkLimitsGC(HIGH,KAXIS) - blkLimits(HIGH,KAXIS))/2
-
   end if
+
+
+  if (myProc == 0) then
+      call MPI_Reduce(MPI_IN_PLACE, nx, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(MPI_IN_PLACE, ny, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(MPI_IN_PLACE, nz, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+  else
+      call MPI_Reduce(nx, nx, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(ny, ny, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(nz, nz, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)
+  end if
+
   get_grid_range=0
 END FUNCTION
 
@@ -490,7 +532,7 @@ FUNCTION get_index_of_position(x, y, z, i, j, k, index_of_grid, Proc_ID, n)
 
       ! x,y,z at bottom-left blk faces may give i,j,k=0;
       ! max(...,1) ensures that x,y,z always maps to cells within blk
-      !
+      ! 
       ! in principle, x,y,z at top-right blk faces may give i,j,k=nxb+1,...
       ! but Grid_getBlkIDFromPos should preclude that scenario, because it
       ! checks "onUpperBoundary"
@@ -567,16 +609,26 @@ FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z, n)
       call Grid_getSingleCellCoords(indices, index_of_grid(ii), CENTER, INTERIOR, loc)
     end if
 
-    if (MyProc == 0) then
-      call MPI_Reduce(MPI_IN_PLACE, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    else
-      call MPI_Reduce(loc, loc, 3, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-    end if
-
     x(ii)=loc(1)
     y(ii)=loc(2)
     z(ii)=loc(3)
+
   end do
+
+    if (MyProc == 0) then
+      call MPI_Reduce(MPI_IN_PLACE, x, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(MPI_IN_PLACE, y, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(MPI_IN_PLACE, z, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    else
+      call MPI_Reduce(x, x, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(y, y, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+      call MPI_Reduce(z, z, n, MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
+    end if
+
+    !x(ii)=loc(1)
+    !y(ii)=loc(2)
+    !z(ii)=loc(3)
+  !end do
   get_position_of_index=0
 END FUNCTION
 
