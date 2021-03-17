@@ -27,10 +27,10 @@ FUNCTION set_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
   DOUBLE PRECISION :: en, rho, enrho(n)
   INTEGER :: set_grid_energy_density
 
-call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getMype(GLOBAL_COMM, myProc)
 
-do m=1, n
-  if (myProc == nproc(m)) then
+  do m=1, n
+    if (myProc == nproc(m)) then
 
         !call Grid_putBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k],en)
         call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
@@ -39,8 +39,8 @@ do m=1, n
 
         call Grid_putPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
 
-  end if
-end do
+    end if
+  end do
 
   set_grid_energy_density=0
 END FUNCTION
@@ -53,26 +53,24 @@ FUNCTION get_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
   DOUBLE PRECISION :: en, rho, enrho(n)
   INTEGER :: get_grid_energy_density
 
-en=0.0
-rho=0.0
-enrho=0.0
+  en=0.0
+  rho=0.0
+  enrho=0.0
 
-call Driver_getComm(GLOBAL_COMM, communicator)
-call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getComm(GLOBAL_COMM, communicator)
+  call Driver_getMype(GLOBAL_COMM, myProc)
 
-do m=1, n
+  do m=1, n
+    if (myProc == nproc(m)) then
 
-  if (myProc == nproc(m)) then
+      !call Grid_getBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k], en)
+      call Grid_getPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
+      call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
 
-    !call Grid_getBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k], en)
-    call Grid_getPointData(index_of_grid(m), CENTER, EINT_VAR, INTERIOR, [i(m),j(m),k(m)], en)
-    call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
+      enrho(m)=en*rho
 
-    enrho(m)=en*rho
-
-  end if
-
-end do
+    end if
+  end do
 
   if (myProc == 0) then
 
@@ -83,7 +81,6 @@ end do
     call MPI_Reduce(enrho, enrho, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
                     0, communicator, ierr)
   end if
-
 
   get_grid_energy_density=0
 END FUNCTION
@@ -98,16 +95,17 @@ FUNCTION get_grid_momentum_density(i, j, k, index_of_grid, nproc, &
   INTEGER :: get_grid_momentum_density
 
 !!! Note in Flash velocities are a  "per mass" variable, unlike most grid codes.
+!!! Note this means units of velocity, instead of momentum -MW
 
-rhovx=0.0; rhovy=0.0; rhovz=0.0
-vx=0.0; vy=0.0; vz=0.0; rho=0.0
+  rhovx=0.0; rhovy=0.0; rhovz=0.0
+  vx=0.0; vy=0.0; vz=0.0; rho=0.0
 
-call Driver_getMype(GLOBAL_COMM, myProc)
-call Driver_getComm(GLOBAL_COMM, communicator)
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getComm(GLOBAL_COMM, communicator)
 
-do m=1, n
+  do m=1, n
 
-  if (myProc == nproc(m)) then
+    if (myProc == nproc(m)) then
 
       call Grid_getPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, [i(m),j(m),k(m)], vx)
       call Grid_getPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, [i(m),j(m),k(m)], vy)
@@ -121,9 +119,9 @@ do m=1, n
       rhovy(m) = rho*vy
       rhovz(m) = rho*vz
 
-  end if
+    end if
 
-end do
+  end do
 
   if (myProc == 0) then
 
@@ -166,9 +164,9 @@ FUNCTION set_grid_momentum_density(i, j, k, index_of_grid, nproc, &
   DOUBLE PRECISION :: vx, vy, vz, rho
   INTEGER :: set_grid_momentum_density
 
-do m=1, n
-
   call Driver_getMype(GLOBAL_COMM, myProc)
+
+  do m=1, n
 
   if (myProc == nproc(m)) then
 
@@ -182,9 +180,9 @@ do m=1, n
       call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, [i(m),j(m),k(m)], vy)
       call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, [i(m),j(m),k(m)], vz)
 
-  end if
+    end if
 
-end do
+  end do
 
   set_grid_momentum_density=0
 END FUNCTION
@@ -197,17 +195,16 @@ FUNCTION get_grid_velocity(i, j, k, index_of_grid, nproc, &
   DOUBLE PRECISION, dimension(n) :: vx, vy, vz
   INTEGER :: get_grid_velocity, myProc, communicator, ierr
 
-vx = 0.0
-vy = 0.0
-vz = 0.0
+  vx = 0.0
+  vy = 0.0
+  vz = 0.0
 
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getComm(GLOBAL_COMM, communicator)
 
-call Driver_getMype(GLOBAL_COMM, myProc)
-call Driver_getComm(GLOBAL_COMM, communicator)
+  do m=1, n
 
-do m=1, n
-
-  if (myProc == nproc(m)) then
+    if (myProc == nproc(m)) then
 
       call Grid_getPointData(index_of_grid(m), CENTER, VELX_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vx(m))
@@ -216,11 +213,11 @@ do m=1, n
       call Grid_getPointData(index_of_grid(m), CENTER, VELZ_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vz(m))
 
-  end if
+    end if
 
-end do
+  end do
 
-if (myProc == 0) then
+  if (myProc == 0) then
 
     call MPI_Reduce(MPI_IN_PLACE, vx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
@@ -228,7 +225,7 @@ if (myProc == 0) then
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(MPI_IN_PLACE, vz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-else
+  else
 
     call MPI_Reduce(vx, vx, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
@@ -236,7 +233,7 @@ else
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
     call MPI_Reduce(vz, vz, n, &
                     MPI_DOUBLE_PRECISION, MPI_SUM, 0, communicator, ierr)
-end if
+  end if
 
 get_grid_velocity=0
 END FUNCTION
@@ -249,11 +246,11 @@ FUNCTION set_grid_velocity(i, j, k, index_of_grid, nproc, vx, vy, vz, n)
   DOUBLE PRECISION, dimension(n) :: vx, vy, vz
   INTEGER :: set_grid_velocity, myProc
 
-call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getMype(GLOBAL_COMM, myProc)
 
-do m=1, n
+  do m=1, n
 
-  if (myProc == nproc(m)) then
+    if (myProc == nproc(m)) then
 
       call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vx(m))
@@ -262,9 +259,10 @@ do m=1, n
       call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, &
                              INTERIOR, [i(m),j(m),k(m)], vz(m))
 
-  end if
+    end if
 
-end do
+  end do
+
 set_grid_velocity=0
 END FUNCTION
 
@@ -276,17 +274,17 @@ FUNCTION set_grid_density(i, j, k, index_of_grid, nproc, rho, n)
   DOUBLE PRECISION :: rho(n)
   INTEGER :: set_grid_density
 
-do m=1, n
-
   call Driver_getMype(GLOBAL_COMM, myProc)
 
-  if (myProc == nproc(m)) then
+  do m=1, n
 
-    call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
+    if (myProc == nproc(m)) then
 
-  end if
+      call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
 
-end do
+    end if
+
+  end do
 
   set_grid_density=0
 END FUNCTION
@@ -299,34 +297,32 @@ FUNCTION get_grid_density(i, j, k, index_of_grid, nproc, rho, n)
   DOUBLE PRECISION :: rho(n)
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
 
-rho=0.0
+  rho=0.0
 
-call Driver_getMype(GLOBAL_COMM, myProc)
-call Driver_getComm(GLOBAL_COMM, communicator)
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getComm(GLOBAL_COMM, communicator)
 
+  do m=1, n
 
+    if (myProc == nproc(m)) then
 
-do m=1, n
+      call Grid_getPointData(index_of_grid(m),CENTER,DENS_VAR,INTERIOR,[i(m),j(m),k(m)],rho(m))
 
-  if (myProc == nproc(m)) then
+    end if
 
-    call Grid_getPointData(index_of_grid(m),CENTER,DENS_VAR,INTERIOR,[i(m),j(m),k(m)],rho(m))
+  end do
 
+  if (myProc == 0) then
+
+    call MPI_Reduce(MPI_IN_PLACE, rho, n, MPI_DOUBLE_PRECISION, &
+                MPI_SUM, 0, communicator, ierr)
+  else
+
+    call MPI_Reduce(rho, rho, n, MPI_DOUBLE_PRECISION, &
+                MPI_SUM, 0, communicator, ierr)
   end if
 
-end do
-
-if (myProc == 0) then
-
-  call MPI_Reduce(MPI_IN_PLACE, rho, n, MPI_DOUBLE_PRECISION, &
-                MPI_SUM, 0, communicator, ierr)
-else
-
-  call MPI_Reduce(rho, rho, n, MPI_DOUBLE_PRECISION, &
-                MPI_SUM, 0, communicator, ierr)
-end if
-
-get_grid_density=0
+  get_grid_density=0
 END FUNCTION
 
 
@@ -338,11 +334,11 @@ FUNCTION set_grid_state(i, j, k, index_of_grid, nproc, rho, rhovx, rhovy, rhovz,
   DOUBLE PRECISION :: vx, vy, vz, en
   INTEGER :: set_grid_state
 
-do m=1, n
-
   call Driver_getMype(GLOBAL_COMM, myProc)
 
-  if (myProc == nproc(m)) then
+  do m=1, n
+
+    if (myProc == nproc(m)) then
 
       vx = rhovx(m) / rho(m); vy = rhovy(m) / rho(m); vz = rhovz(m) / rho(m)
       en = rhoen(m) / rho(m)
@@ -358,9 +354,9 @@ do m=1, n
       call Grid_putPointData(index_of_grid(m), CENTER, ENER_VAR, INTERIOR, &
                             [i(m),j(m),k(m)], en)
 
-  end if
+    end if
 
-end do
+  end do
 
   set_grid_state=0
 END FUNCTION
@@ -382,10 +378,9 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
   call Driver_getMype(GLOBAL_COMM, myProc)
   call Driver_getComm(GLOBAL_COMM, communicator)
 
+  do m=1, n
 
-do m=1, n
-
-  if (myProc == nproc(m)) then
+    if (myProc == nproc(m)) then
 
       call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, &
                             [i(m),j(m),k(m)], rho(m))
@@ -401,8 +396,8 @@ do m=1, n
       rhovx(m)=vx*rho(m); rhovy(m)=rho(m)*vy; rhovz(m)=rho(m)*vz
       rhoen(m)=rho(m)*en
 
-  end if
-end do
+    end if
+  end do
 
 
   if (myProc == 0) then
