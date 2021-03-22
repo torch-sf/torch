@@ -47,5 +47,11 @@ VARIABLE UVFL TYPE: GENERIC
 # photoelectric flux [ergs/s]
 VARIABLE FUFL TYPE: GENERIC
 
+# ambient fluxes, non-absorbed complement of above
+# ambient photoionizing flux [erg/s]
+VARIABLE AUVF TYPE: GENERIC
+# ambient photoelectric flux [erg/s]
+VARIABLE AFUF TYPE: GENERIC
+
 #for source coupling
 PARAMETER maxStars INTEGER 100
