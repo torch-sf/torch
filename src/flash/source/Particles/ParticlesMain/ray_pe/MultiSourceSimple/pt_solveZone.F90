@@ -228,8 +228,8 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 !  call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 !#endif
 
-  !Flux = phih*numdens*xH0*dr*FullEion
-  Flux = phih*numdens*xH0*FullEion * Vpix**(1./.3) / surface_correction
+  Flux = phih*numdens*xH0*dr*FullEion
+  !Flux = phih*numdens*xH0*FullEion * Vpix**(1./.3) / surface_correction
   
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
@@ -238,8 +238,8 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
   call Grid_putPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 
   ! Store unabsorbed (ambient) flux similarly. - MW
-  !Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
-  Flux = (Nion-DNionHI)/(dtin*Vpix**(2./3.)*surface_correction) * FullEion
+  Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
+  !Flux = (Nion-DNionHI)/(dtin*Vpix**(2./3.)*surface_correction) * FullEion
   call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
