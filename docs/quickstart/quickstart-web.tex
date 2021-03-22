@@ -149,16 +149,11 @@ Python package manager with some adjustments.
 % -------------
 \subsection{Prerequisites}
 
-%Torch may work with parallel HDF5 and/or Python 3.x, but has not been tested as
-%much with those packages.
 \begin{itemize}
-%\item \texttt{FLASH4.5} repo commit \texttt{68dfed1},
-%    \url{https://bitbucket.org/joshuawall/FLASH4.5}
-\item FLASH 4.5 (support for 4.6.2 is coming soon): \url{http://flash.uchicago.edu/site/flashcode}
+\item FLASH 4.6.2: \url{http://flash.uchicago.edu/site/flashcode}
 \item AMUSE: \url{https://github.com/amusecode/amuse}
 \item Torch: \url{https://bitbucket.org/torch-sf/torch}
-\item Conda / Python 2.7
-\item Python 3.X (for Torch \texttt{refactor} only)
+\item Python 3.X (below setup assumes Conda)
 \item MPI
 \item HDF5
 \item git, wget
@@ -171,16 +166,12 @@ To download AMUSE, do:
 cd your/code/directory
 git clone https://github.com/amusecode/amuse.git
 \end{lstlisting}
-%cd amuse
-%git checkout d3da434
 
 To download Torch:
 \begin{lstlisting}[language=bash]
 cd your/code/directory
 git clone https://bitbucket.org/torch-sf/torch.git
 \end{lstlisting}
-%cd torch
-%git checkout ca036d1
 
 MPI and HDF5 may be pre-installed if you are using a cluster.  If not, you will
 have to install these packages from source.  Be sure to use the same compiler
@@ -254,7 +245,7 @@ pip install --no-cache-dir mpi4py
 Declare the following environment variables:
 \begin{lstlisting}[language=bash]
 export AMUSE_DIR=/path/to/amuse
-export FLASH_DIR=/path/to/FLASH4.5
+export FLASH_DIR=/path/to/FLASH4.6.2
 export TORCH_DIR=/path/to/torch
 \end{lstlisting}
 
@@ -265,15 +256,15 @@ Then, cd to the \texttt{torch} repo and do:
 This will copy interface files from \texttt{torch} to both the AMUSE and FLASH
 repos.
 
-% ---------------
-% Build FLASH 4.5
-% ---------------
-\subsection{Build FLASH 4.5 (Josh thesis Appendix A.2 + FLASH docs)}
+% -----------
+% Build FLASH
+% -----------
+\subsection{Build FLASH (Josh thesis Appendix A.2 + FLASH docs)}
 
-Let's \texttt{cd} to the FLASH4.5 directory and setup a turbulent sphere
+Let's \texttt{cd} to the FLASH4.6.2 directory and setup a turbulent sphere
 collapse problem.
 
-First, create a \texttt{Makefile.h} in \texttt{FLASH4.5/sites/mysitedir}.
+First, create a \texttt{Makefile.h} in \texttt{FLASH4.6.2/sites/mysitedir}.
 We recommend that you fork an example file from \texttt{sites/Prototypes}.
 You may have done this already while traversing the FLASH manual's quick start.
 
@@ -284,12 +275,12 @@ Cartesius in Josh's thesis, you may need to (1) remove
 
 Then, issue the setup command (update ``mysitedir''):
 \begin{lstlisting}[language=bash]
-./setup Cube -a -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
+./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
     +supportPPMupwind +pm4dev -maxblocks=100 +cube16 \
     --site={mysitedir}
 \end{lstlisting}
 
-%Alternatively, you can add your machine to \texttt{FLASH4.5/sites/Aliases} in
+%Alternatively, you can add your machine to \texttt{FLASH4.6.2/sites/Aliases} in
 %the form ``\texttt{mysitedir  myhostname}'', where \texttt{myhostname} is given
 %by the shell command \texttt{hostname --fqdn}.
 
@@ -497,10 +488,10 @@ and \texttt{bridge\_multiples.py}.  These two files specify most of the
 configuration options for the simulation.
 
 %To understand how the initial gas-cloud conditions are set up, look at:
-%\texttt{FLASH4.5/source/Simulation/SimulationMain/Cube/Simulation\_initBlock.F90}.
+%\texttt{FLASH4.6.2/source/Simulation/SimulationMain/Cube/Simulation\_initBlock.F90}.
 
 Torch comes packaged with a few simulations in
-\texttt{FLASH4.5/source/Simulation/SimulationMain/}
+\texttt{FLASH4.6.2/source/Simulation/SimulationMain/}
 \begin{verbatim}
     Cube
     EnergyInjection
@@ -541,7 +532,7 @@ FLASH-only simulation, only MHD.
 
 Note that \texttt{+rayPE} generally requires \texttt{+amuseSinksAndStars}.
 These setup flags are aliases for various FLASH units; the flags are defined in
-\texttt{FLASH4.5/bin/setup\_shortcuts.txt}.
+\texttt{FLASH4.6.2/bin/setup\_shortcuts.txt}.
 
 Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
@@ -672,7 +663,7 @@ ldd flash_worker
 (NUNK_VARS + NFACEVAR + NFLUXVAR) * (NXB + 2*NGUARD) * (NYB + 2*NGUARD) * (NZB + 2*NGUARD)
 * MAXBLOCKS * (8 bytes)
 \end{verbatim}
-        where the variables are defined in \texttt{FLASH4.5/object/Flash.h}.
+        where the variables are defined in \texttt{FLASH4.6.2/object/Flash.h}.
         For example, with \texttt{NUNK\_VARS=46}, \texttt{NFACEVAR=2},
         \texttt{NFLUXVAR=12}, \texttt{NXB=NYB=NZB=16}, \texttt{NGUARD=6}, and
         \texttt{MAXBLOCKS=100}, the memory usage is around 1 GB.
@@ -815,7 +806,7 @@ This list includes most major components, but is not comprehensive.
 %Noticeably missing are references on radiative heating/cooling prescriptions.
 
 \begin{itemize}
-    \item FLASH 4.5:
+    \item FLASH:
         \href{http://flash.uchicago.edu/site/flashcode/user_support/}{user's guide},
         \href{http://adsabs.harvard.edu/abs/2000ApJS..131..273F}{Fryxell+ 2000}
     \item PARAMESH (in vanilla FLASH):
@@ -922,9 +913,9 @@ to. I check this periodically to see what simulation time my run has achieved,
 how many stars I've made, if it is hung up on a process, etc.
 
 \subsection{Cartesius - Refactor}
-The refactored version of Torch (on git branch \texttt{refactor}) uses the latest AMUSE commit on branch \texttt{master} which requires Python 3.X as well as FLASH version 4.6.2. The setup for the refactored version of Torch on Cartesius is largely the same as the \texttt{master} branch as described in this document but with a dew caveats. 
+The refactored version of Torch (on git branch \texttt{refactor}) uses the latest AMUSE commit on branch \texttt{master} which requires Python 3.X as well as FLASH version 4.6.2. The setup for the refactored version of Torch on Cartesius is largely the same as the \texttt{master} branch as described in this document but with a dew caveats.
 
-Firstly, make sure you download and unzip FLASH4.6.2. This can be done from the same FLASH distribution webpage from which FLASH4.5 or earlier versions can be accessed. 
+Firstly, make sure you download and unzip FLASH4.6.2. This can be done from the same FLASH distribution webpage from which FLASH4.5 or earlier versions can be accessed.
 
 Second, make sure to have the AMUSE \texttt{master} branch checked out and is at the most recent commit.
 

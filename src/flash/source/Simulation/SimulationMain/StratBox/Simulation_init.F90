@@ -79,4 +79,10 @@ subroutine Simulation_init()
 
   call RuntimeParameters_get('killdivb', sim_killdivb)
 
+  ! stratbox, turbulent stirring
+  call RuntimeParameters_get('sim_stirLayer', sim_stirLayer)
+  call RuntimeParameters_get('sim_stirH', sim_stirH)
+
+
+
 end subroutine Simulation_init

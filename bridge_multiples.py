@@ -3026,7 +3026,7 @@ first_step = True
 gridChanged = True
 if restart:
     if start_with_star or start_with_cluster:
-        print "WARNING: restart AND adding new particles, so recomputing grav accel"
+        print("WARNING: restart AND adding new particles, so recomputing grav accel")
     else:
         # restarts: don't re-compute grav accel during very 1st bridge kick
         #   because we can read it from file. this matches normal bridge loop
@@ -3569,6 +3569,8 @@ try:
                                 #print sig
                                 eion[part] = (avg_E | units.eV) - (13.6 |units.eV) #2.0 | units.eV #6.0 | units.eV
                                 sigh[part] = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
+                                # Calculate total number of photons from stellar surface with stellar radius.
+                                # Since flux is interpolated from OSTAR2002, no extra factor of pi needed.
                                 nphot[part] = (flux*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
 
@@ -3605,7 +3607,8 @@ try:
                                     epe[part] = avg_E | units.eV # should be around 8 eV
                                     #sigh = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
                                     # Calculate total number of photons from stellar surface with stellar radius.
-                                    npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
+                                    # Extra factor of pi from solid angle integration of blackbody curve.
+                                    npe[part] = (np.pi*(per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
                         if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
                             # Note other evolutionary things besides winds could have reduced the stars mass.
