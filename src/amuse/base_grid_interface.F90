@@ -448,6 +448,8 @@ FUNCTION get_grid_flux_photoelectric(i, j, k, index_of_grid, nproc, flux_pe, n)
 call Driver_getComm(GLOBAL_COMM, communicator)
 call Driver_getMype(GLOBAL_COMM, myProc)
 
+flux_pe = 0.0
+
 do m=1, n
 
   if (myProc == nproc(m)) then
@@ -484,6 +486,8 @@ FUNCTION get_grid_flux_ionizing(i, j, k, index_of_grid, nproc, flux_ion, n)
 
 call Driver_getComm(GLOBAL_COMM, communicator)
 call Driver_getMype(GLOBAL_COMM, myProc)
+
+flux_ion = 0.0
 
 do m=1, n
 
