@@ -77,12 +77,12 @@ subroutine Simulation_init()
   ! stratbox, toggle staticgrav
   call RuntimeParameters_get('sim_withStaticGrav', sim_withStaticGrav)
 
-<<<<<<< HEAD
+  call RuntimeParameters_get('killdivb', sim_killdivb)
+
   ! stratbox, turbulent stirring
   call RuntimeParameters_get('sim_stirLayer', sim_stirLayer)
   call RuntimeParameters_get('sim_stirH', sim_stirH)
-=======
-  call RuntimeParameters_get('killdivb', sim_killdivb)
->>>>>>> f7dbe88... Bfield fix for StratBox
+
+
 
 end subroutine Simulation_init

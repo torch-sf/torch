@@ -169,7 +169,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult, ppds):
             root_rem = Particles(0)
 
             # remove the entire tree if any leaf outside bndbox
-            for root, tree in mult.root_to_tree.iteritems():
+            for root, tree in mult.root_to_tree.items():
                 leaves = tree.get_leafs_subset()
                 leaves_outside = stars_rem.get_intersecting_subset_in(leaves)
                 leaves_inside = leaves - leaves_outside

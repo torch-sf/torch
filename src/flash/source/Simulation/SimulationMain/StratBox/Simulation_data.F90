@@ -43,11 +43,10 @@ module Simulation_data
 
   logical, save :: sim_withStaticGrav
 
-<<<<<<< HEAD
+  logical, save :: sim_killdivb
+
   logical, save :: sim_stirLayer
   real, save :: sim_stirH
-=======
-  logical, save :: sim_killdivb
->>>>>>> f7dbe88... Bfield fix for StratBox
+
 
 end module Simulation_data

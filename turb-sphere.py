@@ -386,7 +386,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     Emag = 0.5*(4.0/3.0*np.pi*Rsph**3.0*(Bmag**2.0/4.0/np.pi))
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
-    print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
+    print ('Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir)
     # rescale velocity field to get pre-set virial ratio
     velx *= sqrt(vir_rat / Qvir)*mask
     vely *= sqrt(vir_rat / Qvir)*mask
@@ -396,8 +396,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
-    print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
-    print 'Msph, Rsph = ', Msph/MSun, Rsph/cmpc
+    print ('Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir)
+    print ('Msph, Rsph = ', Msph/MSun, Rsph/cmpc)
 
     if (with_plots):
 
@@ -446,7 +446,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
 
     if (write_data):
 
-        print "writing metadata to "+filename+".dat"
+        print ("writing metadata to "+filename+".dat")
         with open(filename+'.dat', 'w') as f:
 
             f.write("# {:<9} {:<35}\n".format('filename:', filename))
@@ -481,7 +481,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
             )
 
         # Write out the initial conditions file.
-        print "writing data file."
+        print ("writing data file.")
         f = open(filename, 'w')
         f.write('# {} {} {} \n'.format(NCD[0], NCD[1], NCD[2]) )
         for i in range(NCD[0]):
@@ -532,15 +532,15 @@ if (infile is None):
             args.radius     = 50.0
             args.box_side   = 55.0
 
-        print "Using the default factors for Rsph and box size:"
-        print "--radius", args.radius, "--box_size", args.box_side
+        print ("Using the default factors for Rsph and box size:")
+        print ("--radius", args.radius, "--box_size", args.box_side)
 
     elif (args.radius is not None and args.box_side is None):
 
         args.box_side = args.radius * 1.25
 
-        print "Using default box size +/-(1.25x Rsph):"
-        print "--box_size", args.box_side
+        print ("Using default box size +/-(1.25x Rsph):")
+        print ("--box_size", args.box_side)
 
 
     if (args.radius is None or args.mass is None or args.virial_ratio is None or args.filename is None):

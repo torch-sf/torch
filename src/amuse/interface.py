@@ -257,7 +257,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         for x in ['i','j','k']:
             function.addParameter(x, dtype='i', direction=function.IN)
         function.addParameter('index_of_grid', dtype='i', direction=function.IN, default = 1)
-        function.addParameter('Proc_ID', dtype='i', direction=function.IN, default = 0)
+        function.addParameter('nproc', dtype='i', direction=function.IN, default = 0)
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.OUT)
         function.addParameter('n', dtype='i', direction=function.LENGTH)
@@ -272,12 +272,14 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         processor number on which this grid resides.
         """
         function = LegacyFunctionSpecification()
+        function.must_handle_array = True
         for x in ['x','y','z']:
             function.addParameter(x, dtype='d', direction=function.IN)
         for x in ['i','j','k']:
             function.addParameter(x, dtype='i', direction=function.OUT)
         function.addParameter('index_of_grid', dtype='i', direction=function.OUT)
-        function.addParameter('Proc_ID', dtype='i', direction=function.OUT)
+        function.addParameter('nproc', dtype='i', direction=function.OUT)
+        function.addParameter('n', dtype='i', direction=function.LENGTH)
         function.result_type = 'i'
         return function
 
@@ -1052,7 +1054,6 @@ class Flash(CommonCode):
 
     def get_index_range_inclusive(self, index_of_grid = 1, nproc=0):
         nx, ny, nz = self.get_grid_range(index_of_grid, nproc)
-
         return (1, nx, 1, ny, 1, nz)
 
     # I think all of these should start with a numpy array like:
