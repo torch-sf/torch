@@ -53,6 +53,7 @@ from amuse.lab import *
 from amuse.community.flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
+from amuse.community.petar.interface import Petar
 from amuse.couple import multiples
 
 from torch_se import stellar_evolution
@@ -89,7 +90,7 @@ def stop_smalln():
 def initialize_workers():
 
     # Converter for the N-body code.
-    convert = nbody.nbody_to_si(1.0|units.parsec, 1000.0|units.MSun)
+    convert = nbody.nbody_to_si(1.0|units.s, 1000.0|units.MSun)
     # Converter for the hydro code.
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
@@ -99,6 +100,10 @@ def initialize_workers():
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
+    elif USER['with_petar']:
+        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
+        grav.parameters.set_defaults()
+        grav.parameters.epsilon_squared = USER['epsilon']**2.0
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -161,11 +166,6 @@ def evolve(state, hydro, grav, mult, se):
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
 
-    # grav loop control
-    grav.parameters.begin_time  = hy_time
-    grav.evolve_model(hy_time)
-    gr_time = grav.get_time()
-
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
     se_dt = 1e99 | units.s
@@ -173,7 +173,17 @@ def evolve(state, hydro, grav, mult, se):
     # bridge loop control
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+    # set initial hydro dt to a power of 2 so PeTar can sync times
+    if USER['with_petar']:
+        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
+        dt = dt_nbody
     num_stars = hydro.get_number_of_particles()
+
+    # grav loop control
+    if not USER['with_petar']: # only initialize PeTar if there are stars
+        grav.parameters.begin_time  = hy_time
+        grav.evolve_model(hy_time)
+        gr_time = grav.get_time()
 
     # worker setup
     if num_stars > 0:  # restart or user initial conditions
@@ -181,6 +191,9 @@ def evolve(state, hydro, grav, mult, se):
         # particles mis-sorted in the particles array. -JW
         hydro.particles_sort()
         add_particles_to_grav(state, hydro, grav, mult, se)
+        if(USER['with_petar']): # Need to sync velocities when restarting PeTar
+            state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
+            state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
 
     if USER['evolve_async']:
         from amuse.rfi.async_request import AsyncRequestsPool
@@ -193,6 +206,8 @@ def evolve(state, hydro, grav, mult, se):
                 pool_table_hydro.append(i)
             elif name == "grav":
                 pool_table_grav.append(i)
+
+    first_star = 0
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
@@ -210,6 +225,14 @@ def evolve(state, hydro, grav, mult, se):
             tprint("... Num stars:", num_stars)
 
         if num_stars > 0:
+
+            # initialize PeTar once when the first star forms
+            if first_star == 0:
+                first_star = 1
+                if USER['with_petar']:
+                    tprint("First stars have formed. Initializing PETAR.")
+                    grav.set_begin_time(hy_time)
+                    grav.parameters.begin_time = hy_time
 
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
@@ -303,10 +326,17 @@ def evolve(state, hydro, grav, mult, se):
                 if USER['with_multiples']:
                     mult.evolve_model(hy_time+dt)
                 else:
+                    gr_time = grav.get_time()
+                    grav.set_tree_step(dt)
+                    tprint("DEBUG: before grav.evolve, gr_time = ",gr_time)
                     grav.evolve_model(hy_time+dt)
+                    gr_time = grav.get_time()
+                    tprint("DEBUG: after grav.evolve, gr_time = ",gr_time)
                 tprint("Advance hydro")
                 hydro.evolve_model(hy_time+dt)
 
+                gr_time = grav.get_time()
+                tprint("DEBUG: after hydro.evolve, gr_time = ",gr_time)
 
             # sync position & velocity to stars + hydro from gravity code(s)
             state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
@@ -332,8 +362,9 @@ def evolve(state, hydro, grav, mult, se):
             # 2. had stars, but they all escaped
             # not sure if below code works with case 2 of stars -> no stars
             hy_time = hydro.get_time()
-            grav.parameters.begin_time  = hy_time
-            grav.evolve_model(hy_time)
+            if not USER['with_petar']: # PeTar cannot be evolved with 0 stars
+                grav.parameters.begin_time  = hy_time
+                grav.evolve_model(hy_time)
 
         ### --------------------------------
         ### Queue and create star particles.
@@ -348,9 +379,17 @@ def evolve(state, hydro, grav, mult, se):
             sum_small=USER['sum_small'],
         )
 
+        gr_time = grav.get_time()
+        tprint("DEBUG: before make_stars, gr_time = ",gr_time)
+
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
+            gr_time = grav.get_time()
+            tprint("DEBUG: before add_particles, gr_time = ",gr_time)
             add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
+
+        gr_time = grav.get_time()
+        tprint("DEBUG: after add_particles, gr_time = ",gr_time)
 
         ### ----------------------------
         ### Remove stars outside domain.
@@ -402,9 +441,19 @@ def evolve(state, hydro, grav, mult, se):
         # bridge loop control
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+        # PeTar needs power of 2 timestep
+        if USER['with_petar']:
+            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
+            dt = dt_nbody
+
         num_stars = hydro.get_number_of_particles()  # loop variable
 
-        assert abs(hy_time - gr_time) <= (1e4|units.s)
+        if USER['with_petar']:
+            # only assert time-sync with PeTar if stars have formed
+            if first_star==1:
+                assert abs(hy_time - gr_time) <= (1e4|units.s)
+        else:
+            assert abs(hy_time - gr_time) <= (1e4|units.s)
         assert num_stars == len(state.stars)
         if USER['with_multiples']:
             assert num_stars == len(mult.stars)
@@ -472,3 +521,4 @@ def run_torch(user_initial_conditions, user_parameters):
         #kep.stop()
         #stop_smalln()
         #del multiples
+
