@@ -2460,19 +2460,23 @@ VELW_PART_PROP      wind mass loss rate
     \textbf{Answer:} estimate as:
     \begin{align*}
         8 \unit{bytes}
-        &\times \left( \mathtt{NUNK\_VARS} + \mathtt{NFACEVAR} + \mathtt{NFLUXVAR} \right) \\
-        &\times \left( \mathtt{NXB} + 2\times\mathtt{GUARDCELLS} \right)
-        \left( \mathtt{NYB} + 2\times\mathtt{GUARDCELLS} \right)
-        \left( \mathtt{NZB} + 2\times\mathtt{GUARDCELLS} \right) \\
+        &\times \left( \mathtt{NUNK\_VARS} + 3\times\mathtt{NFACE\_VARS} + \mathtt{NSCRATCH\_GRID\_VARS} \right) \\
+        &\times \left( \mathtt{NXB} + 2\times\mathtt{NGUARD} \right)
+        \left( \mathtt{NYB} + 2\times\mathtt{NGUARD} \right)
+        \left( \mathtt{NZB} + 2\times\mathtt{NGUARD} \right) \\
         &\times \mathtt{MAXBLOCKS}
     \end{align*}
     These variables are defined by \texttt{Flash.h}, in the object directory.
     For the simulation \texttt{Cube} with unsplit MHD solver,
     $16^3$ blocks, and \texttt{MAXBLOCKS=300}, the memory usage is:
     \[
-        8 \unit{bytes} \times (46 + 2 + 12) \times (16 + 12)^3 \times 300
-        \approx 3.2 \unit{GB}
+        8 \unit{bytes} \times (45 + 3\times 2 + 3) \times (16 + 12)^3 \times 300
+        \approx 2.8 \unit{GB}
     \]
+    This is a rough estimate, does not include rays or particles.
+    See also: \url{http://flash.uchicago.edu/pipermail/flash-users/2019-April/002870.html}
+    And, search \texttt{NUNK\_VARS} in the FLASH manual for a few sentences
+    on Paramesh memory usage.
 
     \item \textbf{Question:} with FLASH4.2.2, how do I compile with large
         values of MAXBLOCKS?  Setup works, but make fails.
