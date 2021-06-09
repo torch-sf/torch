@@ -48,9 +48,12 @@ parser.add_argument("-n", "--number_density", default=1.25, required=False, type
 parser.add_argument("-r", "--radius", default=None, required=False, type=float,
                    help="Radius of the sphere in parsecs.")
 parser.add_argument("-v", "--virial_ratio", default=0.4, required=False, type=float,
-                   help="Virial ratio of the sphere. CUrrently only \
+                   help="Virial ratio of the sphere. Currently only \
                          calculates virial ratio using kinetic and gravitational \
-                         energy. NOTE: equilibrium is v=0.5!")
+                         energy. NOTE: equilibrium is v=0.5! Any sphere generated \
+                         before June 9, 2021 doesn't necessarily have the correct \
+                         user-specified virial ratio, see \ 
+                         https://bitbucket.org/torch-sf/torch/issues/47/velocities-scaled-incorrectly-in-turb")
 parser.add_argument("-b", "--box_side", default=None, required=False, type=float,
                    help="Distance from the center of the cube to the \
                          edge of the cube (half the length of a side). \
@@ -381,8 +384,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     dx = (CD[0][1] - CD[0][0]) / NCD[0]
     dy = (CD[1][1] - CD[1][0]) / NCD[1]
     dz = (CD[2][1] - CD[2][0]) / NCD[2]
-    Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
-    Epot = 0.5*(mask*rho_arr*pot_arr).sum()*dx*dy*dz
+    Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velz)).sum()*dx*dy*dz
+    Epot = (mask*rho_arr*pot_arr).sum()*dx*dy*dz
     Emag = 0.5*(4.0/3.0*np.pi*Rsph**3.0*(Bmag**2.0/4.0/np.pi))
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
@@ -393,7 +396,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     velz *= sqrt(vir_rat / Qvir)*mask
 
     # recalculate kinetic energy
-    Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velx)).sum()*dx*dy*dz
+    Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velz)).sum()*dx*dy*dz
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
     print 'Ekin, Epot, Emag/2, Qvir = ', Ekin, Epot, 0.5*Emag, Qvir
