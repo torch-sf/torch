@@ -1042,7 +1042,7 @@ subroutine Particles_sinkCreateAccrete(dt)
                          gas_mean_vel_x = gas_mean_vel_x + solnData(ivelx,ip,jp,kp)
                          gas_mean_vel_y = gas_mean_vel_y + solnData(ively,ip,jp,kp)
                          gas_mean_vel_z = gas_mean_vel_z + solnData(ivelz,ip,jp,kp)
-                         gas_mean_cs    = gas_mean_cs + sqrt(solnData(ipres,ip,jp,kp) / comovingCellDens)
+                         gas_mean_cs    = gas_mean_cs + sqrt((5.0 / 3.0) * solnData(ipres,ip,jp,kp) / comovingCellDens)
                          end if
                      
 !                       end do
