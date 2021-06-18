@@ -281,7 +281,7 @@ def user_parameters():
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 150.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 10
+    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. 
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
