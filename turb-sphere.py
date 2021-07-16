@@ -387,7 +387,7 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
     dy = (CD[1][1] - CD[1][0]) / NCD[1]
     dz = (CD[2][1] - CD[2][0]) / NCD[2]
     Ekin = 0.5*(mask*rho_arr*(velx*velx+vely*vely+velz*velz)).sum()*dx*dy*dz
-    Epot = (mask*rho_arr*pot_arr).sum()*dx*dy*dz
+    Epot = 0.5*(mask*rho_arr*pot_arr).sum()*dx*dy*dz
     Emag = 0.5*(4.0/3.0*np.pi*Rsph**3.0*(Bmag**2.0/4.0/np.pi))
     Qvir = (Ekin) / np.abs(Epot)
     #Qvir = (Ekin+Emag*0.5) / np.abs(Epot)
