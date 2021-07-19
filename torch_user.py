@@ -253,9 +253,9 @@ def user_parameters():
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
 
-    p['evolve_async'] = False  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
+    p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
-    p['with_multiples'] = True  # adds two workers: kepler, smalln
+    p['with_multiples'] = False  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
 
     # <timestepping>
@@ -264,7 +264,7 @@ def user_parameters():
 
     # <star/n-body gravity>
 
-    p['with_ph4'] = True  # use ph4 or Hermite
+    p['with_ph4'] = False  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <star/n-body gravity & binaries>
@@ -285,7 +285,7 @@ def user_parameters():
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 150.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 10
+    p['sample_imf_bins'] = 100
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
@@ -298,13 +298,12 @@ def user_parameters():
     ntasks = get_ntasks_from_run_script()
 
     p['num_grav_workers'] = 8 # must be power of 2 for PeTar 
-    p['num_hy_workers'] = 9 #ntasks - p['num_grav_workers'] - 1  # amuse
+    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
-        p['evolve_async'] = False # TODO: make sure petar works with evolve_async=True
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
