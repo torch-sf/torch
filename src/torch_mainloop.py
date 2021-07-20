@@ -101,6 +101,7 @@ def initialize_workers():
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     elif USER['with_petar']:
+        convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun) # PeTar likes it when the units are nbody system scale
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
     else:
@@ -152,11 +153,11 @@ def initialize_workers():
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
-    return hydro, grav, mult, se
+    return hydro, grav, mult, se, convert
 
 # ============================================================================
 
-def evolve(state, hydro, grav, mult, se):
+def evolve(state, hydro, grav, mult, se, nbody_conv):
 
     # FLASH loop control
     hy_dt           = hydro.get_timestep()
@@ -172,11 +173,13 @@ def evolve(state, hydro, grav, mult, se):
     # bridge loop control
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        print("nbody time = ",nbody.time)
-        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
-        dt = dt_nbody
+        dt_nbody_units = nbody_conv.to_nbody(dt).value_in(nbody.time)
+        dt_nbody = pow(2., np.floor(np.log2(dt_nbody_units))) | nbody.time
+        dt = nbody_conv.to_si(dt_nbody)
+        print("dt_nbody_units, dt_nbody, dt = ",dt_nbody_units, dt_nbody, dt)
 
     num_stars = hydro.get_number_of_particles()
 
@@ -427,10 +430,14 @@ def evolve(state, hydro, grav, mult, se):
         # bridge loop control
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-        # set initial hydro dt to a power of 2 so PeTar can sync times
+
+        # set hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
-            dt = dt_nbody
+            dt_nbody_units = nbody_conv.to_nbody(dt).value_in(nbody.time)
+            dt_nbody = pow(2., np.floor(np.log2(dt_nbody_units))) | nbody.time
+            dt = nbody_conv.to_si(dt_nbody)
+            print("dt_nbody_units, dt_nbody, dt = ",dt_nbody_units, dt_nbody, dt)
+
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         if USER['with_petar']:
@@ -479,7 +486,7 @@ def run_torch(user_initial_conditions, user_parameters):
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
 
-    hydro, grav, mult, se = initialize_workers()
+    hydro, grav, mult, se, nbody_conv = initialize_workers()
 
     state = TorchState(hydro, grav, mult)
 
@@ -496,7 +503,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     try:
 
-        evolve(state, hydro, grav, mult, se)
+        evolve(state, hydro, grav, mult, se, nbody_conv)
 
     finally:
         pass
