@@ -2396,7 +2396,7 @@ def initialize_multiples(stars, grav, conv, mult_debug_level=1, kep=None, new_sm
     multiples_code.global_debug = mult_debug_level
 
     multiples_code.neighbor_veto               = True
-    multiples_code.check_tidal_perturbation    = True
+    multiples_code.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
     multiples_code.neighbor_perturbation_limit = 0.05
     multiples_code.wide_perturbation_limit     = 0.08
     print("Setting up channels between stars and multiples.")
