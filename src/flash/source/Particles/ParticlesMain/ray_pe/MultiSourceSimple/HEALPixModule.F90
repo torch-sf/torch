@@ -206,7 +206,7 @@ contains
     if (nside <= ns_max4) then
        ip_low = iand(ipf,1023)       ! content of the last 10 bits
        ip_trunc =    ipf/1024        ! truncation of the last 10 bits
-       ip_med = iand(ip_trunc,1023)  ! content of the next 10 bits
+       ip_med = iand(int(ip_trunc),1023)  ! content of the next 10 bits
        ip_hi  =      ip_trunc/1024   ! content of the high weight 10 bits
 
        ix = 1024*pix2x(ip_hi) + 32*pix2x(ip_med) + pix2x(ip_low)
@@ -247,7 +247,7 @@ contains
     else if (jr <= 3*nside) then ! equatorial region
        nr = nside
        z  = (2*nside-jr)*fact2
-       kshift = iand(jr - nside, 1)
+       kshift = iand(int(jr - nside), 1)
        if (do_vertex) then
           z_nv = (2*nside-jr+1)*fact2
           z_sv = (2*nside-jr-1)*fact2
