@@ -8,16 +8,18 @@ You must define the methods:
 
 User parameters should have AMUSE units attached, where appropriate.
 
+See the main torch code (torch.py) to understand how this all works.
+
 Design inspired by TRISTAN-MP, Athena++ architecture.
 """
 
-from __future__ import division, print_function
+
 
 from amuse.datamodel import Particles
 from amuse.units import units
 
 from torch_param import FlashPar
-from torch_mainloop import run_torch
+from binaries_mainloop import run_torch
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
@@ -56,28 +58,6 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_mass(star_tag, star.mass)
 #    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
 #    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-
-    # ------------------------------------------------------------------------
-    # SN with SE test: plop a star that goes SN within 5e11 seconds
-
-#    star        = Particles(1)
-#    star.mass   = 3.09698e+34 | units.g
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
-#
-#    oldmass = 5.10964e+34 | units.g  # about 25.5 MSun
-#    creation_time = hydro.get_time() - (2.3861e+14|units.s)  # 7.5611 Myr old
-#    # goes SN between 7.5611 and 7.5763 Myr (2.3861e14 to 2.3909e14 s)
-#
-#    tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(tag, star.mass)
-#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(tag, oldmass) # for SE code
-#    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
     # Multiples test: plop a binary system
@@ -249,14 +229,14 @@ def user_parameters():
 
     # <bridge>
 
-    p['npy_seed'] = None  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
-    p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
+    p['npy_seed'] = None  # no effect if (restart && restart_with_new_rng=False)
+    p['restart_with_new_rng'] = False
     p['restart_with_user_ics'] = False  # meant for testing
 
-    p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
-    p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
+    p['evolve_async'] = True
+    p['with_bridge'] = True
     p['with_multiples'] = True  # adds two workers: kepler, smalln
-    p['with_se'] = True  # do stellar evolution for individual stars?
+    p['with_se'] = True
 
     # <timestepping>
 
@@ -264,47 +244,36 @@ def user_parameters():
 
     # <star/n-body gravity>
 
-    p['with_ph4'] = False  # use ph4 or Hermite
+    p['with_ph4'] = True  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
-
-    # <star/n-body gravity & binaries>
-
-    p['with_petar'] = True
 
     # <stellar evolution>
 
-    p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
-    p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
-    p['with_sn'] = True  # allow stars to deposit SNe at end of life
-    p['with_winds'] = True  # allow stars to deposit hot winds
+    p['with_lyc'] = True
+    p['with_pe_heat'] = True
+    p['with_sn'] = True
+    p['with_winds'] = True
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
 
     # <star particle creation>
 
-    p['binaries'] = True
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 150.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
     p['sample_imf_bins'] = 100
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
-    p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
-
-    # <amuse file overwrite>
-
-    p['overwrite'] = True # <True> Passes flag to AMUSE write_set_to_file(); allows .amuse files to be overwritten without warning.
+    p['sum_small'] = False
+    p['binaries'] = True      
 
     # <job>
 
     ntasks = get_ntasks_from_run_script()
+    #ntasks = 35
 
-    p['num_grav_workers'] = 8 # must be power of 2 for PeTar 
+    p['num_grav_workers'] = 1
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
-
-    if p['with_petar']:
-        p['with_ph4'] = False
-        p['with_multiples'] = False
 
     if p['with_se']:
         p['num_hy_workers'] -= 1

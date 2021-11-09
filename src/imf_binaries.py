@@ -2,8 +2,6 @@
 Generate samples from initial mass function (IMF).
 
 Joshua Wall, Drexel University
-
-Modified to account for primordial binaries (CCC, 05/2020, 02/2021, 11/2021)
 """
 
 
@@ -13,7 +11,7 @@ from scipy.integrate import quad
 from primordial_binaries import orbits
 
 
-def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1,
+def sample_stars(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
                               max_samp_mass=150.0, sum_small=False, binaries=True):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)

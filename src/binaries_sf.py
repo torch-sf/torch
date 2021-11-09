@@ -5,8 +5,6 @@ Currently, just implements scheme for creating stars from sinks.
 Could be made more general in the future.
 
 Joshua Wall, Drexel University
-
-Modified to account for primordial binaries (CCC, 05/2020, 02/2021, 11/2021)
 """
 
 
@@ -17,7 +15,7 @@ from amuse.datamodel import Particles
 from amuse.units import units
 
 from torch_stdout import tprint
-from imf_sample import sample_stars
+from imf_binaries import sample_stars
 
 
 def add_particles_to_grav(state, hydro, grav, mult, se):

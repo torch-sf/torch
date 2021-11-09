@@ -57,7 +57,7 @@ class TorchState(object):
 
         self.output_dir = hydro.get_output_dir()
 
-    def initial_io(self, overwrite, refresh=False):
+    def initial_io(self, refresh=False):
         """Load restart files or write starting Torch state
         Kwargs:
             refresh (False): for restarts,
@@ -142,14 +142,14 @@ class TorchState(object):
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
             # and hy_pltnum != self.pltnum, so we will write torch files.
-            self.output(overwrite)
+            self.output()
 
         # After FLASH inits (whether restart or not), it increments
         # io_checkpointFileNumber for the /next/ file write.
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
-    def output(self, overwrite):
+    def output(self):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
         """
@@ -171,7 +171,7 @@ class TorchState(object):
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
-            self.out_stars(overwrite)
+            self.out_stars()
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
@@ -225,11 +225,11 @@ class TorchState(object):
             pickle.dump(np.random.get_state(), f)
         tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
-    def out_stars(self, overwrite):
+    def out_stars(self):
         """Write star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "stars{:04d}.amuse".format(self.pltnum))
-        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False)  # hdf5 works with Particles(0), csv breaks
         #mult_file = path.join(self.output_dir,
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
