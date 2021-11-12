@@ -2,7 +2,8 @@
 Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017) and Winters et al. (2019)
 Claude Cournoyer-Cloutier, McMaster University, 2020
 The functions get_multiplicity, get_period and get_eccentricity have been reworked
-There is still some work to be done on get_companion_masses, which still defaults the gamma (June 3, 2020)
+There is still some work to be done on get_companion_masses, which still defaults the gamma (June 3, 2020) --> Done, date unknown, CCC
+Version used in paper I took the log twice in the period distribution, resulting in an absence of close massive binaries --> Fixed, 11/2021, CCC
 """
 
 import numpy as np
@@ -129,92 +130,92 @@ def get_period(mass):
         def probability(m, x):
             
             if 0.6 <= m < 1.6:
-                if 0.5 <= np.log10(x) < 1.5:
+                if 0.5 <= x < 1.5:
                     prob = 0.027
-                elif 1.5 <= np.log10(x) < 2.5:
+                elif 1.5 <= x < 2.5:
                     prob = interpolate(2.5, 1.5, 0.057, 0.027, x)
-                elif 2.5 <= np.log10(x) < 3.5:
+                elif 2.5 <= x < 3.5:
                     prob = 0.057
-                elif 3.5 <= np.log10(x) < 4.5:
+                elif 3.5 <= x < 4.5:
                     prob = interpolate(4.5, 3.5, 0.095, 0.057, x)
-                elif 4.5 <= np.log10(x) < 5.5:
+                elif 4.5 <= x < 5.5:
                     prob = 0.095
-                elif 5.5 <= np.log10(x) < 6.5:
+                elif 5.5 <= x < 6.5:
                     prob = interpolate(6.5, 5.5, 0.075, 0.095, x)
-                elif 6.5 <= np.log10(x) < 7.5:
+                elif 6.5 <= x < 7.5:
                     prob = 0.075
                 else:
                     prob = 0
         
         
             elif 1.6 <= m < 5:
-                if 0.5 <= np.log10(x) < 1.5:
+                if 0.5 <= x < 1.5:
                     prob = 0.07
-                elif 1.5 <= np.log10(x) < 2.5:
+                elif 1.5 <= x < 2.5:
                     prob = interpolate(2.5, 1.5, 0.12, 0.07, x)
-                elif 2.5 <= np.log10(x) < 3.5:
+                elif 2.5 <= x < 3.5:
                     prob = 0.12
-                elif 3.5 <= np.log10(x) < 4.5:
+                elif 3.5 <= x < 4.5:
                     prob = interpolate(4.5, 3.5, 0.13, 0.12, x)
-                elif 4.5 <= np.log10(x) < 5.5:
+                elif 4.5 <= x < 5.5:
                     prob = 0.13
-                elif 5.5 <= np.log10(x) < 6.5:
+                elif 5.5 <= x < 6.5:
                     prob = interpolate(6.5, 5.5, 0.09, 0.13, x)
-                elif 6.5 <= np.log10(x) < 7.5:
+                elif 6.5 <= x < 7.5:
                     prob = 0.09
                 else:
                     prob = 0
     
             elif 5 <= m < 9:
-                if 0.5 <= np.log10(x) < 1.5:
+                if 0.5 <= x < 1.5:
                     prob = 0.14
-                elif 1.5 <= np.log10(x) < 2.5:
+                elif 1.5 <= x < 2.5:
                     prob = interpolate(2.5, 1.5, 0.22, 0.14, x)
-                elif 2.5 <= np.log10(x) < 3.5:
+                elif 2.5 <= x < 3.5:
                     prob = 0.22
-                elif 3.5 <= np.log10(x) < 4.5:
+                elif 3.5 <= x < 4.5:
                     prob = interpolate(4.5, 3.5, 0.20, 0.22, x)
-                elif 4.5 <= np.log10(x) < 5.5:
+                elif 4.5 <= x < 5.5:
                     prob = 0.20
-                elif 5.5 <= np.log10(x) < 6.5:
+                elif 5.5 <= x < 6.5:
                     prob = interpolate(6.5, 5.5, 0.11, 0.20, x)
-                elif 6.5 <= np.log10(x) < 7.5:
+                elif 6.5 <= x < 7.5:
                     prob = 0.11
                 else:
                     prob = 0
                         
             elif 9 <= m < 16:
-                if 0.5 <= np.log10(x) < 1.5:
+                if 0.5 <= x < 1.5:
                     prob = 0.19
-                elif 1.5 <= np.log10(x) < 2.5:
+                elif 1.5 <= x < 2.5:
                     prob = interpolate(2.5, 1.5, 0.26, 0.19, x)
-                elif 2.5 <= np.log10(x) < 3.5:
+                elif 2.5 <= x < 3.5:
                     prob = 0.26
-                elif 3.5 <= np.log10(x) < 4.5:
+                elif 3.5 <= x < 4.5:
                     prob = interpolate(4.5, 3.5, 0.23, 0.26, x)
-                elif 4.5 <= np.log10(x) < 5.5:
+                elif 4.5 <= x < 5.5:
                     prob = 0.23
-                elif 5.5 <= np.log10(x) < 6.5:
+                elif 5.5 <= x < 6.5:
                     prob = interpolate(6.5, 5.5, 0.13, 0.23, x)
-                elif 6.5 <= np.log10(x) < 7.5:
+                elif 6.5 <= x < 7.5:
                     prob = 0.13
                 else:
                     prob = 0
                                                                                             
             elif m >= 16:
-                if 0.5 <= np.log10(x) < 1.5:
+                if 0.5 <= x < 1.5:
                     prob = 0.29
-                elif 1.5 <= np.log10(x) < 2.5:
+                elif 1.5 <= x < 2.5:
                     prob = interpolate(2.5, 1.5, 0.32, 0.29, x)
-                elif 2.5 <= np.log10(x) < 3.5:
+                elif 2.5 <= x < 3.5:
                     prob = 0.32
-                elif 3.5 <= np.log10(x) < 4.5:
+                elif 3.5 <= x < 4.5:
                     prob = interpolate(4.5, 3.5, 0.30, 0.32, x)
-                elif 4.5 <= np.log10(x) < 5.5:
+                elif 4.5 <= x < 5.5:
                     prob = 0.30
-                elif 5.5 <= np.log10(x) < 6.5:
+                elif 5.5 <= x < 6.5:
                     prob = interpolate(6.5, 5.5, 0.18, 0.30, x)
-                elif 6.5 <= np.log10(x) < 7.5:
+                elif 6.5 <= x < 7.5:
                     prob = 0.18
                 else:
                     prob = 0
