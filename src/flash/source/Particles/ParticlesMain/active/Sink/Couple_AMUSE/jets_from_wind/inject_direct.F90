@@ -207,6 +207,13 @@ if (first_call) then
     
 end if
 
+!!!  Turn off mass loading and perturb velocity.
+!!!  Since this is the JETS code, we don't want either mass loading
+!!!  or perturb_velocity set.  So, we directly set both to false here
+!!!  in case they get set to true elsewhere.  -SA 1/23/2022
+mass_load = .false.
+perturb_velocity = .false.
+
 
 ! Mechanical Energy injected by the wind. - JW
 injE = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
