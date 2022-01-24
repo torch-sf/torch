@@ -273,7 +273,7 @@ def user_parameters():
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds
-    p['massloss_method'] = 'puls'
+    p['massloss_method'] = 'seba' #'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
 
     # <star particle creation>
