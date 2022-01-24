@@ -250,6 +250,9 @@ enerInj::--with-unit=Particles/ParticlesMain/energyInjection
 # Winds for AMUSE
 amuseWinds:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind
 
+# Jets from AMUSE winds module
+amuseJetsFromWinds:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/jets_from_wind
+
 checkGridVar:--with-unit=Grid/Grid_checkVar
 
 # in development: grid injection unit to refactor SN, enerInj, and possibly
