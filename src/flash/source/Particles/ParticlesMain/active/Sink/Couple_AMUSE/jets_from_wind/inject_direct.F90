@@ -543,6 +543,32 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
+                    !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
+                    !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
+                    !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
+                    theta_x = 0.0  !0.78  !!is roughly pi/4
+                    theta_y = 0.78
+                    theta_z = 0.0  !1.57
+
+                    dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
+                         (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
+                         (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
+                    dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
+                         (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
+                         (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
+                    dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
+                         (cos(theta_y)*cos(theta_x))*dz
+
+                    rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
+                    rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
+
+                    theta = acos(dz_jet/rad_jet)
+                    phi = atan(dy_jet/dx_jet)
+
+                    ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
+                    !!! This is just to test the overall set up.  We'll need to change this later to get the
+                    !!! Cunningham model set up. -SA 1/23/2022
+
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
                     
@@ -558,9 +584,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                       
                     endif
                     ! velocity of the wind points radially outwards
-                    xvel = idir * injectVelocity
-                    yvel = jdir * injectVelocity
-                    zvel = kdir * injectVelocity
+                    xvel = (idir * injectVelocity) * ang_dependence
+                    yvel = (jdir * injectVelocity) * ang_dependence
+                    zvel = (kdir * injectVelocity) * ang_dependence
                     
 
                     ! Get the background density to estimate what the inject
