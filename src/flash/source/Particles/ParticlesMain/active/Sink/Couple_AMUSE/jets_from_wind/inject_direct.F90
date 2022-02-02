@@ -163,7 +163,7 @@ logical  :: calcBgDens
 
 ! Add new variables for the additional code needed to make jets, including the 
 ! set up for the Cunningham model.  -SA 1/23/2022
-real(dp) :: theta, ang_dependence
+real(dp) :: theta, ang_dependence, phi
 real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
