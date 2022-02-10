@@ -589,7 +589,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     else
                        rad_dependence = 0.0  !!  This both introduces the gap right next to the star particles and
                                              !!  sets the outer limit of the injection region. 
-                       
+                    endif
+
                     ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
 
                     ! normalized components of the star --> cell center vector 
