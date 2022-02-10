@@ -574,7 +574,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     c_two = 1.0
                     norm_factor = 1.0
 
-                    write(*,*) "This is a test write statement...  -SA", i, j, k  !!  We'll see if this works...
+                    write(*,*) "This is a test write statement...  -SA"  !!  We'll see if this works...
 
                     delta_theta = atan(delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
 
