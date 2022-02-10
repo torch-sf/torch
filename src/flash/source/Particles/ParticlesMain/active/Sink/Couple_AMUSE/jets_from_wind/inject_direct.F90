@@ -165,7 +165,7 @@ logical  :: calcBgDens
 ! set up for the Cunningham model.  -SA 1/23/2022
 real(dp) :: theta, ang_dependence, phi
 real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
-real(dp) :: rad2_jet, rad_jet
+real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
 
@@ -576,14 +576,15 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     write(*,*) "This is a test write statement...  -SA"  !!  We'll see if this works...
 
-                    delta_theta = atan(delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+                    ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
+                    delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
 
                     theta_zero = 0.01
                     ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
                          ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
                          atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
 
-                    if (4*delta .lt. rad_jet .AND. rad_jet .lt. 8*delta) then   !!  This assumes delta=delta_x from Cunningham.
+                    if (4*ave_delta .lt. rad_jet .AND. rad_jet .lt. 8*ave_delta) then   !!  This assumes delta=delta_x from Cunningham.
                        !!!  I am pretty sure that delta is the min cell size - and I think this is what we want here.
                        rad_dependence = (1/c_one) * rad_jet**(-2.0)
                     else
