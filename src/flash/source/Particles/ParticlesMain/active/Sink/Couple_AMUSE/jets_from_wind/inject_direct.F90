@@ -547,7 +547,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
                     !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
                     theta_x = 0.0  !0.78  !!is roughly pi/4
-                    theta_y = 0.78
+                    theta_y = 0.4
                     theta_z = 0.0  !1.57
 
                     dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
@@ -568,6 +568,29 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                     !!! This is just to test the overall set up.  We'll need to change this later to get the
                     !!! Cunningham model set up. -SA 1/23/2022
+
+                    !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
+                    c_one = 1.0
+                    c_two = 1.0
+                    norm_factor = 1.0
+
+                    write(*,*) "This is a test write statement...  -SA", i, j, k  !!  We'll see if this works...
+
+                    delta_theta = atan(delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+
+                    theta_zero = 0.01
+                    ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
+                         ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
+                         atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
+
+                    if (4*delta .lt. rad_jet .AND. rad_jet .lt. 8*delta) then   !!  This assumes delta=delta_x from Cunningham.
+                       !!!  I am pretty sure that delta is the min cell size - and I think this is what we want here.
+                       rad_dependence = (1/c_one) * rad_jet**(-2.0)
+                    else
+                       rad_dependence = 0.0  !!  This both introduces the gap right next to the star particles and
+                                             !!  sets the outer limit of the injection region. 
+                       
+                    ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
 
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
