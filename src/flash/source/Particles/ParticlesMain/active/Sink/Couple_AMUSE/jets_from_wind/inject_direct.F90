@@ -574,7 +574,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     c_two = 1.0
                     norm_factor = 1.0
 
-                    write(*,*) "This is a test write statement...  -SA"  !!  We'll see if this works...
+                    write(*,*) "This is a test write statement...  -SA" , i , j, k !!  We'll see if this works...
+                    
+                    print*, "This is a test print statement.. -SA", i, j, k
 
                     ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
                     delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
@@ -592,7 +594,11 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                                              !!  sets the outer limit of the injection region. 
                     endif
 
-                    ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
+                    !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
+                    
+                    print*, "cos^2 is:", (cos(theta))**2.0, 
+                    print*, "But Cunningham ang dependence is: ", ang_dependence
+                    print*, "Also, the radial dependence is:", rad_dependence
 
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
