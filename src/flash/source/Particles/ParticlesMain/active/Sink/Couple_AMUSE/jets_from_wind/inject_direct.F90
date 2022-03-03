@@ -596,7 +596,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
                     
-                    print*, "cos^2 is:", (cos(theta))**2.0, 
+                    print*, "cos^2 is:", (cos(theta))**2.0 
                     print*, "But Cunningham ang dependence is: ", ang_dependence
                     print*, "Also, the radial dependence is:", rad_dependence
 
