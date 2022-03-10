@@ -256,6 +256,15 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 
 else
 
+  ! Code above is skipped if ionizing photon can't ionize
+  ! still save ambient field - MW
+  if (ph_type == ion_photon) then
+    Flux = Nion*dr/(dtin*Vpix) * FullEion
+    call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
+    Flux = Flux + cellFlux
+    call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
+  endif
+
   FullEion = Eion ! The energy is already all there.
 
 end if  ! else if (ph_type == pe_photon) then
@@ -360,7 +369,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     Flux = Flux*1.6d-3 + cellFlux ! Convert back to ergs cm^-2 s^-1
     call Grid_putPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, Flux)
 
-    ! Unabsorbed, ambient flux, stored similarly.
+    ! Unabsorbed, ambient flux, stored similarly - MW
     call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
     ambientFlux = ambientFlux*1.6d-3 + cellFlux
     call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
@@ -373,6 +382,16 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
   DustVel = DustMom/(dens*Vpix)
 
   Nion = Nion - DNdust
+
+! Code above is skipped if photoelectric photon can't be absorbed
+! still save ambient field - MW
+else if (ph_type == pe_photon .or. ph_EUVonDust) then
+
+  ambientFlux = Nion*FullEion/dtin / surface_correction*zone_size**2.0
+
+  call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
+  ambientFlux = ambientFlux + cellFlux
+  call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
 
   
 end if
