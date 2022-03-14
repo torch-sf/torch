@@ -121,7 +121,6 @@ atan2xy = atan2(dirx, diry)
 surface_correction = sqrt(1.-costheta2) + sqrt(costheta2)
 surface_correction = surface_correction*(abs(sin(atan2xy)) + abs(cos(atan2xy)))
 
-
 !phi = atan2(diry, dirx)
 !theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
 
@@ -385,9 +384,9 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 
 ! Code above is skipped if photoelectric photon can't be absorbed
 ! still save ambient field - MW
-else if (ph_type == pe_photon .or. ph_EUVonDust) then
+else if (ph_type == pe_photon) then
 
-  ambientFlux = Nion*FullEion/dtin / surface_correction*zone_size**2.0
+  ambientFlux = Nion*FullEion/dtin / (surface_correction*zone_size**2.0)
 
   call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
   ambientFlux = ambientFlux + cellFlux
