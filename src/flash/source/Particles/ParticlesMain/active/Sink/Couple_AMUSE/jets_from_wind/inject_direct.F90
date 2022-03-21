@@ -574,10 +574,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     c_two = 1.0
                     norm_factor = 1.0
 
-                    write(*,*) "This is a test write statement...  -SA" , i , j, k !!  We'll see if this works...
-                    
-                    print*, "This is a test print statement.. -SA", i, j, k
-
                     ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
                     delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
 
@@ -615,9 +611,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                       
                     endif
                     ! velocity of the wind points radially outwards
-                    xvel = (idir * injectVelocity) * ang_dependence
-                    yvel = (jdir * injectVelocity) * ang_dependence
-                    zvel = (kdir * injectVelocity) * ang_dependence
+                    xvel = (idir * injectVelocity)
+                    yvel = (jdir * injectVelocity)
+                    zvel = (kdir * injectVelocity)
                     
 
                     ! Get the background density to estimate what the inject
@@ -631,8 +627,14 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
                         overlap_frac = overlap_frac*solidAngle
                     end if
-                    ! sum all weightings for normalization later
                     
+                    ! apply the Cunningham angular and radial dependence to
+                    ! overlap frac  - SA  March 21, 2022
+                    print *, "overlap_frac before Cunningham is", overlap_frac
+                    overlap_frac = overlap_frac * ang_dependence * rad_dependence
+                    print *, "overlap_frac after Cunningham is", overlap_frac
+
+                    ! sum all weightings for normalization later
                     if (rad .ge. min_radius) then
                         if (overlap_frac .gt. 0.0d0) then
                             sumOverlap = sumOverlap + overlap_frac
@@ -656,6 +658,7 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
+print*, "sumOverlap is", sumOverlap
 
 if (perturb_velocity) then
 
@@ -770,6 +773,7 @@ if (iHaveInjectBlk) then
                       if (injectDataOverlap(n,i,j,k) .le. 0.0_dp) cycle
                       
                       ! Note: This is includes the mass loaded stuff.
+                      print*, "Within momentum loop, sumOverlap is", sumOverlap  ! -SA
                       dDens   = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
                       oldDens = solndata(DENS_VAR,i,j,k)
                       newDens = solndata(DENS_VAR,i,j,k) + dDens ! m + delta_m
