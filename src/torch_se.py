@@ -114,7 +114,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt,
+                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, s.initial_mass,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
@@ -150,9 +150,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
     return se_dt
 
 
-def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massloss_method=None):
+def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, init_mass, massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
+	init_mass  = s.initial_mass
     """
     if massloss_method == 'seba':
 
@@ -187,10 +188,11 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
     print("In torch_se.py; computing dmdt.")
     print("Current dmdt value: ", dm_dt)
     print("prev_mass: ", prev_mass.value_in(units.MSun), "se_mass: ", se_mass.value_in(units.MSun))
-    print("initial mass: ", state.stars.initial_mass.value_in(units.Msun))  #check that we can access the initial mass
+    print("initial mass: ", init_mass.value_in(units.Msun))  #check that we can access the initial mass
+    print("stellar age: ", t_evol)  #check that this is working
 
     if se_mass.value_in(units.MSun) < 9 : # Should probably use whether we're calculating jets...
-        dm_tot = state.stars.initial_mass / 3  # eject one third of the initial mass into the protostellar outflows
+        dm_tot = init_mass / 3  # eject one third of the initial mass into the protostellar outflows
         print("total mass lost to outflows: ", dm_tot)
         jet_lifetime = 1e5.as_quantity_in(units.yr)  # inject jets over 100 kyr
         print("jet lifetime: ", jet_lifetime)
