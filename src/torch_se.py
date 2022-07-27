@@ -181,6 +181,23 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
 
     else:
         raise Exception("Invalid stellar mass loss method")
+	
+    ##  Add a chunk of code to make a non-zero dm_dt in the case of low mass stars so that we 
+    ##  can do jets.  Will need to be significantly improved. -SA July 7, 2022
+    print("In torch_se.py; computing dmdt.")
+    print("Current dmdt value: ", dm_dt)
+    print("prev_mass: ", prev_mass.value_in(units.MSun), "se_mass: ", se_mass.value_in(units.MSun))
+    print("initial mass: ", state.stars.initial_mass.value_in(units.Msun))  #check that we can access the initial mass
+
+    if se_mass.value_in(units.MSun) < 9 : # Should probably use whether we're calculating jets...
+        dm_tot = state.stars.initial_mass / 3  # eject one third of the initial mass into the protostellar outflows
+        print("total mass lost to outflows: ", dm_tot)
+        jet_lifetime = 1e5.as_quantity_in(units.yr)  # inject jets over 100 kyr
+        print("jet lifetime: ", jet_lifetime)
+        dm = dm_tot *(dt/jet_lifetime)
+        print("mass injected in this time step: ", dm)
+        dm_dt = dm/dt   # Just a quick placeholder that hopefully isn't too huge.
+    print("New dmdt value: ", dm_dt)
 
     return dm_dt, vterm
 
