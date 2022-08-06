@@ -6,6 +6,12 @@ AMUSE_DIR?=$(shell amusifier --get-amuse-dir)
 MPIFC ?= ${MPI_HOME}/bin/mpifort #/home/josh/local/bin/mpif90
 FC      = $(MPIFC)
 
+# Workaround for MPI interface type mismatch errors from GCC version 10, see:
+# https://stackoverflow.com/questions/63892055/fortran-error-type-mismatch-between-two-unrelated-subroutine-calls
+# https://github.com/NOAA-GFDL/FMS/issues/561
+# Beware, -fallow-argument-mismatch is strongly discouraged by GCC docs
+FCFLAGS += -fallow-argument-mismatch
+
 LDFLAGS  += -lm $(MUSE_LD_FLAGS)
 
 OBJS = base_grid_interface.o interface.o
