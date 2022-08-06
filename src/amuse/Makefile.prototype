@@ -1,6 +1,6 @@
 # standard amuse configuration include
 # config.mk will be made after ./configure has run
-AMUSE_DIR?=../../../..
+AMUSE_DIR?=$(shell amusifier --get-amuse-dir)
 -include $(AMUSE_DIR)/config.mk
 
 MPIFC ?= ${MPI_HOME}/bin/mpifort #/home/josh/local/bin/mpif90
@@ -11,8 +11,6 @@ LDFLAGS  += -lm $(MUSE_LD_FLAGS)
 OBJS = base_grid_interface.o interface.o
 
 CODELIB = src/libflash.a
-
-CODE_GENERATOR = $(AMUSE_DIR)/build.py
 
 #drive_loc = ./src/FLASH4.2.2/object
 #drive_loc = ./src/FLASH4.4-mod/object
