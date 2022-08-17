@@ -195,9 +195,9 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     eject_fraction = 3  # eject one third of the initial mass into the protostellar outflows
     max_jet_mass = 9.0 | units.MSun
     jet_lifetime = 1e5 | units.yr  # inject jets over 100 kyr
-    print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol)
+    print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
     
-    if se_mass.value_in(units.MSun) < max_jet_mass and t_evol.value_in(unit.yr) < jet_lifetime : 
+    if ((se_mass.value_in(units.MSun) < max_jet_mass.value_in(units.MSun)) and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
         print("We are injecting jets.")
         dm_tot = init_mass / eject_fraction
         print("total mass lost to outflows: ", dm_tot)
