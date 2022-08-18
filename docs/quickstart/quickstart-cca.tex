@@ -1,0 +1,331 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.75in, letterpaper]{geometry}
+\usepackage{parskip}
+
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage{gensymb}  % For use of degree symbol
+\usepackage[pdftex]{graphicx}
+\usepackage{hyperref}
+
+\usepackage{enumerate} % For use of (a), (b), et cetera
+\usepackage{booktabs} % Tables
+\usepackage[margin=20pt, labelfont=bf, labelsep=period,
+justification=justified]{caption} % Captions in figure floats
+
+% https://stackoverflow.com/questions/3175105/inserting-code-in-this-latex-document-with-indentation
+\usepackage{listings}
+\usepackage{color}
+
+% ======================
+% Document setup, layout
+% ======================
+
+% Code block formatting
+% http://texdoc.net/texmf-dist/doc/latex/listings/listings.pdf
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\lstset{
+  backgroundcolor=\color{lightgray},
+  frame=none,
+%  language=python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+%  mathescape=false,
+}
+
+% The following metadata will show up in the PDF properties
+\hypersetup{
+    colorlinks = true,
+    urlcolor = magenta,  % Links to URLs
+    linkcolor = blue,  % Links within PDF
+    pdfauthor = {},
+    pdfkeywords = {Torch, FLASH, AMUSE},
+    pdftitle = {Torch Quick Start - \today},
+    pdfsubject = {},
+    pdfpagemode = UseNone
+}
+
+% Don't indent paragraphs
+\setlength\parindent{0em}
+
+% Slightly more compact lines
+\linespread{0.95}
+
+% ===============
+% Useful commands
+% ===============
+\newcommand*{\mt}{\mathrm}
+\newcommand*{\unit}[1]{\;\mt{#1}}  % vemod.net/typesetting-units-in-latex
+\newcommand*{\abt}{\mathord{\sim}} % tex.stackexchange.com/q/55701
+\newcommand*\mean[1]{\bar{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}  % Bold vectors
+\newcommand*{\tsup}{\textsuperscript}
+
+% Sets, operators
+\newcommand*{\ints}{\mathbb{Z}}
+\newcommand*{\ptl}{\partial}
+\newcommand*{\dl}{\nabla}
+\newcommand*{\dtl}{\mathrm{d}}
+
+\newcommand*{\Msun}{M_\odot}
+\newcommand*{\sun}{\odot}
+\newcommand*{\kB}{k_\mathrm{B}}
+
+\begin{document}
+
+% =======
+% Titling
+% =======
+\begin{center}
+Torch Quick Start Guide (CCA Workshop) \\
+Last updated: \today \\
+\end{center}
+
+\tableofcontents
+\newpage
+
+
+% ==================================
+% Introduction
+% ==================================
+\section{About the CCA Cluster}
+
+We have some 17 nodes reserved on the Flatiron Institute's internal cluster.
+\begin{itemize}
+\item \url{https://docs.simonsfoundation.org/index.php/Public:Instructions_Iron_Cluster}
+\item \url{https://docs.simonsfoundation.org/index.php/Public:SoftwareFlatiron}
+\item \url{https://docs.simonsfoundation.org/index.php/Public:ClusterIO}
+\end{itemize}
+
+To log into the cluster:
+\begin{lstlisting}[language=bash]
+ssh -p 61022 temp01@gateway.flatironinstitute.org
+ssh rusty
+\end{lstlisting}
+
+By default no modules are loaded, so you will need to do:
+\begin{lstlisting}[language=bash]
+module load slurm
+\end{lstlisting}
+
+When using slurm, provide the option
+\begin{lstlisting}[language=bash]
+--reservation=amuse
+\end{lstlisting}
+in order to use the resources allocated for the workshop.
+
+To see available packages, try \texttt{module avail}.
+
+To access more packages, try \texttt{module load modules-nix}, followed by
+\texttt{module avail}.
+
+% ===========
+% Quick Start
+% ===========
+\section{Quick Start}
+
+% -------------
+% Prerequisites
+% -------------
+\subsection{Prerequisites}
+
+Obtain the following software.
+\begin{itemize}
+\item FLASH 4.5 (not 4.6 or 4.6.1):
+    \url{http://flash.uchicago.edu/site/flashcode}
+\item AMUSE (commit 541b124): \url{https://github.com/amusecode/amuse}
+\item Torch: \url{https://bitbucket.org/aarontran/flash\_interface}
+\end{itemize}
+
+To download FLASH, you'll need to register, which takes a few days.
+
+To download AMUSE, do:
+\begin{lstlisting}[language=bash]
+cd your/code/directory
+git clone https://github.com/amusecode/amuse.git
+cd amuse
+git checkout 541b124
+\end{lstlisting}
+
+To download Torch, and checkout the workshop branch:
+\begin{lstlisting}[language=bash]
+cd your/code/directory
+git clone https://bitbucket.org/aarontran/flash_interface.git
+cd flash_interface
+git checkout cca-workshop
+\end{lstlisting}
+% woops, the git transport doesn't work.
+%git clone git@bitbucket.org:aarontran/flash_interface.git
+
+% -----------
+% Environment
+% -----------
+\subsection{Module setup}
+
+Tentatively, you need to work on a compute node for some packages to load
+correctly.  Go ahead and request 7 processes on the cluster.
+\begin{lstlisting}[language=bash]
+module load slurm
+srun --pty -t 0-12:00 -n 7 --reservation=amuse -J "bash" /bin/bash
+\end{lstlisting}
+
+In your new bash session, load some modules.  You may want to put this in a
+shell script that you can
+\href{https://en.wikipedia.org/wiki/Source_(command)}{source}
+each time you log in.
+
+\begin{lstlisting}[language=bash]
+module load modules-nix
+module load nix/git/2.22.0
+
+module load slurm
+module load gcc/7.4.0  # version used to build python
+module load openmpi2/2.1.6-hfi
+module load python2/2.7.16
+module load lib/hdf5/1.8.21-openmpi2  # version used to build h5py - must be in this order
+module load python2-mpi4py/2.7.16-openmpi2
+
+module load lib/fftw3/3.3.8-openmpi2
+module load lib/gmp/6.1.2
+module load lib/gsl/2.3
+module load lib/mpfr/4.0.2
+
+export OMPI_MCA_mpi_warn_on_fork=0
+
+export AMUSE_DIR=/path/to/amuse
+export FLASH_DIR=/path/to/FLASH4.5
+export TORCH_DIR=/path/to/flash_interface
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+\end{lstlisting}
+
+The git \texttt{module load} is optional, but makes code development a bit
+nicer.
+
+% -------------
+% Install Torch
+% -------------
+\subsection{Install Torch}
+
+In the \texttt{flash\_interface} repo, do:
+\begin{lstlisting}[language=bash]
+./install.sh
+\end{lstlisting}
+This will copy interface files from \texttt{flash\_interface} to both the AMUSE
+and FLASH repos.  For more detail, take a look at the README in this repo.
+
+% ---------------
+% Build FLASH 4.5
+% ---------------
+\subsection{Build FLASH 4.5}
+
+In the \texttt{FLASH4.5} repo, issue the setup command:
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
+    +supportPPMupwind +pm4dev -maxblocks=100 +cube16
+\end{lstlisting}
+
+It should automatically use the libraries in
+\texttt{rusty.flatironinstitute.org/Makefile.h} for configuration.
+
+Then, compile FLASH.
+\begin{lstlisting}[language=bash]
+cd object
+make -j
+\end{lstlisting}
+
+% -----------
+% Build AMUSE
+% -----------
+\subsection{Build AMUSE}
+
+In the AMUSE directory, do:
+\begin{lstlisting}[language=bash]
+./configure
+make framework
+make flash.code
+make kepler.code
+make ph4.code
+make seba.code
+make smalln.code
+\end{lstlisting}
+A successful make will create \texttt{flash\_worker} in
+\texttt{src/amuse/community/flash/}.
+
+% --------------------
+% Run Torch simulation
+% --------------------
+\subsection{Run a Torch simulation}
+
+You are now ready to run a Torch simulation!  We will simulate a
+$3 \times 10^3 \Msun$, $5 \unit{pc}$ radius gas sphere in $\pm 7 \unit{pc}$
+cubic domain with outflow boundary conditions.
+In about a free-fall time ($\approx 2 \unit{Myr}$), the cloud will collapse
+under its own gravity, create a sink particle, and begin forming stars.
+
+Choose a directory for your simulation and \texttt{cd} there.  Then do:
+\begin{lstlisting}[language=bash]
+ln -s $TORCH_DIR/cool.dat
+ln -s $TORCH_DIR/cube128
+
+cp $TORCH_DIR/bridge_multiples.py           bridge_multiples.py
+cp $TORCH_DIR/flash.par.turbsph_standard    flash.par
+mkdir data
+\end{lstlisting}
+
+To run the simulation interactively, execute the command:
+\begin{lstlisting}[language=bash]
+srun --pty -t 0-01:00 -n 7 --reservation=amuse -J "bash" /bin/bash
+mpiexec -n 1 python bridge_multiples.py
+\end{lstlisting}
+
+To queue the simulation, copy \texttt{run.sh} from the
+\texttt{flash\_interface} repository to your simulation directory.
+Edit the \texttt{SBATCH} options as needed;
+add \texttt{\#SBATCH --reservation=amuse}.
+Then do:
+\begin{lstlisting}[language=bash]
+sbatch run.sh
+\end{lstlisting}
+If you increase the number of tasks requested, \texttt{bridge\_multiples.py}
+will automatically assign more threads (workers) to FLASH.
+
+
+% --------------------
+% Next steps
+% --------------------
+\subsection{Next steps}
+
+\subsubsection{Jupyter analysis}
+
+Visualization: some info and a script for Jupyterlab setup to be provided live.
+
+Here is a script to run Jupyter notebook on the CCA cluster:
+\url{http://user.astro.columbia.edu/~atran/share/ipynb.sh}
+
+On the CCA cluster, you can start a Jupyter session with:
+\begin{lstlisting}[language=bash]
+srun --pty -t 0-12:00 --mem=10666mb --reservation=amuse PATH/TO/ipynb.sh
+\end{lstlisting}
+
+Then, on your local computer, you will (1) open a new terminal and start an ssh
+session, (2) open localhost:8888 in your local browser with a token, following
+the instructions in STDOUT.
+
+\end{document}

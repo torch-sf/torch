@@ -1,0 +1,29 @@
+REQUIRES Driver
+REQUIRES Grid
+REQUIRES Grid/GridParticles
+REQUIRES Multispecies
+REQUIRES physics/Eos/EosMain/Multigamma
+
+REQUESTS IO
+REQUESTS IO/IOParticles
+REQUESTS physics/Hydro
+REQUESTS PhysicalConstants
+
+# average molecular weights, if negative, calculated from chemistry data
+PARAMETER sim_A_n      REAL    -1.0
+PARAMETER sim_A_i      REAL    -1.0
+
+PARAMETER sim_init_Hp  REAL    1.E-3
+
+PARAMETER sim_gamma_n  REAL    1.66667
+PARAMETER sim_gamma_i  REAL    1.66667
+
+# Initial mag field
+
+PARAMETER bx0 REAL 0.0d0
+PARAMETER by0 REAL 0.0d0
+PARAMETER bz0 REAL 0.0d0
+
+PARAMETER amNumDens     REAL    1000.
+PARAMETER amTemp        REAL    100.
+PARAMETER sim_tdust     REAL    18.0

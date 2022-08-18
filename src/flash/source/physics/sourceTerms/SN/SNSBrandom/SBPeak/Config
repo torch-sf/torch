@@ -1,0 +1,63 @@
+# Config file for the SB module
+REQUIRES Particles/ParticlesMain/sb
+REQUIRES physics/sourceTerms/Heat/phenHeat
+
+PARAMETER hstarb	REAL    0.2
+
+PARAMETER tsb		  			REAL 4.7967E12
+PARAMETER nsnmax				INTEGER 40
+PARAMETER nsnmin				INTEGER 7
+PARAMETER sblife				REAL 3.14
+PARAMETER sbMaxV				REAL 3.00
+PARAMETER useSB					BOOLEAN TRUE
+PARAMETER useSNrandom	  		BOOLEAN TRUE
+PARAMETER useSBrandom  			BOOLEAN TRUE
+PARAMETER sbTrackV	    		BOOLEAN TRUE
+PARAMETER SNmapToGrid	  		BOOLEAN FALSE
+PARAMETER useSNTracer	  		BOOLEAN FALSE
+PARAMETER MCTracerShellDis  	REAL 1.0
+PARAMETER MCTracerMaxRad  		REAL 3.08567758e19
+PARAMETER TracerPerSN 			INTEGER 100
+PARAMETER SBmax					INTEGER 1000
+
+# if false MC tracer are used instead
+PARAMETER veltracer	    BOOLEAN FALSE
+
+# Do I want to position the SB in density peaks
+PARAMETER SB_cluster_peak		BOOLEAN TRUE
+
+# Config file for the SN module
+D stratifySN   runtime control for turning the stratification of SN on or off,
+D if off SN are distributed evenly throughout the domain
+D also turns of uv stratification
+PARAMETER stratifySN	BOOLEAN FALSE
+PARAMETER radialSN	  	BOOLEAN FALSE
+
+#actual used stuff 
+D   hstar1          Scale height of the Type I SNe distribution
+D   hstar2          Scale height of the Type II SNe distribution
+D   Mejc            average total ejecta mass per supernova
+D   nsndt           allowed number of SN explosions per timestep
+# pc
+PARAMETER hstar1	REAL 0.2
+PARAMETER hstar2	REAL 0.2
+PARAMETER erstar1 	REAL 3500.0
+PARAMETER erstar2 	REAL 3500.0
+
+#PARAMETER xctr		REAL    0.5
+#PARAMETER yctr		REAL    0.5
+#PARAMETER zctr		REAL    0.5
+
+PARAMETER Mejc			REAL    8.0
+PARAMETER nsndt			INTEGER 20
+PARAMETER nms			INTEGER 50
+
+PARAMETER tsn1			REAL 4.7967E12
+PARAMETER tsn2			REAL 2.8685E12
+PARAMETER r_init		REAL 6.1714E18
+PARAMETER r_exp_max		REAL 1.54283879E20
+PARAMETER sn_max_temp	REAL 1e9
+PARAMETER exp_energy	REAL 1.0003E51
+PARAMETER SNminstep		REAL 3.1556926E10
+
+PARAMETER callRNG		INTEGER -1

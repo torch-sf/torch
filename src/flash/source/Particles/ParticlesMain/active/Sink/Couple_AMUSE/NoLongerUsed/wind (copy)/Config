@@ -1,0 +1,15 @@
+## Ensure that this unit defines its own use, so
+## that other units can know if its here.
+
+PPDEFINE WIND_INJ
+
+# For any energy injection, these particle props
+# should be defined.
+
+# Kinetic energy injection
+# Thermal energy injection
+PARTICLEPROP KINE REAL
+PARTICLEPROP THRE REAL
+
+# For winds specifically, we define dM/dt
+PARTICLEPROP DMDT REAL

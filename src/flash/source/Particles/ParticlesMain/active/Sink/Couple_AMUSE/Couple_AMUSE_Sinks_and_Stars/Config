@@ -1,0 +1,42 @@
+D Note that here we don't allow Flash to create sinks
+D or for sinks to accrete. We will create "sinks" which
+D will represent MS stars without accretion, but it still
+D allows us to use all the bridging stuff I wrote for
+D sink particles already. - JW
+
+PPDEFINE SINKS_AND_STARS
+
+REQUIRES Particles/ParticlesMapping/meshWeighting/MapToMesh
+REQUIRES flashUtilities/sorting/quicksort
+REQUIRES Particles/ParticlesMain/active/massive
+
+D Mean gas sound speed around a sink.
+PARTICLEPROP CSGM REAL
+
+D This holds the gas velocity mean and gas
+D velocity variance in each direction around
+D a given sink particle.
+
+D Mean
+PARTICLEPROP VXGM REAL
+PARTICLEPROP VYGM REAL
+PARTICLEPROP VZGM REAL
+D Variance
+PARTICLEPROP VXGV REAL
+PARTICLEPROP VYGV REAL
+PARTICLEPROP VZGV REAL
+
+D Here's a variable that holds the amount of time
+D passed since a star was formed in this cell.
+
+PARTICLETYPE ACTIVE INITMETHOD custom MAPMETHOD weighted ADVMETHOD PT_ADVMETH_NONE
+
+D sfe            Local star formation efficiency (usually around 20-30%,
+D                see Krumholz, Dekel and McKee 2011)
+
+PARAMETER sfe                   REAL   0.3
+
+D Injection radius for winds, or if no winds, refinement radius for
+D blocks around active/massive particles.
+D ref_radius REAL -1.0
+PARAMETER ref_radius            REAL   -1.0

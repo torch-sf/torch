@@ -1,0 +1,77 @@
+# The usage of rt_maxHchange, rt_rayTrace has changed slightly in
+# RayRad/SinksRad when compared to RayRad, but FLASH uses the parameter
+# documentation in RayRad.  Not sure how to override. -AT, 2019 May 01
+
+#D rt_maxHchange Max change in H ionization/neutral fraction to target
+#D & during rad/ionize subcycle timestep.  This linearly modifies the radiation
+#D & timestep adopted by code.
+#PARAMETER rt_maxHchange REAL 0.1
+#
+#D rt_rayTrace Use raytracing from particles?
+#D & This parameter is distinct from useRadTrans, which toggles the entire
+#D & RadTrans unit (and so disables, e.g., both ray tracing and ionization)
+#PARAMETER rt_rayTrace BOOLEAN True
+
+# Some parameters of my own design. -JW
+
+D rt_heatInRad Subcycle the heating and cooling inside the ionization
+D & calculation (subcycle them together)?
+PARAMETER rt_heatInRad BOOLEAN True 
+
+D rt_numstepsRadTransDt Number of steps to take at a safe RadTrans dt
+PARAMETER rt_numstepsRadTransDt INTEGER 1
+
+D rt_useNumstepsRadTransDtOnStart Whether to use rt_numstepsRadTransDt on
+D & startup/restart.
+PARAMETER rt_useNumstepsRadTransDtOnStart BOOLEAN True
+
+D rt_useRadTransDt Whether to use RadTrans_computeDt at all?
+PARAMETER rt_useRadTransDt BOOLEAN True
+
+# needs raytracing
+#REQUIRES Particles/ParticlesMain/ray/MultiSourceSimple/Active/Sink
+
+# Now for use specifically with RadHeat.F90
+# which is used to subcycle the entire
+# radiation field, temperature field and
+# ionization fraction to equilibrium. -JW
+#REQUIRES physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
+
+# multigamma equation of state
+#REQUIRES physics/Eos/EosMain/Multigamma
+
+#define species here IHP is ionized, IHA is atomic
+#SPECIES IHP
+#SPECIES IHA
+#METAL \~/
+#SPECIES IHM
+
+USESETUPVARS vary_atomic_frac
+IF vary_atomic_frac
+  PPDEFINE VARY_ATM_FRAC
+  D rt_vary_atomic_frac allow for varying atomic weight?
+  PARAMETER rt_vary_atomic_frac BOOLEAN False
+  D atmu atomic weight 
+  VARIABLE atmu
+ENDIF
+
+D rt_ion_min Minimum ionization fraction tracked by IHA_SPEC,IHP_SPEC
+PARAMETER rt_ion_min REAL 1e-8
+
+D rt_neutral_min Minimum neutral fraction tracked by IHA_SPEC,IHP_SPEC
+PARAMETER rt_neutral_min REAL 0.0
+
+D rt_ion_threshold  Convergence threshold for radiation + ionization fraction
+D & subcycling.  Used to advance radiation until photo-ionization bubbles
+D & reach a rough steady state.  This rad/ionize subcycling effectively
+D & compensates for too-large radiation timesteps, and so enables
+D & (radiation,ionization,heat/cool) dt to be roughly the hydro dt.
+D & WARNING, rt_ion_threshold must be relatively large compared to rt_ion_min,
+D & or else the code will subcycle ionization unphysically, and may advance
+D & radiation + ionization too far ahead in time.
+# Should probably be the same as the minimum ionization or less,
+# since you can't otherwise resolve the minimum ionization (you might
+# overshoot then get corrected back above the converged solution).
+# UPDATE: behavior has changed, not clear that comment about being same as
+# minimum ionization or less applies - AT, 2019 May 01
+PARAMETER rt_ion_threshold REAL 1e-1

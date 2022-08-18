@@ -1,0 +1,43 @@
+#REQUIRES driver
+
+# Turn on dust cooling?
+D useDustCool BOOLEAN TRUE
+PARAMETER useDustCool    BOOLEAN TRUE
+
+D ih2_diss  care about H2 disscotiation
+PARAMETER ih2_diss       INTEGER     0
+
+D ih2_form  care about H2 formation 
+PARAMETER ih2_form       INTEGER     0
+
+D tstep_cool_factor  cooling timestep factor
+PARAMETER tstep_cool_factor     REAL   0.3
+
+D T_cool_min             cool only in regimes where temperature > T_cool_min
+PARAMETER T_cool_min                REAL    16.0
+
+D nd_cool_min             cool only in regimes where nd > nd_min (nd = number density)
+PARAMETER nd_cool_min                REAL    2.7355645e4
+
+D nd_cool_max             cool only in regimes where nd < nd_max (nd = number density)
+PARAMETER nd_cool_max                REAL    1.e30
+
+D temp_dust Dust temperature (constant throughout)
+PARAMETER temp_dust     REAL      6.0E0
+
+D Lambda_CR  gas cosmic ray heating (erg sec^-1)
+PARAMETER Lambda_CR                  REAL   1.e-27
+#D thermal energy loss
+#VARIABLE dene NOADVECT NORENORM NOCONSERVE
+
+D tdust dust temperature
+VARIABLE tdus
+
+D T_max   maximum temperature threshold within T_max_radius
+PARAMETER T_max        REAL  5.e4
+
+D T_max_core   maximum temperature threshold within T_max_core_radius
+PARAMETER T_max_core        REAL  2.e3
+
+D T_max_core_radius     maximum  radius below which temperature threshold is applied
+PARAMETER T_max_core_radius REAL 0.

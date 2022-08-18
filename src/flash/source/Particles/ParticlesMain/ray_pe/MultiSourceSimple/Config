@@ -1,0 +1,51 @@
+# for communication routines 
+REQUIRES flashUtilities/sorting/quicksort
+
+# point source specific properties
+# defined in Particles/Initialisation/WithHEALPix
+PARAMETER ph_sampling REAL 3.0
+PARAMETER ph_rotRays BOOLEAN FALSE
+PARAMETER ph_inBlockSplit BOOLEAN FALSE
+PARAMETER ph_initHPlevel INTEGER 1
+PARAMETER ph_radPressure BOOLEAN FALSE
+PARAMETER ph_EUVonDust BOOLEAN FALSE
+
+
+PARAMETER ph_xPeriodic BOOLEAN FALSE
+PARAMETER ph_yPeriodic BOOLEAN FALSE
+PARAMETER ph_zPeriodic BOOLEAN FALSE
+PARAMETER useRadTransfer BOOLEAN TRUE 
+
+# interval in which to check for communication
+PARAMETER ph_CommCheckInterval INTEGER 200
+
+# size of rays to collect until send off
+PARAMETER ph_raysToBundle INTEGER 50
+
+# stopping length in periodic box, not tested for other values
+# probably breaks at multiple crossings
+PARAMETER ph_periodicBoxL REAL 1.499
+PARAMETER ph_maxNRays INTEGER 10000
+
+# photoionization rate [1/s]
+VARIABLE phio
+
+# photoionization heating rate [erg/s]
+VARIABLE phhe
+
+# photoelectric flux [erg/s]
+# (In Habing units)
+VARIABLE PEFL
+
+# Here we make a couple of scratch variables
+# to hold the flux in a cell. Note these
+# don't participate in guardcell fills and are
+# not in checkpoint files.
+
+# photoionizing flux [erg/s]
+VARIABLE UVFL TYPE: GENERIC
+# photoelectric flux [ergs/s]
+VARIABLE FUFL TYPE: GENERIC
+
+#for source coupling
+PARAMETER maxStars INTEGER 100

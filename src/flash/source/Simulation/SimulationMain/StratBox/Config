@@ -1,0 +1,153 @@
+# Configuration file for Stratbox/ problem
+# Forked from setup-cube-USM/ and StratBox_Min_Restart/
+# Development started ~ 2019 Feb-Mar
+
+REQUIRES Driver
+REQUIRES physics/Hydro
+REQUIRES physics/Eos/EosMain/Gamma  # should we use Multigamma?...
+#REQUIRES Particles/ParticlesMain/active/SinkNoAdvance
+
+# If FERVENT is omitted, Multispecies is not actually needed.
+# Easier to leave as "required", code should still work, but Multispecies will
+# contain nothing.
+REQUIRES Multispecies
+
+REQUIRES Grid/GridMain/paramesh  # for nested refinement
+
+REQUESTS physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat  # for abundM, metal information...
+
+# ??? 2019 Feb 21 AT don't know what this is for . . .
+# answer -- if using multigrid... seems gacx must be there.
+# but has changed in Josh's FLASH4.5?...
+#USESETUPVARS bhtreeAcc
+#IF bhtreeAcc
+#ELSE
+#    VARIABLE GACX
+#    VARIABLE GACY
+#    VARIABLE GACZ
+#ENDIF
+
+D sim_bx0           Initial mag field, x component
+D sim_by0           Initial mag field, y component
+D sim_bz0           Initial mag field, z component
+PARAMETER sim_bx0 REAL 0.0
+PARAMETER sim_by0 REAL 0.0
+PARAMETER sim_bz0 REAL 0.0
+
+# stratbox init
+D sim_p             Stratbox pres at midplane; global pres if sim_useStrat=F
+D sim_rho           Stratbox rho at midplane; global rho if sim_useStrat=F
+D sim_useStrat      Enable/disable stratified exponential pres,rho profiles
+D sim_pIGM          Stratbox boundary (IGM) pres
+D sim_rhoIGM        Stratbox boundary (IGM) rho
+D sim_aParm1        Gravity profile param a1, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm2        Gravity profile param a2, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm3        Gravity profile param a3, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm4        Gravity profile param a4, Ibanez-Mejia+ 2016 eqns 5-7
+PARAMETER sim_useStrat      BOOLEAN True
+PARAMETER sim_p             REAL 1.0
+PARAMETER sim_rho           REAL 1.0
+PARAMETER sim_pIGM          REAL 1.0
+PARAMETER sim_rhoIGM        REAL 1.0
+PARAMETER sim_aParm1        REAL 0.0
+PARAMETER sim_aParm2        REAL 0.0
+PARAMETER sim_aParm3        REAL 0.0
+PARAMETER sim_aParm4        REAL 0.0
+
+# nested z-refinement
+D sim_zrefcut1      z location of 1st (smallest) nest-refinement bdry, cm
+D sim_zrefcut2      z location of 2nd nest-refinement bdry, cm
+D sim_zrefcut3      z location of 3rd nest-refinement bdry, cm
+D sim_zrefcut4      z location of 4th nest-refinement bdry, cm
+D sim_zrefcut5      z location of 5th (highest) nest-refinement bdry, cm
+D sim_zrefcut6      NOT USED, DUMMY VAR. z location of 6th nest-refinement bdry, cm
+D sim_zrefcut7      NOT USED, DUMMY VAR. z location of 7th nest-refinement bdry, cm
+D sim_targetRef     Target refinement
+D sim_useNestedRef  Use z-nested refinement?
+PARAMETER sim_zrefcut1      REAL        6.16E20 # 200 pc
+PARAMETER sim_zrefcut2      REAL        3.08E21 # 1 kpc
+PARAMETER sim_zrefcut3      REAL        9.24E21 # 3 kpc
+PARAMETER sim_zrefcut4      REAL        3.08E22 # 10 kpc
+PARAMETER sim_zrefcut5      REAL        6.16E22 # 20 kpc
+PARAMETER sim_zrefcut6      REAL        6.16E22 # 20 kpc
+PARAMETER sim_zrefcut7      REAL        6.16E22 # 20 kpc
+PARAMETER sim_targetRef     INTEGER     1
+PARAMETER sim_useNestedRef  BOOLEAN     False
+
+# For radiation, chemistry
+D sim_A_n       Mean nucleon number, neutral medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in Josh Wall's heating/cooling module HeatCool/phenHeat
+D sim_A_i       Mean nucleon number, ionized medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in Josh Wall's heating/cooling module HeatCool/phenHeat
+D sim_gamma_n   Heat capacity ratio Gamma, neutral medium
+D sim_gamma_i   Heat capacity ratio Gamma, ionized medium
+D sim_init_Hp   Initial ionization mass fraction stored in IHA_SPEC, IHP_SPEC
+D sim_tdust     Initial dust temperature (Kelvin), stored in TDUS_VAR
+
+PARAMETER sim_A_n       REAL    -1.0
+PARAMETER sim_A_i       REAL    -1.0
+PARAMETER sim_gamma_n   REAL    1.66667
+PARAMETER sim_gamma_i   REAL    1.66667
+PARAMETER sim_init_Hp   REAL    1.E-3
+PARAMETER sim_tdust     REAL    18.0
+
+# New Heating and Cooling routines (question: what unit defines these parameters...?)
+#D  sim_Z                   gas metallicity in fractions of Solar metallicity. used in the heating routine
+#D  sim_G0                  Interstellar radiation field in fractions of Draine's field (which is 1.7 Habing's field.)
+#D  h_cr                    Scale height of the cosmic ray heating. 2 kpc default
+#D  use_constant_heating    Swith to use the old, constant heating routine
+
+
+# ------------------
+# SN/SB unit driving
+# ------------------
+
+#REQUIRES physics/sourceTerms/SN/SNSBrandom
+##REQUIRES physics/sourceTerms/SN/SNSBrandom/SNsink
+#REQUIRES Particles/ParticlesMapping/Quadratic
+#REQUIRES Particles/ParticlesMapping/NoMap
+#REQUIRES Particles/ParticlesMain/passive/RungeKuttaThermo
+#
+#REQUESTS IO
+#REQUESTS IO/IOParticles
+#
+##particle stuff
+#PARTICLETYPE sb INITMETHOD custom MAPMETHOD nomap ADVMETHOD rungekuttastatic
+#PARTICLETYPE passive INITMETHOD custom MAPMETHOD weighted ADVMETHOD rungekuttathermo
+##PARTICLETYPE sink INITMETHOD custom MAPMETHOD weighted ADVMETHOD leapfrog
+
+# --------------------
+# Simple SN/SB driving
+# --------------------
+REQUESTS physics/sourceTerms/SN/Simple
+
+# ---------------------------
+# Static gravity
+# ---------------------------
+D sim_withStaticGrav    Let static grav potential from sim_aParm1-4
+D &                     accelerate gas and sink particles.
+PARAMETER sim_withStaticGrav    BOOLEAN     False
+
+# Temporary -- static grav doesn't work with BHTree, though rest of code should
+# function.  Forbid BHTree entirely to be super conservative.
+CONFLICTS physics/Gravity/GravityMain/Poisson/BHTree
+LINKIF Gravity_accelOneRow.F90.mg                           physics/Gravity/GravityMain/Poisson/Multigrid
+LINKIF Particles_sinkAccelGasOnSinksAndSinksOnGas.F90       Particles/ParticlesMain/active/Sink
+
+# ---------------------------
+# Stirred (driven) turbulence
+# ---------------------------
+#REQUIRES physics/sourceTerms/Stir/StirMain/Generate
+LINKIF st_calcAccel.F90                                     physics/sourceTerms/Stir/StirMain/FromFile
+
+D sim_stirLayer         Focus the stirring to thin layer in z,
+D &                     defined by +/-sim_stirH
+PARAMETER sim_stirLayer BOOLEAN     True
+
+D sim_stirH             Scale height for turbulent stirring
+D &                     z-profile scaling is 1 + tanh((h-|z|)/(0.5*h))
+D &                     so that energy input is about the same
+D &                     as constant forcing over +/-2h
+PARAMETER sim_stirH     REAL        3.09E20 # 100 pc

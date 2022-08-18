@@ -1,0 +1,14 @@
+DEFAULT MultiSource
+
+PPDEFINE FERVENT
+PPDEFINE PE_HEAT
+REQUIRES Particles/ParticlesMain/ray/rayAPI
+
+# this ensures that implemented stubs are chosen and not the stubs, as both folder are on the same hierarchy level
+CHILDORDER rayAPI
+
+PARAMETER useRadTransfer BOOLEAN  FALSE
+
+D Terminate the FUV bin rays if they are less than background FUV at local
+D shielding level.
+PARAMETER early_term_FUV BOOLEAN  FALSE

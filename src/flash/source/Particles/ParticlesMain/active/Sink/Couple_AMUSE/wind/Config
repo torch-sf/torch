@@ -1,0 +1,72 @@
+## Ensure that this unit defines its own use, so
+## that other units can know if its here.
+
+PPDEFINE WIND_INJ
+
+# For any energy injection, these particle props
+# should be defined.
+
+# Kinetic energy injection
+# Thermal energy injection
+PARTICLEPROP KINE REAL
+PARTICLEPROP THRE REAL
+
+# For winds specifically, we define dM/dt
+PARTICLEPROP DMDT REAL
+# And also the terminal wind velocity
+PARTICLEPROP VELW REAL
+
+# Store the initial background density to use
+# in calculating the injection radius.
+PARTICLEPROP BGDY REAL
+
+# Use the wind module to esitmate the timestep
+# constraint due to wind temp and velocity?
+
+PARAMETER use_wind_compute_dt         BOOLEAN TRUE
+
+# Which quantity to attempt to conserve in wind.
+PARAMETER cons_quant    	STRING "momentum"
+# Minimum mass at which to inject wind.
+PARAMETER min_wind_mass 	REAL    1.3923e34		# 7 solar masses 
+# Minimum mass loss rate at which to inject wind. Currently not used.
+PARAMETER min_wind_dmdt 	REAL	1e-7		# 1e-7 solar masses / year
+# Mass load the winds?
+PARAMETER mass_load         BOOLEAN TRUE
+# Force conservation of E in momentum conserving mode
+# by injection the difference of wind luminosity
+# energy and kinetic wind energy as thermal energy?
+PARAMETER add_therm_e       BOOLEAN FALSE
+
+
+# Target wind injection temperature.
+# Sets the mass loading of the wind to attempt to hit
+# the target temperature in the gas using the shock temperature
+# from velocity formula (T ~ 3/16 * mu / k_b * v**2.0)
+
+PARAMETER wind_target_temp  REAL    1e6
+
+# Wind injection radius.
+# This is used both to set the injection radius
+# for the energy and also to ensure that the
+# cells within this radius are all properly refined.
+
+# Commented out for now, assumed to be in Particles_data and in Config
+# for Sinks_and_Stars
+
+# Value of -1.0 is default and then uses
+# 3.5*sqrt(3)*dx. - JW
+#PARAMETER ref_radius 	REAL	-1.0		# 3.5*sqrt(3)*dx is a good start. -JW
+
+# Minimum wind injection radius
+PARAMETER min_radius 	REAL	0.0
+
+# Do you want to vary the radius out to ref_radius by analytic calculation
+# of R1 (from Weaver et al)?
+
+PARAMETER var_radius    BOOLEAN     FALSE
+
+# Do you want to perturb the injected velocities from the wind?
+PARAMETER perturb_velocity BOOLEAN  FALSE
+# With what standard deviation would you like to perturb it by?
+PARAMETER perturb_std_dev  REAL     0.05

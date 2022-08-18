@@ -1,0 +1,7 @@
+# Config file for the GridInject module
+
+DEFAULT GridInjectMain
+
+# Don't need runtime control for turning on/off
+# GridInject provides utility methods to other units; it will not modify
+# simulation if compiled in without calling units.

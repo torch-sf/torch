@@ -1,0 +1,32 @@
+### Zoom in module written by Josh Wall, Drexel U.
+### to zoom in on a particular region of a simulation
+### using either a rectangle or spherical region.
+
+#### Zoom in parameters
+
+PARAMETER use_zoom      BOOLEAN  false
+### RECTANGLE for rectangle zoom, INRADIUS for spherical zoom
+PARAMETER zoom_type     STRING   "INRADIUS"
+
+
+### If using zoom_type = RECTANGLE
+PARAMETER refine_xmin   REAL    -1.0e99  # Edges of rectangle
+PARAMETER refine_xmax   REAL     1.0e99
+PARAMETER refine_ymin   REAL    -1.0e99
+PARAMETER refine_ymax   REAL     1.0e99
+PARAMETER refine_zmin   REAL    -1.0e99
+PARAMETER refine_zmax   REAL     1.0e99
+### If = 0 then refine box and overlapping areas
+### If /=0 then refine only the box.
+PARAMETER only_in_box   REAL     0.0
+
+### If using zoom_type = INRADIUS
+PARAMETER x_center      REAL    0.0   # Coords of sphere
+PARAMETER y_center      REAL    0.0
+PARAMETER z_center      REAL    0.0
+PARAMETER sph_radius    REAL    0.0   # Radius of sphere
+
+
+### Maximuim refinement outside of
+### zoom area.
+PARAMETER outer_lmax    INTEGER  1

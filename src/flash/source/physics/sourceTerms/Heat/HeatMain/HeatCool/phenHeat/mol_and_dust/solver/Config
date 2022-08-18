@@ -1,0 +1,5 @@
+REQUIRES flashUtilities/IntegratorModule
+
+D he_int_method Select integration method to solve the heating/cooling energy
+D &             equation.  As of 2019 Dec 20, only "Implicit" is supported.
+PARAMETER he_int_method STRING "Implicit" ["Implicit", "Euler", "trap", "RK4"]

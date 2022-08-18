@@ -1,0 +1,40 @@
+#	Config file for the Poisson Multigrid module that couples to the AMUSE astrophysics package.
+#   Written by Josh Wall, Drexel U.  
+#  [source/physics/Gravity/Poisson/Multigrid/Couple_AMUSE]
+
+PPDEFINE AMUSE_GRAVITY_BRIDGE
+
+REQUESTS Grid/GridSolvers/Multigrid
+
+# Runtime parameters
+REQUESTS Grid/GridSolvers/IsoBndMultipole
+
+
+# These variables are used to map the accelerations
+# at each point in the grid to the sinks in the simulation.
+# These accels are gathered in Gravity_accelOneRow (which is
+# called by the hydro solver) or in Gravity_accelOneBlock if
+# its called.
+# These possibly no longer needed with PM bridge. - JW
+#VARIABLE gacx
+#VARIABLE gacy
+#VARIABLE gacz
+#VARIABLE gaox
+#VARIABLE gaoy
+#VARIABLE gaoz
+
+# This is the potential variable for the sinks gravity on the gas.
+# Used for the new particle mesh mapping method of the gravity bridge.
+# This gets finite differenced to get the acceleration for the bridge
+# for the sinks gravity on the gas.
+
+#VARIABLE SGPT
+
+# For the PM bridge used in AMUSE coupling - JW
+D BGPT The gravitational potential from the particles on the gas.
+VARIABLE BGPT
+D And acceleration variables for the acceleration from the particles on the gas.
+D (Because using the sink ones doesnt work if we are including sinks and massive particles.)
+VARIABLE BGAX
+VARIABLE BGAY
+VARIABLE BGAZ

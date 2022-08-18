@@ -1,0 +1,51 @@
+# Configuration file for the unit test of the BHTree Poisson Solver
+
+REQUIRES Driver
+REQUIRES physics/Hydro
+REQUIRES physics/Eos/EosMain/Gamma
+REQUIRES Particles/ParticlesMain/active/Sink
+
+USESETUPVARS gravSolver
+IF gravSolver=="bhtree"
+REQUIRES physics/Gravity/GravityMain/Poisson/BHTree
+ENDIF
+IF gravSolver=="mg"
+REQUIRES physics/Gravity/GravityMain/Poisson/Multigrid
+ENDIF
+
+USESETUPVARS cool
+IF cool=="larson"
+REQUIRES physics/sourceTerms/Cool/CoolMain/larson
+ENDIF
+IF cool=="pki"
+REQUIRES physics/sourceTerms/Cool/CoolMain/pki
+ENDIF
+IF cool=="iso"
+REQUIRES physics/sourceTerms/Cool/CoolMain/isotherm
+ENDIF
+
+
+#REQUIRES physics/sourceTerms/Wind/WindMain
+#REQUIRES physics/TreeRay/TreeRayMain/OnTheSpot
+
+# file from which radial profiles of grid quantities are read
+PARAMETER sim_cubeFile  STRING  "cube"
+
+# Jeans refinement and derefinement criteria
+# gives number of cells accross the Jeans length to refine/derefine
+D jeans_ref             Jeans refinement criterion.
+D & Gives number of cells accross the Jeans length to refine.
+D jeans_deref           Jeans derefinement criterion.
+D & Gives number of cells accross the Jeans length to derefine.
+PARAMETER jeans_ref             REAL    32.0
+PARAMETER jeans_deref           REAL    64.0
+
+
+USESETUPVARS bhtreeAcc
+IF bhtreeAcc
+ELSE
+VARIABLE GACX
+VARIABLE GACY
+VARIABLE GACZ
+ENDIF
+

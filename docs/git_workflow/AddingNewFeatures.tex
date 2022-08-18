@@ -1,0 +1,240 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.75in, letterpaper]{geometry}
+\usepackage{parskip}
+
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage[pdftex]{graphicx}
+\usepackage{hyperref}
+
+\usepackage{enumerate} % For use of (a), (b), et cetera
+\usepackage{booktabs} % Tables
+\usepackage[margin=20pt, labelfont=bf, labelsep=period,
+justification=justified]{caption} % Captions in figure floats
+
+% https://stackoverflow.com/questions/3175105/inserting-code-in-this-latex-document-with-indentation
+\usepackage{listings}
+\usepackage{color}
+
+% ======================
+% Document setup, layout
+% ======================
+
+% Code block formatting
+% http://texdoc.net/texmf-dist/doc/latex/listings/listings.pdf
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\lstset{
+  backgroundcolor=\color{lightgray},
+  frame=none,
+%  language=python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+%  mathescape=false,
+}
+
+% The following metadata will show up in the PDF properties
+\hypersetup{
+    colorlinks = true,
+    urlcolor = magenta,  % Links to URLs
+    linkcolor = blue,  % Links within PDF
+    pdfauthor = {},
+    pdfkeywords = {Torch, FLASH, AMUSE},
+    pdftitle = {Adding New Features to Torch - \today},
+    pdfsubject = {},
+    pdfpagemode = UseNone
+}
+
+% Don't indent paragraphs
+\setlength\parindent{0em}
+
+% Slightly more compact lines
+\linespread{0.95}
+
+% ===============
+% Useful commands
+% ===============
+\newcommand*{\mt}{\mathrm}
+\newcommand*{\unit}[1]{\;\mt{#1}}  % vemod.net/typesetting-units-in-latex
+\newcommand*{\abt}{\mathord{\sim}} % tex.stackexchange.com/q/55701
+\newcommand*\mean[1]{\bar{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}  % Bold vectors
+\newcommand*{\tsup}{\textsuperscript}
+
+% Sets, operators
+\newcommand*{\ints}{\mathbb{Z}}
+\newcommand*{\ptl}{\partial}
+\newcommand*{\dl}{\nabla}
+\newcommand*{\dtl}{\mathrm{d}}
+
+\newcommand*{\Msun}{M_\odot}
+\newcommand*{\sun}{\odot}
+\newcommand*{\kB}{k_\mathrm{B}}
+
+\begin{document}
+
+% =======
+% Titling
+% =======
+\begin{center}
+Adding New Features to \texttt{Torch} \\
+Last updated: \today \\
+\end{center}
+
+%\newpage
+
+% =========
+% Outline
+% =========
+
+% I. What are sink particles
+% 	a. definition; save computation time
+%	b. history (citations)
+%	c. usage in Torch
+% II. Setup Parameters
+%	a. Sink Size
+%		i. Truelove criterion
+%	b. Density threshold
+%		i. Derived from Jean's criterion
+%	c. Refinement
+%		i. refine_var_1 = "none"
+%		ii. refines on Jeans length
+% III. Rules of Sink creation
+% IV. Rules of Sink Accretion
+% V. Star Placement
+% VI. Discussion of Methods
+%	 a. using standard sink size
+%	 b. placing stars in uniform volume
+
+
+% =========
+% Overview
+% =========
+\section{Note to the reader}
+Keep in mind that everything listed here is based on my (Sean C. Lewis) personal workflow and can be augmented to fit whatever your preferences are.
+That said, following this workflow structure will help ensure that all contributions to the \texttt{Torch} project are kept organized and introduced to the master project in an organized matter.
+
+\section{Overview}
+In order to effectively maintain an up-to-date collaborative project, we will need to implement some sort of version control. Luckily, a \texttt{git} repository already exists for \texttt{Torch}: https://bitbucket.org/torch-sf/torch/src/master/
+
+\texttt{Git} version control allows multiple users to view and use the most recent version of a project while also maintaining individual feature development and bug fixes. \texttt{Git} is not inherently intuitive and this document is intended to be a basic guide to the development and implementation of a feature in \texttt{Torch}.
+
+A feature for \texttt{Torch} could be a minor update to a routine, a bugfix, or the inclusion of a new physics module. Any changes made to the \texttt{Torch} source code should be done using a process similar to the following.
+
+
+\section{Making a new \texttt{Torch} feature}
+
+\subsection{Bring local repository up-to-date with \texttt{master}}
+\begin{lstlisting}[language=bash]
+git checkout master
+git fetch origin
+git reset --hard origin/master
+\end{lstlisting}
+
+This series of commands will switch your local repository over to the master branch and resets the local to match the latest version of the source code.
+
+\textbf{WARNING:} If you have any previous changes that you have made locally, back them up in a repository outside of the Torch git controlled repo. All changes that diverge from the master branch will be erased by these commands.
+
+\texttt{git checkout master} moves your HEAD to your local master branch (which reflects the remote master branch at the time of your last \texttt{git pull}
+
+\texttt{git fetch origin} 'downloads' all updates from the remote master branch but does not make the changes locally.
+
+\texttt{git reset --hard origin/master} implements all changes staged for the master branch and disregards any local changes you have made.
+
+\subsection{Create new local branch off \texttt{master} to work in}
+
+We want to now create a local copy of the master branch that we can augment without consequence to the production source code. Here, the code snippet shows the creation and switching to a branch called \texttt{new-feature}.
+
+\begin{lstlisting}[language=bash]
+git checkout -b new-feature
+\end{lstlisting}
+
+The \texttt{-b} flag of this command ensures the branch \texttt{new-feature} is created locally if it does not exist yet.
+
+\textbf{NAME YOUR BRANCH}: As per convention, name your branch according to whatever task you intend to undertake (all lowercase with dashes in between words). We will pretend for the rest of this document that your branch is called \texttt{new-feature}
+
+You can check if you are in fact on this new branch by doing \texttt{git branch -a} which will show you all available branches and highlight the one you are on.
+
+Once here, you can implement any changes you like. If you had to backup some changes before going through this process, you can copy the pieces back into the appropriate directories now. All changes you are making at this point are to the local branch called \texttt{new-feature} (or whatever you choose). Therefore, no one else can see your changes, and no one can access them or begin to integrate them into the source code.
+
+To keep track of your changes to your branch: check the status of your branch (if you've made any changes since your last commit), make a change, stage the changes, commit the changes with an explanation message.
+
+\begin{lstlisting}[language=bash]
+git status
+git add [name-of-file]
+git status
+git commit -m "Explain your changes here (in quotes)"
+\end{lstlisting}
+
+You will want to perform these commits frequently, at the very least issue a commit every time a major change to your code is made. You can issue as many commits as you want prior to the next step of pushing your branch and associated changes to origin (remote).
+
+\subsection{Push \texttt{new-feature} branch to remote}
+This command makes your feature branch visible to all other collaborators on the project (both in content and all the commits you made during development).
+
+\begin{lstlisting}[language=bash]
+git push -u origin new-feature
+\end{lstlisting}
+
+ The \texttt{-u} flag adds the remote \texttt{origin/new-feature} as a remote tracking branch. In simple terms, it ties your local branch to a remote one.In the future if you can therefore simply use \texttt{git push} to push changes to the remote branch without the need for the extra fluff seen in the command here.
+
+Now, your \texttt{new-feature} branch exists locally and remotely, everyone in the project group can see it, comment on it, work on it themselves, but it is still separate from the \texttt{master} branch. Next is to incorporate your changes into the main project.
+
+\subsection{Issue pull request}
+Go online to bitbucket (or wherever the git repository is managed) and you will see an option available for you to issue a pull request. Within this, you will denote which branch you are wanting to merge to where (in this example, \texttt{new-feature} ---$>$ \texttt{master}) and write up a description of your features added, and denote users to be referees of your changes. They (and you) will then have to check if any changes you are intending to make will conflict with the code in \texttt{master}.
+
+\subsection{Updating your local repository}
+
+If changes have been made to the master script and you need to incorporate them into your \texttt{new-feature} branch, you can issue the following commands given that the repository you are working on has been pushed to origin (follow the above steps):
+\begin{lstlisting}[language=bash]
+git checkout new-feature
+git merge origin/master
+\end{lstlisting}
+This is a non destructive action and both \texttt{origin/master} and \texttt{new-feature} will remain intact with all commit histories preserved.
+
+If someone else has created their own branch \texttt{other-feature}, pushed it to origin, and you want to take a look at it (say they asked you to run some test problems using their branch), you first need to pull in that information from origin so you can see it locally. Then you can checkout \texttt{other-feature} and run your tests:
+
+\begin{lstlisting}[language=bash]
+git checkout origin/master
+git pull
+git checkout other-feature
+\end{lstlisting}
+
+\section{Other useful \texttt{git} commands}
+
+\texttt{git remote -v} \\
+shows the address of the remote repository that your local repository is associated with (cloned from, etc,).
+
+\texttt{git branch -a} \\
+shows all branches associated from the project and highlights the one you are currently on locally.
+
+\texttt{git rev-parse HEAD} \\
+shows what commit hash you are checked out on locally.
+
+\texttt{git log --graph} \\
+shows the commit history with comments and authorship as well as branches, merges, and pull requests.
+
+
+\section{Terminology}
+
+\textbf{version control} - a system that records the changes made to a set of files so that you can revert back to a specific previous states of the file set. This document describes how to use the \texttt{git} version control system. Version control can be as simple as you making local copies of all your files, but \texttt{git} is much more suited for projects with many users.
+
+\textbf{local branch} -  a \texttt{git} branch that exists on your personal computer; one you can \texttt{git checkout} to see and make changes to. Local branches can be put on the remote level via \texttt{git push}.
+
+\textbf{remote branch} - a branch that exists on the online version control system (origin). remote branches can be brought to the local level via \texttt{git pull}.
+
+\textbf{master branch} - represents the working full state of the project. Note: local and remote versions of this branch exist. If you simply \texttt{git checkout master} you will NOT be up to date with the latest version of the project. You must issue a \texttt{git pull} while on the master branch as well.
+
+\end{document}

@@ -1,0 +1,57 @@
+REQUIRES physics/Eos/EosMain/Gamma
+
+# If FERVENT is omitted, Multispecies is not actually needed.
+# Easier to leave as "required", code should still work, but Multispecies will
+# contain nothing.
+# Note: simulation problem MUST require Multispecies, because ray-tracing unit
+# does not have "requires" statement.
+REQUIRES Multispecies
+REQUESTS physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat  # for abundM, metal information...
+
+#REQUIRES physics/sourceTerms/SN/SNSBrandom/SNejecta
+#REQUIRES physics/sourceTerms/SN/SNSBrandom_test
+REQUIRES physics/sourceTerms/SN/Simple
+
+#REQUIRES Particles/ParticlesMapping/NoMap
+#REQUIRES Particles/ParticlesMapping/InZone
+#REQUIRES Particles/ParticlesInitialization/NParPerZone
+#REQUIRES Particles/ParticlesInitialization/NParPerZoneMC
+#REQUIRES Particles/ParticlesMain/passive/MonteCarlo/ejectaTracer
+#REQUIRES Particles/ParticlesMain/passive/RungeKuttaThermo
+
+#PARTICLETYPE sb INITMETHOD custom MAPMETHOD nomap ADVMETHOD rungekuttastatic
+#PARTICLETYPE passive INITMETHOD nparperzonemc MAPMETHOD InZone ADVMETHOD montecarlo
+
+D Bx0       Initial Bx component
+D By0       Initial By component
+D Bz0       Initial Bz component
+D rho       Initial density
+D pres      Initial pressure
+D gamma     EOS gamma, only for runs without ray trace / ionization
+
+PARAMETER Bx0	REAL 0.00
+PARAMETER By0	REAL 0.00
+PARAMETER Bz0	REAL 0.00
+PARAMETER rho	REAL 1.67e-23
+PARAMETER pres	REAL 1.38e-12
+PARAMETER gamma	REAL 1.6666666666666667
+
+# For radiation, chemistry
+D sim_A_n       Mean nucleon number, neutral medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in HeatCool/phenHeat
+D sim_A_i       Mean nucleon number, ionized medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in HeatCool/phenHeat
+D sim_gamma_n   Heat capacity ratio Gamma, neutral medium
+D sim_gamma_i   Heat capacity ratio Gamma, ionized medium
+D sim_init_Hp   Initial ionization mass fraction stored in IHA_SPEC, IHP_SPEC
+D sim_tdust     Initial dust temperature (Kelvin), stored in TDUS_VAR
+
+# average molecular weights, if negative, calculated from chemistry data
+PARAMETER sim_A_n      REAL    -1.0
+PARAMETER sim_A_i      REAL    -1.0
+PARAMETER sim_gamma_n  REAL    1.66667
+PARAMETER sim_gamma_i  REAL    1.66667
+PARAMETER sim_init_Hp  REAL    1.E-3
+PARAMETER sim_tdust    REAL    18.0

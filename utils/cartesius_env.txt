@@ -1,0 +1,28 @@
+# This environment script is for Surfsara Cartesius supercomputer cluster.
+# It sometimes needs to be run twice to properly load all modules.
+
+module load 2019
+module load foss/2018b
+
+module load Python/3.6.6-fosscuda-2018b
+module load HDF5/1.10.2-foss-2018b
+module load h5py/2.10.0-fosscuda-2018b-Python-3.6.6
+module load GSL/2.5-iccifort-2018.3.222-GCC-7.3.0-2.30
+module load pytest/4.4.0-fosscuda-2018b-Python-3.6.6
+
+export MODLOC=/sw/arch/RedHatEnterpriseServer7/EB_production/2019/software
+export MPIHOME=$MODLOC/OpenMPI/3.1.1-GCC-7.3.0-2.30
+
+export OMPI_MCA_mpi_warn_on_fork=0
+
+
+# Edit your working directory paths before loading this script.
+export AMUSE_DIR={/path/to/working/amuse/dir}
+export FLASH_DIR={/path/to/working/FLASH/dir}
+export TORCH_DIR={/path/to/working/Torch/dir}
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+export PROJ_DIR=/projects/0/flashrad

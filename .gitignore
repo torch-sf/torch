@@ -1,1 +1,63 @@
-legacy
+# Python: byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Vim: swap files
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+# Session
+Session.vim
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.eps
+*.gif
+*.tiff
+# Images (caps)
+*.PNG
+*.JPG
+*.JPEG
+*.EPS
+*.GIF
+*.TIFF
+
+# PDF files
+*.pdf
+*.PDF
+
+# PDF files NOT to be ignored
+!docs/quickstart/fig/torch-features.pdf
+!docs/quickstart/fig/quickstart-particles.pdf
+!docs/quickstart/fig/quickstart-dens-slice.pdf
+
+# Images NOT to be ignored
+!docs/torch_manual/fig/*.png
+!docs/sinks/fig/isothermal.png
+
+# Tars and zips
+*.gz
+*.tar
+*.GZ
+*.TAR

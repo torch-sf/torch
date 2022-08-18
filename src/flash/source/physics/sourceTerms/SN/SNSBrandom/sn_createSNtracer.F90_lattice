@@ -1,0 +1,486 @@
+!!
+!! NAME
+!!
+!!   sn_createSNtracer
+!!
+!! SYNOPSIS
+!!
+!!  inserts a passive particles as SB and a sphere of tracer particles around it
+!!
+!! ARGUMENTS
+!! x,y,z : position of SB
+!! time  : current simulation time   
+!! rad	 : shell radius
+!! tag   : this is either the particle tag or the he_nSN number
+!! SNtype: 1 for type I, 2 for type 2, 3 for SB SN, 4 for Sink SN 
+!!
+!!
+!! DESCRIPTION
+!! generates a passive particle field on a sphere on the SN shell
+!! velocity tracers are injected in a lattice structure
+!! passive tracer particles are then advected with the underlying gas velocity field   
+!!
+!!***
+!#define DEBUG_SN
+
+subroutine sn_createSNtracer(x, y, z, vx, vy, vz, temp, dens, time, tag, SNtype, blockID, gridspace, offset, ncount)
+
+	use Particles_Data, only: pt_maxPerProc, pt_numLocal, particles, pt_meshMe, pt_typeInfo
+	use SN_data, only: he_tracerPerSN, he_tracerPosX, he_tracerPosY, he_tracerPosZ, he_veltracer
+	use tree, only : bnd_box, lrefine
+  use Driver_interface, ONLY : Driver_abortFlash
+
+	implicit none
+
+#include "Flash.h"
+#include "Particles.h"
+#include "constants.h"
+
+  real,  intent(in) :: x,y,z,time,vx,vy,vz,temp,dens!,rad
+  real, dimension(NDIM),  intent(in) :: gridspace
+  integer,  intent(in) :: tag, SNtype,blockID, ncount
+  integer,  intent(inout) :: offset
+  integer :: startID, nP, i, p,  j, k, l
+	integer :: xID, yID, zID
+  integer :: latticesize
+  integer :: latx,laty,latz
+	real		:: xpos, ypos, zpos, spaceX, spaceY, spaceZ
+
+!	tracerDimN = he_tracerPerZone**3
+
+#ifdef DEBUG_SN
+	print*,'Creating SN tracers'
+	print*,'Number of local particles', pt_numLocal
+	print*,'Number of passive particles',pt_typeInfo(PART_LOCAL, PASSIVE_PART_TYPE)
+	print*,'SNtype,blockID,temp,dens',SNtype,blockID,temp,dens
+	print*,'zone coords',x,y,z
+#endif
+
+!////////////////////////////////// Vel tracer
+		if(he_veltracer) then
+
+! calculate number of new tracer particles
+! using ad hoc prime factorization, ugh 
+		  call prime_factor(ncount,latx,laty,latz)
+#ifdef DEBUG_SN
+		  print*,'target number of particles','from factorization','lattice dimensions'
+		  print*,ncount,latx*laty*latz,latx,laty,latz
+#endif
+
+		  allocate(he_tracerPosX(1:latX,1:latY,1:latZ))
+		  allocate(he_tracerPosY(1:latX,1:latY,1:latZ))
+		  allocate(he_tracerPosZ(1:latX,1:latY,1:latZ))
+
+			he_tracerPosX = 0.0
+			he_tracerPosY = 0.0
+			he_tracerPosZ = 0.0
+! spacing in x,y,z
+
+	! fill array, 4 because we want some distance from the boundaries
+			spaceX = 1.0/(latX)
+			spaceY = 1.0/(latY)
+			spaceZ = 1.0/(latZ)
+		  do i = 1, latX
+		    do j = 1, latY
+		      do k = 1, latZ
+				    he_tracerPosX(i,j,k) = (i-0.5)*spaceX
+				    he_tracerPosY(i,j,k) = (j-0.5)*spaceY
+				    he_tracerPosZ(i,j,k) = (k-0.5)*spaceZ
+		      enddo
+		    enddo
+		  enddo
+
+! check for space
+			if(pt_typeInfo(PART_LOCAL, PASSIVE_PART_TYPE) .gt. 0) then
+
+    	  startID = pt_numLocal+1
+
+    	  do i = 0, ncount-1
+! TODO offset here 
+    	    p = startID + i 
+					offset = offset + 1 
+
+!   same block as source initially
+    	    particles(BLK_PART_PROP,p)  = blockID
+    	    particles(PROC_PART_PROP,p) = real(pt_meshMe)
+! SB or sink tag, otherwise 0
+    	    particles(TAG_PART_PROP,p)  = offset
+
+    	    particles(TYPE_PART_PROP,p) = PASSIVE_PART_TYPE
+
+!					if() then
+! quick hack to get from linear array to 3d array indices
+					j = mod(i, latx) + 1
+					k = mod((i - mod(i, latx))/latx, laty) + 1
+					l = mod((i - mod(i, latx*laty))/(latx*laty),&
+					  	latz*latz) + 1
+!					endif
+
+
+! multiply position array by zonesize and move to right zone
+    	    particles(POSX_PART_PROP,p) = he_tracerPosX(j, k, l)*gridspace(1) + x
+    	    particles(POSY_PART_PROP,p) = he_tracerPosY(j, k, l)*gridspace(2) + y
+    	    particles(POSZ_PART_PROP,p) = he_tracerPosZ(j, k, l)*gridspace(3) + z
+
+! set from zone 
+    	    particles(VELX_PART_PROP,p) = vx
+    	    particles(VELY_PART_PROP,p) = vy
+    	    particles(VELZ_PART_PROP,p) = vz
+! type of origin SN
+    	    particles(TSN_PART_PROP,p)  = tag
+! explosion time 
+    	    particles(TCRT_PART_PROP,p) = time
+! free for whatever, temperature 
+    	    particles(NSN_PART_PROP,p)  = temp 
+! need one more field for density, could be mass if sinks are in etc. check with some preprocessor code maybe
+    	    particles(MASS_PART_PROP,p) = dens
+! free for whatever, volume
+	        particles(SBID_PART_PROP,p) = gridspace(1)*gridspace(2)*gridspace(3)
+
+    	  enddo
+    	   pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) = pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) + ncount
+	
+! is just last occupied slot
+    	   pt_numLocal = pt_numLocal +  ncount
+
+				if (pt_numLocal > pt_maxPerProc) then
+            call Driver_abortFlash &
+ 	            ("sb_createSNtracer:  Exceeded max # of particles/processor!")
+				endif
+
+! is just last occupied slot
+
+    	else
+
+! just append 
+    	  startID = pt_numLocal+1
+    	  do i = 0, ncount-1
+    	    p = startID + i 
+					offset = offset + 1 
+!   same block as source initially
+    	    particles(BLK_PART_PROP,p)  = blockID
+    	    particles(PROC_PART_PROP,p) = real(pt_meshMe)
+
+! SB or sink tag, otherwise 0
+    	    particles(TAG_PART_PROP,p)  = offset 
+    	    particles(TYPE_PART_PROP,p) = PASSIVE_PART_TYPE
+
+! quick hack to get from linear array to 3d array indices
+				  j = mod(i, latx) + 1
+				  k = mod((i - mod(i, latx))/latx, laty) + 1
+				  l = mod((i - mod(i, latx*laty))/(latx*laty),&
+					  latz*latz) + 1
+
+
+! multiply position array by zonesize and move to right zone
+    	    particles(POSX_PART_PROP,p) = he_tracerPosX(j, k, l)*gridspace(1) + x
+    	    particles(POSY_PART_PROP,p) = he_tracerPosY(j, k, l)*gridspace(2) + y
+    	    particles(POSZ_PART_PROP,p) = he_tracerPosZ(j, k, l)*gridspace(3) + z
+
+! set from zone 
+    	    particles(VELX_PART_PROP,p) = vx
+    	    particles(VELY_PART_PROP,p) = vy
+    	    particles(VELZ_PART_PROP,p) = vz
+
+! type of origin SN
+    	    particles(TSN_PART_PROP,p)  = tag
+! explosion time 
+    	    particles(TCRT_PART_PROP,p) = time
+! free for whatever, temperature 
+    	    particles(NSN_PART_PROP,p)  = temp 
+! need one more field for density, could be mass if sinks are in etc. check with some preprocessor code maybe
+    	    particles(MASS_PART_PROP,p) = dens
+! free for whatever, volume
+	        particles(SBID_PART_PROP,p) = gridspace(1)*gridspace(2)*gridspace(3)
+
+    	  enddo     
+    	   pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) = pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) + ncount
+
+! is just last occupied slot
+    	   pt_numLocal = pt_numLocal + ncount
+
+				if (pt_numLocal > pt_maxPerProc) then
+            call Driver_abortFlash &
+ 	            ("sb_createSNtracer:  Exceeded max # of particles/processor!")
+				endif
+
+! is just last occupied slot
+    	   pt_typeInfo(PART_TYPE_BEGIN,PASSIVE_PART_TYPE) = startID
+    	endif
+
+
+			deallocate(he_tracerPosX)
+		  deallocate(he_tracerPosY)
+		  deallocate(he_tracerPosZ)
+
+    	return
+
+!////////////////////////////////// MC tracer
+		else
+	
+    	if(pt_typeInfo(PART_LOCAL, PASSIVE_PART_TYPE) .gt. 0) then
+    	  startID = pt_numLocal+1
+
+    	  do i = 0, ncount-1
+! TODO offset here 
+    	    p = startID + i
+					offset = offset + 1 
+!   same block as source initially
+    	    particles(BLK_PART_PROP,p)  = blockID
+    	    particles(PROC_PART_PROP,p) = real(pt_meshMe)
+
+! SB or sink tag, otherwise 0
+    	    particles(TAG_PART_PROP,p)  = offset
+
+    	    particles(TYPE_PART_PROP,p) = PASSIVE_PART_TYPE
+
+! just center position 
+    	    particles(POSX_PART_PROP,p) = x
+    	    particles(POSY_PART_PROP,p) = y
+    	    particles(POSZ_PART_PROP,p) = z
+
+! move to local coordinate system
+					xpos = x - bnd_box(LOW,IAXIS,blockID)! + gridspace(1)*0.5d0
+					ypos = y - bnd_box(LOW,JAXIS,blockID)! + gridspace(2)*0.5d0
+					zpos = z - bnd_box(LOW,KAXIS,blockID)! + gridspace(3)*0.5d0
+
+! refinement level tracer sits at
+#ifdef LREF_PART_PROP
+					particles(LREF_PART_PROP,p) = lrefine(blockID)
+#endif
+
+! get the IDs from zone position
+					xID = floor(xpos/gridspace(1))+1
+					yID = floor(ypos/gridspace(2))+1
+					zID = floor(zpos/gridspace(3))+1
+
+! set from zone indices
+    	    particles(VELX_PART_PROP,p) = xID
+    	    particles(VELY_PART_PROP,p) = yID
+    	    particles(VELZ_PART_PROP,p) = zID
+! type of origin SN
+    	    particles(TSN_PART_PROP,p)  = tag
+! explosion time 
+    	    particles(TCRT_PART_PROP,p) = time
+! free for whatever, temperature 
+    	    particles(NSN_PART_PROP,p)  = temp 
+! need one more field for density, could be mass if sinks are in etc. check with some preprocessor code maybe
+    	    particles(MASS_PART_PROP,p) = dens
+! free for whatever, volume
+	        particles(SBID_PART_PROP,p) = gridspace(1)*gridspace(2)*gridspace(3)
+
+
+    	  enddo
+    	   pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) = pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) + ncount
+
+! is just last occupied slot
+    	   pt_numLocal = pt_numLocal +  ncount
+
+				if (pt_numLocal > pt_maxPerProc) then
+            call Driver_abortFlash &
+ 	            ("sb_createSNtracer:  Exceeded max # of particles/processor!")
+				endif
+
+! is just last occupied slot
+
+    	else
+
+! just append 
+	      startID = pt_numLocal+1
+	      do i = 0,  ncount-1
+! TODO offset here
+	        p = startID + i
+					offset = offset  + 1 
+!   same block as source initially
+	        particles(BLK_PART_PROP,p)  = blockID
+	        particles(PROC_PART_PROP,p) = real(pt_meshMe)
+! SB or sink tag, otherwise 0
+	        particles(TAG_PART_PROP,p)  = offset
+	        particles(TYPE_PART_PROP,p) = PASSIVE_PART_TYPE
+
+! multiply position array by zonesize and move to right zone
+	        particles(POSX_PART_PROP,p) = x
+	        particles(POSY_PART_PROP,p) = y
+	        particles(POSZ_PART_PROP,p) = z
+
+! refinement level tracer sits at
+#ifdef LREF_PART_PROP
+					particles(LREF_PART_PROP,p) = lrefine(blockID)
+#endif
+!				print*,lrefine(blockID),i
+
+! move to local coordinate system
+					xpos = x - bnd_box(LOW,IAXIS,blockID)! + gridspace(1)*0.5d0
+					ypos = y - bnd_box(LOW,JAXIS,blockID)! + gridspace(2)*0.5d0
+					zpos = z - bnd_box(LOW,KAXIS,blockID)! + gridspace(3)*0.5d0
+
+! get the IDs from zone position
+					xID = floor(xpos/gridspace(1))+1
+					yID = floor(ypos/gridspace(2))+1
+					zID = floor(zpos/gridspace(3))+1
+
+! set from zone indices
+	        particles(VELX_PART_PROP,p) = xID
+	        particles(VELY_PART_PROP,p) = yID
+	        particles(VELZ_PART_PROP,p) = zID
+
+! type of origin SN
+! not needed if it has SNtag, could look up type
+	        particles(TSN_PART_PROP,p)  = tag
+! explosion time 
+	        particles(TCRT_PART_PROP,p) = time
+! free for whatever, temperature 
+	        particles(NSN_PART_PROP,p)  = temp 
+! need one more field for density, could be mass if sinks are in etc. check with some preprocessor code maybe
+	        particles(MASS_PART_PROP,p) = dens
+! free for whatever, volume
+	        particles(SBID_PART_PROP,p) = gridspace(1)*gridspace(2)*gridspace(3)
+	      enddo
+
+	       pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) = pt_typeInfo(PART_LOCAL,PASSIVE_PART_TYPE) + ncount
+! is just last occupied slot
+  	     pt_numLocal = pt_numLocal + ncount
+
+				if (pt_numLocal > pt_maxPerProc) then
+            call Driver_abortFlash &
+ 	            ("sb_createSNtracer:  Exceeded max # of particles/processor!")
+				endif
+
+
+! is just last occupied slot
+  	     pt_typeInfo(PART_TYPE_BEGIN,PASSIVE_PART_TYPE) = startID
+  	  endif
+  	  return
+	endif
+
+contains
+
+!return 3 more or less equal factors of num
+	subroutine prime_factor(num,xfac,yfac,zfac)
+implicit none
+    integer,  intent(in) :: num
+		integer,  intent(out):: xfac,yfac,zfac
+		integer :: nfactors, i, j, N
+! if there's a number with more than 100 factors eff me
+		integer,dimension(100) :: factors
+
+	  integer, dimension(168) :: primes = (/ &
+     &   2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37,  41, &
+     &  43,  47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, &
+     & 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, &
+     & 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, &
+     & 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, &
+     & 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, &
+     & 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, &
+     & 479, 487, 491, 499, 503, 509, 521, 523, 541, 547, 557, 563, 569, &
+     & 571, 577, 587, 593, 599, 601, 607, 613, 617, 619, 631, 641, 643, &
+     & 647, 653, 659, 661, 673, 677, 683, 691, 701, 709, 719, 727, 733, &
+     & 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811, 821, 823, &
+     & 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911, &
+     & 919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997 /)
+
+print*,'factorize',num
+		 N = num
+! let's hope num is not one of these primes
+     if (N .eq. 0) return
+! 1D lattice		
+     if (N .le. 3) then				!if number .le. 3 then return number
+          xfac = N
+          yfac = 1
+          zfac = 1
+	 print*, '3 particles per zone'
+					return
+     endif
+! 2D lattice
+
+			nfactors = 0
+			factors = 0
+			i = 1 
+
+			do while(i .lt. 168)
+! found factorization
+!				if(primes(i) .gt. N) then					
+!					exit
+!				endif
+      	if ( mod(N,primes(i)) .eq. 0 ) then	!prime is a factor
+					N = N / primes(i)
+					nfactors = nfactors + 1
+					factors(nfactors) = primes(i)
+! reset search, not efficient but meh
+					i = 0
+! factorized
+        	if (N .eq. 1) exit
+				endif
+				i = i + 1
+			enddo
+
+			print*, 'factors', factors(1:nfactors)
+
+			if(N .gt. 1 ) then
+				print*,'factorization failed'
+			endif
+
+			do while( nfactors .gt. 4)
+! should be sorte from bottom up after loop
+! even/ odd test, multiply away
+				if(mod(nfactors,2) .eq. 0) then
+					do j = 1, nfactors/2
+					  factors(j) = factors(nfactors-(j-1))*factors(j)
+					enddo
+					nfactors = nfactors/2
+				else
+					do j = 1, (nfactors-1)/2
+					  factors(j) = factors(nfactors-(j-1))*factors(j)
+					enddo
+					nfactors = (nfactors-1)/2+1
+				endif
+! sorting step
+			  call sort(nfactors,factors)
+			enddo
+
+			if (nfactors .eq. 2 ) then
+          xfac = factors(1)
+          yfac = factors(2)
+          zfac = 1
+			endif
+
+			if (nfactors .eq. 3 ) then
+          xfac = factors(1)
+          yfac = factors(2)
+          zfac = factors(3)
+			endif
+
+!! should be sorted ascending !!
+! this is the only choice for 4
+			if (nfactors .eq. 4) then
+! sort 
+          xfac = factors(1)*factors(2)
+          yfac = factors(3)
+          zfac = factors(4)
+			endif
+
+	end subroutine prime_factor
+
+	subroutine sort(N,ARR)
+	  implicit none
+	  integer,dimension(N),intent(inout) :: arr
+	  integer,intent(in) :: N
+	  integer :: j,a,i,ind
+
+	  do j=1, N
+	    ind = j
+	    a=ARR(j)
+	    do i=j+1,N
+! if value is less or equal put in spot afterwards and move to next value
+	      if (ARR(i) .le. a) then
+	        ind = i
+	        a   = ARR(i)
+	      endif
+	    end do
+	    ARR(ind) = ARR(j)
+	    ARR(j) = a
+	  end do
+	  return
+	end subroutine sort
+
+end subroutine sn_createSNtracer

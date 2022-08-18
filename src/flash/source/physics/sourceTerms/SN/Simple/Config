@@ -1,0 +1,59 @@
+# Config file for the SN/Simple module
+
+REQUIRES physics/sourceTerms/GridInject/GridInjectMain
+
+D callRNG       call RNG at restart?  If <= 0, do not reset RNG.
+D &             if >= 1, call RNG that many times to generate new seed.
+PARAMETER callRNG       INTEGER     -1
+
+D hstar1        Scale height of Type Ia SN distr (cm, 325pc); requires stratifySN=T
+D hstar2        Scale height of Type II SN distr (cm, 90pc); requires stratifySN=T
+D stratifySN    distribute SN in z-exponential profile or uniformly
+D tsn1          Avg time between Type Ia SNe (s; 152 kyr for 1 kpc^2 and 6.58 Myr^-1 kpc^-2)
+D &             Update this value if your simulation domain size changes
+D tsn2          Avg time between Type II SNe (s; 91 kyr for 1 kpc^2 and 10.96 Myr^-1 kpc^-2)
+D &             Total SN II rate 27.4 Myr^-1 kpc^-2, 60% clustered 40% field.
+D &             Update this value if your simulation domain size changes
+
+PARAMETER hstar1        REAL        1.0028e21
+PARAMETER hstar2        REAL        2.7771e20
+PARAMETER stratifySN    BOOLEAN     FALSE
+PARAMETER tsn1          REAL        4.79588541E12
+PARAMETER tsn2          REAL        2.86881145E12
+
+D exp_energy    SN explosion energy (erg)
+D Mejc          ejecta mass per supernova (g, 60 Msun)
+D nms           number of mass shells, about 1 pc per shell
+D nsndt         max allowed number of SN explosions per timestep
+D r_exp_max     SN maximum radius (cm, 50 pc)
+D r_init        SN initial radius (cm, 2pc)
+D sn_max_temp   maximum temperature if not enough mass is found,
+D &               only used when sn_injEint=T
+D SNmapToGrid   always explode in center of zone?
+D SNminstep     small dt limiter (s) to prevent overcooling
+
+PARAMETER exp_energy    REAL        1.0003E51
+PARAMETER Mejc          REAL        1.1934E35
+PARAMETER nms           INTEGER     50
+PARAMETER nsndt         INTEGER     20
+PARAMETER r_exp_max     REAL        1.54283879E20
+PARAMETER r_init        REAL        6.1714E18
+PARAMETER sn_max_temp   REAL        1e9
+PARAMETER SNmapToGrid   BOOLEAN     FALSE
+PARAMETER SNminstep     REAL        3.1556926E10
+
+D sn_kinetic    Use kinetic prescription for SN driving instead of pure thermal
+PARAMETER sn_kinetic    BOOLEAN     FALSE
+
+D sn_tstop      Halt all SN driving after this time.
+PARAMETER sn_tstop      REAL        1E99
+
+D sn_fieldMode  How to distribute field supernovae?
+PARAMETER sn_fieldMode STRING "random" ["random", "single", "double"]
+
+D sn_single_x   x-coordinate of supernova, for sn_fieldMode=single
+D sn_single_y   y-coordinate of supernova, for sn_fieldMode=single
+D sn_single_z   z-coordinate of supernova, for sn_fieldMode=single
+PARAMETER sn_single_x   REAL        0e0
+PARAMETER sn_single_y   REAL        0e0
+PARAMETER sn_single_z   REAL        0e0

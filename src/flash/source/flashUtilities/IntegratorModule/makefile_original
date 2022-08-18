@@ -1,0 +1,20 @@
+# Joshua Wall
+# Drexel University
+# Spring 2017
+
+all: OdeData.o OdeInt.o test.x
+
+OdeData.o:
+	gfortran -c OdeData.F90
+	
+OdeInt.o:
+	gfortran -c OdeInt.F90
+
+test.x:
+	gfortran -ggdb -Wall -o test.x test.f95 OdeInt.o OdeData.o
+
+.Phoney: clean
+
+clean:
+	rm -f test.x OdeInt.o OdeData.o
+	rm -f OdeInt.mod OdeData.mod

@@ -1,0 +1,87 @@
+# Configuration file for Cube_Velocity/ problem
+
+REQUIRES Driver
+REQUIRES physics/Hydro
+REQUIRES physics/Eos/EosMain/Gamma  # should we use Multigamma?...
+#REQUIRES Particles/ParticlesMain/active/SinkNoAdvance
+REQUIRES Multispecies
+
+REQUIRES Grid/GridMain/paramesh  # for nested refinement
+
+REQUESTS physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat  # for abundM, metal information...
+
+D sim_bx0           Initial mag field, x component
+D sim_by0           Initial mag field, y component
+D sim_bz0           Initial mag field, z component
+PARAMETER sim_bx0 REAL 0.0
+PARAMETER sim_by0 REAL 0.0
+PARAMETER sim_bz0 REAL 0.0
+
+# stratbox init
+D sim_p             Stratbox pres at midplane; global pres if sim_useStrat=F
+D sim_rho           Stratbox rho at midplane; global rho if sim_useStrat=F
+D sim_useStrat      Enable/disable stratified exponential profiles
+D sim_pIGM          Stratbox boundary (IGM) pres
+D sim_rhoIGM        Stratbox boundary (IGM) rho
+D sim_aParm1        Gravity profile param a1, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm2        Gravity profile param a2, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm3        Gravity profile param a3, Ibanez-Mejia+ 2016 eqns 5-7
+D sim_aParm4        Gravity profile param a4, Ibanez-Mejia+ 2016 eqns 5-7
+PARAMETER sim_useStrat      BOOLEAN True
+PARAMETER sim_p             REAL 1.0
+PARAMETER sim_rho           REAL 1.0
+PARAMETER sim_pIGM          REAL 1.0
+PARAMETER sim_rhoIGM        REAL 1.0
+PARAMETER sim_aParm1        REAL 0.0
+PARAMETER sim_aParm2        REAL 0.0
+PARAMETER sim_aParm3        REAL 0.0
+PARAMETER sim_aParm4        REAL 0.0
+
+# For radiation, chemistry
+D sim_A_n       Mean nucleon number, neutral medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in Josh Wall's heating/cooling module HeatCool/phenHeat
+D sim_A_i       Mean nucleon number, ionized medium.
+D & If negative, calculated from chemistry data (he_abundM, he_metal)
+D & in Josh Wall's heating/cooling module HeatCool/phenHeat
+D sim_gamma_n   Heat capacity ratio Gamma, neutral medium
+D sim_gamma_i   Heat capacity ratio Gamma, ionized medium
+D sim_init_Hp   Initial ionization mass fraction stored in IHA_SPEC, IHP_SPEC
+D sim_tdust     Initial dust temperature (Kelvin), stored in TDUS_VAR
+
+PARAMETER sim_A_n       REAL    -1.0
+PARAMETER sim_A_i       REAL    -1.0
+PARAMETER sim_gamma_n   REAL    1.66667
+PARAMETER sim_gamma_i   REAL    1.66667
+PARAMETER sim_init_Hp   REAL    1.E-3
+PARAMETER sim_tdust     REAL    18.0
+
+D sim_velcubeFile  File from which radial profiles of grid quantities are read
+D sim_machTurb  Initial velocity Mach number, global average, for cube turbulent velocities
+PARAMETER sim_velcubeFile   STRING  "velcube"
+PARAMETER sim_machTurb      REAL    5.0
+
+# New Heating and Cooling routines (question: what unit defines these parameters...?)
+#D  sim_Z                   gas metallicity in fractions of Solar metallicity. used in the heating routine
+#D  sim_G0                  Interstellar radiation field in fractions of Draine's field (which is 1.7 Habing's field.)
+#D  h_cr                    Scale height of the cosmic ray heating. 2 kpc default
+#D  use_constant_heating    Swith to use the old, constant heating routine
+
+
+# ----------------------------
+# STUFF FOR SN/SB unit driving
+# ----------------------------
+
+#REQUIRES physics/sourceTerms/SN/SNSBrandom
+##REQUIRES physics/sourceTerms/SN/SNSBrandom/SNsink
+#REQUIRES Particles/ParticlesMapping/Quadratic
+#REQUIRES Particles/ParticlesMapping/NoMap
+#REQUIRES Particles/ParticlesMain/passive/RungeKuttaThermo
+#
+#REQUESTS IO
+#REQUESTS IO/IOParticles
+#
+##particle stuff
+#PARTICLETYPE sb INITMETHOD custom MAPMETHOD nomap ADVMETHOD rungekuttastatic
+#PARTICLETYPE passive INITMETHOD custom MAPMETHOD weighted ADVMETHOD rungekuttathermo
+##PARTICLETYPE sink INITMETHOD custom MAPMETHOD weighted ADVMETHOD leapfrog
