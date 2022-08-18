@@ -9,7 +9,7 @@
 !!! J. Wall Drexel University 2017
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!#define debug
+#define debug
 #define debug2
 subroutine Particles_wind(dt)
 
