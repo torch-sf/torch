@@ -145,14 +145,18 @@ The Torch code includes contributions by:
 * Sabrina Appel
 * Claude Cournoyer-Cloutier
 * Raúl Domínguez
+* Will Farner
+* Joseph Glaser
 * Ralf Klessen
 * Sean Lewis
 * Steve McMillan
 * Mordecai-Mark Mac Low
 * Andrew Pellegrino
+* Brooke Polak
 * Simon Portegies Zwart
 * Aaron Tran
 * Joshua Wall
+* Martijn Wilhelm
 
 In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 
