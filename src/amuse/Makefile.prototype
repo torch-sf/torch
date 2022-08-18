@@ -10,7 +10,10 @@ FC      = $(MPIFC)
 # https://stackoverflow.com/questions/63892055/fortran-error-type-mismatch-between-two-unrelated-subroutine-calls
 # https://github.com/NOAA-GFDL/FMS/issues/561
 # Beware, -fallow-argument-mismatch is strongly discouraged by GCC docs
-# FCFLAGS += -fallow-argument-mismatch
+
+# Temporary: breaks on gcc7, long-term fix is to check compiler version.
+# Short-term fix to demo pull request + work on rusty/graham. -ATr,2022aug18
+#FCFLAGS += -fallow-argument-mismatch
 
 LDFLAGS  += -lm $(MUSE_LD_FLAGS)
 
