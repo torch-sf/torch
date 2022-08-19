@@ -239,13 +239,12 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 #endif
 
 
-! First order correction to effective surfaces of cells -MW
-costheta2 = dirz*dirz/(dirx*dirx + diry*diry + dirz*dirz)
-atan2xy = atan2(dirx, diry)
-
-surface_correction = sqrt(1.-costheta2) + sqrt(costheta2)
-surface_correction = surface_correction*(abs(sin(atan2xy)) + abs(cos(atan2xy)))
-
+  ! Correction to effective surfaces of cells -MW
+  ! Projected area of each face is the area times the dot product of the face's 
+  ! normal and the viewing vector (the direction of the ray). Every ray pierces
+  ! two faces, so need only count every dimension once. Sum of all faces is then
+  ! sum of (normalized) cartesian unit vectors dot product with ray
+  surface_correction = (abs(dirx) + abs(diry) + abs(dirz))/sqrt(dirx*dirx + diry*diry + dirz*dirz)
 
 ! I'm lazy, I didn't rename the Nion variable. Just note that for radiation
 ! bin for PE photons (5.6-13.6 eV) when you see Nion it means pe photons. - JW
