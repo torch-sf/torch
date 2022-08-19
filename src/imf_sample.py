@@ -11,7 +11,7 @@ from scipy.integrate import quad
 
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False):
+                              max_samp_mass=150.0, sum_small=False, jet_fraction=0.0):  #Add jet_fraction parameter -SA 20220819
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
@@ -38,8 +38,13 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
         masses = collect_small_stars_mass(masses)
 
     np.random.shuffle(masses)
+    
+    # Define starjet_masses value - SA 20220819
+    starjet_masses = (1.0 + jet_fraction) * masses
+    print("TEST: this is the star mass: ", masses)
+    print("And this is the total mass and of the star and jet: ", starjet_masses)
 
-    return masses
+    return masses, starjet_masses
 
 
 def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
