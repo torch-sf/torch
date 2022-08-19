@@ -346,6 +346,7 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_mass=USER['sample_imf_mass'],
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
+            jet_fraction=USER['jet_fraction']
         )
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
