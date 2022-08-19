@@ -285,6 +285,9 @@ def user_parameters():
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
+    # Set jet_fraction parameter - SA 20220819
+    p['jet_fraction'] = 0.33  # Set default to 0.0 if no jets
+
     # <amuse file overwrite>
 
     p['overwrite'] = True # <True> Passes flag to AMUSE write_set_to_file(); allows .amuse files to be overwritten without warning.
