@@ -209,7 +209,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, sum_small=False,
-                sample_imf_bins=10):
+                sample_imf_bins=10, jet_fraction=0.0):  #Add default value of jet_fraction -SA 20220819
     """Check hydro for new sinks, queue stars for spawning"""
 
     hydro.set_particle_pointers('sink')
@@ -227,15 +227,16 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
 
         if sink_tag not in state.all_masses:
             state.all_masses[sink_tag] = np.array([])
+            state.starjet_masses[sink_tag] = np.array([]) # Added starjet masses -SA 20220819
             tprint("... new sink tag {}".format(sink_tag))
 
         while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-            new_masses = sample_stellar_mass(
+            new_masses, new_starjet_masses = sample_stellar_mass(
                             sample_imf_mass.value_in(units.MSun),
                             num_bins=sample_imf_bins,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
-                            sum_small=sum_small,
+                            sum_small=sum_small, jet_fraction=jet_fraction  # Added jet_fraction -SA 20220819
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')
@@ -244,6 +245,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             print(" max mass {}".format(np.amax(new_masses)))
 
             state.all_masses[sink_tag] = np.concatenate((state.all_masses[sink_tag], new_masses))
+            state.starjet_masses[sink_tag] = np.concatenate((state.starjet_masses[sink_tag], new_starjet_masses))
+            #  Added starjet state - SA 20220819
 
     hydro.set_particle_pointers('mass')
 
@@ -289,6 +292,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
         spawn_masses = state.all_masses[sink_tag][:i]
+        spawn_starjet = state.starjet_masses[sink_tag][:i] # Added starjet masses - SA 20220819
         nnew = len(spawn_masses)
 
         if nnew == 0:
@@ -299,6 +303,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
             print(" {:d} stars,".format(nnew), end='')
+            print(" total starjet masses {},".format(np.sum(spawn_starjet)), end='') # Added print statement -SA 20220819
             print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
             print(" due to absence of nearby cold gas")
 
@@ -306,6 +311,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
             print(" {:d} stars,".format(nnew), end='')
+            print(" total starjet masses {},".format(np.sum(spawn_starjet)), end='') # Added print statement -SA 20220819
             print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
             print(" max mass {:.2f}".format(np.amax(spawn_masses)))
 
@@ -313,13 +319,14 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             # Remove newly-created stars from sink's queue
             state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
+            state.starjet_masses[sink_tag] = state.startjet_masses[sink_tag][nnew:]  # Added -SA 20220819
 
             # Remove the mass from the sink.
-            sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun)
+            sink_mass = sink_mass - (np.sum(spawn_starjet)|units.MSun) # Change to remove spawn_starjet instead of spawn_masses -SA 20220819
             hydro.set_particle_mass(sink_tag, sink_mass)
 
             star          = Particles(nnew)
-            star.mass     = spawn_masses | units.MSun
+            star.mass     = spawn_masses | units.MSun # Leave this as spawn_masses to form correct stellar mass - SA 20220819
             # Isothermal spherical distribution.
             star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
             # Gaussian distribution satisfying <vx**2> = sink_cs**2
