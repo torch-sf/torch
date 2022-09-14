@@ -192,7 +192,8 @@ if (first_call) then
     ! If we are setting ref_radius to -1, this means we want to
     ! vary the injection radius up to 
     if (ref_radius == -1.0) then
-      ref_radius = 3.5_dp*sqrt(3.0_dp)*delta(1)
+      !!  Update to account for larger injection region of jets - SA 20220825
+      ref_radius = 10.0_dp*delta(1) !3.5_dp*sqrt(3.0_dp)*delta(1)  ! This is the old winds value
     end if
     
     injectRadius = ref_radius
@@ -218,9 +219,10 @@ end if
 !!!  Since this is the JETS code, we don't want either mass loading
 !!!  or perturb_velocity set.  So, we directly set both to false here
 !!!  in case they get set to true elsewhere.  -SA 1/23/2022
+!!!  Adding var_radius and setting it to false for the same reason. -SA 20220825
 mass_load = .false.
 perturb_velocity = .false.
-
+var_radius = .false.
 
 ! Mechanical Energy injected by the wind. - JW
 injE = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
