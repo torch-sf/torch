@@ -580,9 +580,14 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
 
                     theta_zero = 0.01
-                    ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
-                         ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
-                         atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
+                    
+                    if (abs(sin(3.14159265359/2.0 - theta)) .ge. ave_delta/rad_jet) then  ! Eq. 21 from Cunningham - if statement added 20220825
+                        ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
+                            ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
+                            atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
+                    else
+                        ang_dependence = 0.0  !!  This sets the gap at the equator
+                    endif
 
                     if (4*ave_delta .lt. rad_jet .AND. rad_jet .lt. 8*ave_delta) then   !!  This assumes delta=delta_x from Cunningham.
                        !!!  I am pretty sure that delta is the min cell size - and I think this is what we want here.
