@@ -236,10 +236,10 @@ rampVelocity = .false. !.true.
 sumOverlap = 0.0_dp
 sumMass = 0.0_dp
 
-calcBgDens   = .false.
+calcBgDens   = .false.  !  Keep false unless we really know what we're doing. -SA 20220825
 mass_load_factor = 0.0d0
 
-snap_to_grid = .false. !.true.
+snap_to_grid = .true. !.false. !! Set to true for jets -SA 20220825
 globalDeltaE = 0.0
 globalDeltaP = 0.0
 globalTE     = 0.0
