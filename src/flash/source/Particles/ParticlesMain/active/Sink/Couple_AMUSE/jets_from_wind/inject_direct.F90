@@ -599,9 +599,10 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
                     
-                    print*, "cos^2 is:", (cos(theta))**2.0 
-                    print*, "But Cunningham ang dependence is: ", ang_dependence
-                    print*, "Also, the radial dependence is:", rad_dependence
+                    
+                    !print*, "cos^2 is:", (cos(theta))**2.0 
+                    !print*, "But Cunningham ang dependence is: ", ang_dependence
+                    !print*, "Also, the radial dependence is:", rad_dependence
 
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
@@ -642,9 +643,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     
                     ! apply the Cunningham angular and radial dependence to
                     ! overlap frac  - SA  March 21, 2022
-                    print *, "overlap_frac before Cunningham is", overlap_frac
+                    ! print *, "overlap_frac before Cunningham is", overlap_frac
                     overlap_frac = overlap_frac * ang_dependence * rad_dependence
-                    print *, "overlap_frac after Cunningham is", overlap_frac
+                    ! print *, "overlap_frac after Cunningham is", overlap_frac
 
                     ! sum all weightings for normalization later
                     if (rad .ge. min_radius) then
@@ -670,7 +671,8 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
-print*, "sumOverlap is", sumOverlap
+if (gr_meshMe == 0) &   ! Added 20220825 -SA
+    print*, "sumOverlap is", sumOverlap
 
 if (perturb_velocity) then
 
@@ -783,9 +785,10 @@ if (iHaveInjectBlk) then
                       ! changes in thermal energy that have big
                       ! consequences in EOS calls. So just skip.
                       if (injectDataOverlap(n,i,j,k) .le. 0.0_dp) cycle
-                      
+                      !!!  Possibly eventually change this to just set injectDataOverlap to 0 instead of cycling? -SA 20220825                      
+
                       ! Note: This is includes the mass loaded stuff.
-                      print*, "Within momentum loop, sumOverlap is", sumOverlap  ! -SA
+                      !print*, "Within momentum loop, sumOverlap is", sumOverlap  ! -SA
                       dDens   = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
                       oldDens = solndata(DENS_VAR,i,j,k)
                       newDens = solndata(DENS_VAR,i,j,k) + dDens ! m + delta_m
