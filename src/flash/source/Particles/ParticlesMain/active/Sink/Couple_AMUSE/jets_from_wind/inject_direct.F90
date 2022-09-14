@@ -626,14 +626,19 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     ! Get the background density to estimate what the inject
                     ! radius should be physically. - JW
                     if (calcBgDens) &
-                    bgDens = bgDens + overlap_frac*solndata(DENS_VAR, i, j, k)
+                        bgDens = bgDens + overlap_frac*solndata(DENS_VAR, i, j, k)
 
-                    if (.not. mass_load) then
-                        ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
-                        ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
-                        solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
-                        overlap_frac = overlap_frac*solidAngle
-                    end if
+
+                    !!!!!!  Removing the solidAngle lines for the jets module.
+                    !!!!!!  Since we have the radial dependence from the Cunningham model, we don't need the 
+                    !!!!!!  additional radial dependence from the decreasing solidAngle value with radius.
+                    !!!!!!  Add back in for winds.     -SA 20220825
+                    ! if (.not. mass_load) then
+                    !     ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
+                    !     ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
+                    !     solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
+                    !     overlap_frac = overlap_frac*solidAngle
+                    ! end if
                     
                     ! apply the Cunningham angular and radial dependence to
                     ! overlap frac  - SA  March 21, 2022
