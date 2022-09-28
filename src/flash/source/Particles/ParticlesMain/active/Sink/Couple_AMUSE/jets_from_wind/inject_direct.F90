@@ -193,6 +193,9 @@ if (first_call) then
     ! vary the injection radius up to 
     if (ref_radius == -1.0) then
       !!  Update to account for larger injection region of jets - SA 20220825
+      !!  The new value is based on the injection region of the Cunningham model.
+      !!  The upper limit of the radial dependence for the Cunningham model is 8*delta_x
+      !!  so we set the default value of ref_radius to be definitely larger than that. -SA
       ref_radius = 10.0_dp*delta(1) !3.5_dp*sqrt(3.0_dp)*delta(1)  ! This is the old winds value
     end if
     
