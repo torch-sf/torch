@@ -319,7 +319,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             # Remove newly-created stars from sink's queue
             state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
-            state.starjet_masses[sink_tag] = state.startjet_masses[sink_tag][nnew:]  # Added -SA 20220819
+            state.starjet_masses[sink_tag] = state.starjet_masses[sink_tag][nnew:]  # Added -SA 20220819
 
             # Remove the mass from the sink.
             sink_mass = sink_mass - (np.sum(spawn_starjet)|units.MSun) # Change to remove spawn_starjet instead of spawn_masses -SA 20220819
