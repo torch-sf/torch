@@ -162,6 +162,8 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         vterm = 10**(1.23 - 0.30 * np.log10(se_lum.value_in(units.LSun))
                 + 0.55*np.log10(se_mass.value_in(units.MSun))
                 + 0.64*np.log10(se_temp.value_in(units.K))) | units.km/units.s
+        
+        print("Current jet velocity - using wind equation: ", vterm) # Add to check current velocities - SA 20220927
 
     # Note that Leitherer and Puls calculations use the old mass
 
