@@ -197,7 +197,9 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     eject_fraction = 3  # eject one third of the initial mass into the protostellar outflows
     max_jet_mass = 9.0 | units.MSun
     jet_lifetime = 1e5 | units.yr  # inject jets over 100 kyr
+    jet_vel = 100 | units.km / units.s  # placeholder velocity for jets - should be updated -SA 20221011
     print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
+    print("Jet placeholder velocity: ", jet_vel)
     
     if ((se_mass.value_in(units.MSun) < max_jet_mass.value_in(units.MSun)) and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
         print("We are injecting jets.")
@@ -206,9 +208,10 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         dm = dm_tot *(dt/jet_lifetime)
         print("mass injected in this time step: ", dm)
         dm_dt = dm/dt   # Just a quick placeholder that hopefully isn't too huge.
+        vterm = jet_vel  # Quick placeholder that is a more reasonable scale. -SA 20221011
     else:
         print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
-    print("New dmdt value: ", dm_dt)
+    print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
 
     return dm_dt, vterm
 
