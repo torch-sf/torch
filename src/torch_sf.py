@@ -286,6 +286,9 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
 
+        # Add quick print statement to double check sink accretion method for jets -SA 20221012
+        tprint("Sink mass before forming stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))  
+
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
         i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
@@ -341,6 +344,9 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+
+    # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
+    tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
