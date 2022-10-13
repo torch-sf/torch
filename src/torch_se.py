@@ -23,6 +23,7 @@ from torch_stdout import tprint
 h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
+G = 6.6743e-8  #Gravitational constant in cgs (from astropy constants)
 
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
 E_ev = 1.60222497096e-12 # energy of 1 eV in erg
@@ -185,19 +186,27 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     else:
         raise Exception("Invalid stellar mass loss method")
 	
-    ###  Set jets dmdt value ###
+    ###  Set jets dmdt and vterm values ###
     
     ##  Add a chunk of code to make a non-zero dm_dt in the case of low mass stars so that we 
     ##  can do jets.  Will need to be significantly improved. -SA July 7, 2022
+    ##  First print some things to check
     print("In torch_se.py; computing dmdt.")
     print("Current dmdt value: ", dm_dt)
     print("prev_mass: ", prev_mass.value_in(units.MSun), "se_mass: ", se_mass.value_in(units.MSun), "initial mass: ", init_mass.value_in(units.MSun))
     print("stellar age: ", t_evol)  #check that this is working
 
+    ##  Now set some constants (eventually these should all be user defined parameters or defined at the start of the funcion)
     eject_fraction = 3  # eject one third of the initial mass into the protostellar outflows
     max_jet_mass = 9.0 | units.MSun
     jet_lifetime = 1e5 | units.yr  # inject jets over 100 kyr
     jet_vel = 100 | units.km / units.s  # placeholder velocity for jets - should be updated -SA 20221011
+    jet_vel_frac = 1  #This needs to be a user defined parameter.  This correpsonds to f_v in Cunningham+2011
+
+    ##  Now to calculate the keplerian velocity to set the 
+    v_kepler = np.sqrt(G * se_mass.value_in(units.g) / se_radius.value_in(units.cm)) | units.km/units.s
+    print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
+
     print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
     print("Jet placeholder velocity: ", jet_vel)
     
@@ -208,7 +217,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         dm = dm_tot *(dt/jet_lifetime)
         print("mass injected in this time step: ", dm)
         dm_dt = dm/dt   # Just a quick placeholder that hopefully isn't too huge.
-        vterm = jet_vel  # Quick placeholder that is a more reasonable scale. -SA 20221011
+        vterm = jet_vel_frac * v_kepler  # Quick placeholder that is a more reasonable scale. -SA 20221011
     else:
         print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
     print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
