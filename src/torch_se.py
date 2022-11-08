@@ -23,7 +23,7 @@ from torch_stdout import tprint
 h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
-G = 6.6743e-8  #Gravitational constant in cgs (from astropy constants)
+G_cgs = 6.6743e-8  #Gravitational constant in cgs (from astropy constants)
 
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
 E_ev = 1.60222497096e-12 # energy of 1 eV in erg
@@ -206,9 +206,9 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     ##  Now to calculate the keplerian velocity to set the 
     print("Check mass: ", se_mass, "Check radius: ", se_radius)
     print("Check mass: ", se_mass.value_in(units.g), "Check radius: ", se_radius.value_in(units.cm))
-    print("Check G (in cgs): ", G)
-    v_kepler_cgs = np.sqrt( G * se_mass.value_in(units.g) / (se_radius.value_in(units.cm))) | (units.cm/units.s)
-    v_kepler = v_kepler_cgs.to(u.km/u.s)
+    print("Check G (in cgs): ", G_cgs)
+    v_kepler_cgs = np.sqrt( G_cgs * se_mass.value_in(units.g) / (se_radius.value_in(units.cm))) | (units.cm/units.s)
+    v_kepler = v_kepler_cgs.as_quantity_in(units.km/units.s)
     print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
 
     print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
