@@ -204,7 +204,11 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     jet_vel_frac = 1  #This needs to be a user defined parameter.  This correpsonds to f_v in Cunningham+2011
 
     ##  Now to calculate the keplerian velocity to set the 
-    v_kepler = np.sqrt(G * se_mass.value_in(units.g) / se_radius.value_in(units.cm)) | units.km/units.s
+    print("Check mass: ", se_mass, "Check radius: ", se_radius)
+    print("Check mass: ", se_mass.value_in(units.g), "Check radius: ", se_radius.value_in(units.cm))
+    print("Check G (in cgs): ", G)
+    v_kepler_cgs = np.sqrt( G * se_mass.value_in(units.g) / (se_radius.value_in(units.cm))) | (units.cm/units.s)
+    v_kepler = v_kepler_cgs.to(u.km/u.s)
     print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
 
     print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
