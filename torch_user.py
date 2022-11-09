@@ -285,8 +285,10 @@ def user_parameters():
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
 
-    # Set jet_fraction parameter - SA 20220819
+    # Set jet parameters - SA 20221108
     p['jet_fraction'] = 0.33  # Set default to 0.0 if no jets
+    p['jet_lifetime'] = 1e5 | units.yr
+    p['jet_vel_frac'] = 1 
 
     # <amuse file overwrite>
 
