@@ -38,7 +38,8 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None, jet_fraction, jet_lifetime, jet_vel_frac):
+    jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
+    massloss_method=None, min_feedback_mass=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -116,7 +117,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
                     _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, s.initial_mass,
-                                              massloss_method=massloss_method, jet_fraction, jet_lifetime, jet_vel_frac)
+                                              jet_fraction, jet_lifetime, jet_vel_frac,
+                                              massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
 
@@ -152,7 +154,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
 
 def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, 
-                        init_mass, massloss_method=None, jet_fraction=0.0, jet_lifetime, jet_vel_frac=1):
+                        init_mass, jet_fraction=0.0, jet_lifetime=0.0|untis.yr, jet_vel_frac=1,
+                        massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
 	init_mass  = s.initial_mass
@@ -215,8 +218,8 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         print("total mass lost to outflows: ", dm_tot)
         dm = dm_tot *(dt/jet_lifetime)
         print("mass injected in this time step: ", dm)
-        dm_dt = dm/dt   # Just a quick placeholder that hopefully isn't too huge.
-        vterm = jet_vel_frac * v_kepler  # Quick placeholder that is a more reasonable scale. -SA 20221011
+        dm_dt = dm/dt   
+        vterm = jet_vel_frac * v_kepler  
     else:
         print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
     print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)

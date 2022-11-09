@@ -248,11 +248,11 @@ def evolve(state, hydro, grav, mult, se):
                     with_pe_heat      = USER['with_pe_heat'],
                     with_winds        = USER['with_winds'],
                     with_sn           = USER['with_sn'],
+                    jet_fraction      = USER['jet_fraction'],
+                    jet_lifetime      = USER['jet_lifetime'],
+                    jet_vel_frac      = USER['jet_vel_frac'],
                     massloss_method   = USER['massloss_method'],
-                    min_feedback_mass = USER['min_feedback_mass'],
-                    jet_fraction      = USER['jet_fraction']
-                    jet_lifetime      = USER['jet_lifetime'], 
-                    jet_vel_frac      = USER['jet_vel_frac']
+                    min_feedback_mass = USER['min_feedback_mass']
                 )
                 tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
