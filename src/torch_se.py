@@ -154,7 +154,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
 
 def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, 
-                        init_mass, jet_fraction=0.0, jet_lifetime=0.0|untis.yr, jet_vel_frac=1,
+                        init_mass, jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
                         massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
