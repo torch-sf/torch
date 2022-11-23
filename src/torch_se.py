@@ -116,7 +116,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, s.initial_mass,
+                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol[i], s.initial_mass,
                                               jet_fraction, jet_lifetime, jet_vel_frac,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
@@ -211,6 +211,10 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
 
     #print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
+    #print("Check se_mass shape: ", se_mass.value_in(units.MSun))
+    #print("Check max_jet_mass: ", max_jet_mass.value_in(units.MSun))
+    print("Check t_evol: ", t_evol.value_in(units.yr))
+    #print("Check jet_lifetime: ", jet_lifetime.value_in(units.yr))
     
     if ((se_mass.value_in(units.MSun) < max_jet_mass.value_in(units.MSun)) and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
         print("We are injecting jets.")
