@@ -13,6 +13,9 @@ If you do not have write access to this repository, you can fork the repo and
 submit a pull request following the
 [Forking Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow).
 
+A beginner's guide to Git branching workflow, written by Sean Lewis, is also
+provided in this repository at `docs/git_workflow/AddingNewFeatures.tex`.
+
 
 HOWTO submit a pull request
 ---------------------------
