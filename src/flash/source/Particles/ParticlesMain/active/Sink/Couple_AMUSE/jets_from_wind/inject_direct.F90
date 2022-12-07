@@ -552,7 +552,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
                     !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
                     theta_x = 0.0  !0.78  !!is roughly pi/4
-                    theta_y = 0.4
+                    theta_y = 1.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
                     theta_z = 0.0  !1.57
 
                     dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
