@@ -470,6 +470,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
         # Version for ppds, as disk mass is being annoying... -MW
         if USER['with_ppds']:
             make_and_add_stars_with_ppds(state, hydro, grav, se, ppds, 
+                USER['min_feedback_mass'],
+                first_feedback_mass=USER['first_feedback_mass'],
                 max_frac=USER['disk_max_stable_fraction'],
                 sink_rad=USER['sink_rad'])
 

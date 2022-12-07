@@ -276,6 +276,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['first_feedback_mass'] = None # mass of first feedback star to form; if None, this isn't tampered with
 
     # <star particle creation>
 
