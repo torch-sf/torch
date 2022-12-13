@@ -176,9 +176,9 @@ def initialize_workers():
                 USER['disk_alpha'], USER['disk_mu'], USER['disk_n_cells'],
                 USER['disk_r_min'], USER['disk_r_max'], USER['fried_folder'],
                 max_frac=USER['disk_max_stable_fraction'])
-
-        ppds.collision_detector = grav.stopping_conditions.collision_detection
-        ppds.collision_detector.enable()
+        if USER['with_truncations']:
+            ppds.collision_detector = grav.stopping_conditions.collision_detection
+            ppds.collision_detector.enable()
 
     else:
 
@@ -383,7 +383,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
                             target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
 
                         # Event loop for dynamic interactions between disks -MW
-                        while ppds.collision_detector.is_set():
+                        while USER['with_truncations'] and \
+                                ppds.collision_detector.is_set():
 
                             tprint("Encounter between stars!")
 
