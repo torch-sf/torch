@@ -71,7 +71,7 @@ from torch_ppd import (
     reinitialize_ppds,
 )
 
-from ppd_population import PPD_population, G0
+from ppd_population_async import PPDPopulationAsync, G0
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -160,15 +160,17 @@ def initialize_workers():
         p = FlashPar("flash.par")
         if not p['restart']:
             if USER['rad_field_method'] == 'rad_trans':
-                ppds = PPD_population(
+                ppds = PPDPopulationAsync(
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'], grid_hydro=hydro,
-                   max_frac=USER['disk_max_stable_fraction'])
+                   max_frac=USER['disk_max_stable_fraction'],
+                   vader_mode='pedisk')
             elif USER['rad_field_method'] == 'geometric':
-                ppds = PPD_population(
+                ppds = PPDPopulationAsync(
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'],
-                   max_frac=USER['disk_max_stable_fraction'])
+                   max_frac=USER['disk_max_stable_fraction'],
+                   vader_mode='pedisk')
 
         else:
             ppds = reinitialize_ppds (hydro, p['checkpointFileNumber'],

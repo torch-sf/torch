@@ -13,7 +13,7 @@ from torch_stdout import tprint
 from torch_sf import random_three_vector, queue_stars
 from imf_sample import sample_stellar_mass
 
-from ppd_population import initial_disk_mass, restart_population
+from ppd_population_async import initial_disk_mass, restart_population
 
 
 def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, max_frac=1.,
@@ -266,16 +266,18 @@ def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
     if rad_field_method == 'rad_trans':
 
         ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
-            n_cells, r_min, r_max, fried_folder, label='chk_',
+            n_cells, r_min, r_max, fried_folder=fried_folder, label='chk_',
             number_of_workers=num_viscous_workers, grid_hydro=hydro,
-            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac)
+            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac,
+            vader_mode='pedisk')
 
     elif rad_field_method == 'geometric':
 
         ppds = restart_population(hydro.get_output_dir(), ppd_index, alpha, mu,
-            n_cells, r_min, r_max, fried_folder, label='chk_',
+            n_cells, r_min, r_max, fried_folder=fried_folder, label='chk_',
             number_of_workers=num_viscous_workers,
-            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac)
+            extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac,
+            vader_mode='pedisk')
 
     print ("No. disks, stars:", len(ppds.disked_stars), len(ppds.star_particles), 
         flush=True)
