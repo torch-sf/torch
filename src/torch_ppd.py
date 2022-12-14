@@ -16,8 +16,8 @@ from imf_sample import sample_stellar_mass
 from ppd_population_async import initial_disk_mass, restart_population
 
 
-def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, max_frac=1.,
-        sink_rad=None):
+def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, 
+        min_feedback_mass, first_feedback_mass=None, max_frac=1., sink_rad=None):
     '''
     Replacement of make_stars_from_sinks and add_particles_to_grav for runs with
     ppds. Note that this is only for new stars and disks; for old stars and disks,
@@ -50,14 +50,39 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds, max_frac=1.,
 
         # get all the stars that we can form now
         # disk material must also be present! gas, and 1% dust
-        csum = np.cumsum(state.all_masses[sink_tag] + \
-            initial_disk_mass(
-                state.all_masses[sink_tag]|units.MSun,
-                max_frac=max_frac).value_in(units.MSun)*1.01)
-        i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
-        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+        if first_feedback_mass is None or \
+                state.stars.initial_mass.max() >= min_feedback_mass:
+            csum = np.cumsum(state.all_masses[sink_tag] + \
+                initial_disk_mass(
+                    state.all_masses[sink_tag]|units.MSun,
+                    max_frac=max_frac).value_in(units.MSun)*1.01)
 
-        spawn_masses = state.all_masses[sink_tag][:i]
+            i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
+            assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+
+            spawn_masses = state.all_masses[sink_tag][:i]
+
+        else:
+            masses_to_spawn = state.all_masses[sink_tag] + \
+                initial_disk_mass(
+                    state.all_masses[sink_tag]|units.MSun,
+                    max_frac=max_frac).value_in(units.MSun)*1.01
+            i_first_feedback_star = np.argmax( # pick first feedback star
+                state.all_masses[sink_tag] >= \
+                min_feedback_mass.value_in(units.MSun))[0]
+            # if no massive star is on the list, the first star would become massive
+            if state.all_masses[sink_tag][i_first_feedback_star] >= \
+                    min_feedback_mass.value_in(units.MSun):
+                masses_to_spawn[i_first_feedback_star] = \
+                    first_feedback_mass.value_in(units.MSun)
+
+            csum = np.cumsum(masses_to_spawn)
+
+            i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
+            assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+
+            spawn_masses = masses_to_spawn[:i]
+
         nnew = len(spawn_masses)
 
         if nnew == 0:

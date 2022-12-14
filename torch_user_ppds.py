@@ -276,6 +276,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['first_feedback_mass'] = None # mass of first feedback star to form; if None, this isn't tampered with
 
     # <star particle creation>
 
@@ -296,6 +297,7 @@ def user_parameters():
     p['disk_n_cells'] = 330 # disks' number of cells
     p['fried_folder'] = './' # file location of FRIED grid
     p['disk_max_stable_fraction'] = 0.75 # disks' mass fraction of maximum stable mass
+    p['with_truncations'] = True # take dynamic truncations of encountering disks into account
 
     # <amuse file overwrite>
 
