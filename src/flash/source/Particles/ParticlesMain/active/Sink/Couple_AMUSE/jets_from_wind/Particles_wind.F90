@@ -78,6 +78,8 @@ min_wind_dt = 1d99
   p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
   p_end   = p_num + p_begin - 1
 
+print*, "Number of particles (begin, num, end): ", p_begin, p_num, p_end, " -SA 202212"
+
 allocate(p_ind(pt_numLocal))
 p_ind = 0
 
@@ -185,6 +187,9 @@ call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 #ifdef debug
 print*, "Done gathering.", dr_globalMe
 #endif
+
+print*, "Starting loop with inject_direct call (w_num): ", w_num , " -SA 202212"
+
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
@@ -193,6 +198,7 @@ do p=1, w_num
 #ifdef debug2
   if (dr_globalMe .eq. 0) &
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
+    print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
 #endif
   
   call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p))

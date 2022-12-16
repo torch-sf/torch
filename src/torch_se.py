@@ -73,6 +73,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     for i, s in enumerate(state.stars):
 
+        print("Looping through stars. Init Mass: ", s.initial_mass, " position: ", s.x, s.y, s.x)
+        
         if went_supernova(s.stellar_type):
             continue
 
@@ -222,8 +224,8 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         print("total mass lost to outflows: ", dm_tot)
         dm = dm_tot *(dt/jet_lifetime)
         print("mass injected in this time step: ", dm)
-        dm_dt = dm/dt   
-        vterm = jet_vel_frac * v_kepler  
+        dm_dt = dm/dt
+        vterm = jet_vel_frac * v_kepler
     else:
         print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
     print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
