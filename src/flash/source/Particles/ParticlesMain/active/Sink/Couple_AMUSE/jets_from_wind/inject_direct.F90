@@ -342,6 +342,9 @@ if (gr_meshMe == 0) &
     write(*, '(A,ES13.3e3)') " injection radius / dx = ", injectRadius/delta(1)
 #endif
 
+if (gr_meshMe == 0) &
+    print*, "loc before snap_to_grid:", loc_in  !SA 20221221
+
 ! Place the star in the center of a cell. Gives best results
 if (snap_to_grid) then
     do i=1,3
@@ -353,6 +356,10 @@ else
     loc(:) = loc_in(:)    
 
 end if
+
+if (gr_meshMe == 0) &
+    print*, "loc after snap_to_grid:", loc  !SA 20221221
+
 
 #ifdef DEBUG
 if (gr_meshMe == 0) then
