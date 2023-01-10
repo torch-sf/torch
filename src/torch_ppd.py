@@ -243,7 +243,9 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     state.stars.add_particles(add_star)
     state.stars = state.stars.sorted_by_attribute('tag')
 
-    grav.particles.add_particles(add_star)
+    #grav.particles.add_particles(add_star)
+    for part in add_star:
+        grav.particles.add_particle(part)
     grav.particles.mass = add_star.gravity_mass
 
     if add_parts_restart:
