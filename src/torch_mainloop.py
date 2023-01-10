@@ -161,23 +161,32 @@ def initialize_workers():
         if not p['restart']:
             if USER['rad_field_method'] == 'rad_trans':
                 ppds = PPDPopulationAsync(
+                   alpha=USER['disk_alpha'], mu=USER['disk_mu'],
+                   number_of_cells=USER['disk_n_cells'],
+                   r_min=USER['disk_r_min'], r_max=USER['disk_r_max'],
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'], grid_hydro=hydro,
                    max_frac=USER['disk_max_stable_fraction'],
-                   vader_mode='pedisk')
+                   vader_mode=USER['vader_mode'], dust_params=USER['dust_params'],
+                   dust_model=USER['dust_model'])
             elif USER['rad_field_method'] == 'geometric':
                 ppds = PPDPopulationAsync(
+                   alpha=USER['disk_alpha'], mu=USER['disk_mu'],
+                   number_of_cells=USER['disk_n_cells'],
+                   r_min=USER['disk_r_min'], r_max=USER['disk_r_max'],
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'],
                    max_frac=USER['disk_max_stable_fraction'],
-                   vader_mode='pedisk')
+                   vader_mode=USER['vader_mode'], dust_params=USER['dust_params'],
+                   dust_model=USER['dust_model'])
 
         else:
             ppds = reinitialize_ppds (hydro, p['checkpointFileNumber'],
                 USER['rad_field_method'], USER['num_viscous_workers'], 
                 USER['disk_alpha'], USER['disk_mu'], USER['disk_n_cells'],
                 USER['disk_r_min'], USER['disk_r_max'], USER['fried_folder'],
-                max_frac=USER['disk_max_stable_fraction'])
+                max_frac=USER['disk_max_stable_fraction'], vader_mode=USER['vader_mode'],
+                dust_model=USER['dust_model'], dust_params=USER['dust_params'])
         if USER['with_truncations']:
             ppds.collision_detector = grav.stopping_conditions.collision_detection
             ppds.collision_detector.enable()

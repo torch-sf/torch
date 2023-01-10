@@ -51,7 +51,7 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds,
         # get all the stars that we can form now
         # disk material must also be present! gas, and 1% dust
         if first_feedback_mass is None or \
-                state.stars.initial_mass.max() >= min_feedback_mass:
+                (len(state.stars) > 0 and state.stars.initial_mass.max() >= min_feedback_mass):
             csum = np.cumsum(state.all_masses[sink_tag] + \
                 initial_disk_mass(
                     state.all_masses[sink_tag]|units.MSun,
@@ -69,19 +69,24 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds,
                     max_frac=max_frac).value_in(units.MSun)*1.01
             i_first_feedback_star = np.argmax( # pick first feedback star
                 state.all_masses[sink_tag] >= \
-                min_feedback_mass.value_in(units.MSun))[0]
+                min_feedback_mass.value_in(units.MSun))
             # if no massive star is on the list, the first star would become massive
             if state.all_masses[sink_tag][i_first_feedback_star] >= \
                     min_feedback_mass.value_in(units.MSun):
                 masses_to_spawn[i_first_feedback_star] = \
                     first_feedback_mass.value_in(units.MSun)
+            else:
+                i_first_feedback_star = -1
 
             csum = np.cumsum(masses_to_spawn)
 
             i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
             assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
-            spawn_masses = masses_to_spawn[:i]
+            spawn_masses = state.all_masses[sink_tag][:i]
+            if i_first_feedback_star >= 0 and i_first_feedback_star < i:
+                spawn_masses[i_first_feedback_star] = \
+                    first_feedback_mass.value_in(units.MSun)
 
         nnew = len(spawn_masses)
 
@@ -282,7 +287,8 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
 
 
 def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
-        alpha, mu, n_cells, r_min, r_max, fried_folder, max_frac=1.):
+        alpha, mu, n_cells, r_min, r_max, fried_folder, max_frac=1.,
+        dust_model='Haworth2018', dust_params=None, vader_mode='pedisk'):
     '''
     Reinitialize a ppd population code. This is complicated by the internal
     structure of the disks
@@ -294,7 +300,7 @@ def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
             n_cells, r_min, r_max, fried_folder=fried_folder, label='chk_',
             number_of_workers=num_viscous_workers, grid_hydro=hydro,
             extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac,
-            vader_mode='pedisk')
+            vader_mode=vader_mode, dust_model=dust_model, dust_params=dust_params)
 
     elif rad_field_method == 'geometric':
 
@@ -302,7 +308,7 @@ def reinitialize_ppds (hydro, ppd_index, rad_field_method, num_viscous_workers,
             n_cells, r_min, r_max, fried_folder=fried_folder, label='chk_',
             number_of_workers=num_viscous_workers,
             extra_attributes=['tag', 'fuv_luminosity'], max_frac=max_frac,
-            vader_mode='pedisk')
+            vader_mode=vader_mode, dust_model=dust_model, dust_params=dust_params)
 
     print ("No. disks, stars:", len(ppds.disked_stars), len(ppds.star_particles), 
         flush=True)
