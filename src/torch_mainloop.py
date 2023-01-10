@@ -71,7 +71,7 @@ from torch_ppd import (
     reinitialize_ppds,
 )
 
-from ppd_population import PPD_population, G0
+from ppd_population_async import PPDPopulationAsync, G0
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -160,25 +160,36 @@ def initialize_workers():
         p = FlashPar("flash.par")
         if not p['restart']:
             if USER['rad_field_method'] == 'rad_trans':
-                ppds = PPD_population(
+                ppds = PPDPopulationAsync(
+                   alpha=USER['disk_alpha'], mu=USER['disk_mu'],
+                   number_of_cells=USER['disk_n_cells'],
+                   r_min=USER['disk_r_min'], r_max=USER['disk_r_max'],
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'], grid_hydro=hydro,
-                   max_frac=USER['disk_max_stable_fraction'])
+                   max_frac=USER['disk_max_stable_fraction'],
+                   vader_mode=USER['vader_mode'], dust_params=USER['dust_params'],
+                   dust_model=USER['dust_model'])
             elif USER['rad_field_method'] == 'geometric':
-                ppds = PPD_population(
+                ppds = PPDPopulationAsync(
+                   alpha=USER['disk_alpha'], mu=USER['disk_mu'],
+                   number_of_cells=USER['disk_n_cells'],
+                   r_min=USER['disk_r_min'], r_max=USER['disk_r_max'],
                    number_of_workers=USER['num_viscous_workers'],
                    fried_folder=USER['fried_folder'],
-                   max_frac=USER['disk_max_stable_fraction'])
+                   max_frac=USER['disk_max_stable_fraction'],
+                   vader_mode=USER['vader_mode'], dust_params=USER['dust_params'],
+                   dust_model=USER['dust_model'])
 
         else:
             ppds = reinitialize_ppds (hydro, p['checkpointFileNumber'],
                 USER['rad_field_method'], USER['num_viscous_workers'], 
                 USER['disk_alpha'], USER['disk_mu'], USER['disk_n_cells'],
                 USER['disk_r_min'], USER['disk_r_max'], USER['fried_folder'],
-                max_frac=USER['disk_max_stable_fraction'])
-
-        ppds.collision_detector = grav.stopping_conditions.collision_detection
-        ppds.collision_detector.enable()
+                max_frac=USER['disk_max_stable_fraction'], vader_mode=USER['vader_mode'],
+                dust_model=USER['dust_model'], dust_params=USER['dust_params'])
+        if USER['with_truncations']:
+            ppds.collision_detector = grav.stopping_conditions.collision_detection
+            ppds.collision_detector.enable()
 
     else:
 
@@ -383,7 +394,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
                             target_names=['x', 'y', 'z', 'vx', 'vy', 'vz'])
 
                         # Event loop for dynamic interactions between disks -MW
-                        while ppds.collision_detector.is_set():
+                        while USER['with_truncations'] and \
+                                ppds.collision_detector.is_set():
 
                             tprint("Encounter between stars!")
 
@@ -470,6 +482,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
         # Version for ppds, as disk mass is being annoying... -MW
         if USER['with_ppds']:
             make_and_add_stars_with_ppds(state, hydro, grav, se, ppds, 
+                USER['min_feedback_mass'],
+                first_feedback_mass=USER['first_feedback_mass'],
                 max_frac=USER['disk_max_stable_fraction'],
                 sink_rad=USER['sink_rad'])
 

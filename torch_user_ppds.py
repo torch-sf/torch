@@ -276,6 +276,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['first_feedback_mass'] = None # mass of first feedback star to form; if None, this isn't tampered with
 
     # <star particle creation>
 
@@ -295,7 +296,17 @@ def user_parameters():
     p['disk_r_max'] = 3000. | units.AU # disks' outer grid edge
     p['disk_n_cells'] = 330 # disks' number of cells
     p['fried_folder'] = './' # file location of FRIED grid
-    p['disk_max_stable_fraction'] = 0.75 # disks' mass fraction of maximum stable mass
+    p['disk_max_stable_fraction'] = 0.55 # disks' mass fraction of maximum stable mass
+    p['with_truncations'] = True # take dynamic truncations of encountering disks into account
+    p['dust_model'] = 'Birnstiel2012'
+    p['dust_params'] = {
+        'uf': 10. | units.m/units.s,
+        'rho_s': 1. | units.g/units.cm**3,
+        'a0': 1e-7 | units.m,
+        'Tsubl': 1500. | units.K,
+        'CFL': 1e99
+    } # dust model parameters, for the Birnstiel 2012 model
+    p['vader_mode'] = 'pedisk_dusty' # set of user functions VADER uses
 
     # <amuse file overwrite>
 
