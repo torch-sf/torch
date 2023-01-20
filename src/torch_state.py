@@ -147,6 +147,9 @@ class TorchState(object):
             if self.ppds is not None:
                 self.ppds.output_counter = self.pltnum
                 self.ppds.write_particles(self.output_dir, 'plt_', overwrite)
+                # grids are large compared to particles, but small compared to plt 
+                # at max ref 5, and 330 viscous cells -MW
+                self.ppds.write_grids(self.output_dir, 'plt_', overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))

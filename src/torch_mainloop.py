@@ -273,6 +273,9 @@ def evolve(state, hydro, grav, mult, se, ppds):
             ### First bridge kick.
             ### ------------------
 
+            remove_particles_outside_bndbox(state, hydro, grav, mult, ppds)
+            hydro.particles_sort()  # also checks for stars outside domain
+
             if USER['with_bridge']:
                 tprint("First bridge kick")
                 kick_number = 1  # tell FLASH to NOT recompute grav pot (BGPT), accel (BGA{X,Y,Z}) from stars
@@ -290,6 +293,9 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 if USER['with_multiples']:
                     mult.channel_from_code_to_memory.copy()     # grav  -> multiples
                     state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+
+                remove_particles_outside_bndbox(state, hydro, grav, mult, ppds)
+                hydro.particles_sort()  # also checks for stars outside domain
 
             ### ------------------
             ### Stellar evolution.
@@ -469,6 +475,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
         ### --------------------------------
         ### Queue and create star particles.
         ### --------------------------------
+        remove_particles_outside_bndbox(state, hydro, grav, mult, ppds)
+        hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
         queue_stars(state, hydro,
