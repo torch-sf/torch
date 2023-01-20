@@ -43,7 +43,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   use Particles_windData, only : min_wind_mass, min_wind_dt, wind_target_temp
   use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 #endif
-  use Particles_rayData, only : ph_radPressure
+  use Particles_rayData, only : ph_radPressure, cfl_radPressure
   use rt_data, only: rt_dt, rt_dt_pos, rt_protonMass, rt_gamma1, &
                      rt_rayTrace, rt_useNumstepsRadTransDtOnStart, &
                      rt_numstepsRadTransDt, rt_useRadTransDt, rt_dt_temp
@@ -76,6 +76,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real :: injectVelocity
   character(len=10), save :: conserved_quant
   real :: refVel
+  real, save :: sink_density
 
   ! Here we estimate the timestep for feedback in radiation and winds
   ! from a star we have introduced to the simulation in between loop steps.
@@ -96,6 +97,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
     call RuntimeParameters_get("rt_useNumstepsRadTransDtOnStart", rt_useNumstepsRadTransDtOnStart)
     call RuntimeParameters_get("rt_numstepsRadTransDt", rt_numstepsRadTransDt)
     call RuntimeParameters_get("rt_dt_temp", rt_dt_temp)
+    call RuntimeParameters_get("cfl_radPressure", cfl_radPressure)
+    call RuntimeParameters_get("sink_density_thresh", sink_density)
     first_call = .false.
   end if
 #endif
@@ -247,10 +250,22 @@ end if
 ! stars photon flux on that cell. Note this is a bit too aggressive, should
 ! go back and actually integrate and find the flux to properly put in here. - JW
 
+! It's ok to assume that in the initial timestep all the ionizing photons get
+! absorbed because the sink density in which a star will form implies a mean 
+! free path smaller than a cell width. -BP 19Jan23
+
         if (ph_radPressure) then
 ! This is delta_t = sqrt(V * c * mu * m_H / (dN_ph/dt * sigma_H * E_avg) - JW
-          dt_mom        = 0.3*sqrt(deltaX**3.0d0 * 3.0d10 * 1.24d0 * 1.67d-24 / &
-                        (photon_flux * cross_sec * ener_per_ph))
+!          dt_mom        = 0.3*sqrt(deltaX**3.0d0 * 3.0d10 * 1.24d0 * 1.67d-24 / &
+!                        (photon_flux * cross_sec * ener_per_ph))
+
+! Above formula is dt = mean free path / dv, when it should be dt = dx/dv 
+! where dv = (E_avg * dN_ph/dt * dt) / (rho * V * c). Density is approximated as
+! the sink threshhold density, as this is roughly the density where newborn stars 
+! will form in. Also made the "courant" factor a user parameter. -BP 19Jan23
+           dt_mom = cfl_radPressure * sqrt(deltaX**4.0d0 * 3.0d10 * sink_density / &
+                               (photon_flux * ener_per_ph))
+
         end if
       dt_min_local  = 0.3*deltaX / csRad ! With a safe CFL factor for now.
 

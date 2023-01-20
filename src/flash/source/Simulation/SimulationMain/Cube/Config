@@ -31,9 +31,6 @@ PARAMETER bz0 REAL 0.0
 
 # For radiation
 
-# Temperature that sets the radtrans timestep, what temp the ionized gas will be
-PARAMETER rt_dt_temp REAL 1.0d4
-
 # average molecular weights, if negative, calculated from chemistry data
 PARAMETER sim_A_n      REAL    -1.0
 PARAMETER sim_A_i      REAL    -1.0
