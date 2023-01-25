@@ -46,7 +46,8 @@ use Hydro_data, ONLY: hy_cfl, hy_eswitch
 
 use Grid_interface, ONLY: Grid_getBlkPtr, Grid_releaseBlkPtr, &
     Grid_getBlkIndexLimits, Grid_fillGuardCells, Grid_getMinCellSize, &
-    Grid_notifySolnDataUpdate, Grid_getBlkRefineLevel
+    Grid_notifySolnDataUpdate, Grid_getBlkRefineLevel, &
+    Grid_getBlkIDFromPos !add for snap_to_grid -SA 20230125
     
 use Driver_interface, ONLY : Driver_abortFlash
     
@@ -345,10 +346,21 @@ if (gr_meshMe == 0) &
 if (gr_meshMe == 0) &
     print*, "loc before snap_to_grid:", loc_in  !SA 20221221
 
+!!!!  Snap to Grid !!!
 ! Place the star in the center of a cell. Gives best results
+! Needed to ensure symmetric driving (Cunningham+2011).
+! Previous version worked incorrectly - updated to attempt to fix it -  20230125 SA
+! NOTE - this happens before we check that every cell on the block is maximally refined....
+! Not sure if this is an issue or not so we should double check
 if (snap_to_grid) then
-    do i=1,3
-        loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)
+    call Grid_getBlkIDFromPos(loc_in ,blockID ,procID, gr_meshComm)  ! Finds block ID given star location
+    print*, "Check on coord: ", coord(i, blockID) ! Double check what coord() does 
+    do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
+        deltaInverse = 1. / delta(i)
+        xp = (loc_in(i) - coord(i,blockID)) * deltaInverse  ! Find offset of loc_in from block edge
+        ip = floor(xp) !+ 1 + NGUARD  ! Actual cell index - check if we should include guard cells???
+        cellCenter = ((ip + 0.5) * delata(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
+        ! loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)  ! Previous approach to snap_to_grid
     end do
 
 else
@@ -359,6 +371,7 @@ end if
 
 if (gr_meshMe == 0) &
     print*, "loc after snap_to_grid:", loc  !SA 20221221
+    print*. "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
 
 
 #ifdef DEBUG
