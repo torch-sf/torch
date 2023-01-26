@@ -169,6 +169,9 @@ real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
+! Add new variables for snap_to_grid update. - SA 1/25/2023
+real(dp) :: procID, deltaInverse, xp, ip, cellCenter 
+
 
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
@@ -354,12 +357,13 @@ if (gr_meshMe == 0) &
 ! Not sure if this is an issue or not so we should double check
 if (snap_to_grid) then
     call Grid_getBlkIDFromPos(loc_in ,blockID ,procID, gr_meshComm)  ! Finds block ID given star location
-    print*, "Check on coord: ", coord(i, blockID) ! Double check what coord() does 
+    print*, "Check on coord: ", coord(i, blockID) ! Double check what coord() does - should find the coord of the block center 
     do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
         deltaInverse = 1. / delta(i)
-        xp = (loc_in(i) - coord(i,blockID)) * deltaInverse  ! Find offset of loc_in from block edge
+        xp = (loc_in(i) - coord(i,blockID)) * deltaInverse  ! Find offset of loc_in from block center
         ip = floor(xp) !+ 1 + NGUARD  ! Actual cell index - check if we should include guard cells???
-        cellCenter = ((ip + 0.5) * delata(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
+        cellCenter = ((ip + 0.5) * delta(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
+        loc(i) = cellCenter  ! Save coordinate of cell center to loc() for use during injection
         ! loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)  ! Previous approach to snap_to_grid
     end do
 
@@ -372,6 +376,8 @@ end if
 if (gr_meshMe == 0) &
     print*, "loc after snap_to_grid:", loc  !SA 20221221
     print*. "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
+    if (max(loc_in - loc) > del) then
+        print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
 
 
 #ifdef DEBUG
