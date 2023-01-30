@@ -68,6 +68,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   logical :: stoppH, fully_ionized
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
+  real    :: surface_correction, atan2xy, costheta2
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -108,6 +109,13 @@ if (dr .le. 0.0d0) return
             write(*,'(A,ES13.3E3)') "[pt_solveZone]: Begin phi*rt_dt =", phih*rt_dt
             write(*,*) "[pt_solveZone]: fully_ionized=", fully_ionized
 #endif
+
+! First order correction to effective surfaces of cells -MW
+costheta2 = dirz*dirz/(dirx*dirx + diry*diry + dirz*dirz)
+atan2xy = atan2(dirx, diry)
+
+surface_correction = sqrt(1.-costheta2) + sqrt(costheta2)
+surface_correction = surface_correction*(abs(sin(atan2xy)) + abs(cos(atan2xy)))
 
 ! Select the correct bin before calculating ionization and heating. - JW
 if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
@@ -191,9 +199,10 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 
   !Flux = phih*numdens*xH0*dr*FullEion
 ! Using the phion rate double counts the flux if two rays pass through 
-! a cell in a given timestep. Use actual number of absorbed photons 
-! instead. -BP 24Jan23
-  Flux  = DNionHI*FullEion/(dtin * zone_size**2.0)
+! a cell in a given timestep. Use actual number of non-absorbed photons 
+! instead to store ambient flux. -BP 24Jan23
+! Use Area=Vpix/dr to convert to flux to avoid overestimating. -BP 30Jan23
+  Flux  = (Nion-DNionHI)*FullEion*dr/(dtin*Vpix)
   
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
@@ -255,7 +264,8 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! Convert this number into a flux by multiplying by the
 ! average energy of a photon in this bin. - JW
 
-  Flux = DNdust*FullEion/dtin
+  ! Store ambient flux. -BP 30Jan23
+  Flux = (Nion-DNdust)*FullEion/dtin
 
 ! Now convert this to a Habing 1968 (G_conv = 1.6 x 10^-3 ergs cm^-2 s^-1) normalized flux as
 ! described in Baczynski 2015. Note we can probably do
@@ -263,7 +273,9 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! good enough for now.
 
 ! Also note, implict assumption here that cells are cubes! - JW
-  Flux = Flux / (1.6d-3 * zone_size**2.0)
+! Apply Martijn Wilhelm's surface correction to cell area dependent 
+! on ray direction. -BP 30Jan23
+  Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
   GFlux = GFlux + Flux
 
   if (isNaN(GFlux)) then
@@ -295,7 +307,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     
         ! If flux on this cell and flux still in the ray are less than the background
         ! Draine field, terminate this ray.
-        if (Flux < bgFlux .and. (Nion-DNdust)*FullEion/dtin/(1.6d-3*zone_size**2.0) < bgFlux) then 
+        if (Flux < bgFlux .and. DNdust*FullEion/dtin/(1.6d-3*zone_size**2.0) < bgFlux) then 
             !print*, "bgFlux =", bgFlux, "Flux =", Flux
             Nion = 0.0
             stopp = .true.
