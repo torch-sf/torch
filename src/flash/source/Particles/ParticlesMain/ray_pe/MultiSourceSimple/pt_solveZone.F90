@@ -276,7 +276,9 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! Apply Martijn Wilhelm's surface correction to cell area dependent 
 ! on ray direction. -BP 30Jan23
   Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
-  GFlux = GFlux + Flux
+
+  ! Add absorbed flux to background FUV Flux
+  GFlux = GFlux + DNdust*FullEion/(dtin * 1.6d-3 * surface_correction*zone_size**2.0)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &
