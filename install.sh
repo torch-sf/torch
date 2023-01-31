@@ -37,7 +37,13 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 # patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
 
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
-
+if [[ $* != *-v* ]]
+then
+    echo "\nInstalling Torch w/o VorAMR.\n"
+    rm -v ${FLASH_DIR}/source/Simulation/SimulationMain/Cube/pt_initVoronoiPositions.F90
+else
+    echo "\nInstalling Torch with VorAMR!\n"
+fi
 #### ----------------------------
 #### Prepare the AMUSE repository
 
