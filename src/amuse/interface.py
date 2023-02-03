@@ -80,6 +80,18 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_block_state():
+        # VorAMR addition - SCL
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('dataSize', dtype='i', direction=function.IN)
+        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
+            function.addParameter(x, dtype='d', direction=function.IN)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
     def get_grid_momentum_density():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -1204,6 +1216,13 @@ class Flash(CommonCode):
             density, momentum, momentum, momentum, energy),
             (object.ERROR_CODE,)
         )
+        # VorAMR addition - SCL
+        object.add_method(
+            'set_block_state',
+            (object.INDEX, object.INDEX,
+            density, speed, speed, speed, enerInt, potential),
+            (object.ERROR_CODE,)
+        )
 
         object.add_method(
             'get_grid_energy_density',
@@ -1739,7 +1758,7 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-
+        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot')) # VorAMR addition - SCL
         definition.add_getter('get_grid_density', names=('rho',))
         definition.add_setter('set_grid_density', names=('rho',))
 
@@ -1827,6 +1846,7 @@ class Flash(CommonCode):
                     'set_particle_pointers',
                     'get_grid_state',
                     'set_grid_state',
+                    'set_block_state', # VorAMR addition - SCL
                     'get_potential_at_point',
                     'get_potential',
 #                    'get_gravity_at_point',
