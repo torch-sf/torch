@@ -115,7 +115,9 @@ subroutine Particles_initPositions (partPosInitialized,updateRefine)
   integer :: blkCount
   integer,dimension(MAXBLOCKS) :: blkList
 !----------------------------------------------------------------------
-
+  ! VorAMR subroutine, is stub if not installed. - SCL
+  call pt_initVoronoiPositions(success,updateRefine)
+  
   if(.not.useParticles) then
      partPosInitialized = .true.
   end if
