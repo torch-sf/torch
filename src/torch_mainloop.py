@@ -65,6 +65,26 @@ from torch_sf import (
 from torch_state import TorchState
 from torch_stdout import tprint
 
+from voramr.hdf5_convert import (
+    extract_data,
+    rescale_coords_vels,
+    write_corrected_file
+)
+from voramr.kdtree import (
+    read_arepo_hdf5,
+    build_kdtree,
+    pickle_tree,
+    unpickle_tree,
+    interp_data
+)
+from voramr.voramr_mainloop import (
+    get_ntasks_from_run_script,
+    get_leaf_blocks,
+    interpolate_fields
+)
+from voramr.voramr_stdout import vprint
+
+
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
 
@@ -444,9 +464,33 @@ def run_torch(user_initial_conditions, user_parameters):
 
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
+    if(USER['with_voramr']):
+        vprint("Initializing with VorAMR.")
+        if(USER['convert_file']):
+            vprint("Converting  provided hdf5 file.")
+            coords, vels, dens, mass, eint, gpot = extract_data(USER['source_file'],
+                                                                apply_consts=True)
+            coords_cor, vels_cor = rescale_coords_vels(coords, vels, mass, apply_consts=True, use_com_coords=False)
+            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot)
 
+            coords, field_set = read_arepo_hdf5(USER['input_file'])
+        else:
+            vprint("Using unconverted source file.")
+            coords, field_set = read_arepo_hdf5(USER['source_file'])
+
+        vprint("Building field interpolator.")
+        kdtree = build_kdtree(coords, field_set)
+        if(USER['pickle_kdtree']):
+            pickle_tree(kdtree, USER['pickle_file_name'])
+            vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
+    # End VorAMR file init
+    
     hydro, grav, mult, se = initialize_workers()
 
+    if(USER['with_voramr']):
+        leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+        interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
+    
     state = TorchState(hydro, grav, mult)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])

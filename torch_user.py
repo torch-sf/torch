@@ -247,6 +247,17 @@ def user_parameters():
     p = {}
     flashp = FlashPar("flash.par")
 
+    # <VorAMR>
+
+    p['with_voramr'] = False
+    p['source_file'] = "snapshot_550_9.hdf5"#"voramr_test.hdf5"                                                                                        
+    p['convert_file'] = True
+    p['input_file'] = "voramr_input.hdf5"
+    p['pickle_kdtree'] = True
+    p['pickle_file_name'] = "kdtree.pickle"
+    p['numBlocks'] = 15000 #345                                                                                                                        
+    p['cellsPerBlock'] = 16
+    
     # <bridge>
 
     p['npy_seed'] = None  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
