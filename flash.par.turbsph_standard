@@ -29,6 +29,14 @@ bx0 = 0.0e0
 by0 = 0.0e0
 bz0 = 3.0e-6
 
+# ================
+# VorAMR extension
+# ================
+
+refine_on_particle_count=.true.
+min_particles_per_blk=4096 #0
+max_particles_per_blk=4096 #1 #500000 # 50000
+pt_maxPerProc = 20000000 # COMMENTED OUT SAME PARAM on LINE 259
 
 # ===================
 # physics/Eos/EosMain
@@ -248,7 +256,7 @@ useParticles        = T
 useSinkParticles    = .true.
 
 # maximum number of total particles, not just rays
-pt_maxPerProc   = 10000
+# pt_maxPerProc   = 10000
 
 # --------------------------------------------
 # Particles/ParticlesMain/active/SinkNoAdvance
