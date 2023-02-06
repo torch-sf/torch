@@ -464,9 +464,9 @@ def run_torch(user_initial_conditions, user_parameters):
 
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
-    if(USER['with_voramr']):
-        vprint("Initializing with VorAMR.")
-        if(USER['convert_file']):
+    if USER['with_voramr']:
+        tprint("Initializing with VorAMR.")
+        if USER['convert_file']:
             vprint("Converting  provided hdf5 file.")
             coords, vels, dens, mass, eint, gpot = extract_data(USER['source_file'],
                                                                 apply_consts=True)
@@ -487,7 +487,8 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
-    if(USER['with_voramr']):
+    if USER['with_voramr']:
+        vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
     

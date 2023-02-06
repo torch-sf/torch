@@ -249,7 +249,7 @@ def user_parameters():
 
     # <VorAMR>
 
-    p['with_voramr'] = False
+    p['with_voramr'] = True #False
     p['source_file'] = "snapshot_550_9.hdf5"#"voramr_test.hdf5"                                                                                        
     p['convert_file'] = True
     p['input_file'] = "voramr_input.hdf5"

@@ -1,20 +1,20 @@
 from amuse.lab import *
 #from amuse.datamodel import Particles
 
-from amuse.community.voramr.interface import Flash
-from voramr_kdtree import (
+from amuse.community.flash.interface import Flash #from amuse.community.voramr.interface import Flash
+from voramr.kdtree import (
     read_arepo_hdf5,
     build_kdtree,
     pickle_tree,
     unpickle_tree,
     interp_data,
     )
-from voramr_convert import (
+from voramr.hdf5_convert import (
     extract_data,
     rescale_coords_vels,
     write_corrected_file,
     )
-from voramr_stdout import vprint
+from voramr.voramr_stdout import vprint
 
 import numpy as np
 from time import time

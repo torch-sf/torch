@@ -14,6 +14,7 @@ speed = generic_unit_system.speed
 density = generic_unit_system.density
 momentum =  generic_unit_system.momentum_density
 energy =  generic_unit_system.energy_density
+enerInt = generic_unit_system.length ** 2 / generic_unit_system.time ** 2
 potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
