@@ -57,6 +57,13 @@ module Simulation_data
 !  real, save :: sim_Z, sim_G0, sim_pe_h, sim_cr_h
 !  logical, save :: sim_stratify_heating, sim_constant_heating
 
+   !! VorAMR stuff
+   !real, save :: sim_smlRho
+   !real, save :: sim_ptMass, sim_densityThreshold
+   !integer, save :: sim_meshMe, sim_minBlks
+   !logical, save :: sim_print=.false.
+
+
 end module Simulation_data
 
 

@@ -86,7 +86,7 @@ subroutine Particles_initPositions (partPosInitialized,updateRefine)
   use Grid_interface, ONLY : Grid_getListOfBlocks
   use Driver_interface, ONLY : Driver_abortFlash
   use pt_interface, ONLY : pt_initPositions,pt_createTag,&
-       pt_initVornoiPositions
+       pt_initVoronoiPositions
   use Particles_data, ONLY : pt_posInitialized,pt_numLocal,useParticles,&
        pt_typeInfo, particles, pt_meshNumProcs, pt_meshMe
 
@@ -116,7 +116,7 @@ subroutine Particles_initPositions (partPosInitialized,updateRefine)
   integer,dimension(MAXBLOCKS) :: blkList
 !----------------------------------------------------------------------
   ! VorAMR subroutine, is stub if not installed. - SCL
-  call pt_initVoronoiPositions(success,updateRefine)
+  call pt_initVoronoiPositions(partPosInitialized,updateRefine)
   
   if(.not.useParticles) then
      partPosInitialized = .true.

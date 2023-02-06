@@ -9,8 +9,8 @@ Module pt_interface
 #include "Flash.h"
 
   interface
-     subroutine pt_initVoronoiPositions(success,updateRefine)
-       logical, intent(INOUT) :: success
+     subroutine pt_initVoronoiPositions(partPosInitialized,updateRefine)
+       logical, intent(INOUT) :: partPosInitialized !success
        logical, intent(OUT) :: updateRefine
      end subroutine pt_initVoronoiPositions
   end interface
