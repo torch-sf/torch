@@ -487,15 +487,16 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
+    # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
-    
+        vprint("Done interpolating. VorAMR complete.")
     state = TorchState(hydro, grav, mult)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
-
+    
     if not state.restart:
         user_initial_conditions(state, hydro)
     elif state.restart and USER['restart_with_user_ics']:

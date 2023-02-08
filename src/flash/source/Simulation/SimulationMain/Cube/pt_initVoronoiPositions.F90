@@ -125,6 +125,9 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
      endif
   enddo
   call Particles_getGlobalNum(globalNumParticles)
+
+  DEALLOCATE(coords_dset_data)
+  
   print*, "Done placing. Exiting Particles_initPositions"
   CALL flush()
 
