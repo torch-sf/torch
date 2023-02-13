@@ -5,6 +5,12 @@
 
 mpiexec --mca orte_base_help_aggregate 0 -n 1 python bridge_multiples.py
 
+# Some system/hardware-specific call options
+
+# On Rome nodes (on e.g. Snellius) an error can occur in wireup.c when starting a worker,
+# this can be fixed with these options:
+#mpiexec --mca orte_base_help_aggregate 0 -x UCX_ATOMIC_MODE=cpu -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_RC_MLX5_MAX_NUM_EPS=inf -n 1 python bridge_multiples.py
+
 # Some MPI call options for experimenting
 
 # OpenMPI 4.x or newer defaults to UCX rather than infiniband ports,
