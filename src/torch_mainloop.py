@@ -156,7 +156,7 @@ def initialize_workers():
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
-    if USER['with_ppds']:
+    if 'with_ppds' in USER and USER['with_ppds']:
         p = FlashPar("flash.par")
         if not p['restart']:
             if USER['rad_field_method'] == 'rad_trans':
@@ -220,7 +220,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
     # bridge loop control
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-    if USER['with_ppds'] and len(ppds.disked_stars) > 0:
+    if 'with_ppds' in USER and USER['with_ppds'] and len(ppds.disked_stars) > 0:
         # added 2 kyr as maximum, needed for ppd external photoevaporation 
         # updates! -MW
         dt = min(dt, 2.|units.kyr)
@@ -231,7 +231,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
         # if this is a restart, FLASH may still have all the
         # particles mis-sorted in the particles array. -JW
         hydro.particles_sort()
-        if USER['with_ppds']:
+        if 'with_ppds' in USER and USER['with_ppds']:
             add_particles_to_grav_and_ppd(state, hydro, grav, se, ppds)
         else:
             add_particles_to_grav(state, hydro, grav, mult, se)
@@ -248,7 +248,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
             elif name == "grav":
                 pool_table_grav.append(i)
 
-    ppds.model_time = hy_time
+    if ppds is not None:
+        ppds.model_time = hy_time
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
 
@@ -316,7 +317,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
                 tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
-                if USER['with_ppds']:
+                if 'with_ppds' in USER and USER['with_ppds']:
                     # ppd code also needs stellar mass
                     #if USER['rad_field_method'] == 'geometric':
                     state.stars_to_ppds.copy_attributes(["fuv_luminosity"])
@@ -382,7 +383,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
                     # and without multiples; not sure how to set up an event loop
                     # with asynchronous evolution, and since it assumes no
                     # primordial binaries, multiples shouldn't be necessary -MW
-                    if USER['with_ppds']:
+                    if 'with_ppds' in USER and USER['with_ppds']:
 
                         ppds.evolve_model(hy_time+dt/2.)
 
@@ -448,7 +449,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
             # ppd evolution has altered disk masses -MW
-            if USER['with_ppds']:
+            if 'with_ppds' in USER and USER['with_ppds']:
                 hydro.set_particle_mass(state.stars.tag, state.stars.gravity_mass)
 
 
@@ -470,7 +471,8 @@ def evolve(state, hydro, grav, mult, se, ppds):
             grav.parameters.begin_time  = hy_time
             grav.evolve_model(hy_time)
 
-            ppds.evolve_model(hy_time)
+            if 'with_ppds' in USER and USER['with_ppds']:
+                ppds.evolve_model(hy_time)
 
         ### --------------------------------
         ### Queue and create star particles.
@@ -488,7 +490,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
         )
 
         # Version for ppds, as disk mass is being annoying... -MW
-        if USER['with_ppds']:
+        if 'with_ppds' in USER and USER['with_ppds']:
             make_and_add_stars_with_ppds(state, hydro, grav, se, ppds, 
                 USER['min_feedback_mass'],
                 first_feedback_mass=USER['first_feedback_mass'],
@@ -550,7 +552,7 @@ def evolve(state, hydro, grav, mult, se, ppds):
         # bridge loop control
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-        if USER['with_ppds'] and len(ppds.disked_stars) > 0:
+        if 'with_ppds' in USER and USER['with_ppds'] and len(ppds.disked_stars) > 0:
             # maximum timestep for disk photoevaporation updates -MW
             dt = min(dt, 2.|units.kyr)
         num_stars = hydro.get_number_of_particles()  # loop variable
