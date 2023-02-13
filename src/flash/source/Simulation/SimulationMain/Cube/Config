@@ -7,7 +7,6 @@ REQUIRES physics/Eos/EosMain/Gamma
 #REQUIRES Particles/ParticlesMain/active/Sink/Couple_AMUSE
 REQUIRES Multispecies
 
-
 #REQUIRES physics/sourceTerms/Wind/WindMain
 #REQUIRES physics/TreeRay/TreeRayMain/OnTheSpot
 

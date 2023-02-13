@@ -21,6 +21,7 @@
 !!                initialized particles instead of reinitializaing them
 !!                as the grid refines.
 !!
+!! Developed by Sean C. Lewis (Drexel University) as part of the VorAMR project.
 !!***
 
 !!REORDER(4): solnData
@@ -72,7 +73,7 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
   real :: xcoord, ycoord, zcoord
 !--------------------------------------------------------------
 
-  if (pt_meshMe.EQ.MASTER_PE) print*,'Entering Particles_initPositions.F90'
+  if (pt_meshMe.EQ.MASTER_PE) print*,'Entered pt_initVoronoiPositions.F90'
   updateRefine=.true. !.false.
   if(partPosInitialized) return
 
@@ -122,6 +123,8 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
         particles(POSX_PART_PROP,ps) = xcoord
         particles(POSY_PART_PROP,ps) = ycoord
         particles(POSZ_PART_PROP,ps) = zcoord
+        particles(TYPE_PART_PROP,ps) = NONEXISTENT
+        !NONEXISTENT particle type allows VorAMR particles and their memory to be cleared by Grid_sortParticles() and reused. 
      endif
   enddo
   call Particles_getGlobalNum(globalNumParticles)

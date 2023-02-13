@@ -61,7 +61,7 @@ subroutine Particles_updateRefinement(oldLocalNumBlocks)
        pt_indexList, pt_indexCount,&
        regrid)
   call Particles_sinkMoveParticles(regrid)
-
+    
 ! added to allow particle advancement outside Particle advancement call, i.e. radiation transport
 #ifdef TYPE_PART_PROP
   call Grid_sortParticles(particles,NPART_PROPS,pt_numLocal,NPART_TYPES, &
@@ -70,7 +70,7 @@ subroutine Particles_updateRefinement(oldLocalNumBlocks)
   call Grid_sortParticles(particles,NPART_PROPS,pt_numLocal,NPART_TYPES, &
        pt_maxPerProc,particlesPerBlk,BLK_PART_PROP)
 #endif
-
+  
   if(pt_keepLostParticles) then
      pfor=pt_numLocal
      do while(particles(BLK_PART_PROP,pt_numLocal)==LOST)
