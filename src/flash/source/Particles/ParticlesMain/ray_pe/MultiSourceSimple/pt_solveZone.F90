@@ -68,8 +68,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   logical :: stoppH, fully_ionized
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
-  real    :: DNambient, ambientFlux
-  real    :: surface_correction, atan2xy, costheta2
+  real    :: DNambient, ambientFlux, surface_correction
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -111,40 +110,12 @@ if (dr .le. 0.0d0) return
             write(*,*) "[pt_solveZone]: fully_ionized=", fully_ionized
 #endif
 
-
-
-!surface_correction = 1.
-! First order correction to effective surfaces of cells -MW
-costheta2 = dirz*dirz/(dirx*dirx + diry*diry + dirz*dirz)
-atan2xy = atan2(dirx, diry)
-
-surface_correction = sqrt(1.-costheta2) + sqrt(costheta2)
-surface_correction = surface_correction*(abs(sin(atan2xy)) + abs(cos(atan2xy)))
-
-!phi = atan2(diry, dirx)
-!theta = acos(dirz/sqrt(dirx*dirx + diry*diry + dirz*dirz))
-
-!surface_correction = abs(sin(phi)) + abs(cos(phi))
-!surface_correction = surface_correction*(abs(sin(theta)) + abs(cos(theta)))
-
-!if (phi < -pi/2.) then
-!  surface_correction = -sin(phi) - cos(phi)
-!else if (phi < 0.) then
-!  surface_correction = -sin(phi) + cos(phi)
-!else if (phi < pi/2.) then
-!  surface_correction =  sin(phi) + cos(phi)
-!else
-!  surface_correction =  sin(phi) - cos(phi)
-!end if
-!if (theta < -pi/2.) then
-!  surface_correction = surface_correction * (-sin(theta) - cos(theta))
-!else if (theta < 0.) then
-!  surface_correction = surface_correction * (-sin(theta) + cos(theta))
-!else if (theta < pi/2.) then
-!  surface_correction = surface_correction * ( sin(theta) + cos(theta))
-!else
-!  surface_correction = surface_correction * ( sin(theta) - cos(theta))
-!end if
+! Correction to effective surfaces of cells -MW
+! Projected area of each face is the area times the dot product of the face's 
+! normal and the viewing vector (the direction of the ray). Every ray pierces
+! two faces, so need only count every dimension once. Sum of all faces is then
+! sum of (normalized) cartesian unit vectors dot product with ray
+surface_correction = (abs(dirx) + abs(diry) + abs(dirz))/sqrt(dirx*dirx + diry*diry + dirz*dirz)
 
 
 ! Select the correct bin before calculating ionization and heating. - JW
@@ -242,7 +213,6 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 
   ! Store unabsorbed (ambient) flux similarly. - MW
   Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
-  !Flux = (Nion-DNionHI)/(dtin*Vpix**(2./3.)*surface_correction) * FullEion
   call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
@@ -322,12 +292,11 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! good enough for now.
 
 ! Also note, implict assumption here that cells are cubes! - JW
+! I've also applied a correction depending on incident angle -MW
   Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
-  !Flux = Flux / (1.6d-3 * Vpix/dr)
   GFlux = GFlux + Flux
 
   ambientFlux = ambientFlux / (1.6d-3 * surface_correction*zone_size**2.0)
-  !ambientFlux = ambientFlux / (1.6d-3 * Vpix/dr)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &
@@ -354,7 +323,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
         f_ext  = exp(-3.5*Av) ! Fraction of background FUV that makes it through to here.
         !Av     = lam_j * numdens * sigDust      ! Using actual dust cross section.
         !f_ext  = exp(-Av) ! Fraction of background FUV that makes it through to here.
-        bgFlux = 1.69*f_ext! Draine field is 1.69*G_0
+        bgFlux = 10.*1.69*f_ext! Draine field is 1.69*G_0
     
         ! If flux on this cell and flux still in the ray are less than the background
         ! Draine field, terminate this ray.
@@ -372,7 +341,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     Flux = Flux*1.6d-3 + cellFlux ! Convert back to ergs cm^-2 s^-1
     call Grid_putPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, Flux)
 
-    ! Unabsorbed, ambient flux, stored similarly - MW
+    ! Unabsorbed, ambient flux, stored similarly. -MW
     call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
     ambientFlux = ambientFlux*1.6d-3 + cellFlux
     call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
