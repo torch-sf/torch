@@ -468,10 +468,13 @@ def run_torch(user_initial_conditions, user_parameters):
         tprint("Initializing with VorAMR.")
         if USER['convert_file']:
             vprint("Converting  provided hdf5 file.")
-            coords, vels, dens, mass, eint, gpot = extract_data(USER['source_file'],
+            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sfmtime, smet = extract_data(USER['source_file'],
                                                                 apply_consts=True)
-            coords_cor, vels_cor = rescale_coords_vels(coords, vels, mass, apply_consts=True, use_com_coords=False)
-            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot)
+            coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
+                                                                               scoords, svels,
+                                                                               apply_consts=True, use_com_coords=False)
+            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
+                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet)
 
             coords, field_set = read_arepo_hdf5(USER['input_file'])
         else:

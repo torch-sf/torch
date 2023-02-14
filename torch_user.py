@@ -235,8 +235,36 @@ def user_initial_conditions(state, hydro):
 #
 #    make_cluster_in_hydro(cluster, xmax)
 
+    # ------------------------------------------------------------------------ 
+    # Start with a cluster extracted from VorAMR initial file.
     # ------------------------------------------------------------------------
-
+    import numpy as np
+    from amuse.units import nbody_system
+    import h5py
+    print("Reading input hdf5 for stars")
+    f = h5py.File("voramr_input.hdf5", "r")
+    ds = f['PartType4']
+    c = ds['Coordinates'][:]
+    m = ds['Masses'][:]
+    v = ds['Velocities'][:]
+    im = ds['GFM_InitialMass']
+    a = ds['GFM_StellarFormationTime']
+    print("Extracted data")
+    pos = np.array([c[:,0], c[:,1], c[:,2]]).T
+    vel = np.array([v[:,0], v[:,1], c[:,2]]).T
+    #age = 0.499035 - a
+    stars = Particles(len(m))
+    stars.mass = m | units.MSun
+    stars.position = pos | units.cm
+    stars.velocity = vel | units.cm/units.s
+    print("Converted to AMUSE particle set")
+    tag = hydro.add_particles(stars.x, stars.y, stars.z)
+    hydro.set_particle_mass(tag, stars.mass)
+    hydro.set_particle_velocity(tag, stars.vx, stars.vy, stars.vz)
+    hydro.set_particle_oldmass(tag, stars.mass) # for SE code
+    #hydro.set_particle_creation_time(tag, creation_time)
+    f.close()
+    print("Set hydro data")
     return
 
 def user_parameters():
@@ -262,7 +290,7 @@ def user_parameters():
 
     p['npy_seed'] = None  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
-    p['restart_with_user_ics'] = False  # meant for testing
+    p['restart_with_user_ics'] = True #False  # meant for testing
 
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported

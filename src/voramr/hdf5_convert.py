@@ -26,10 +26,22 @@ def extract_data(file_name, apply_consts=True):
     
     coords = np.array([c[:,0], c[:,1], c[:,2]]).T
     vels = np.array([v[:,0], v[:,1], v[:,2]]).T
-    f.close()
-    return coords, vels, d, m, ie, gpot
 
-def rescale_coords_vels(coords, vels, masses, apply_consts=True, use_com_coords=False):
+    #Extract star dataset
+    sds = f['PartType4']
+    c = sds['Coordinates'][:]*length*hubble
+    sm = sds['Masses'][:]*mass*hubble
+    v = sds['Velocities'][:]*velocity
+    im = sds['GFM_InitialMass'][:]*mass*hubble
+    a = sds['GFM_StellarFormationTime'][:]
+    smet = sds['GFM_Metallicity'][:]
+
+    scoords = np.array([c[:,0], c[:,1], c[:,2]]).T
+    svels = np.array([v[:,0], v[:,1], v[:,2]]).T
+    f.close()
+    return coords, vels, d, m, ie, gpot, scoords, svels, sm, im, a, smet
+
+def rescale_coords_vels(coords, vels, masses, scoords, svels, apply_consts=True, use_com_coords=False):
     pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
     u_coord = units.pc
     u_vels = units.km/units.s
@@ -57,11 +69,15 @@ def rescale_coords_vels(coords, vels, masses, apply_consts=True, use_com_coords=
     
     coords_cor = coords - np.array([x_cor, y_cor, z_cor]).reshape(1,3)
     vels_cor = vels - np.array([vx_cor, vy_cor, vz_cor]).reshape(1,3)
-    
-    return coords_cor, vels_cor
 
-def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot):
+    scoords_cor = scoords - np.array([x_cor, y_cor, z_cor]).reshape(1,3)
+    svels_cor = svels - np.array([vx_cor, vy_cor, vz_cor]).reshape(1,3)
+    return coords_cor, vels_cor, scoords_cor, svels_cor
+
+def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
+                         scoords, svels, smass, sinitmass, sfmtime, smetal):
     f = h5py.File(output_filename, 'w')
+    # Recreate gas dataset
     group = f.create_group('PartType0')
     dset = group.create_dataset('Coordinates', data=coords, dtype='d')
     dset = group.create_dataset('Velocities', data=vels, dtype='d')
@@ -69,4 +85,13 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot):
     dset = group.create_dataset('Masses', data=masses, dtype='d')
     dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
     dset = group.create_dataset('Potential', data=gpot, dtype='d')
+
+    # Recreate stars dataset
+    group_s = f.create_group('PartType4')
+    dset = group_s.create_dataset('Coordinates', data=scoords, dtype='d')
+    dset = group_s.create_dataset('Velocities', data=scoords, dtype='d')
+    dset = group_s.create_dataset('Masses', data=smass, dtype='d')
+    dset = group_s.create_dataset('GFM_InitialMass', data=sinitmass, dtype='d')
+    dset = group_s.create_dataset('GFM_StellarFormationTime', data=sfmtime, dtype='d')
+    dset = group_s.create_dataset('GFM_Metallicity', data=smetal, dtype='d')
     f.close()
