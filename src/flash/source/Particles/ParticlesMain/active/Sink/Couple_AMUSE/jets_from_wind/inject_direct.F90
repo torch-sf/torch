@@ -49,7 +49,7 @@ use Grid_interface, ONLY: Grid_getBlkPtr, Grid_releaseBlkPtr, &
     Grid_notifySolnDataUpdate, Grid_getBlkRefineLevel, &
     Grid_getBlkIDFromPos !add for snap_to_grid -SA 20230125
     
-use Driver_interface, ONLY : Driver_abortFlash
+use Driver_interface, ONLY : Driver_abortFlash, Driver_getMype
     
 use Eos_interface, ONLY : Eos_wrapped
 
@@ -170,7 +170,8 @@ real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
-real(dp) :: procID, deltaInverse, xp, indexP, cellCenter 
+integer :: procID, myProc
+real(dp) ::  deltaInverse, xp, indexP, cellCenter 
 
 
 !integer  :: blkStar, iStar, jStar, kStar
@@ -356,16 +357,21 @@ if (gr_meshMe == 0) &
 ! NOTE - this happens before we check that every cell on the block is maximally refined....
 ! Not sure if this is an issue or not so we should double check
 if (snap_to_grid) then
-    call Grid_getBlkIDFromPos(loc_in ,blockID ,procID, gr_meshComm)  ! Finds block ID given star location
-    print*, "Check on coord: ", coord(i, blockID) ! Double check what coord() does - should find the coord of the block center 
-    do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
-        deltaInverse = 1. / delta(i)
-        xp = (loc_in(i) - coord(i,blockID)) * deltaInverse  ! Find offset of loc_in from block center
-        indexP = floor(xp) !+ 1 + NGUARD  ! Actual cell index - check if we should include guard cells???
-        cellCenter = ((indexP + 0.5) * delta(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
-        loc(i) = cellCenter  ! Save coordinate of cell center to loc() for use during injection
-        ! loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)  ! Previous approach to snap_to_grid
-    end do
+    call Grid_getBlkIDFromPos(loc_in, blockID ,procID, gr_meshComm)
+    ! The above line finds block ID given star location
+    print*, "Print blockID and procID: ", blockID, procID ! Check procID and blockID - SA 20230214
+    print*, "Check on coord: ", coord(1, blockID) ! Double check what coord() does - should find the coord of the block center 
+    call Driver_getMype(GLOBAL_COMM, myProc) ! Check the current processor  - SA 20230214
+    print*, "Check procID and myProc: ", procID, myProc  ! compare current processor and proc of loc_in - SA 20230214
+    if (myProc == procID) then  ! Only snap_to_grid if the current processor matches the proc of loc_in - SA 20230214
+        do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
+            deltaInverse = 1. / delta(i)
+            xp = (loc_in(i) - coord(i,blockID)) * deltaInverse  ! Find offset of loc_in from block center
+            indexP = floor(xp) !+ 1 + NGUARD  ! Actual cell index - check if we should include guard cells???
+            cellCenter = ((indexP + 0.5) * delta(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
+            loc(i) = cellCenter  ! Save coordinate of cell center to loc() for use during injection
+            ! loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)  ! Previous approach to snap_to_grid
+        end do
 
 else
 
@@ -376,7 +382,7 @@ end if
 if (gr_meshMe == 0) then
     print*, "loc after snap_to_grid:", loc  !SA 20221221
     print*, "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
-    if (max(loc_in - loc) > del) then
+    if (max((loc_in(1) - loc(1)),(loc_in(2) - loc(2)),(loc_in(3) - loc(3)) ) > min(delta(1), delta(2),delta(3)) ) then
         print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
     end if
 end if
