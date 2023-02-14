@@ -132,7 +132,7 @@ def initialize_workers():
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
-        mult.check_tidal_perturbation    = True
+        mult.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
 

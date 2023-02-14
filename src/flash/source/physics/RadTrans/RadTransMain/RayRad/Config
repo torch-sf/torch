@@ -12,6 +12,9 @@ PARAMETER rt_rayTrace BOOLEAN True
 PARAMETER sigDust        REAL   1e-23
 PARAMETER dust_gas_ratio REAL   0.01
 
+# Temperature that sets the radtrans timestep, what temp the ionized gas will be
+PARAMETER rt_dt_temp REAL 1.0d4
+
 # needs raytracing
 #REQUIRES Particles/ParticlesMain/ray/MultiSourceSimple
 #REQUIRES physics/sourceTerms/Heat/HeatMain/phenHeat
