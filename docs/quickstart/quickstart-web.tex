@@ -913,6 +913,8 @@ This list includes most major components, but is not comprehensive.
 
 \subsection{Cartesius}
 
+\textbf{CARTESIUS IS NOW DISCONTINUED} - We leave the build instructions here as many of the steps are similar to other systems. Also, while SURF has now brought Cartesius offline, its replacement Snellius has a similar module file structure.
+
 \href{https://userinfo.surfsara.nl/systems/cartesius}{Cartesius} is the Dutch
 national supercomputer managed by the cooperative educational and scientific
 association SURFsara. Many projects have utilized Cartesius and its up-to-date
@@ -1004,5 +1006,117 @@ export OMPI_MCA_mpi_warn_on_fork=0
 In addition to this slightly altered environment, the Cartesius Python 3.6.6 module does not currently have the \texttt{matplotlib} and \texttt{docutils} libraries installed. This is okay, we can just install them ourselves in our user environment using \texttt{pip install --user matplotlib docutils} after loading the Python/3.6.6-fosscuda-2018b module.
 
 Finally, if running this module environment setup reports any error (such as "XYZ module cannot load due to conflict") try running the same environment setup file again and there should be no issue.
+
+\subsection{Snellius}
+
+After gaining access to Snellius, download Torch and \texttt{AMUSE} via github/bitbucket and \texttt{FLASH} via the Rochester University portal. 
+
+The following is a \texttt{Bash} environment file for modules and paths. Run these commands (or something similar) before installing Torch or compiling \texttt{FLASH} or \texttt{AMUSE}.
+\begin{lstlisting}[language=bash]
+#Load modules
+
+module load 2021
+module load Python/3.9.5-GCCcore-10.3.0
+module load h5py/3.2.1-foss-2021a
+module load GSL/2.7-GCC-10.3.0
+
+# Specific paths
+export MODLOC=/sw/arch/Centos8/EB_production/2021/software
+export MPIHOME=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0
+export MPI_HOME=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0
+export MPI_RUN=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+export HDF5_HOME=$MODLOC/HDF5/1.10.7-gompi-2021a
+export HDF5DIR=$MODLOC/HDF5/1.10.7-gompi-2021a/lib
+export HDF5INCLUDE=$MODLOC/HDF5/1.10.7-gompi-2021a/include
+export HDF5LIB="hdf5_fortran -lhdf5"
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+
+export OMPI_MCA_mpi_warn_on_fork=0
+
+export AMUSE_DIR=$HOME/2023feb-vorch/amuse
+export FLASH_DIR=$HOME/2023feb-vorch/FLASH4.6.2
+export TORCH_DIR=$HOME/2023feb-vorch/torch
+
+export PYTHONPATH=$TORCH_DIR:$PYTHONPATH
+export PYTHONPATH=$TORCH_DIR/src:$PYTHONPATH
+export PYTHONPATH=$AMUSE_DIR/test:$PYTHONPATH
+export PYTHONPATH=$AMUSE_DIR/src:$PYTHONPATH
+
+export CONDA_PATH={path to your conda env.}
+
+# Activate conda environment
+conda activate $CONDA_PATH
+export PYTHON=$CONDA_PATHbin/python
+
+MCA_Settings='--mca orte_base_help_aggregate 0 '
+UCX_Settings='-x UCX_NET_DEVICES=mlx5_0:1'
+\end{lstlisting}
+
+Then, build your conda environment. The mpi4py install is very particular about the system environment in which it is installed, if you're running into issues later, reinstalling mpi4py or double checking paths is a good place to start.
+\begin{lstlisting}[language=bash]
+mkdir {your/conda_env/directory} 
+conda create --prefix {your/conda_env/directory}/{env_name} python=3.9
+conda activate {your/conda_env/directory}/{env_name} #give absolute path so conda can find your env
+conda install ipython matplotlib numpy scipy docutils gsl gmp h5py mpfr nose 
+conda clean --all 
+pip install --no-cache-dir mpi4py
+conda activate environment 
+\end{lstlisting}
+
+A few changes need to be made inside of the Torch and \texttt{FLASH} architecture to bring up to date with Snellius' compiler and Python version.
+\begin{lstlisting}[language=bash]
+cd torch
+#in src/flash/source/Particles/ParticlesMain/ray_pe/MultiSourceSimple/HEALPixModule.F90
+#line 209 & 250:
+iand(int(x),y) #i.e. replace the first argument of iand with int(argument)
+./install.sh
+
+emacs $FLASH_DIR/bin/setup.py
+#change sys.setcheckinterval() to sys.setswitchinterval()
+cd $FLASH_DIR/sites
+cp -r cartesius.surfsara.nl snellius.surf.nl
+#in $FLASH_DIR/sites/snellius.surf.nl/Makefile.h
+#add -fallow-argument-mismatch to FFLAGS_OPT
+#in $FLASH_DIR/sites/Aliases
+add:
+snellius.surf.nl int1.local.snellius.surf.nl
+snellius.surf.nl int2.local.snellius.surf.nl
+\end{lstlisting}
+
+Then, \texttt{FLASH} can be setup and built.
+\begin{lstlisting}[language=bash]
+./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev -maxblocks=100 +cube16 -site={mysitedir}
+cd object
+make -j
+\end{lstlisting}
+
+And \texttt{AMUSE} can be setup and the individual codes built. Note we need to make some under-the-hood changes to the .mk file after \texttt{AMUSE} is configured.
+\begin{lstlisting}[language=bash]
+cd amuse
+./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a --with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++ --with-gmp=/$CONDA_ENV --with-mpfr=$CONDA_ENV --with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env 
+#note: some users found that "./configure" what sufficient without any of the --with flags.
+
+#edit in amuse/config.mk:
+MPIFC=/sw/arch/Centos8/EB_production/2021/software/OpenMPI/4.1.1-GCC-10.3.0/bin/mpifort
+FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
+pip install -e .
+make framework
+make flash.code
+make kepler.code
+make ph4.code
+make seba.code
+make smalln.code
+make petar.code
+\end{lstlisting}
 
 \end{document}
