@@ -581,6 +581,8 @@ Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid t
 	+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=10000 +cube16
 \end{lstlisting}
 
+Change the `lrefine\_max` value in flash.par to be whatever level you wish the grid to reach at its highest refinement regions.
+
 Uncomment the VorAMR parameters in flash.par. Be sure to re-comment these if you later starting a "normal" Torch run.
 
 \begin{lstlisting}[language=bash]
@@ -589,6 +591,8 @@ min_particles_per_blk=4096
 max_particles_per_blk=4096 
 pt_maxPerProc = 10000000
 \end{lstlisting}
+
+If your source data contains star particles that you would like to include in Torch, edit \texttt{user\_initial\_conditions()} in \texttt{torch\_user.py} to read in the particle data, incorporate them into an \texttt{AMUSE} particle set, and initialize them via the \texttt{hydro} class.
 
 Finally, run Torch with only 1 processor assigned to \texttt{flash\_worker} (if running default worker partitions, this would be 6 total processors: 1 driver, 2 \texttt{ph4}, 1 \texttt{SeBa}, 1 \texttt{multiples}, 1 \texttt{FLASH}).
 
@@ -637,6 +641,11 @@ The module \texttt{source/physics/sourceTerms/GridInject} is in development and
 not recommended for use yet.
 
 \subsection{VorAMR Issues}
+\texttt{VorAMR} is capable of building Torch-ready initial conditions from ANY hydrodynamical simulation output. But, \texttt{VorAMR} is limited in how quickly it can complete this process. Luckily, a user will only have to use VorAMR once for a major production run, so the initial cost of time is generally worthwhile.
+\begin{itemize}
+	\item \texttt{VorAMR} can only run with ONE oversubscribed processor for the \texttt{flash\_worker} due to the use of serial HDF5 open/read calls within \texttt{FLASH}. Data conversion and grid build times can be on the order of days.
+	\item Users are recommended to augment a Torch+\texttt{VorAMR} run to output a checkpoint file after ONE timestep. Then, restart from the checkpoint in a clean Torch build without \texttt{VorAMR} turned on.
+\end{itemize}
 % ===========
 % Help!
 % ===========
