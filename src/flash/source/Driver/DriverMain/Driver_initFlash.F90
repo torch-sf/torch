@@ -141,6 +141,9 @@ subroutine Driver_initFlash()
 
   call RayTrace_init()
 
+#ifdef VORAMR
+  if(dr_globalMe==MASTER_PE)print*,'Using VorAMR'
+#endif
   call Particles_init( dr_restart)       ! Particles
 
 #ifdef DEBUG_DRIVER

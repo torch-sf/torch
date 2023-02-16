@@ -78,6 +78,7 @@
 !!  Particles_initData
 !!***
 
+#define VORAMR !Must be commented out to turn off VorAMR - SCL
 !!#define DEBUG_PARTICLES
 
 subroutine Particles_initPositions (partPosInitialized,updateRefine)
@@ -115,8 +116,18 @@ subroutine Particles_initPositions (partPosInitialized,updateRefine)
   integer :: blkCount
   integer,dimension(MAXBLOCKS) :: blkList
 !----------------------------------------------------------------------
-  ! VorAMR subroutine, is stub if not installed. - SCL
+#ifdef VORAMR
+  if (pt_meshMe == MASTER_PE) then
+     print*,"Calling VorAMR routine."
+  end if
+  ! VorAMR subroutine, VORAMR compile flag is set in pt_initVoronoiPositions.F90
   call pt_initVoronoiPositions(partPosInitialized,updateRefine)
+#endif
+#ifndef VORAMR
+  if (pt_meshMe == MASTER_PE) then
+     print*,"Skipping VorAMR."
+  end if
+#endif
   
   if(.not.useParticles) then
      partPosInitialized = .true.

@@ -4,7 +4,6 @@
 !!    pt_initVoronoiPositions
 !!
 !! SYNOPSIS
-!!
 !!    pt_initVoronoiPositions( logical, INTENT(out) :: success,
 !!                             logical, INTENT(out) :: updateRefine)
 !!
@@ -12,14 +11,19 @@
 !!    Initialize zero-mass particles with distribution drawn from input
 !!    dataset. Arrays for particle positions are dynamically allocated 
 !!    and de-allocated here too. 
-!! ARGUMENTS
 !!
+!! ARGUMENTS
 !! success/partPosInitialized   : boolean indicating whether particle positions were
 !!                successfully initialized. This is not really relavant
 !!                for this version of the routine.
 !! updateRefine : is true if the routine wishes to retain the already 
 !!                initialized particles instead of reinitializaing them
 !!                as the grid refines.
+!!
+!! NOTES
+!! This routine is called by source/Particles/Particles_Initialization/Particles_initPositions.F90
+!! Particles_initPositions contains the compiler flag #define VORAMR. This flag must be
+!! uncommented in order for this routine to be called. 
 !!
 !! Developed by Sean C. Lewis (Drexel University) as part of the VorAMR project.
 !!***
@@ -29,7 +33,7 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
 
   use Particles_data, ONLY: pt_numLocal, particles, pt_maxPerProc, &
        pt_posInitialized, pt_meshMe, pt_globalMe, pt_meshComm
-
+  use Logfile_interface, ONLY : Logfile_stamp
   use Grid_interface, ONLY : Grid_getListOfBlocks, &
        Grid_getBlkPtr, Grid_releaseBlkPtr,Grid_getCellCoords,&
        Grid_getBlkIndexLimits, Grid_getBlkData, &
@@ -73,7 +77,10 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
   real :: xcoord, ycoord, zcoord
 !--------------------------------------------------------------
 
-  if (pt_meshMe.EQ.MASTER_PE) print*,'Entered pt_initVoronoiPositions.F90'
+  if (pt_meshMe.EQ.MASTER_PE) then
+     call Logfile_stamp('VorAMR. Building refined grid', "[pt_initVoronoiPositions]")
+  endif
+  
   updateRefine=.true. !.false.
   if(partPosInitialized) return
 
