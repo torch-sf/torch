@@ -351,18 +351,21 @@ if (gr_meshMe == 0) &
     print*, "loc before snap_to_grid:", loc_in  !SA 20221221
 
 !!!!  Snap to Grid !!!
+
 ! Place the star in the center of a cell. Gives best results
 ! Needed to ensure symmetric driving (Cunningham+2011).
 ! Previous version worked incorrectly - updated to attempt to fix it -  20230125 SA
 ! NOTE - this happens before we check that every cell on the block is maximally refined....
 ! Not sure if this is an issue or not so we should double check
+
 if (snap_to_grid) then
+    ! First figure out block and proc of star location
     call Grid_getBlkIDFromPos(loc_in, blockID ,procID, gr_meshComm)
-    ! The above line finds block ID given star location
-    print*, "Print blockID and procID: ", blockID, procID ! Check procID and blockID - SA 20230214
-    print*, "Check on coord: ", coord(1, blockID) ! Double check what coord() does - should find the coord of the block center 
+    
     call Driver_getMype(GLOBAL_COMM, myProc) ! Check the current processor  - SA 20230214
     print*, "Check procID and myProc: ", procID, myProc  ! compare current processor and proc of loc_in - SA 20230214
+    !! CAN WE REPLACE GETMYPE WITH GR_MESHME???
+
     if (myProc == procID) then  ! Only snap_to_grid if the current processor matches the proc of loc_in - SA 20230214
         do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
             deltaInverse = 1. / delta(i)
@@ -370,22 +373,27 @@ if (snap_to_grid) then
             indexP = floor(xp) !+ 1 + NGUARD  ! Actual cell index - check if we should include guard cells???
             cellCenter = ((indexP + 0.5) * delta(i)) + coord(i,blockID)  ! Move to cell center and convert back to physical position
             loc(i) = cellCenter  ! Save coordinate of cell center to loc() for use during injection
-            ! loc(i) = floor(loc_in(i)) + 0.5_dp*delta(i)  ! Previous approach to snap_to_grid
         end do
+        
+        ! Check how far the location of the star moved:  !SA 20230222
+        print*, "loc after snap_to_grid:", loc  !SA 20221221
+        print*, "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
+        if (max(abs(loc_in(1) - loc(1)), abs(loc_in(2) - loc(2)), abs(loc_in(3) - loc(3)) ) &
+            > min(delta(1), delta(2),delta(3)) ) then  !added abs() SA 20230222 
+           print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
+        end if !end of checking total location change
 
+        !put the mpi scatter here  MPI_Bcast()
+        ! does the MPI_Bcast need to be on only the proc with the star or everywhere? see other code?
+        call MPI_Bcast(loc, 3, MPI_DOUBLE_PRECISION, procID, gr_meshComm, ierr)
+        !  Are these the right arguments?  Does this save things to loc????
+    end if
 else
 
     loc(:) = loc_in(:)    
 
-end if
+end if !end if snap_to_grid
 
-if (gr_meshMe == 0) then
-    print*, "loc after snap_to_grid:", loc  !SA 20221221
-    print*, "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
-    if (max((loc_in(1) - loc(1)),(loc_in(2) - loc(2)),(loc_in(3) - loc(3)) ) > min(delta(1), delta(2),delta(3)) ) then
-        print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
-    end if
-end if
 
 
 #ifdef DEBUG
