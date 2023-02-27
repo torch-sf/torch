@@ -61,6 +61,7 @@ from torch_se import stellar_evolution
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
+    remove_merged_stars,
     make_stars_from_sinks,
     queue_stars,
 )
@@ -91,9 +92,7 @@ def stop_smalln():
 def initialize_workers():
 
     # Converter for the N-body code.
-    convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun) # from Brooke
-    #convert = nbody.nbody_to_si(12.5*2*1.496e16|units.cm, (np.pi/8.0)*np.sqrt(((12.5*2*1.496e16/2.0)**3)/(2*6.67428e-8*1.234e33))|units.s) # r_out and dt_soft
-    #convert = nbody.nbody_to_si(12.5*1.496e15|units.cm, (np.pi/8.0)*np.sqrt(((12.5*1.496e15/2.0)**3)/(2*6.67428e-8*1.234e33))|units.s) # r_out and dt_soft, 100 AU
+    convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun)
     # Converter for the hydro code.
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
@@ -107,7 +106,6 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
-        #grav.parameters.r_bin = 2*1.496e16 | units.cm # 2000AU, from Brooke's script
         #aveStarMass = 1.234e33 | units.g
         #velDisp = 1.7e5 | units.cm/units.s
         G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
@@ -134,7 +132,7 @@ def initialize_workers():
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
-        mult.check_tidal_perturbation    = True
+        mult.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
 
@@ -188,7 +186,7 @@ def evolve(state, hydro, grav, mult, se):
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
         print("nbody time = ",nbody.time)
-        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
+        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = dt_nbody
 
     num_stars = hydro.get_number_of_particles()
@@ -216,6 +214,8 @@ def evolve(state, hydro, grav, mult, se):
                 pool_table_hydro.append(i)
             elif name == "grav":
                 pool_table_grav.append(i)
+
+
 
     first_star = 0
 
@@ -365,6 +365,9 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
 
+                #if USER['with_petar']:
+                    #remove_merged_stars(state, hydro, grav)
+
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
                 if USER['with_multiples']:
@@ -423,6 +426,7 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
             binaries=USER['binaries']
+            m_small=USER['m_small']
         )
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
@@ -481,7 +485,7 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.s)))) | units.s
+            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
         num_stars = hydro.get_number_of_particles()  # loop variable
 

@@ -33,6 +33,7 @@ module rt_data
   real, save    :: rt_abundM, rt_metal
 
   real, save    :: rt_dt
+  real, save    :: rt_dt_temp
   real, save, dimension(5) :: rt_dt_pos
 
   logical,save :: rt_rayTrace

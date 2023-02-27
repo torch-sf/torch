@@ -40,16 +40,16 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   use Driver_data, only : dr_globalMe, dr_nstep, dr_globalComm
 
 #ifdef WIND_INJ
-  use Particles_windData, only : min_wind_mass, min_wind_dt
+  use Particles_windData, only : min_wind_mass, min_wind_dt, wind_target_temp
   use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 #endif
-  use Particles_rayData, only : ph_radPressure
+  use Particles_rayData, only : ph_radPressure, cfl_radPressure
   use rt_data, only: rt_dt, rt_dt_pos, rt_protonMass, rt_gamma1, &
                      rt_rayTrace, rt_useNumstepsRadTransDtOnStart, &
-                     rt_numstepsRadTransDt, rt_useRadTransDt
+                     rt_numstepsRadTransDt, rt_useRadTransDt, rt_dt_temp
   use Particles_data, only: particles, pt_typeInfo
   use Grid_interface, only: Grid_getMinCellSize
-
+  use Particles_windData, ONLY: mass_load, wind_target_temp
   implicit none
   
 #include "Flash_mpi.h"
@@ -72,6 +72,11 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   integer, save       :: global_mass_count=0, global_fb_stars=0
   logical, save       :: stillUseRadDt = .false., first_call=.true.
   real, save          :: old_dt_radtrans = 1d99
+  real :: mass_load_factor
+  real :: injectVelocity
+  character(len=10), save :: conserved_quant
+  real :: refVel
+  real, save :: sink_density
 
   ! Here we estimate the timestep for feedback in radiation and winds
   ! from a star we have introduced to the simulation in between loop steps.
@@ -85,10 +90,15 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 
 #ifdef WIND_INJ
   if (first_call) then
+    call RuntimeParameters_get("cons_quant", conserved_quant)
     call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+    call RuntimeParameters_get("wind_target_temp", wind_target_temp)
     call RuntimeParameters_get("rt_useRadTransDt", rt_useRadTransDt)
     call RuntimeParameters_get("rt_useNumstepsRadTransDtOnStart", rt_useNumstepsRadTransDtOnStart)
     call RuntimeParameters_get("rt_numstepsRadTransDt", rt_numstepsRadTransDt)
+    call RuntimeParameters_get("rt_dt_temp", rt_dt_temp)
+    call RuntimeParameters_get("cfl_radPressure", cfl_radPressure)
+    call RuntimeParameters_get("sink_density_thresh", sink_density)
     first_call = .false.
   end if
 #endif
@@ -200,8 +210,22 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #ifdef WIND_INJ
       if (wind_vel > 0.0) then
 ! Assume new star winds will make the gas ionized and 2x10^7 K. -JW
-        csRad        = sqrt(rt_gamma1 * kB * 2d7 / rt_protonMass / mu)
-        dt_wind      = 0.3 * deltaX / sqrt(csRad**2.0 + wind_vel**2.0)
+! This temperature should be set to the wind_target_temp of mass loading. -BP 06.23.22
+        csRad        = sqrt(rt_gamma1 * kB * wind_target_temp / rt_protonMass / mu)
+
+! The velocity used for wind timestep should account for mass loading!!
+if (mass_load) then 
+    refVel = sqrt(wind_target_temp/1.38d7)*1e8
+    if (conserved_quant .eq. "momentum") then
+        mass_load_factor = wind_vel/refVel - 1.0d0
+        injectVelocity   = wind_vel / (1.0d0+mass_load_factor)
+    else if (conserved_quant .eq. "energy") then
+        mass_load_factor = wind_vel**2.0d0/refVel**2.0d0 - 1.0d0
+        injectVelocity   = wind_vel / dsqrt(1.0d0+mass_load_factor)
+    endif
+end if
+
+        dt_wind      = 0.3 * deltaX / sqrt(csRad**2.0 + injectVelocity**2.0)
 
 #ifdef DEBUG_RADDT
 #ifdef ONLY_FB_PROC
@@ -218,17 +242,30 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 
       if (rt_rayTrace) then
 ! Assume new star radiation will make the gas ionized and 2x10^5 K. -JW
-        csRad        = sqrt(rt_gamma1 * kB * 3d5 / rt_protonMass / mu)
+! This should be a flash runtime parameter (rt_dt_temp). -BP 06.23.22
+        csRad        = sqrt(rt_gamma1 * kB * rt_dt_temp / rt_protonMass / mu)
     
 ! Estimate the velocity from the momentum of radiation as that which
 ! makes it into one of the surrounding cells based on the newly formed
 ! stars photon flux on that cell. Note this is a bit too aggressive, should
 ! go back and actually integrate and find the flux to properly put in here. - JW
 
+! It's ok to assume that in the initial timestep all the ionizing photons get
+! absorbed because the sink density in which a star will form implies a mean 
+! free path smaller than a cell width. -BP 19Jan23
+
         if (ph_radPressure) then
 ! This is delta_t = sqrt(V * c * mu * m_H / (dN_ph/dt * sigma_H * E_avg) - JW
-          dt_mom        = 0.3*sqrt(deltaX**3.0d0 * 3.0d10 * 1.24d0 * 1.67d-24 / &
-                        (photon_flux * cross_sec * ener_per_ph))
+!          dt_mom        = 0.3*sqrt(deltaX**3.0d0 * 3.0d10 * 1.24d0 * 1.67d-24 / &
+!                        (photon_flux * cross_sec * ener_per_ph))
+
+! Above formula is dt = mean free path / dv, when it should be dt = dx/dv 
+! where dv = (E_avg * dN_ph/dt * dt) / (rho * V * c). Density is approximated as
+! the sink threshhold density, as this is roughly the density where newborn stars 
+! will form in. Also made the "courant" factor a user parameter. -BP 19Jan23
+           dt_mom = cfl_radPressure * sqrt(deltaX**4.0d0 * 3.0d10 * sink_density / &
+                               (photon_flux * ener_per_ph))
+
         end if
       dt_min_local  = 0.3*deltaX / csRad ! With a safe CFL factor for now.
 

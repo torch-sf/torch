@@ -21,6 +21,14 @@ installation.  The installer will then automatically copy interface code from
 It will also ensure that the FLASH4.5-a patch for HDF5 >1.10.x compatibility is
 applied in your FLASH repo.
 
+
+Contributing
+------------
+
+Torch is an open-source code!  Please see [CONTRIBUTING.md](CONTRIBUTING.md) to
+learn how to get involved.
+
+
 What's in this repository?
 --------------------------
 
@@ -134,25 +142,26 @@ This reports to STDOUT something like:
     Total - ambient mass (Msun): [9.978e+02 9.978e+02 5.686e+03 4.849e+05 6.290e+08]
     t_freefall (Myr): [2.865 2.865 3.394 4.109 3.608]
 
-Contributing
-------------
-
-Torch is an open-source code!  Please see [CONTRIBUTING.md](CONTRIBUTING.md) to
-learn how to get involved.
+Credits
+-------
 
 The Torch code includes contributions by:
 
 * Sabrina Appel
 * Claude Cournoyer-Cloutier
 * Raúl Domínguez
+* Will Farner
+* Joseph Glaser
 * Ralf Klessen
 * Sean Lewis
 * Steve McMillan
 * Mordecai-Mark Mac Low
 * Andrew Pellegrino
+* Brooke Polak
 * Simon Portegies Zwart
 * Aaron Tran
 * Joshua Wall
+* Martijn Wilhelm
 
 In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 

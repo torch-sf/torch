@@ -263,7 +263,7 @@ def user_parameters():
 
     # <bridge>
 
-    p['npy_seed'] = 1437783  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
+    p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
 
@@ -278,7 +278,7 @@ def user_parameters():
 
     # <star/n-body gravity>
 
-    p['with_ph4'] = False  # use ph4 or Hermite
+    p['with_ph4'] = True  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <star/n-body gravity & binaries>
@@ -290,19 +290,20 @@ def user_parameters():
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
-    p['with_winds'] = True  # allow stars to deposit hot winds
+    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
-    p['min_feedback_mass'] = 7.0 | units.MSun
+    p['min_feedback_mass'] = 20.0 | units.MSun
 
     # <star particle creation>
 
     p['binaries'] = True
     p['min_imf_mass'] = 0.08 | units.MSun
-    p['max_imf_mass'] = 150.0 | units.MSun
+    p['max_imf_mass'] = 100.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 100
+    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
-    p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
+    p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
+    p['m_small'] = 1.0 # agglomerate mass in Msun
 
     # <amuse file overwrite>
 
@@ -311,6 +312,7 @@ def user_parameters():
     # <job>
 
     ntasks = get_ntasks_from_run_script()
+
 
     p['num_grav_workers'] = 2 # must be power of 2 for PeTar 
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse

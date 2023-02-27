@@ -3,9 +3,9 @@
 # Set the HDF5/MPI library paths -- these need to be updated for your system
 #----------------------------------------------------------------------------
 
-MPI_PATH   = /cm/shared/sw/pkg/devel/openmpi/2.1.6-hfi-slurm17.11
+MPI_PATH   = $(OPENMPI_BASE)
 HDF4_PATH  =
-HDF5_PATH  = /cm/shared/sw/pkg/devel/hdf5/1.8.21-openmpi2
+HDF5_PATH  = $(HDF5_BASE)
 HYPRE_PATH =
 
 ZLIB_PATH  =

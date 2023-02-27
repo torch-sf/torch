@@ -43,6 +43,7 @@ rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 25
 
 asrc="${TORCH_DIR}/src/amuse" || { echo $errstr; exit 255; }
 adest="${AMUSE_DIR}/src/amuse/community/flash" || { echo $errstr; exit 255; }
+pdest="${AMUSE_DIR}/src/amuse/community/petar" || { echo $errstr; exit 255; }
 
 # to allow python imports
 touch ${adest}/__init__.py || { echo $errstr; exit 255; }
@@ -51,6 +52,7 @@ cp -v ${asrc}/base_grid_interface.F90   ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/interface.F90             ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/interface.py              ${adest}/ || { echo $errstr; exit 255; }
 cp -v ${asrc}/Makefile.prototype        ${adest}/Makefile || { echo $errstr; exit 255; }
+cp -v ${asrc}/petar_download.py         ${pdest}/download.py || { echo $errstr; exit 255; }
 
 mkdir -p ${adest}/src
 cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 255; }
