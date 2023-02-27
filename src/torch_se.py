@@ -132,6 +132,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
     state.stars.mass = new_mass
     state.stars.stellar_type = new_type
 
+    # Set radius to physical radius of star, CCC & BP 19Aug2022
+    state.stars.radius = se_radius
+    
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
