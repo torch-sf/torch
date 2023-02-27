@@ -31,7 +31,6 @@
 !!REORDER(4): solnData
 subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
 
-  use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use Particles_data, ONLY: pt_numLocal, particles, pt_maxPerProc, &
        pt_posInitialized, pt_meshMe, pt_globalMe, pt_meshComm
   use Logfile_interface, ONLY : Logfile_stamp
@@ -76,7 +75,6 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
   INTEGER(HSIZE_T), DIMENSION(2) :: coords_max_dims
 
   real :: xcoord, ycoord, zcoord ! Imported gas particle coordinates
-  !real :: lrx, lry, lrz, lrr, diffr ! Localized refinement runtime params
 !--------------------------------------------------------------
 
   if (pt_meshMe.EQ.MASTER_PE) then
@@ -114,23 +112,6 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
      CALL h5close_f(error)
   endif
 
-  ! Get runtime params loc_ref_{x,y,z,rad} and save to vars here (make sure to declare them at top!).
-  ! if loc_ref_rad .eq. -1.0, set to +INF (all particles included). Report this to user.
-  ! ifelse,
-  ! For each particle, check if ABS(pos{x,y,z} - loc_ref{x,y,z}) .lt. loc_ref_rad
-  ! place particle, set type, block.
-  ! end if
-  !call RuntimeParameters_get('loc_ref_x', lrx)
-  !call RuntimeParameters_get('loc_ref_y', lry)
-  !call RuntimeParameters_get('loc_ref_z', lrz)
-  !call RuntimeParameters_get('loc_ref_rad', lrr)
-  !if (lrr .eq. -1.0) then
-  !   print*, "Local refinement radius == -1.0, setting to HUGE(1.0) to include all VorAMR particles."
-  !   lrr = HUGE(1.0)
-  !else
-  !   print*, "Local refinement radius == ", lrr, "Only placing particle within this radius."
-  !endif
-  
   print*, 'Placing particles...'
   CALL flush()
   do i=1, rows
@@ -138,8 +119,6 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
         xcoord = coords_dset_data(1,i)
         ycoord = coords_dset_data(2,i)
         zcoord = coords_dset_data(3,i)
-        !diffr = ((xcoord-lrx)*(xcoord-lrx) + (ycoord-lry)*(ycoord-lry) + (zcoord-lrz)*(zcoord-lrz))**(0.5)
-        !if (diffr .lt. lrr) then
         call Grid_getBlkIDFromPos([xcoord, ycoord, zcoord], blockID, pt_meshMe, pt_meshComm)
         pt_numLocal = pt_numLocal + 1
         if (pt_numLocal .gt. pt_maxPerProc) &
@@ -153,7 +132,6 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
         particles(POSZ_PART_PROP,ps) = zcoord
         particles(TYPE_PART_PROP,ps) = NONEXISTENT
         !NONEXISTENT particle type allows VorAMR particles and their memory to be cleared by Grid_sortParticles() and reused.
-        !endif
      endif
   enddo
   call Particles_getGlobalNum(globalNumParticles)
