@@ -130,6 +130,7 @@ def get_period(mass):
         def probability(m, x):
             
             if 0.6 <= m < 1.6:
+
                 if 0.5 <= x < 1.5:
                     prob = 0.027
                 elif 1.5 <= x < 2.5:
