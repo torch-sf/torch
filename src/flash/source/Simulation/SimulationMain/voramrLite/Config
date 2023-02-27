@@ -1,0 +1,305 @@
+#Configuration file for testing Particles based refinement
+
+REQUIRES Driver
+REQUIRES RuntimeParameters
+REQUIRES Grid/GridMain/paramesh
+
+
+#Active particles.
+PARTICLETYPE ACTIVE INITMETHOD custom MAPMETHOD weighted ADVMETHOD PT_ADVMETH_NONE
+PARTICLETYPE NONEXISTENT INITMETHOD custom MAPMETHOD weighted ADVMETHOD PT_ADVMETH_NONE
+PARTICLEPROP mass     REAL
+D PARTICLEPROP momx     REAL
+D PARTICLEPROP momy     REAL
+D PARTICLEPROP momz     REAL
+PARTICLEPROP eint     REAL
+PARTICLEPROP test     REAL
+
+REQUIRES Grid/GridParticles
+REQUIRES Grid/GridParticles/GridParticlesMapToMesh
+REQUESTS Particles/ParticlesMapping/meshWeighting/MapToMesh
+REQUESTS Particles/ParticlesMapping/meshWeighting/CIC
+
+D sim_ptMass mass of one particles when replacing some mass in the
+D & domain with active particles to test refinement based on particles
+D & count
+PARAMETER sim_ptMass     REAL    0.005
+
+D sim_densityThreshold the level of density in any cell above which
+D & the particles are used to simulate the mass in the domain. This 
+D & formulation is used only to test refinement based on particles.
+PARAMETER sim_densityThreshold REAL 0.85
+
+D sim_smlRho the smallest allowed value of density so that we do not
+D & have overflow in calculations.
+PARAMETER sim_smlRho REAL 1.e-10
+
+D sim_minBlks parameter to ensure that refinement is taking place
+PARAMETER sim_minBlks  INTEGER 40
+
+VARIABLE dens # density profile
+# adding more variables that base_grid_interface.F90 expects -SCL 07/12/22
+VARIABLE eint # internal energy
+VARIABLE ener # gas kinetic energy not sure
+VARIABLE velx # gas velocity x
+VARIABLE vely # gas velocity y
+VARIABLE velz # gas velocity z
+VARIABLE gpot # gravitational potential
+
+#VARIABLE dmps # density distribution where mass carried by particles is removed
+VARIABLE pden # density distribution obtained by mapping particles to mesh
+
+# More variables that Torch has/expects
+VARIABLE bgpt # background potential due to star particles
+VARIABLE fufl # far-UV flux
+VARIABLE iha  # atomic (neutral) hydrogen fraction
+VARIABLE ihp  # ionized hydrogen fraction
+VARIABLE bgax # acceleration in x due to bgpt
+VARIABLE bgay # acceleration in y due to bgpt
+VARIABLE bgaz # acceleration in z due to bgpt
+VARIABLE divb # divergence in B-field
+
+VARIABLE magp # magnetic pressure
+VARIABLE magx # x-component of magnetic field
+VARIABLE magy # y-component of magnetic field
+VARIABLE magz # z-component of magnetic field
+VARIABLE pres # gas pressure
+VARIABLE tdus # dust temperature
+VARIABLE temp # gas temparature
+VARIABLE uvfl # UV flux
+VARIABLE fcx1 # face-centered value x1
+VARIABLE fcx2 # face-centered value x2
+VARIABLE fcy1 # face-centered value y1
+VARIABLE fcy2 # face-centered value y2
+VARIABLE fcz1 # face-centered value z1
+VARIABLE fcz2 # face-centered value z2
+VARIABLE gacx #
+VARIABLE gacy #
+VARIABLE gacz #
+VARIABLE gamc # gamma
+VARIABLE game # gamma
+VARIABLE gpol #
+VARIABLE grac #
+VARIABLE icor #
+VARIABLE imgm #
+VARIABLE imgp #
+VARIABLE isls #
+VARIABLE pefl #
+VARIABLE phhe #
+VARIABLE phio #
+
+VARIABLE sgax #
+VARIABLE sgay #
+VARIABLE sgaz #
+VARIABLE sgxo #
+VARIABLE sgyo #
+VARIABLE sgzo #
+VARIABLE shok #
+
+# Torch PARAMETERS; unused by VorAMR but required for checkpoint build
+PARAMETER eos_entrelescalechoice   INTEGER 6
+PARAMETER eos_loglevel             INTEGER 700
+PARAMETER gp_radius                INTEGER 2
+PARAMETER hy_3torder               INTEGER -1
+PARAMETER hydrocomputedtoption     INTEGER -1
+PARAMETER ih2_diss		   INTEGER 0
+PARAMETER ih2_form		   INTEGER 0
+PARAMETER irenorm		   INTEGER 0
+PARAMETER maxstars		   INTEGER 100
+PARAMETER maxcycles		   INTEGER 5000
+PARAMETER mpole_lmax		   INTEGER 10
+PARAMETER order 		   INTEGER 1
+PARAMETER particlefileintervalstep INTEGER 0
+PARAMETER particlefilenumber	   INTEGER 0
+PARAMETER ph_commcheckinterval	   INTEGER 20
+PARAMETER ph_inithplevel	   INTEGER 2
+PARAMETER ph_maxnrays		   INTEGER 1000000
+PARAMETER ph_raystobundle	   INTEGER 5
+PARAMETER rt_numstepsradtransdt	   INTEGER 10
+PARAMETER sink_ewaldfieldnx	   INTEGER 64
+PARAMETER sink_ewaldfieldny	   INTEGER 64
+PARAMETER sink_ewaldfieldnz	   INTEGER 64
+PARAMETER sink_ewaldseriesn	   INTEGER 5
+PARAMETER sink_maxsinks		   INTEGER 1000
+PARAMETER transorder		   INTEGER 1
+
+PARAMETER gzero			   REAL 1.69
+PARAMETER lambda_cr		   REAL 1.E-27
+PARAMETER limitedslopebeta	   REAL 1.
+PARAMETER t_cool_min		   REAL 10.
+PARAMETER t_max			   REAL 50000.
+PARAMETER t_max_core		   REAL 2000.
+PARAMETER t_max_core_radius	   REAL 0.
+PARAMETER abstmax		   REAL 1.E+9
+PARAMETER abstmin		   REAL 10.
+PARAMETER bx0			   REAL 0.
+PARAMETER by0			   REAL 0.
+PARAMETER bz0			   REAL 3.E-6
+PARAMETER cfl			   REAL 0.8
+PARAMETER crionenergy		   REAL 20.
+PARAMETER crionexp		   REAL 0.021
+PARAMETER crionnh		   REAL 1.E+20
+PARAMETER crionrate		   REAL 2.E-17
+PARAMETER cvisc			   REAL 0.1
+PARAMETER dradmax		   REAL 1.E+10
+PARAMETER dradmin		   REAL 1.E-99
+PARAMETER dtthres		   REAL -0.01
+PARAMETER dust_gas_ratio	   REAL 0.01
+PARAMETER dust_sputter_temp	   REAL 30000.
+PARAMETER eintswitch		   REAL 0.01
+PARAMETER eos_singlespeciesa	   REAL 1.
+PARAMETER eos_singlespeciesz	   REAL 1.
+PARAMETER gamma 		   REAL 1.66666667
+PARAMETER gp_elldel		   REAL 12.
+PARAMETER gp_sigdel		   REAL 2.
+PARAMETER h_uv			   REAL 0.3
+PARAMETER he_abundm		   REAL 0.
+PARAMETER he_metal		   REAL 4.
+PARAMETER he_pe_norm		   REAL 1.3E-24
+PARAMETER hy_bier1ta		   REAL -1.
+PARAMETER hy_bier1tz		   REAL -1.
+PARAMETER hy_biermanncoef	   REAL 1.
+PARAMETER hy_cflfallbackfactor	   REAL 0.9
+PARAMETER hy_fpresinmomflux	   REAL 1.
+PARAMETER hybridorderkappa	   REAL 0.
+PARAMETER jeans_ncells_deref	   REAL 24.
+PARAMETER jeans_ncells_ref	   REAL 12.
+PARAMETER mg_maxresidualnorm	   REAL 0.01
+PARAMETER min_radius		   REAL 0.
+PARAMETER min_wind_dmdt		   REAL 1.E-7
+PARAMETER min_wind_mass		   REAL 1.3923E+34
+PARAMETER nd_cool_max		   REAL 1.E+10
+PARAMETER nd_cool_min	       	   REAL 10.
+PARAMETER particlefileintervaltime REAL 3.15569260e+010
+PARAMETER particlefileintervalz    REAL	HUGE(1.)
+PARAMETER perturb_std_dev	   REAL 0.05
+PARAMETER ph_periodicboxl	   REAL 1.499
+PARAMETER ph_sampling		   REAL 2.
+PARAMETER point_mass		   REAL 0.
+PARAMETER point_mass_rsoft	   REAL	0.
+PARAMETER pt_dtchangetolerance	   REAL	0.4
+PARAMETER pt_dtfactor		   REAL	0.5
+PARAMETER ref_radius		   REAL -1.
+PARAMETER rt_dtfactor		   REAL	0.1
+PARAMETER rt_ion_min		   REAL 1.E-8
+PARAMETER rt_ion_threshold	   REAL 0.1
+PARAMETER rt_maxhchange		   REAL 0.1
+PARAMETER rt_neutral_min	   REAL 1.E-10
+PARAMETER sfe			   REAL 0.3
+PARAMETER sigdust		   REAL	1.E-21
+PARAMETER sim_a_i		   REAL -1.0
+PARAMETER sim_a_n		   REAL -1.0
+PARAMETER sim_gamma_i		   REAL	1.66667
+PARAMETER sim_gamma_n		   REAL 1.66667
+PARAMETER sim_init_hp		   REAL	0.0001
+PARAMETER sim_tdust		   REAL	18.
+PARAMETER sink_accretion_radius	   REAL 1.E14
+PARAMETER sink_density_thresh	   REAL 1.E-14
+PARAMETER sink_dt_factor	   REAL	0.5
+PARAMETER sink_softening_radius	   REAL 1.E14
+PARAMETER sink_subdt_factor	   REAL 0.01
+PARAMETER subfactor		   REAL	0.3
+PARAMETER temp_dust		   REAL 6.
+PARAMETER theatmax		   REAL	2.E+4
+PARAMETER theatmin		   REAL 1.E-99
+PARAMETER tradmax		   REAL 1.E+15
+PARAMETER tradmin		   REAL 10.
+PARAMETER tstep_cool_factor	   REAL	0.3
+PARAMETER wind_target_temp	   REAL 5.E+6
+
+PARAMETER riemannsolver		    STRING "HLLD"
+PARAMETER unitsystem		    STRING "CGS"
+PARAMETER cons_quant		    STRING "momentum"
+PARAMETER entropyfixmethod	    STRING "HARTENHYMAN"
+PARAMETER he_int_method		    STRING "Implicit"
+PARAMETER he_pe_recipe		    STRING "WD01"
+PARAMETER hy_eosmodegc		    STRING "see eosMode"
+PARAMETER prolmethod		    STRING "injection_prol"
+PARAMETER sim_cubefile		    STRING "none"
+PARAMETER sink_ewaldfilename	    STRING "sink_ewald.txt"
+PARAMETER sink_softening_type_gas   STRING "spline"
+PARAMETER sink_softening_type_sinks STRING "spline"
+PARAMETER slopelimiter		    STRING "minmod"
+PARAMETER wenomethod		    STRING "WENO5"
+
+PARAMETER eosforriemann		          BOOLEAN FALSE
+PARAMETER e_modification		  BOOLEAN TRUE
+PARAMETER e_upwind			  BOOLEAN TRUE
+PARAMETER forcehydrolimit		  BOOLEAN FALSE
+PARAMETER addthermalflux		  BOOLEAN TRUE
+PARAMETER add_therm_e			  BOOLEAN FALSE
+PARAMETER charlimiting			  BOOLEAN TRUE
+PARAMETER conserveangfield		  BOOLEAN FALSE
+PARAMETER conserveangmom		  BOOLEAN FALSE
+PARAMETER cooloff			  BOOLEAN FALSE
+PARAMETER cooltime			  BOOLEAN FALSE
+PARAMETER early_term_fuv		  BOOLEAN TRUE
+PARAMETER energyfix			  BOOLEAN TRUE
+PARAMETER entropy			  BOOLEAN FALSE
+PARAMETER grav_temporal_extrp		  BOOLEAN FALSE
+PARAMETER grav_unjunkpden		  BOOLEAN TRUE
+PARAMETER hallvelocity			  BOOLEAN FALSE
+PARAMETER hy_biermannsource		  BOOLEAN FALSE
+PARAMETER hy_fallbacklowercfl		  BOOLEAN TRUE
+PARAMETER hy_fullspecmsfluxhandling	  BOOLEAN TRUE
+PARAMETER hy_usefluxeqn			  BOOLEAN FALSE
+PARAMETER keeplostparticles		  BOOLEAN FALSE
+PARAMETER killdivb			  BOOLEAN TRUE
+PARAMETER killdivb8w			  BOOLEAN FALSE
+PARAMETER mass_load			  BOOLEAN TRUE
+PARAMETER mg_printnorm			  BOOLEAN FALSE
+PARAMETER octant			  BOOLEAN FALSE
+PARAMETER perturb_velocity		  BOOLEAN FALSE
+PARAMETER ph_euvondust			  BOOLEAN FALSE
+PARAMETER ph_inblocksplit		  BOOLEAN TRUE
+PARAMETER ph_radpressure		  BOOLEAN TRUE
+PARAMETER ph_rotrays			  BOOLEAN TRUE
+PARAMETER ph_xperiodic			  BOOLEAN FALSE
+PARAMETER ph_yperiodic			  BOOLEAN FALSE
+PARAMETER ph_zperiodic			  BOOLEAN FALSE
+PARAMETER quadrant			  BOOLEAN FALSE
+PARAMETER refineonjeanslength		  BOOLEAN TRUE
+PARAMETER refineonsinkparticles		  BOOLEAN TRUE
+PARAMETER rt_heatinrad			  BOOLEAN TRUE
+PARAMETER rt_raytrace			  BOOLEAN TRUE
+PARAMETER rt_usenumstepsradtransdtonstart BOOLEAN FALSE
+PARAMETER rt_useradtransdt		  BOOLEAN TRUE
+PARAMETER shockdetect			  BOOLEAN TRUE
+PARAMETER shocklowercfl			  BOOLEAN TRUE
+PARAMETER sink_advanceserialcomputation	  BOOLEAN TRUE
+PARAMETER sink_gasaccretionchecks	  BOOLEAN TRUE
+PARAMETER sink_convergingflowcheck	  BOOLEAN TRUE
+PARAMETER sink_jeanscheck		  BOOLEAN TRUE
+PARAMETER sink_merging			  BOOLEAN TRUE
+PARAMETER sink_negativeetotcheck	  BOOLEAN TRUE
+PARAMETER sink_offdomainsupport		  BOOLEAN FALSE
+PARAMETER sink_potentialmincheck	  BOOLEAN TRUE
+PARAMETER statifyheat			  BOOLEAN FALSE
+PARAMETER threadeoswithinblock		  BOOLEAN FALSE
+PARAMETER threadhydroblocklist		  BOOLEAN FALSE
+PARAMETER threadhydrowithinblock	  BOOLEAN FALSE
+PARAMETER updategravity			  BOOLEAN TRUE
+PARAMETER updatehydrofluxes		  BOOLEAN TRUE
+PARAMETER usedustcool			  BOOLEAN TRUE
+PARAMETER useradtransfer		  BOOLEAN TRUE
+PARAMETER usesn				  BOOLEAN FALSE
+PARAMETER usesinkparticles		  BOOLEAN TRUE
+PARAMETER use_3dfullctu			  BOOLEAN TRUE
+PARAMETER use_biermann			  BOOLEAN FALSE
+PARAMETER use_biermann1t		  BOOLEAN FALSE
+PARAMETER use_biermann3t		  BOOLEAN FALSE
+PARAMETER use_hall			  BOOLEAN FALSE
+PARAMETER use_auxeinteqn		  BOOLEAN TRUE
+PARAMETER use_avisc			  BOOLEAN TRUE
+PARAMETER use_cma_advection		  BOOLEAN FALSE
+PARAMETER use_cma_flattening		  BOOLEAN FALSE
+PARAMETER use_cr_heating		  BOOLEAN FALSE
+PARAMETER use_flattenting		  BOOLEAN FALSE
+PARAMETER use_gravhalfupdate		  BOOLEAN TRUE
+PARAMETER use_hybridorder		  BOOLEAN TRUE
+PARAMETER use_steepening		  BOOLEAN FALSE
+PARAMETER use_upwindtvd			  BOOLEAN TRUE
+PARAMETER use_wind_compute_dt		  BOOLEAN FALSE
+PARAMETER var_radius			  BOOLEAN FALSE
+PARAMETER writeparticleall		  BOOLEAN TRUE
+PARAMETER writeparticlesubset		  BOOLEAN FALSE
