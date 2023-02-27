@@ -474,7 +474,7 @@ def run_torch(user_initial_conditions, user_parameters):
                                                                                scoords, svels,
                                                                                apply_consts=True, use_com_coords=False)
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
-                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet)
+                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['local_ref'])
 
             coords, field_set = read_arepo_hdf5(USER['input_file'])
         else:
@@ -488,14 +488,27 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
     
-    hydro, grav, mult, se = initialize_workers()
+    hydro, grav, mult, se = initialize_workers() 
 
+    # VORAMR-LITE Testing - SCL ####################
+    #from amuse.community.voramr.interface import Flash
+    #convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+    #hydro = Flash(
+    #    unit_converter=convert2,
+    #    number_of_workers=1,#USER['num_hy_workers'],
+    #    redirection='file',
+    #    redirect_stdout_file='voramr_worker.out',
+    #    redirect_stderr_file='voramr_worker.err',
+    #    )
+    ###################################################3
     # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
         vprint("Done interpolating. VorAMR complete.")
+        #hydro.hydro.write_chpt()
+        #vprint("Wrote checkpoint.")
     state = TorchState(hydro, grav, mult)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
