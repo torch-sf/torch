@@ -88,8 +88,8 @@ class TorchState(object):
             loopfile = path.join(self.output_dir,
                 'torch_loop{:04d}.pickle'.format(self.chknum))
 
-            with open(loopfile, 'rb') as f:                  #Added b to avoid unicode errors, CCC 03/2021
-                self.loop = pickle.load(f)
+            with open(loopfile, 'rb') as f:                          #Added b to avoid unicode errors, CCC 03/2021
+                self.loop = pickle.load(f, encoding='latin1')        #Added encoding to restart python2 with python3, CCC 27/01/2022
             tprint("Loaded torch loop state from "+loopfile)
 
             if not refresh:
@@ -107,26 +107,26 @@ class TorchState(object):
                 velocitiesfile = path.join(self.output_dir,
                     'all_velocities{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'rb') as f:     #Added b, CCC 03/2021
-                    rnd_state = pickle.load(f)
+                with open(rstatefile, 'rb') as f:                 #Added b, CCC 03/2021
+                    rnd_state = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'rb') as f:     #Added b, CCC 03/2021
-                    self.all_masses = pickle.load(f)
+                with open(massesfile, 'rb') as f:                       #Added b, CCC 03/2021
+                    self.all_masses = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 tprint("Loaded all_masses dictionary from "+massesfile)
                 
                 # Adding these to permit primordial binaries -CCC, May 3, 2020
-                with open(systemsfile, 'rb') as f:    #Added b, CCC 03/2021
-                    self.system_masses = pickle.load(f)   
+                with open(systemsfile, 'rb') as f:                          #Added b, CCC 03/2021
+                    self.system_masses = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022 
                 tprint("Loaded system_masses dictionary from "+systemsfile)
                 
-                with open(positionsfile, 'rb') as f:  #Added b, CCC 03/2021
-                    self.all_positions = pickle.load(f)
+                with open(positionsfile, 'rb') as f:                        #Added b, CCC 03/2021
+                    self.all_positions = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022
                 tprint("Loaded all_positions dictionary from "+positionsfile)
                 
-                with open(velocitiesfile, 'rb') as f: #Added b, CCC 03/2021
-                    self.all_velocities = pickle.load(f)
+                with open(velocitiesfile, 'rb') as f:                       #Added b, CCC 03/2021
+                    self.all_velocities = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 tprint("Loaded all_velocities dictionary from "+velocitiesfile)
 
             else:

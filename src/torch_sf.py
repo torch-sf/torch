@@ -232,6 +232,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             state.all_velocities[sink_tag] = np.empty([0,3])
             tprint("... new sink tag {}".format(sink_tag))
 
+        # Here, we try to keep only the first 1000 systems for each sink, CCC 18/02/2022
         while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
             new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
                             sample_imf_mass.value_in(units.MSun),
@@ -240,6 +241,11 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
                             sum_small=sum_small, binaries=binaries
             )
+            
+            #new_masses = to_new_masses[:1000]
+            #new_system_masses = to_new_system_masses[:1000]
+            #new_positions = to_new_positions[:1000]
+            #new_velocities = to_new_velocities[:1000]
 
             tprint("... sink tag {}".format(sink_tag), end='')
             print(" queued {} stars,".format(len(new_masses)), end='')
@@ -325,8 +331,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" max mass {}".format(np.amax(spawn_masses)))
-
             formed_stars = True
+
+            #Print sink & stars position, CCC 26 Aug 2022
+            tprint("Sink position:", sink_pos)
+            tprint("Stars relative positions:", spawn_positions)
 
             # Remove newly-created stars from sink's queue
             state.all_masses[sink_tag]     = state.all_masses[sink_tag][nnew:]
@@ -357,7 +366,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
                     random_pos = sink_rad*np.random.rand()*random_three_vector()
                     random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
                     star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
-                    #star[j].position = sink_pos + random_pos + (np.zeros(3) | units.cm)
+                    ## Debug for stars formed outside the domain -- CCC, August 26, 2022                                                                                                                                                                                        
+                    #tprint("The star with mass", star[j].mass, "is formed at", star[j].position, "cm")
                     star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
 
             # star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)

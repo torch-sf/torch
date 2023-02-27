@@ -49,6 +49,7 @@ from __future__ import division, print_function
 
 import numpy as np
 np.set_printoptions(precision=3)
+import sys
 
 from amuse.lab import *
 from amuse.community.flash.interface import Flash
@@ -104,7 +105,7 @@ def initialize_workers():
     elif USER['with_petar']:
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = 2*1.496e16 | units.cm # 2000AU
+        grav.parameters.r_bin = 0.1*1.496e16 | units.cm # 2000AU; CCC 05/04/2022 --> 2 replaced by 0.1 for 100 AU
         aveStarMass = 1.234e33 | units.g
         velDisp = 1.7e5 | units.cm/units.s
         G = 1.0 | units.cm**3 / units.g / units.s**2
@@ -149,13 +150,13 @@ def initialize_workers():
             redirection='file',
             redirect_stdout_file='flash_worker.out',
             redirect_stderr_file='flash_worker.err',
-        )
+        ) 
     else:
         hydro = Flash(
             unit_converter=convert2,
             number_of_workers=USER['num_hy_workers'],
             redirection='none',
-        )
+        )  
 
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
@@ -211,7 +212,9 @@ def evolve(state, hydro, grav, mult, se):
                 pool_table_hydro.append(i)
             elif name == "grav":
                 pool_table_grav.append(i)
-
+                # Debug, CCC 18/02/2022
+                #print('[DEBUG FOR STALL]: Added', i, 'to pool_table_grav')
+                
     first_star = 0
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
@@ -238,9 +241,27 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PETAR.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
+                    tprint("...printing Petar grav parameters")
                     print(grav.parameters)
 
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
+
+            # Debugging for mesh error, CCC 02/2022
+            #tprint("Stars have masses", state.stars.mass)
+            #tprint("Stars have velocities", state.stars.velocity)
+            #tprint("Stars have positions", state.stars.x, state.stars.y, state.stars.z)
+            #tprint("State object has size", sys.getsizeof(state))
+            #tprint("Hydro object has size", sys.getsizeof(hydro))
+            #tprint("Grav object has size", sys.getsizeof(grav))
+            #if np.any(state.stars.mass) < 10|units.g or np.any(np.abs(state.stars.velocity)) < 10|units.cm/units.s or np.any(np.abs(state.stars.x)) < 10|units.cm  or np.any(np.abs(state.stars.y)) < 10|units.cm  or np.any(np.abs(state.stars.z)) < 10|units.cm:
+            #    tprint('SOMETHING WENT WRONG!')
+            #    assert False
+
+            # Debugging for mesh error, CCC 28/02/2022
+            # updates all of grav,stars,hydro,mult; can accept mult=None                                                                                                                                                                                                        
+            tprint("Checking for particles outside the domain...")
+            remove_particles_outside_bndbox(state, hydro, grav, mult)
+            hydro.particles_sort()  # also checks for stars outside domain
 
             ### ------------------
             ### First bridge kick.
@@ -263,7 +284,24 @@ def evolve(state, hydro, grav, mult, se):
                 if USER['with_multiples']:
                     mult.channel_from_code_to_memory.copy()     # grav  -> multiples
                     state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+                # Debugging for mesh error, CCC 02/2022
+                #tprint("Stars have masses", state.stars.mass)
+                #tprint("Stars have velocities", state.stars.velocity)
+                #tprint("Stars have positions", state.stars.x, state.stars.y, state.stars.z)
+                #tprint("State object has size", sys.getsizeof(state))
+                #tprint("Hydro object has size", sys.getsizeof(hydro))
+                #tprint("Grav object has size", sys.getsizeof(grav))
+                #if np.any(state.stars.mass) < 10|units.g or np.any(np.abs(state.stars.velocity)) < 10|units.cm/units.s or np.any(np.abs(state.stars.x)) < 10|units.cm  or np.any(np.abs(state.stars.y)) < 10|units.cm  or np.any(np.abs(state.stars.z)) < 10|units.cm:
+                #    tprint('SOMETHING WENT WRONG!')
+                #    assert False
 
+                # Debugging for mesh error, CCC 28/02/2022
+                # Commented out, CCC 17/03/2022
+                # updates all of grav,stars,hydro,mult; can accept mult=None                                                                                                                                                                                                  
+                #tprint("Checking for particles outside the domain...")
+                #remove_particles_outside_bndbox(state, hydro, grav, mult)
+                #hydro.particles_sort()  # also checks for stars outside domain 
+                    
             ### ------------------
             ### Stellar evolution.
             ### ------------------
@@ -315,6 +353,12 @@ def evolve(state, hydro, grav, mult, se):
                     if USER['with_petar']:
                         grav.parameters.dt_soft = dt
                     req_grav = grav.evolve_model.asynchronous(hy_time+dt)
+                    # Debugging for mesh error, CCC 28/02/2022                                                                                                                                                                                                                  
+                    # Commented out, CCC 17/03/2022
+                    # updates all of grav,stars,hydro,mult; can accept mult=None                                                                                                                                                                                                
+                    #tprint("Checking for particles outside the domain...")
+                    #remove_particles_outside_bndbox(state, hydro, grav, mult)
+                    #hydro.particles_sort()  # also checks for stars outside domain 
 
                     pool.add_request(req_hydro, handle_result, ["hydro", it])
                     pool.add_request(req_grav, handle_result, ["grav", it])
@@ -348,6 +392,22 @@ def evolve(state, hydro, grav, mult, se):
             hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
             hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
+            # Debugging for mesh error, CCC 28/02/2022
+            # updates all of grav,stars,hydro,mult; can accept mult=None
+            tprint("Checking for particles outside the domain...")
+            remove_particles_outside_bndbox(state, hydro, grav, mult)
+            hydro.particles_sort()  # also checks for stars outside domain
+            
+            # Debugging for mesh error, CCC 02/2022
+            #tprint("Stars have masses", state.stars.mass)
+            #tprint("Stars have velocities", state.stars.velocity)
+            #tprint("Stars have positions", state.stars.x, state.stars.y, state.stars.z)
+            #tprint("State object has size", sys.getsizeof(state))
+            #tprint("Hydro object has size", sys.getsizeof(hydro))
+            #tprint("Grav object has size", sys.getsizeof(grav))
+            #if np.any(state.stars.mass) < 10|units.g or np.any(np.abs(state.stars.velocity)) < 10|units.cm/units.s or np.any(np.abs(state.stars.x)) < 10|units.cm  or np.any(np.abs(state.stars.y)) < 10|units.cm  or np.any(np.abs(state.stars.z)) < 10|units.cm:
+            #    tprint('SOMETHING WENT WRONG!')
+            #    assert False
 
         else: # num_stars == 0
 
@@ -379,6 +439,7 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_mass=USER['sample_imf_mass'],
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
+            binaries=USER['binaries'],
         )
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
