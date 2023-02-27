@@ -22,13 +22,26 @@ from torch_mainloop import run_torch
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
     n = None
+    nodes = None
+    cores = None
+    import os
     with open(name) as f:
         for line in f:
             w = line.split()
-            if len(w) >= 3 and w[0] == '#SBATCH' and w[1] == '-n':
-                assert n is None  # throw error if #SBATCH -n occurs >1x
-                n = int(w[2])
+            if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
+                assert cores is None  # throw error if #SBATCH -n occurs >1x
+                cores = int(''.join(char for char in w[1] if char.isdigit()))
+                cores = int(os.getenv("SLURM_NTASKS_PER_NODE"))
+                #print('Requesting ', cores, 'cores on each of')
+            elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
+                assert nodes is None  # throw error if #SBATCH -n occurs >1x
+                nodes =	int(''.join(char for char in w[1] if char.isdigit()))
+                nodes = int(os.getenv("SLURM_JOB_NUM_NODES"))
+                #print(nodes, 'nodes')
+    assert n is None
+    n = nodes*cores
     assert n is not None
+    return int(os.getenv("SLURM_NTASKS"))
     return n
 
 def user_initial_conditions(state, hydro):
@@ -80,7 +93,7 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
-    # Multiples test: plop a binary system
+#    # Multiples test: plop a binary system
 
 #    star        = Particles(2)
 #    star.mass   = 1. | units.MSun
@@ -90,10 +103,11 @@ def user_initial_conditions(state, hydro):
 #    star.vx     = 0.0 | units.cm/units.s
 #    star.vy     = 0.0 | units.cm/units.s
 #    star.vz     = 0.0 | units.cm/units.s
-#
-#    star[0].x = 1.5e16 | units.cm  # 1000 AU away
-#    star[1].vy = 1.0e4 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s ...
-#
+
+#    # make bound binary                                                                                                                                                                                                                                                        
+#    star[0].x = -1.5e14 | units.cm  # 10 AU away
+#    star[1].vy = 1.0e5 | units.cm/units.s  # sqrt(GM/R) = 9.42e5 cm/s 
+#    
 #    creation_time = hydro.get_time()  # comes with AMUSE units
 #
 #    tag = hydro.add_particles(star.x, star.y, star.z)
@@ -249,7 +263,7 @@ def user_parameters():
 
     # <bridge>
 
-    p['npy_seed'] = None  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
+    p['npy_seed'] = 1437783  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
 
@@ -264,7 +278,7 @@ def user_parameters():
 
     # <star/n-body gravity>
 
-    p['with_ph4'] = True  # use ph4 or Hermite
+    p['with_ph4'] = False  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <star/n-body gravity & binaries>
@@ -298,13 +312,14 @@ def user_parameters():
 
     ntasks = get_ntasks_from_run_script()
 
-    p['num_grav_workers'] = 8 # must be power of 2 for PeTar 
+    p['num_grav_workers'] = 2 # must be power of 2 for PeTar 
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
+        #p['evolve_async'] = False
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
