@@ -147,44 +147,32 @@ def make_and_add_stars_with_ppds (state, hydro, grav, se, ppds,
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
-            hydro.set_particle_mass(star_tag, star.gravity_mass)
-            hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-            hydro.set_particle_oldmass(star_tag, star.mass)
-
-            add_star.add_particles(star)
+            ind_sort_tag = np.argsort(star_tag)
+            hydro.set_particle_mass(star_tag[ind_sort_tag], star.gravity_mass[ind_sort_tag])
+            hydro.set_particle_velocity(star_tag[ind_sort_tag], star.vx[ind_sort_tag], star.vy[ind_sort_tag], star.vz[ind_sort_tag])
+            hydro.set_particle_oldmass(star_tag[ind_sort_tag], star.mass[ind_sort_tag])
 
             ppds.star_particles[start:].tag = star_tag
 
+            star.tag = star_tag
+            star.stellar_type = 1. | units.stellar_type
+            star.radius = 0.02 | units.pc
+            star.initial_mass = star.mass
+
+            star.id = state.stars_next_id + np.arange(len(star))
+            state.stars_next_id += len(star)
+
+            state.stars.add_particles(star)
+            state.stars = state.stars.sorted_by_attribute('tag')
+
+            start = len(grav.particles)
+            grav.particles.add_particles(star)
+            grav.particles[start:].mass = star.gravity_mass
+
+            hydro.clear_new_tags()
+
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
-
-
-    if formed_stars == False:
-        return
-
-
-    num_new_parts = hydro.get_number_of_new_tags()
-    newtags = hydro.get_new_tags(range(1,num_new_parts+1))
-
-    #newtags.sort()
-
-    add_star.tag  = newtags  # AMUSE stars know their FLASH tags
-    add_star.stellar_type = 1 | units.stellar_type # ZAMS star
-    add_star.radius = 0.02 | units.pc # initial collision radius
-    add_star.initial_mass = add_star.mass # for SE/SN uses
-
-    # only used by ph4... without this, ph4 complains about reused user IDs
-    add_star.id = state.stars_next_id + np.arange(num_new_parts)
-    state.stars_next_id += num_new_parts
-
-    state.stars.add_particles(add_star)
-    state.stars = state.stars.sorted_by_attribute('tag')
-
-    start = len(grav.particles)
-    grav.particles.add_particles(add_star)
-    grav.particles[start:].mass = add_star.gravity_mass
-
-    hydro.clear_new_tags()
 
     return
 
@@ -223,7 +211,7 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
         # the ppd population identifies them (and is needed for channels) -MW
         non_ejected_stars = ppds.star_particles.select(lambda flag: flag == False, 
             ['star_ejected'])
-
+        print ( np.sum((position - non_ejected_stars.sorted_by_attribute('tag').position).lengths().value_in(units.pc) > 1e-6), flush=True)
         tags_viscous = non_ejected_stars.tag
         ind_sorted_tags_viscous = np.argsort(tags_viscous)
         new_keys = non_ejected_stars.key[ ind_sorted_tags_viscous ]
@@ -244,6 +232,7 @@ def add_particles_to_grav_and_ppd (state, hydro, grav, se, ppds):
     add_star.radius = 0.02 | units.pc # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
 
+    ppds_star_particles = ppds.star_particles.sorted_by_attribute('key')
 
     if add_parts_restart:
         # fast-forward stellar evolution to get current stellar type, because
