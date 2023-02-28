@@ -61,7 +61,6 @@ from torch_se import stellar_evolution
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
-    remove_merged_stars,
     make_stars_from_sinks,
     queue_stars,
 )
@@ -365,9 +364,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
 
-                #if USER['with_petar']:
-                    #remove_merged_stars(state, hydro, grav)
-
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
                 if USER['with_multiples']:
@@ -426,7 +422,6 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
             binaries=USER['binaries']
-            m_small=USER['m_small']
         )
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
