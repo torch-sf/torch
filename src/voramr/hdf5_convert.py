@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 from amuse.datamodel import Particles
 from amuse.units import units
+from voramr.voramr_stdout import vprint
 
 def extract_data(file_name, apply_consts=True):
     pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
@@ -76,39 +77,60 @@ def rescale_coords_vels(coords, vels, masses, scoords, svels, apply_consts=True,
 
 def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
                          scoords, svels, smass, sinitmass, sfmtime, smetal, local_ref=None):
-    f = h5py.File(output_filename, 'w')
-    # Recreate gas dataset
+    # Write all gas data to file to be included in interpolation kdtree regardless if we
+    # are refining on a region of interest.
+    f = h5py.File("kdtree-"+output_filename, 'w')
     group = f.create_group('PartType0')
+    dset = group.create_dataset('Coordinates', data=coords, dtype='d')
+    dset = group.create_dataset('Velocities', data=vels, dtype='d')
+    dset = group.create_dataset('Density', data=dens, dtype='d')
+    dset = group.create_dataset('Masses', data=masses, dtype='d')
+    dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
+    dset = group.create_dataset('Potential', data=gpot, dtype='d')
+    f.close()
+    vprint("Wrote all gas field values to", "kdtree-"+output_filename)
+    
+    #f = h5py.File(output_filename, 'w')
+    # Recreate gas dataset
+    #group = f.create_group('PartType0')
     
     if(local_ref):
-        print("DOING LOCALIZED REFINEMENT. Limiting gas particles written.")
-        print("locx = ", local_ref[0])
-        print("locy = ", local_ref[1])
-        print("locz = ", local_ref[2])
-        print("locr = ", local_ref[3])
+        vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Reading ",output_filename)
+        # open file to fill with region-of-interest gas only --> FLASH refinement
+        f = h5py.File(output_filename, 'w')
+        group = f.create_group('PartType0')
+        vprint("locx = ", local_ref[0])
+        vprint("locy = ", local_ref[1])
+        vprint("locz = ", local_ref[2])
+        vprint("locr = ", local_ref[3])
         locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
         diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
         ind = np.where(diffr < locr)
-        print("INDICIES < locr:", ind)
-        print("Coords shape: ", coords[ind].shape)
-        print("masses shape: ", masses[ind].shape)
+        vprint("INDICIES < locr:", ind)
+        vprint("coords shape: ", coords[ind].shape)
+        vprint("masses shape: ", masses[ind].shape)
         dset = group.create_dataset('Coordinates', data=coords[ind], dtype='d')
-        dset = group.create_dataset('Velocities', data=vels[ind], dtype='d')
-        dset = group.create_dataset('Density', data=dens[ind], dtype='d')
-        dset = group.create_dataset('Masses', data=masses[ind], dtype='d')
-        dset = group.create_dataset('InternalEnergy', data=ie[ind], dtype='d')
-        dset = group.create_dataset('Potential', data=gpot[ind], dtype='d')
-        
+        #dset = group.create_dataset('Velocities', data=vels[ind], dtype='d')
+        #dset = group.create_dataset('Density', data=dens[ind], dtype='d')
+        #dset = group.create_dataset('Masses', data=masses[ind], dtype='d')
+        #dset = group.create_dataset('InternalEnergy', data=ie[ind], dtype='d')
+        #dset = group.create_dataset('Potential', data=gpot[ind], dtype='d')   
     else:
-        print("USING ALL PARTICLES, NO LOCAL REF.")
+        vprint("USING ALL GAS PARTICLES, NO LOCAL REFINEMENT.")
+        # open file to fill with ALL gas data --> FLASH refinement
+        f = h5py.File(output_filename, 'w')
+        group = f.create_group('PartType0')
+        vprint("coords shape: ", coords.shape)
+        vprint("masses shape: ", masses.shape)
         dset = group.create_dataset('Coordinates', data=coords, dtype='d')
-        dset = group.create_dataset('Velocities', data=vels, dtype='d')
-        dset = group.create_dataset('Density', data=dens, dtype='d')
-        dset = group.create_dataset('Masses', data=masses, dtype='d')
-        dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
-        dset = group.create_dataset('Potential', data=gpot, dtype='d')
+        #dset = group.create_dataset('Velocities', data=vels, dtype='d')
+        #dset = group.create_dataset('Density', data=dens, dtype='d')
+        #dset = group.create_dataset('Masses', data=masses, dtype='d')
+        #dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
+        #dset = group.create_dataset('Potential', data=gpot, dtype='d')
 
     # Recreate stars dataset
+    vprint("Including all stars")
     group_s = f.create_group('PartType4')
     dset = group_s.create_dataset('Coordinates', data=scoords, dtype='d')
     dset = group_s.create_dataset('Velocities', data=scoords, dtype='d')
@@ -116,4 +138,6 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     dset = group_s.create_dataset('GFM_InitialMass', data=sinitmass, dtype='d')
     dset = group_s.create_dataset('GFM_StellarFormationTime', data=sfmtime, dtype='d')
     dset = group_s.create_dataset('GFM_Metallicity', data=smetal, dtype='d')
+
+    vprint("Wrote refinement gas and stars to", output_filename)
     f.close()
