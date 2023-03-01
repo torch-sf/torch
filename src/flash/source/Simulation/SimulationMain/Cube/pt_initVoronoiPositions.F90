@@ -23,7 +23,11 @@
 !! NOTES
 !! This routine is called by source/Particles/Particles_Initialization/Particles_initPositions.F90
 !! Particles_initPositions contains the compiler flag #define VORAMR. This flag must be
-!! uncommented in order for this routine to be called. 
+!! uncommented in order for this routine to be called.
+!!
+!! If pt_maxPerProc in the flash.par is not set high enough, this script should abort.
+!! The abort may appear as a "double free or corruption (!prev)" C memory error due to
+!! IO not being initialized yet at the time of particle placement.
 !!
 !! Developed by Sean C. Lewis (Drexel University) as part of the VorAMR project.
 !!***
@@ -134,10 +138,14 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
         !NONEXISTENT particle type allows VorAMR particles and their memory to be cleared by Grid_sortParticles() and reused.
      endif
   enddo
+  print*, "Out of placing loop, getting global num particles."
+  call flush()
   call Particles_getGlobalNum(globalNumParticles)
 
+  print*, "Deallocating particle coordinate dataset."
+  call flush()
   DEALLOCATE(coords_dset_data)
-  
+
   print*, "Done placing. Exiting Particles_initPositions"
   CALL flush()
 
