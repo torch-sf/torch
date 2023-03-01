@@ -383,11 +383,14 @@ if (snap_to_grid) then
            print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
         end if !end of checking total location change
 
-        !put the mpi scatter here  MPI_Bcast()
-        ! does the MPI_Bcast need to be on only the proc with the star or everywhere? see other code?
-        call MPI_Bcast(loc, 3, MPI_DOUBLE_PRECISION, procID, gr_meshComm, ierr)
-        !  Are these the right arguments?  Does this save things to loc????
     end if
+    
+    ! Use MPI_Bcast to send loc info to all processors
+    ! Need barrier to make sure every processor does this before proceeding
+    ! -SA 20230224
+    !call MPI_Barrier(gr_meshComm, ierr)
+    call MPI_Bcast(loc, 3, MPI_DOUBLE_PRECISION, procID, gr_meshComm, ierr)
+        
 else
 
     loc(:) = loc_in(:)    
