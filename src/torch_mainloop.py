@@ -480,8 +480,19 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
+            # Attempt at recalculating PeTar parameters on the fly, CCC 28/02/23
+            #tprint('Previous grav parameters:', grav.parameters)
+            grav.parameters.set_defaults()
+            #tprint('Default grav parameters:', grav.parameters)
+            grav.parameters.epsilon_squared = USER['epsilon']**2.0
+            grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
+            grav.parameters.begin_time = hy_time
+            #G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
+            tprint('New grav parameters:', grav.parameters)
+            ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
+            tprint('dt_nbody=', dt)
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         if USER['with_petar']:
