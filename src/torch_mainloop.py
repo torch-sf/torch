@@ -476,7 +476,7 @@ def run_torch(user_initial_conditions, user_parameters):
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
                                  scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['local_ref'])
 
-            coords, field_set = read_arepo_hdf5(USER['input_file'])
+            coords, field_set = read_arepo_hdf5("kdtree-"+USER['input_file'])
         else:
             vprint("Using unconverted source file.")
             coords, field_set = read_arepo_hdf5(USER['source_file'])
