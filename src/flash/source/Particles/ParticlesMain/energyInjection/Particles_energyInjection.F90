@@ -141,6 +141,12 @@ bgDens = 0.0_dp
 sumOverlap = 0.0_dp
 sumMass = 0.0_dp
 
+!!  USE WITH CAUTION! 
+!!  This snap_to_grid code does not correctly position star particles!
+!!  floor() will move the star to roughly (0,0,0) in parsecs.
+!!  See jets code inject_direct.F90 for issues with snap_to_grid and 
+!!  improved version of the code.  -SA 20230301
+
 snap_to_grid = .false. !.true. ! For testing / debugging.
 globalDeltaE = 0.0
 globalDeltaP = 0.0
