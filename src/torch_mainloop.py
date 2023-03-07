@@ -107,7 +107,7 @@ def initialize_workers():
         grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
         #aveStarMass = 1.234e33 | units.g
         #velDisp = 1.7e5 | units.cm/units.s
-        G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
+        #G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
         #grav.parameters.r_out = 12.5*grav.parameters.r_bin
         #grav.parameters.dt_soft = (np.pi/8.0)*np.sqrt(((grav.parameters.r_out/2.0)**3)/(2*G*aveStarMass))
         #grav.parameters.r_search_min = grav.parameters.r_out + 3.0*grav.parameters.dt_soft*velDisp
@@ -291,14 +291,12 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
-                tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
+                #tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
                     state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
-                    #print(grav.particles.radius)
                     state.stars_to_grav.copy_attributes(["radius"])
-                    #print(grav.particles.radius)
                     if USER['with_multiples']:
                         mult.channel_from_code_to_memory.copy() # grav  -> multiples
                         state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
@@ -337,8 +335,16 @@ def evolve(state, hydro, grav, mult, se):
                         pool.wait()
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
+                            if USER['with_petar'] == True:
+                                # Force crash if hydro advanced before grav,
+                                # i.e. PeTar stalled, CCC 07/03/2023
+                                tprint("... PeTar has stalled, exit the simulation")
+                                hydro.stop() 
+                                grav.stop()  
+                                se.stop()    
                         elif pool_table_grav and pool_table_grav[-1] == it:
                             tprint("... grav advanced")
+                            tprint(pool_table_grav[-1], it)
 
                         pool.wait()
                         tprint("... both grav and hydro advanced")
@@ -481,13 +487,10 @@ def evolve(state, hydro, grav, mult, se):
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
             # Attempt at recalculating PeTar parameters on the fly, CCC 28/02/23
-            #tprint('Previous grav parameters:', grav.parameters)
             grav.parameters.set_defaults()
-            #tprint('Default grav parameters:', grav.parameters)
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
             grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
             grav.parameters.begin_time = hy_time
-            #G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
             tprint('New grav parameters:', grav.parameters)
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
@@ -560,7 +563,7 @@ def run_torch(user_initial_conditions, user_parameters):
     try:
 
         evolve(state, hydro, grav, mult, se)
-
+        
     finally:
         pass
         #hydro.timer_summary()
