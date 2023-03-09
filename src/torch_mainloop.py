@@ -105,6 +105,7 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
+        grav.parameters.stopping_conditions_timeout = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -485,6 +486,7 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
             grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
             grav.parameters.begin_time = hy_time
+            grav.parameters.stopping_conditions_timeout = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
             tprint('New grav parameters:', grav.parameters)
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
