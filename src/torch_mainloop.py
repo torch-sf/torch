@@ -105,12 +105,6 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
-        #aveStarMass = 1.234e33 | units.g
-        #velDisp = 1.7e5 | units.cm/units.s
-        #G = 6.67428e-8 | units.cm**3 / units.g / units.s**2
-        #grav.parameters.r_out = 12.5*grav.parameters.r_bin
-        #grav.parameters.dt_soft = (np.pi/8.0)*np.sqrt(((grav.parameters.r_out/2.0)**3)/(2*G*aveStarMass))
-        #grav.parameters.r_search_min = grav.parameters.r_out + 3.0*grav.parameters.dt_soft*velDisp
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
