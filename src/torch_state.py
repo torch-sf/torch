@@ -149,6 +149,27 @@ class TorchState(object):
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
+    # Force a checkpoint (to use for stalls), CCC 09/03/2023
+    def force_output(self, overwrite):
+        """
+        Force write chk and full Torch state.
+        """
+        hy_chknum = self.hydro.IO_out('chk')
+        #print("hy_chknum:", hy_chknum)
+        #print("self.chknum:", self.chknum)
+
+        # Force a checkpoint to be written, CCC 09/03/2023
+        self.hydro.write_chpt()
+        # Torch state files
+        self.out_loop()
+        self.out_mass()
+        self.out_system()
+        self.out_position()
+        self.out_velocity()
+        self.out_rnd()
+        self.chknum = hy_chknum
+
+                
     def output(self, overwrite):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.

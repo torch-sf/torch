@@ -244,6 +244,7 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------------
             ### First bridge kick.
             ### ------------------
+            state_ = state # save a copy of state in case we need to save then exit during the loop, CCC 09/03/2023
             remove_particles_outside_bndbox(state, hydro, grav, mult)
             hydro.particles_sort()  # also checks for stars outside domain
 
@@ -331,6 +332,8 @@ def evolve(state, hydro, grav, mult, se):
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
                             if USER['with_petar'] == True:
+                                # Write chk from state_ if stall, CCC 09/03/2023
+                                state_.force_output(overwrite=USER['overwrite'])
                                 # Force crash if hydro advanced before grav,
                                 # i.e. PeTar stalled, CCC 07/03/2023
                                 tprint("... PeTar has stalled, exit the simulation")
