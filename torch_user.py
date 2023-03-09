@@ -321,7 +321,7 @@ def user_parameters():
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
-        #p['evolve_async'] = False
+        p['epsilon'] = 0 | units.RSun
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
