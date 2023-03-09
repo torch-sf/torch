@@ -68,7 +68,8 @@ from torch_stdout import tprint
 from voramr.hdf5_convert import (
     extract_data,
     rescale_coords_vels,
-    write_corrected_file
+    write_corrected_file,
+    write_voramr_data_to_txt_file
 )
 from voramr.kdtree import (
     read_arepo_hdf5,
@@ -481,6 +482,9 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint("Using unconverted source file.")
             coords, field_set = read_arepo_hdf5(USER['source_file'])
 
+        vprint('About to call write_voramr_data_to_txt_file')
+        write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['local_ref'])
+
         vprint("Building field interpolator.")
         kdtree = build_kdtree(coords, field_set)
         if(USER['pickle_kdtree']):
@@ -488,7 +492,7 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
     
-    hydro, grav, mult, se = initialize_workers() 
+    hydro, grav, mult, se = initialize_workers() #- commented out for voramr txt testing SCL 03/01/23 
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash

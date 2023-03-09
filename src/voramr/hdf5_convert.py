@@ -108,7 +108,7 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
         ind = np.where(diffr < locr)
         vprint("INDICIES < locr:", ind)
         vprint("coords shape: ", coords[ind].shape)
-        vprint("masses shape: ", masses[ind].shape)
+        #vprint("masses shape: ", masses[ind].shape)
         dset = group.create_dataset('Coordinates', data=coords[ind], dtype='d')
         #dset = group.create_dataset('Velocities', data=vels[ind], dtype='d')
         #dset = group.create_dataset('Density', data=dens[ind], dtype='d')
@@ -141,3 +141,21 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
 
     vprint("Wrote refinement gas and stars to", output_filename)
     f.close()
+def write_voramr_data_to_txt_file(voramr_txt_filename, coords, local_ref=None):
+    vprint("~~ Writing input gas coordinate data to text file ~~")
+    f = open(voramr_txt_filename, 'w')
+    if(local_ref):
+        vprint("Doing local refinement")
+        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
+        diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
+        ind = np.where(diffr < locr)
+        vprint("INDICIES < locr:", ind)
+        vprint("coords shape: ", coords[ind].shape)
+        np.savetxt(f, coords[ind], fmt=('%15.7e'))
+    else:
+        vprint("Not doing local refinement")
+        vprint("coords shape: ", coords.shape)
+        np.savetxt(f, coords, fmt=('%15.7e'))
+    f.close()
+
+    vprint("~~ Done writing to text file ~~")
