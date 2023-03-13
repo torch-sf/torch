@@ -39,45 +39,13 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For the R=7pc 10^4 cloud
+# For the R=7pc cloud
 xmax  	     	=  2.6999e+19 # 8.75 pc
 xmin		= -2.6999e+19
 ymax		=  2.6999e+19
 ymin		= -2.6999e+19
 zmax		=  2.6999e+19
 zmin		= -2.6999e+19
-
-# For the R=15pc 10^5 cloud
-#xmax            =  5.785645465e+19 # 18.75 pc
-#xmin            = -5.785645465e+19
-#ymax            =  5.785645465e+19
-#ymin            = -5.785645465e+19
-#zmax            =  5.785645465e+19
-#zmin            = -5.785645465e+19
-
-# For the 10^3 cloud
-#xmax            =  2.1602e+19 # 7 pc 1.5428388e+19 #10.0 pc #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
-#xmin            = -2.1602e+19 #-1.5428388e+19 #3.0856776e+19
-#ymax            =  2.1602e+19
-#ymin            = -2.1602e+19
-#zmax            =  2.1602e+19
-#zmin            = -2.1602e+19
-
-# For the 10^4 cloud
-#xmax            =  3.7032e+19 #12.0 pc  #1.5428388e+19 #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
-#xmin            = -3.7032e+19 #3.0856776e+19
-#ymax            =  3.7032e+19
-#ymin            = -3.7032e+19
-#zmax            =  3.7032e+19
-#zmin            = -3.7032e+19
-
-# For the 10^5 cloud
-#xmax            =  1.6973e+20 #55.0 pc  #1.5428388e+19 #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
-#xmin            = -1.6973e+20 #3.0856776e+19
-#ymax            =  1.6973e+20
-#ymin            = -1.6973e+20
-#zmax            =  1.6973e+20
-#zmin            = -1.6973e+20
 
 # remember to update grav boundaries if you change this
 xl_boundary_type      = "outflow" #"diode"
@@ -93,12 +61,12 @@ zr_boundary_type      = "outflow" #"diode"
 nblockx         = 1
 nblocky         = 1
 nblockz         = 1
-lrefine_max     = 6
-lrefine_min     = 3  
+lrefine_max     = 5
+lrefine_min     = 2  
 refine_var_1 = "pres"
 refine_var_2 = "temp"
-refine_var_3 = "ener"
-refine_var_4 = "eint"
+#refine_var_3 = "ener"
+#refine_var_4 = "eint"
 
 #refine_var_1    = "pres"
 #refine_filter_1 = 1e-2
@@ -183,8 +151,8 @@ plot_var_19 = "bgpt"
 
 useHydro       = T
 
-cfl		= 0.4
-eintSwitch      = 1.e-2 #1.e-4
+cfl		= 0.8
+eintSwitch      = 1.e-4
 killdivb    = T
 UnitSystem  = "CGS"
 
@@ -227,7 +195,7 @@ use_upwindTVD	= .true.  #use upwind biased TVD slope for PPM (need nguard=6)
 use_gravhalfupdate = .false. # This would violate the bridge stuff, no?
 
 hy_fallbackLowerCFL = .true.
-hy_cflFallbackFactor = 0.75
+hy_cflFallbackFactor = 0.9
 use_hybridOrder = .true.
 
 #	II. MAGNETIC(B) AND ELECTRIC(E) FIELDS:
@@ -290,20 +258,20 @@ jeans_ncells_deref  = 12.0 #24.0  #40.0 #64.0
 # this assumes mu=2.3, T=10K for sound speed calculation
 # for cs = 2.44576e4 cm s-1, using Federrath eq. 32
 
-#1e4 mass in -+8.75pc box lrefinemax=4
+# -+8.75pc box lrefinemax=4
 #sink_density_thresh   	  = 6.327966e-21   #From Federrath eq. 32, assuming cs = 2.45e4 cm s-1
 #sink_accretion_radius	  = 1.0546875e+18  #2.5 cells at refmax=4
 #sink_softening_radius	  = 1.0546875e+18  #2.5 cells at refmax=4 
 
-#1e4 mass in -+8.75pc box lrefinemax=5
-#sink_density_thresh       = 2.531247e-20   #From Federrath eq. 32, assuming cs = 2.45e4 cm s-1
-#sink_accretion_radius     = 5.2733744e+17  #2.5 cells at refmax=5
-#sink_softening_radius     = 5.2733744e+17  #2.5 cells at refmax=5
+# -+8.75pc box lrefinemax=5
+sink_density_thresh       = 2.531247e-20   #From Federrath eq. 32, assuming cs = 2.45e4 cm s-1
+sink_accretion_radius     = 5.2733744e+17  #2.5 cells at refmax=5
+sink_softening_radius     = 5.2733744e+17  #2.5 cells at refmax=5
 
-#1e4 mass in -+8.75pc box lrefinemax=6
-sink_density_thresh       = 1.012499e-19   #From Federrath eq. 32, assuming cs = 2.45e4 cm s-1
-sink_accretion_radius     = 2.6366872e+17  #2.5 cells at refmax=6
-sink_softening_radius     = 2.6366872e+17  #2.5 cells at refmax=6
+# -+8.75pc box lrefinemax=6
+#sink_density_thresh       = 1.012499e-19   #From Federrath eq. 32, assuming cs = 2.45e4 cm s-1
+#sink_accretion_radius     = 2.6366872e+17  #2.5 cells at refmax=6
+#sink_softening_radius     = 2.6366872e+17  #2.5 cells at refmax=6
 
 # Paper I
 #1e4 mass in -+8.75pc box lrefinemax=5
@@ -496,6 +464,10 @@ useRadTransfer = T
 
 rt_maxHchange = 0.1
 
+# temperature that radiation will heat gas to, used as a limiter of 
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+rt_dt_temp     = 1.0e5
+
 ph_sampling     = 2.0
 ph_initHPlevel  = 2
 ph_inBlockSplit = T
@@ -504,6 +476,10 @@ ph_maxNRays     = 1000000 #300000
 ph_raysToBundle = 5
 ph_CommCheckInterval = 20
 ph_radPressure  = T
+
+# cfl factor used to limit velocity of radiation pressure, used as a limiter of 
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+cfl_radPressure = 0.3
 
 early_term_FUV  = T
 sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
