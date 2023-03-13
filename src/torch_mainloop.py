@@ -106,6 +106,8 @@ def initialize_workers():
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
         grav.parameters.stopping_conditions_timeout = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
+        if USER['restart_from_stall']:
+            grav.parameters.r_out = grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
