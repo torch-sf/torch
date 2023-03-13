@@ -104,7 +104,7 @@ def initialize_workers():
     elif USER['with_petar']:
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
+        grav.parameters.r_bin = USER['r_bin']
         grav.parameters.stopping_conditions_timeout = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
         if USER['restart_from_stall']:
             grav.parameters.r_out = grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023

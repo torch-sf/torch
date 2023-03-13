@@ -285,7 +285,8 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-
+    p['r_bin'] = 1.496e15 | units.cm # 100AU
+    
     # <stellar evolution>
 
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
