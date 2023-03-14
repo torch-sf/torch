@@ -12,7 +12,7 @@ from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
 
-def get_multiplicity(m_arr, binaries=True):
+def get_multiplicity(m_arr, binaries=True, mult='field'):
 
     def interpolate(m_low, m_high, CF_low, CF_high, m):
         a = (CF_high - CF_low) / (m_high - m_low)
@@ -20,46 +20,40 @@ def get_multiplicity(m_arr, binaries=True):
         return a * m + b
 
     def companion_frequency(m):
-    
-        """
-        For masses below 0.6 M_sun, we use the primary mass dependent binary fraction from Winters et al. (2020)
-        Above 0.8 M_sun, we use these from Moe & Di Stefano (2017) -- we use binary fraction + triple/quad frac
-        Between mass bins, we interpolate
-        """
-            
-            
-        if m < 0.15:
-            CF = 0.16
-                
-        if 0.15 <= m < 0.3:
-            CF = 0.214
-                        
-        if 0.3 <= m < 0.6:
-            CF = 0.282
-                                
-        if 0.6 <= m < 0.8:
-            CF = interpolate(0.6, 0.8, 0.282, 0.4, m)
-                                        
-        if 0.8 <= m < 1.2:
-            CF = 0.4
-                                                
-        if 1.2 <= m < 2:
-            CF = interpolate(1.2, 2, 0.4, 0.59, m)
-                                                        
-        if 2 <= m < 5:
-            CF = 0.59
-                                                                
-        if 5 <= m < 9:
-            CF = 0.76
-                                                                        
-        if 9 <= m < 16:
-            CF = 0.84
-                                                                                
-        if m >= 16:
-            CF = 0.94
-                                                                                        
-        return CF
 
+        if mult == 'field':
+    
+            """
+            For masses below 0.6 M_sun, we use the primary mass dependent binary fraction from Winters et al. (2020)
+            Above 0.8 M_sun, we use these from Moe & Di Stefano (2017) -- we use binary fraction + triple/quad frac
+            Between mass bins, we interpolate
+            """
+            
+            if m < 0.15:
+                CF = 0.16
+            elif 0.15 <= m < 0.3:
+                CF = 0.214
+            elif 0.3 <= m < 0.6:
+                CF = 0.282                
+            elif 0.6 <= m < 0.8:
+                CF = interpolate(0.6, 0.8, 0.282, 0.4, m)                        
+            elif 0.8 <= m < 1.2:
+                CF = 0.4                                
+            elif 1.2 <= m < 2:
+                CF = interpolate(1.2, 2, 0.4, 0.59, m)                                                
+            elif 2 <= m < 5:
+                CF = 0.59                                                
+            elif 5 <= m < 9:
+                CF = 0.76                                                        
+            elif 9 <= m < 16:
+                CF = 0.84                                                                
+            elif m >= 16:
+                CF = 0.94
+                                                                                        
+            return CF
+
+        else:
+            print('Please select a valid argument for the multiplicity. Options are \'field\' and TBD.')
 
     multiplicity = []
     singles      = []
@@ -84,7 +78,7 @@ def get_multiplicity(m_arr, binaries=True):
 
 
 
-def get_period(mass):
+def get_period(mass, pdist='field'):
     
     """
     For masses below 0.6 M_sun, we use the lognormal period distributions from Winters et al.
@@ -237,15 +231,18 @@ def get_period(mass):
         period_above_solar = period(m)
         return period_above_solar
 
-    if mass < 0.6:
-        p = m_dwarfs(mass)
+    if pdist == 'field':
+        if mass < 0.6:
+            p = m_dwarfs(mass)
+        else:
+            p = solar_and_above(mass)
     else:
-        p = solar_and_above(mass)
-            
+        print('Please select a valid argument for the period distribution. Options are \'field\' and TBD.')
+
     return p
 
 
-def get_companion_mass(mass, period):
+def get_companion_mass(mass, period, qdist='field'):
     
     """
     All from Moe & Di Stefano, due to incompleteness of mass ratio distribution for M-dwarfs
@@ -481,14 +478,17 @@ def get_companion_mass(mass, period):
         return mass_ratio
 
     
-    mr = mass_ratio(mass, period)
-    cm = mass * mr
+    if qdist == 'field':
+        mr = mass_ratio(mass, period)
+        cm = mass * mr
+    else:
+        print('Please select a valid argument for the mass ratio distribution. Options are \'field\' and TBD.')
     
     return cm
 
 
 
-def get_eccentricity(mass, period):
+def get_eccentricity(mass, period, edist = 'field'):
     
     def ecc_max(p):
         e_max = 1 - (10 ** p / 2) ** (-2 / 3)
@@ -516,13 +516,16 @@ def get_eccentricity(mass, period):
                 h    = random.uniform(0, emax ** n)
         return ecc
     
-    eccentricity = get_ecc(mass, period)
-
+    if edist == 'field':
+        eccentricity = get_ecc(mass, period)
+    else:
+        print('Please select a valid argument for the eccentricity distribution. Options are \'field\' and TBD.')
+        
     return eccentricity
 
 
 
-def orbits(mass_array, binaries=True):
+def orbits(mass_array, binaries=True, mult='field', pdist='field', qdist='field', edist='field'):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
         """
@@ -537,13 +540,13 @@ def orbits(mass_array, binaries=True):
         return semi_major_axis.as_quantity_in(units.AU)
 
 
-    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries):
+    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult = mult, pdist = pdist, qdist = qdist, edist = edist):
         """
         Generates binaries from arrays of masses
         The input array has no units
         """
 
-        multiplicity  = get_multiplicity(mass_array, binaries)[0]
+        multiplicity  = get_multiplicity(mass_array, binaries, mult)[0]
         masses        = []
         system_masses = []
         positions     = []
@@ -553,9 +556,9 @@ def orbits(mass_array, binaries=True):
 
             if multiplicity[i] == 1:
                 primary_mass    = mass_array[i]
-                log_period      = get_period(primary_mass)
-                companion_mass  = get_companion_mass(primary_mass, log_period) | units.MSun
-                eccentricity    = get_eccentricity(primary_mass, log_period)
+                log_period      = get_period(primary_mass, pdist)
+                companion_mass  = get_companion_mass(primary_mass, log_period, qdist) | units.MSun
+                eccentricity    = get_eccentricity(primary_mass, log_period, edist)
                 primary_mass    = primary_mass | units.MSun
                 semi_major_axis = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
