@@ -75,7 +75,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
-    add_star.radius = 100 | units.AU # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
 # don't need to carry this around because we don't need history
 # just update directly in hydro
@@ -99,6 +98,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
         _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
         se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
         add_star.stellar_type = se_type
+        add_star.radius = se_radius
 
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
