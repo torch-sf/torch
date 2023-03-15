@@ -344,8 +344,7 @@ def evolve(state, hydro, grav, mult, se):
                                 se.stop()    
                         elif pool_table_grav and pool_table_grav[-1] == it:
                             tprint("... grav advanced")
-                            tprint(pool_table_grav[-1], it)
-
+                            
                         pool.wait()
                         tprint("... both grav and hydro advanced")
 
