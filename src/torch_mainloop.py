@@ -181,7 +181,7 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        print("nbody time = ",nbody.time)
+        #tprint("nbody time = ",nbody.time)
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = dt_nbody
 
@@ -239,8 +239,7 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PETAR.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-                    print(grav.parameters)
-
+                    
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
             ### ------------------
@@ -491,11 +490,10 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.r_bin = USER['r_bin']
             grav.parameters.begin_time = hy_time
             grav.parameters.stopping_conditions_timeout = USER['set_timeout']
-            tprint('New grav parameters:', grav.parameters)
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
-            tprint('dt_nbody=', dt)
+            tprint('dt_nbody =', dt_nbody)
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         if USER['with_petar']:
