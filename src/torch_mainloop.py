@@ -485,12 +485,12 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            # Attempt at recalculating PeTar parameters on the fly, CCC 28/02/23
+            # Recalculate PeTar parameters on the fly, CCC 28/02/23
             grav.parameters.set_defaults()
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
-            grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
+            grav.parameters.r_bin = USER['r_bin']
             grav.parameters.begin_time = hy_time
-            grav.parameters.stopping_conditions_timeout = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
+            grav.parameters.stopping_conditions_timeout = USER['set_timeout']
             tprint('New grav parameters:', grav.parameters)
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
