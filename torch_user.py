@@ -300,6 +300,11 @@ def user_parameters():
     # <star particle creation>
 
     p['binaries'] = True
+    if p['binaries']: #Not used if binaries is false, can leave to default values                                                                                                                                                                                          
+        p['mult'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                                                                                                                   
+        p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                                                                                                        
+        p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                                                                                                     
+        p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
