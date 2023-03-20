@@ -63,7 +63,9 @@ module Simulation_data
    !integer, save :: sim_meshMe, sim_minBlks
    !logical, save :: sim_print=.false.
 
-
+   !! static grav field parameters
+   logical, save :: sim_withStaticGrav
+   real, save :: sim_aParm1, sim_aParm2, sim_aParm3, sim_aParm4
 end module Simulation_data
 
 

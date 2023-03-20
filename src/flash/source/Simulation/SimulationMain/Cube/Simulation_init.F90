@@ -28,7 +28,8 @@ subroutine Simulation_init()
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
   use Driver_interface, ONLY : Driver_abortFlash, Driver_getMype, Driver_getComm
-
+  use Logfile_interface, ONLY : Logfile_stamp
+  
   implicit none
 #include "Flash.h"
 #include "Eos.h"
@@ -81,6 +82,18 @@ subroutine Simulation_init()
 !  call RuntimeParameters_get('use_constant_heating', sim_constant_heating)
 !  call RuntimeParameters_get('stratifyHeat',   sim_stratify_heating)
 
+  ! stratbox, gravity profile parameters, stellar disk
+  call RuntimeParameters_get('sim_aParm1',  sim_aParm1)
+  call RuntimeParameters_get('sim_aParm2',  sim_aParm2)
+  call RuntimeParameters_get('sim_aParm3',  sim_aParm3)
+  call RuntimeParameters_get('sim_aParm4',  sim_aParm4)
+  call RuntimeParameters_get('sim_withStaticGrav', sim_withStaticGrav)
+  
+
+  if (sim_myPE.EQ.MASTER_PE) then
+     if (sim_withStaticGrav) call Logfile_stamp('sim_withStaticGrav is set to .TRUE.', "[Simulation_init]")
+  endif
+  
   sim_abar = 1.0 + sim_abundM*sim_metal
 
 

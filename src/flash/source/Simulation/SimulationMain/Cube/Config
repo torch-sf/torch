@@ -51,4 +51,9 @@ PARAMETER sim_tdust     REAL    18.0
 #PARAMETER	h_cr					REAL	6.1712e21
 #PARAMETER	use_constant_heating	BOOLEAN	FALSE
 
-
+# Static potential parameters
+PARAMETER sim_aParm1        REAL 0.0
+PARAMETER sim_aParm2        REAL 0.0
+PARAMETER sim_aParm3        REAL 0.0
+PARAMETER sim_aParm4        REAL 0.0
+PARAMETER sim_withStaticGrav    BOOLEAN     False
