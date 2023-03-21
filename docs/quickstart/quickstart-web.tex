@@ -35,6 +35,7 @@ justification=justified]{caption} % Captions in figure floats
   showstringspaces=false,
   columns=flexible,
   basicstyle={\small\ttfamily},
+  keepspaces=true,
   numbers=none,
   numberstyle=\tiny\color{gray},
   keywordstyle=\color{blue},
@@ -226,7 +227,7 @@ export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
 Setup a clean, isolated Python environment for AMUSE:
 \begin{lstlisting}[language=bash]
 mkdir {your/conda_env/directory}
-conda create --prefix {your/conda_env/directory}/{env_name} python=2.7
+conda create --prefix {your/conda_env/directory}/{env_name} python=3
 source activate {your/conda_env/directory}/{env_name}  # give absolute path so conda can find your env
 \end{lstlisting}
 
@@ -292,6 +293,30 @@ cd object
 make -j
 \end{lstlisting}
 
+% ------------------------------------
+% Link AMUSE, Torch as Python packages
+% ------------------------------------
+\subsection{Install AMUSE and Torch as Python packages}
+Run the following commands:
+\begin{lstlisting}[language=bash]
+cd $AMUSE_DIR
+pip install -e .
+cd $TORCH_DIR
+pip install -e .
+\end{lstlisting}
+The flag \texttt{-e} installs both AMUSE and Torch modules in
+\href{https://setuptools.pypa.io/en/latest/userguide/development_mode.html}{development mode},
+so that any changes you make to your AMUSE and Torch directories are
+immediately visible to your Python installation; Python imports will take the
+module directly from your git-cloned directories.
+An alternative to the \texttt{pip install} procedure is to set the PYTHONPATH
+environment variable manually, like so:
+\begin{lstlisting}[language=bash]
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+\end{lstlisting}
+
 % ------------------------
 % Configure and make AMUSE
 % ------------------------
@@ -300,9 +325,8 @@ make -j
 Now, \texttt{cd} to the AMUSE repository.  You can follow the AMUSE docs up to
 the \texttt{make} step, but take a look at these notes for extra information.
 
-If you used a local conda environment following this guide, you'll probably
-need to tell \texttt{configure} where GMP, MPFR, and GSL reside.
-Often, you'll have to tell \texttt{configure} where HDF5 and FFTW live, too.
+If you used a local conda environment following this guide, you may
+need to tell \texttt{configure} where HDF5, FFTW, GMP, MPFR, and GSL reside.
 
 Here is an example \texttt{configure} call for the Netherlands supercomputer
 Cartesius (early 2019):
@@ -317,13 +341,15 @@ Cartesius (early 2019):
 
 Library path errors are rather common at this step.  FFTW and NetCDF library
 errors are OK, but HDF5 library and/or header errors are not OK.
-The STDOUT from a successful configure build should include (valid for AMUSE
-v12.0.0, but changed by AMUSE commit \href{https://github.com/amusecode/amuse/commit/9a3b134eeee665b838cb84ff45b85df0887a77bb}{9a3b134e})
+The STDOUT from a successful configure build should include something like:
 \begin{lstlisting}[language=bash]
-checking hdf5.h usability... yes
-checking hdf5.h presence... yes
+checking Using provided HDF5 C wrapper... /path/to/bin/h5pcc
+checking for HDF5 type... parallel
+checking for HDF5 libraries... yes (version 1.10.5)
 checking for hdf5.h... yes
-checking for H5_init_library in -lhdf5... yes
+checking for H5Fcreate in -lhdf5... yes
+checking for main in -lhdf5_hl... yes
+checking for matching HDF5 Fortran wrapper... /path/to/bin/h5pfc
 \end{lstlisting}
 See Section~\ref{sec:help-amuse} for more troubleshooting suggestions.
 
@@ -366,14 +392,10 @@ under its own gravity, create a sink particle, and begin forming stars.
 
 Choose a directory for your simulation and \texttt{cd} there.  Then do:
 \begin{lstlisting}[language=bash]
-export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
-export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
-export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
 ln -s $TORCH_DIR/cool.dat
-ln -s $TORCH_DIR/cube128
-
-cp $TORCH_DIR/bridge_multiples.py           bridge_multiples.py
-cp $TORCH_DIR/flash.par.turbsph_standard    flash.par
+ln -s $TORCH_DIR/examples/cube128
+cp $TORCH_DIR/torch_user.py                         torch_user.py
+cp $TORCH_DIR/examples/flash.par.turbsph_standard   flash.par
 mkdir data
 \end{lstlisting}
 
@@ -391,7 +413,7 @@ the time step may drop; you may wish to end the simulation early.
 
 To run the simulation interactively, execute the command:
 \begin{lstlisting}[language=bash]
-mpiexec -n 1 python bridge_multiples.py
+mpiexec -n 1 python torch_user.py
 \end{lstlisting}
 
 On a compute cluster with Slurm, copy \texttt{run.sh} from the
@@ -400,7 +422,7 @@ Edit the \texttt{SBATCH} options as needed.  Then do:
 \begin{lstlisting}[language=bash]
 sbatch run.sh
 \end{lstlisting}
-If you increase the number of tasks requested, \texttt{bridge\_multiples.py}
+If you increase the number of tasks requested, \texttt{torch\_user.py}
 will automatically assign more threads (workers) to FLASH.
 
 Log files will be dumped in your current working directory, and simulation
@@ -436,6 +458,8 @@ x-z, y-z).  At the command line, call:
 \begin{lstlisting}[language=bash]
 yt plot data/turbsph_forced_hdf5_plt_cnt_0000
 \end{lstlisting}
+or, if you don't have a ``forced'' plot output, use the last ``plt\_cnt'' file
+dumped by the simulation.
 This will create a new directory \texttt{frames/} with three plots similar to
 Figure~\ref{fig:dens}.
 
@@ -484,7 +508,7 @@ In this particular simulation, three stars are massive enough to blow a wind
 \subsection{Next steps}
 
 To tweak the simulation parameters, you will need to edit \texttt{flash.par}
-and \texttt{bridge\_multiples.py}.  These two files specify most of the
+and \texttt{torch\_user.py}.  These two files specify most of the
 configuration options for the simulation.
 
 %To understand how the initial gas-cloud conditions are set up, look at:
@@ -538,11 +562,73 @@ Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
 
 % ============
+% VorAMR Addon
+% ============
+\section{VorAMR: Expanded Options for Initial Conditions}
+A normal Torch run initializes from a "cubefile" like \texttt{cube128} or one generated from \texttt{turb-sphere.py}. These initial conditions are currently restricted to spherical clouds with a turbulent velocity distribution and gaussian density profile or something similar. While such ICs make for easy first steps for users to setup a new Torch simulation, ideal ICs would come from systems that evolved self-consistently in galactic environments. Unfortunately, Torch on its own cannot currently model such systems (and the grid nature of FLASH precludes it to have significant angular momentum loss and so should not be used to model rotating systems like galaxies). 
+
+\texttt{VorAMR} was created to allow for output data from other star formation software suites to be used as initial conditions in Torch. Currently, \texttt{VorAMR} has only been shown to be able to convert data from the star formation code \texttt{AREPO} into Torch ICs, but in theory can be easily adapted to convert ANY moving-mesh, AMR, or SPH code into Torch ICs.
+
+\subsection{How VorAMR works}
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.9\textwidth]{fig/voramr_logic.jpeg}
+    \caption{VorAMR logic flow.}
+    \label{fig:voramr}
+\end{figure}
+
+\texttt{VorAMR} uses output data from other hydro-codes to build a refined grid in \texttt{FLASH} and then populate that grid with field values (density, internal energy, velocity, etc.) via the \texttt{AMUSE} interface. By doing this all within the Torch framework, the resulting grid and initial gas/particle properties allows Torch to immediately launch into a simulation but with external data as its initial conditions.
+
+\texttt{VorAMR} takes advantage of the "refine\_on\_particle" routines within \texttt{FLASH} to construct a refined grid that as accurately as possible mirrors the local mesh scale of the \texttt{AREPO} data. \texttt{VorAMR} also uses a nearest-neighbor NDInterpolator to fill the \texttt{FLASH} grid cells with the field data of the nearest Voronoi mesh element (and therefore the element which encapsulates the cell center).
+
+\subsection{How to use VorAMR}
+
+As of March 21st 2023, \texttt{VorAMR} exists only on the "vorch" branch of Torch. Do: `git checkout vorch` first to obtain all \texttt{VorAMR} dependencies.
+
+\texttt{VorAMR} is installed alongside Torch but is turned off by default; Torch operates normally with \texttt{VorAMR} turned off. 
+To turn \texttt{VorAMR} on, switches must be flipped in two separate places: in the FLASH source which is installed into 
+\$FLASH\_HOME and the Torch source.
+
+1. In \texttt{torch/src/flash/source/Simulation/SimulationMain/Cube/pt\_initVoronoiPositions.F90}, uncomment \texttt{\#define VORAMR}.
+
+2. In \texttt{torch/torch\_user.py user\_parameters()} set the following: \texttt{p["with\_voramr"] = True} and provide the file names as required.
+
+The \texttt{source\_file} is the raw output data that you want to interpolate into Torch. \texttt{convert\_file} will apply the 
+routines in \texttt{hdf5\_convert.py} to the source data (unit conversions, centering, and velocity normalization) and output 
+a simplified hdf5 file that mimics the AREPO data structure. \texttt{pickle\_kdtree} will pickle the k-dimensional tree generated 
+by \texttt{kdtree.py} for quick use on successive runs.
+
+Once VorAMR is turned on, install torch \texttt{. ./install.sh}.
+
+Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid to fit on a single processor. 
+
+\begin{lstlisting}[language=bash]
+./setup Cube -a -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars \
+	+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=10000 +cube16
+\end{lstlisting}
+
+Change the `lrefine\_max` value in flash.par to be whatever level you wish the grid to reach at its highest refinement regions.
+
+Uncomment the VorAMR parameters in flash.par. Be sure to re-comment these if you later starting a "normal" Torch run.
+
+\begin{lstlisting}[language=bash]
+refine_on_particle_count=.true.
+min_particles_per_blk=4096
+max_particles_per_blk=4096 
+pt_maxPerProc = 10000000
+\end{lstlisting}
+
+If your source data contains star particles that you would like to include in Torch, edit \texttt{user\_initial\_conditions()} in \texttt{torch\_user.py} to read in the particle data, incorporate them into an \texttt{AMUSE} particle set, and initialize them via the \texttt{hydro} class.
+
+Finally, run Torch with only 1 processor assigned to \texttt{flash\_worker} (if running default worker partitions, this would be 6 total processors: 1 driver, 2 \texttt{ph4}, 1 \texttt{SeBa}, 1 \texttt{multiples}, 1 \texttt{FLASH}).
+
+% ============
 % Known Issues
 % ============
 \section{Caveats and Known Issues}
 \label{sec:caveats}
 
+\subsection{Torch Issues}
 Unphysical hot/empty zones are a common problem in finite volume codes, and are
 readily generated by under-resolved supernovae and stellar winds in Torch.  To
 combat such zones, a few tactics include:
@@ -579,6 +665,13 @@ probably will not work correctly as is.
 
 The module \texttt{source/physics/sourceTerms/GridInject} is in development and
 not recommended for use yet.
+
+\subsection{VorAMR Issues}
+\texttt{VorAMR} is capable of building Torch-ready initial conditions from ANY hydrodynamical simulation output. But, \texttt{VorAMR} is limited in how quickly it can complete this process. Luckily, a user will only have to use VorAMR once for a major production run, so the initial cost of time is generally worthwhile.
+\begin{itemize}
+	\item \texttt{VorAMR} can only run with ONE oversubscribed processor for the \texttt{flash\_worker} due to the use of serial HDF5 open/read calls within \texttt{FLASH}. Data conversion and grid build times can be on the order of days.
+	\item Users are recommended to augment a Torch+\texttt{VorAMR} run to output a checkpoint file after ONE timestep. Then, restart from the checkpoint in a clean Torch build without \texttt{VorAMR} turned on.
+\end{itemize}
 
 % ===========
 % Help!
@@ -847,6 +940,8 @@ This list includes most major components, but is not comprehensive.
 
 \subsection{Cartesius}
 
+\textbf{CARTESIUS IS NOW DISCONTINUED} - We leave the build instructions here as many of the steps are similar to other systems. Also, while SURF has now brought Cartesius offline, its replacement Snellius has a similar module file structure.
+
 \href{https://userinfo.surfsara.nl/systems/cartesius}{Cartesius} is the Dutch
 national supercomputer managed by the cooperative educational and scientific
 association SURFsara. Many projects have utilized Cartesius and its up-to-date
@@ -938,5 +1033,164 @@ export OMPI_MCA_mpi_warn_on_fork=0
 In addition to this slightly altered environment, the Cartesius Python 3.6.6 module does not currently have the \texttt{matplotlib} and \texttt{docutils} libraries installed. This is okay, we can just install them ourselves in our user environment using \texttt{pip install --user matplotlib docutils} after loading the Python/3.6.6-fosscuda-2018b module.
 
 Finally, if running this module environment setup reports any error (such as "XYZ module cannot load due to conflict") try running the same environment setup file again and there should be no issue.
+
+\subsection{Snellius}
+The below modules and setup notes are from Brooke Polak with additions by Sean Lewis.
+Load the following modules (Summer-Fall 2022):
+\begin{lstlisting}[language=bash]
+# Load Modules
+
+module load 2021
+module load Python/3.9.5-GCCcore-10.3.0
+module load h5py/3.2.1-foss-2021a
+module load GSL/2.7-GCC-10.3.0
+#module load Anaconda3/2021.05
+#module load HDF5/1.10.7-gompi-2020a
+
+
+
+# Specific Paths
+export MODLOC=/sw/arch/Centos8/EB_production/2021/software
+export MPIHOME=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0
+export MPI_HOME=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0
+export MPI_RUN=$MODLOC/OpenMPI/4.1.1-GCC-10.3.0/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+export HDF5_HOME=$MODLOC/HDF5/1.10.7-gompi-2021a
+export HDF5DIR=$MODLOC/HDF5/1.10.7-gompi-2021a/lib
+export HDF5INCLUDE=$MODLOC/HDF5/1.10.7-gompi-2021a/include
+export HDF5LIB="hdf5_fortran -lhdf5"
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+
+export OMPI_MCA_mpi_warn_on_fork=0
+
+export AMUSE_DIR=$HOME/2023feb-vorch/amuse
+export FLASH_DIR=$HOME/2023feb-vorch/FLASH4.6.2
+export TORCH_DIR=$HOME/2023feb-vorch/torch
+
+export PYTHONPATH=$TORCH_DIR:$PYTHONPATH
+export PYTHONPATH=$TORCH_DIR/src:$PYTHONPATH
+export PYTHONPATH=$AMUSE_DIR/test:$PYTHONPATH
+export PYTHONPATH=$AMUSE_DIR/src:$PYTHONPATH
+
+export CONDA_PATH={path to your conda env.}
+
+# Activate conda environment
+conda activate $CONDA_PATH
+export PYTHON=$CONDA_PATHbin/python
+
+MCA_Settings='--mca orte_base_help_aggregate 0 '
+UCX_Settings='-x UCX_NET_DEVICES=mlx5_0:1'
+\end{lstlisting}
+
+Now follow the usual quickstart procedure.  Here are some fixes that might be
+needed during that process.
+\begin{itemize}
+    \item In \texttt{\$TORCH\_DIR/src/flash/source/Particles/ParticlesMain/ray\_pe/MultiSourceSimple/HEALPixModule.F90} \\
+        Lines 209 and 250:
+        \texttt{iand(int(x),y)} i.e. replace the first argument of iand with int(argument)
+    \item In \texttt{\$FLASH\_DIR/bin/setup.py}
+        change \texttt{sys.setcheckinterval()} to \texttt{sys.setswitchinterval()}
+    \item In \texttt{\$FLASH\_DIR/sites/snellius.surf.nl/Makefile.h}
+        add \texttt{-fallow-argument-mismatch} to \texttt{FFLAGS\_OPT}
+\end{itemize}
+
+For the AMUSE configure step, Brooke uses:
+\begin{lstlisting}[language=bash]
+./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a
+--with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++
+--with-gmp=/home/bpolak/TORCH/env/amuse_env
+--with-mpfr=/home/bpolak/TORCH/env/amuse_env
+--with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env
+\end{lstlisting}
+In \texttt{amuse/config.mk}, you may need to edit:
+\begin{lstlisting}[language=bash]
+MPIFC=/sw/arch/Centos8/EB_production/2021/software/OpenMPI/4.1.1-GCC-10.3.0/bin/mpifort
+FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
+\end{lstlisting}
+
+Then, \texttt{FLASH} can be setup and built.
+\begin{lstlisting}[language=bash]
+./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev -maxblocks=100 +cube16 -site={mysitedir}
+cd object
+make -j
+\end{lstlisting}
+
+And \texttt{AMUSE} can be setup and the individual codes built. Note we need to make some under-the-hood changes to the .mk file after \texttt{AMUSE} is configured.
+\begin{lstlisting}[language=bash]
+cd amuse
+./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a --with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++ --with-gmp=/$CONDA_ENV --with-mpfr=$CONDA_ENV --with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env 
+#note: some users found that "./configure" what sufficient without any of the --with flags.
+
+#edit in amuse/config.mk:
+MPIFC=/sw/arch/Centos8/EB_production/2021/software/OpenMPI/4.1.1-GCC-10.3.0/bin/mpifort
+FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
+pip install -e .
+make framework
+make flash.code
+make kepler.code
+make ph4.code
+make seba.code
+make smalln.code
+make petar.code
+\end{lstlisting}
+
+\subsection{Mendel}
+The below modules and setup notes are from Eric Andersson.
+
+All python related software was installed with \texttt{pip} rather than \texttt{conda} (Medndel did not have \texttt{conda} at the time). \texttt{python venv} was used to create a clean python environment for the installation, see details below.
+
+Load the following libraries (note that FFTW is not available on Mendel as of March 21st, 2023) and export all necessary paths.
+
+\begin{lstlisting}[language=bash]
+module load Python/python-3.8.5
+module load OpenMPI/openmpi-4.0.4
+module load HDF5/hdf5-1.10.1
+
+export MPI_HOME=/usr/local/software/OpenMPI/openmpi-4.0.4
+export MPI_RUN=/usr/local/software/OpenMPI/openmpi-4.0.4/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+
+export HDF5_HOME=/usr/local/software/HDF5/hdf5-1.10.1
+export HDF5DIR=/usr/local/software/HDF5/hdf5-1.10.1/lib
+export HDF5INCLUDE=/usr/local/software/HDF5/hdf5-1.10.1/include
+export HDF5LIB="hdf5_fortran -lhdf5"
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+\end{lstlisting}
+
+Create a clean python environment and install the following packages. Note that the Quick Guide asks for us to install \texttt{gmp} and \texttt{mpfr}. These are both included in \texttt{gmpy2}.
+
+\begin{lstlisting}[language=bash]
+mkdir {directory/for/venv/}
+cd {directory/for/venv/}
+python3 -m venv {env_name}
+source {directory/for/venv/env_name}/bin/activate
+pip install ipython matplotlib numpy scipy docutils gsl gmpy2 h5py nose mpi4py
+\end{lstlisting}
+
+Follow the Quick Start Guide to set up AMUSE, FLASH and Torch.
+
+In the FLASH Makefile, update the paths to MPI and HDF5 to point to \texttt{\${MPI\_HOME}} and \texttt{\${HDF5\_HOME}}. All other paths are left blank.
+
+Instead of supplying ./configure with arguments when setting up AMUSE, all relevant paths are updated in \texttt{\$AMUSE\_DIR/config.mk} directly. Note that since \texttt{FFTW} is not on Mendel this is one part where the Mendel set-up deviates from the Quick Start Guide. Ignoring \texttt{FFTW} is fine.
+
+After this point everything is described in the guide.
 
 \end{document}
