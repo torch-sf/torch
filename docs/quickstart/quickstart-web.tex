@@ -1103,15 +1103,6 @@ needed during that process.
         add \texttt{-fallow-argument-mismatch} to \texttt{FFLAGS\_OPT}
 \end{itemize}
 
-For the AMUSE configure step, Brooke uses:
-\begin{lstlisting}[language=bash]
-./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a
---with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++
---with-gmp=/home/bpolak/TORCH/env/amuse_env
---with-mpfr=/home/bpolak/TORCH/env/amuse_env
---with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env
-\end{lstlisting}
-
 Then, \texttt{FLASH} can be setup and built.
 \begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev -maxblocks=100 +cube16 -site={mysitedir}
@@ -1122,7 +1113,7 @@ make -j
 And \texttt{AMUSE} can be setup and the individual codes built. Note we need to make some under-the-hood changes to the .mk file after \texttt{AMUSE} is configured.
 \begin{lstlisting}[language=bash]
 cd amuse
-./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a --with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++ --with-gmp=$CONDA_ENV --with-mpfr=$CONDA_ENV --with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env
+./configure --with-fftw=$MODLOC/FFTW/3.3.9-gompi-2021a --with-hdf5=$MODLOC/HDF5/1.10.7-gompi-2021a/bin/h5c++ --with-gmp=$CONDA_PATH --with-mpfr=$CONDA_PATH --with-gsl-prefix=/home/bpolak/TORCH/env/amuse_env
 #note: some users found that "./configure" was sufficient without any of the --with flags.
 
 #edit in amuse/config.mk:
