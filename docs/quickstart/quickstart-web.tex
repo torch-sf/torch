@@ -565,7 +565,7 @@ recompile the AMUSE worker too.
 % VorAMR Addon
 % ============
 \section{VorAMR: Expanded Options for Initial Conditions}
-A normal Torch run initializes from a "cubefile" like \texttt{cube128} or one generated from \texttt{turb-sphere.py}. These initial conditions are currently restricted to spherical clouds with a turbulent velocity distribution and gaussian density profile or something similar. While such ICs make for easy first steps for users to setup a new Torch simulation, ideal ICs would come from systems that evolved self-consistently in galactic environments. Unfortunately, Torch on its own cannot currently model such systems (and the grid nature of FLASH precludes it to have significant angular momentum loss and so should not be used to model rotating systems like galaxies). 
+A normal Torch run initializes from a "cubefile" like \texttt{cube128} or one generated from \texttt{turb-sphere.py}. These initial conditions are currently restricted to spherical clouds with a turbulent velocity distribution and gaussian density profile or something similar. While such ICs make for easy first steps for users to setup a new Torch simulation, ideal ICs would come from systems that evolved self-consistently in galactic environments. 
 
 \texttt{VorAMR} was created to allow for output data from other star formation software suites to be used as initial conditions in Torch. Currently, \texttt{VorAMR} has only been shown to be able to convert data from the star formation code \texttt{AREPO} into Torch ICs, but in theory can be easily adapted to convert ANY moving-mesh, AMR, or SPH code into Torch ICs.
 
@@ -598,7 +598,7 @@ routines in \texttt{hdf5\_convert.py} to the source data (unit conversions, cent
 a simplified hdf5 file that mimics the AREPO data structure. \texttt{pickle\_kdtree} will pickle the k-dimensional tree generated 
 by \texttt{kdtree.py} for quick use on successive runs.
 
-Once VorAMR is turned on, install torch \texttt{. ./install.sh}.
+Once \texttt{VorAMR} is turned on, install torch \texttt{. ./install.sh}.
 
 Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid to fit on a single processor. 
 
@@ -607,9 +607,9 @@ Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid t
 	+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=10000 +cube16
 \end{lstlisting}
 
-Change the `lrefine\_max` value in flash.par to be whatever level you wish the grid to reach at its highest refinement regions.
+Change the `lrefine\_max` value in flash.par to be whatever level you wish the grid to reach at its highest refinement regions. To acheive maximum consistency with the structure of the input data, `lrefine\_max` should be set such that the highest refinement FLASH blocks will contain as many input data points as cells (4096 for +cube16 blocks).
 
-Uncomment the VorAMR parameters in flash.par. Be sure to re-comment these if you later starting a "normal" Torch run.
+Uncomment the \texttt{VorAMR} parameters in flash.par. Be sure to re-comment these if you later starting a "normal" Torch run.
 
 \begin{lstlisting}[language=bash]
 refine_on_particle_count=.true.
