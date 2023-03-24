@@ -69,10 +69,12 @@ subroutine Simulation_addStaticAcceleration (pos, sweepDir, blockID, numCells, g
           abszHeight = abs(zHeight)			
       ! TODO 2019 May 09 - AT need to reimplement sim_NFWh from Juan's stratbox
 			!if (abszHeight  .lt. sim_NFWh) then
-	      ! gravitational acceleration due to stellar mass distribution
-          grav(ii) = grav(ii) - (sim_aParm1*zHeight/dsqrt(zHeight*zHeight + sim_aParm3*sim_aParm3)) - &
-                                & sim_aParm2 * zHeight + sim_aParm4 * zHeight * abszHeight !- &
-				!& sim_aParm5 * zHeight*zHeight*zHeight
+	      ! gravitational acceleration due to stellar mass distribution (Hill et al. 2012)
+          ! grav(ii) = grav(ii) - (sim_aParm1*zHeight/dsqrt(zHeight*zHeight + sim_aParm3*sim_aParm3)) - &
+          !                       & sim_aParm2 * zHeight + sim_aParm4 * zHeight * abszHeight !- &
+                                 !& sim_aParm5 * zHeight*zHeight*zHeight
+          ! polynomial fit for background potential from VorAMR input data - SCL 
+          grav(ii) = grav(ii) + sim_aParm1*zHeight**3 + sim_aParm2*zHeight**2 + sim_aParm3*zHeight + sim_aParm4
 			!else
 			!	rhoNFW   = sim_rho_s / ( abszHeight / sim_rs * ( 1d0 + abszHeight / sim_rs )**2d0 )
 			!	grav(ii) = grav(ii) -4./3d0 * sim_GravConst * PI * rhoNFW * zheight
