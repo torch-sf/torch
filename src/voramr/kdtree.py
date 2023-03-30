@@ -3,11 +3,12 @@ import h5py
 import numpy as np
 import pickle
 
-def read_arepo_hdf5(file_path):
+def read_hdf5(file_path):
     """
-    Opens an AREPO hdf5 data file and extracts the coordinates
-    of the Voronoi cells as well as the associated
-    gas desnity, internal energy, and velocity field values.
+    Opens an hdf5 data file and extracts the coordinates
+    of the Voronoi cells (or other data structures)
+    as well as the associated gas desnity, 
+    internal energy, and velocity field values.
     
     This function is written specifically to expect AREPO output
     data. Other data structures will need to have tailored calls

@@ -72,7 +72,7 @@ from voramr.hdf5_convert import (
     write_voramr_data_to_txt_file
 )
 from voramr.kdtree import (
-    read_arepo_hdf5,
+    read_hdf5,
     build_kdtree,
     pickle_tree,
     unpickle_tree,
@@ -473,17 +473,19 @@ def run_torch(user_initial_conditions, user_parameters):
                                                                 apply_consts=True)
             coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
                                                                                scoords, svels,
-                                                                               apply_consts=True, use_com_coords=False)
+                                                                               use_com_coords=False)
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
                                  scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['local_ref'])
 
-            coords, field_set = read_arepo_hdf5("kdtree-"+USER['input_file'])
+            #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
+            coords, field_set = read_hdf5("interp-data.hdf5")
         else:
             vprint("Using unconverted source file.")
-            coords, field_set = read_arepo_hdf5(USER['source_file'])
+            coords, field_set = read_hdf5(USER['source_file'])
 
-        vprint('About to call write_voramr_data_to_txt_file')
-        write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['local_ref'])
+        # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
+        #vprint('About to call write_voramr_data_to_txt_file')
+        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['local_ref'])
 
         vprint("Building field interpolator.")
         kdtree = build_kdtree(coords, field_set)
@@ -504,7 +506,7 @@ def run_torch(user_initial_conditions, user_parameters):
     #    redirect_stdout_file='voramr_worker.out',
     #    redirect_stderr_file='voramr_worker.err',
     #    )
-    ###################################################3
+    ###################################################
     # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")

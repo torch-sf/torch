@@ -1,9 +1,8 @@
 from amuse.lab import *
-#from amuse.datamodel import Particles
 
-from amuse.community.flash.interface import Flash #from amuse.community.voramr.interface import Flash
+from amuse.community.flash.interface import Flash
 from voramr.kdtree import (
-    read_arepo_hdf5,
+    read_hdf5,
     build_kdtree,
     pickle_tree,
     unpickle_tree,
@@ -21,6 +20,7 @@ from time import time
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
+    # Unused in favor of same func in torch_mainloop.py - SCL
     n = None
     with open(name) as f:
         for line in f:
@@ -32,6 +32,7 @@ def get_ntasks_from_run_script(name="run.sh"):
     return n
 
 def initialize_workers():
+    # Unused in favor of same func in torch_mainloop.py - SCL
     vprint("Got ntasks from sbatch file: {}".format(USER['num_hy_workers']+1))
     vprint("Number of FLASH workers: {}".format(USER['num_hy_workers']))
     vprint("Initializing Hydro code...")
@@ -53,24 +54,31 @@ def initialize_workers():
     return hydro
 
 def get_leaf_blocks(hydro, cellsPerBlock=16, numBlocks=None):
+    """
+    Acquires all FLASH blocks representing the computational domain.
+    
+    Arguments:
+    hydro         - instance of AMUSE flash_worker.
+
+    cellsPerBlock - number of cells in each direction of a FLASH block.
+
+    numBlocks     - number of blocks in the computational domain. 
+                This is passed in by the user, as long as numBlocks 
+                is > the actual number of blocks in the domain, 
+                this routine runs fine. 
+
+    Returns:
+    leaf_grids[:numblks] - list of active blocks. The slicing removes
+                           any extra buffers that are present from
+                           passing too many numBlocks.
+    """
     vprint("Getting block data...")
     lim=cellsPerBlock
     lim3 = lim**3
-    # nprocs = USER['num_hy_workers']
-    nprocs = hydro.get_number_of_procs()
-    vprint("true nprocs:", nprocs)
-    all_grids = hydro.get_number_of_grids(nprocs)
-    vprint("true all grids:", all_grids)
-    nprocs = 4 #get_number_of_procs()
-    # get all blocks (grids)                                                                                  
-    all_grids = hydro.get_number_of_grids(nprocs)
-    # This returns 0 and I'm not sure why.
-    vprint("all grids from nprocs=4:", all_grids)
-    leaf_grids = np.zeros((all_grids*lim3))
-    block_array = np.zeros((all_grids*lim3))
 
     vprint("getting leaf_indices")
-    all_grids=numBlocks # hard code number of blocks testing SCL 08/31
+    all_grids=numBlocks # hard coded from torch_user.py. Can be set arbitratily large to
+                        # accomodate any sized grid.
     [leaf_grids, block_array, num_leafs]= hydro.get_leaf_indices(list(range(all_grids)))
     numblks=num_leafs[0]
     
@@ -79,6 +87,30 @@ def get_leaf_blocks(hydro, cellsPerBlock=16, numBlocks=None):
     return leaf_grids[:numblks]
 
 def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
+    """
+    This subroutine loops over each block in the computational domain
+    and does three things. 
+    1.) The x,y,z coordinates of all cells
+    within the block are extracted and transformed into a 3D numpy
+    meshgrid. 
+    2.) The coordinate mesh is passed to the kdtree 
+    interpolator and nearest neighbor interpolation is performed on
+    each cell within the mesh resulting in a 4D NxNxNxM matrix where
+    N is the dimensionality of the FLASH block and M is the number of
+    field values interpolated. 
+    3.) The inerpolated field values
+    are unraveled one by one from the 4D matrix and flattened into an
+    ordered 1D array and fed back into FLASH. FLASH is smart enough
+    to fill the 3D block matrix from a 1D array.
+    
+    Arguments:
+    hydro      - instance of AMUSE flash_worker.
+    
+    leaf_grids - list of active blockIDs.
+
+    kdtree     - 3D tree object built previously from the input data, 
+                 allows for nearest neighbor interpolation.
+    """
     lim = cellsPerBlock
     a = np.empty(lim)
     a.fill(1)
@@ -99,13 +131,6 @@ def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
         # Pass coordinate mesh into kdtree interpolation, get field values for each coord point.
         interp = interp_data(kdtree, coords_mesh)
         
-        i = np.arange(1,17) # indicies 1-16 (Fortran indexes from 1)
-        j, k = i.copy(), i.copy()
-        index_mesh = np.meshgrid(i, j, k, indexing='xy')
-        BlkIndex = leaf
-        nproc = 1
-        # --------
-        
         # Using interpolated data. Flatten to 1D to feed to Fortran.
         rho = interp[:,:,:,0].flatten(order='F') | units.g/units.cm**3
         eint = interp[:,:,:,1].flatten(order='F') | (units.cm**2)/(units.s**2)
@@ -114,11 +139,11 @@ def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
         vz = interp[:,:,:,4].flatten(order='F') | units.cm/units.s
         gpot = interp[:,:,:,5].flatten(order='F') | (units.cm**2)/(units.s**2)
         
-        dataSize = 16
+        dataSize = cellsPerBlock
         
         # Feed field data to FLASH.
         #Fortran can properly populate its NxNxN matrices when given a 1xN^3 matrix
-        hydro.set_block_state(BlkIndex, dataSize, rho, vx, vy, vz, eint, gpot)
+        hydro.set_block_state(leaf, dataSize, rho, vx, vy, vz, eint, gpot)
         
     vprint("Done setting blocks. Total blocks: ", leaf)
     
@@ -126,18 +151,20 @@ def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
 def run_flash(user_initial_conditions, user_parameters):
     """
     """
+    # This is not used now that VorAMR is embbedded within Torch. Instead,
+    # the run_flash() function defined in torch_mainloop.py is used. - SCL
     global USER
     USER = user_parameters()
 
     if(USER['convert_file']):
         coords, vels, dens, mass, eint, gpot = extract_data(USER['source_file'],
                                                       apply_consts=True)
-        coords_cor, vels_cor = rescale_coords_vels(coords, vels, mass, apply_consts=True, use_com_coords=False)
+        coords_cor, vels_cor = rescale_coords_vels(coords, vels, mass, use_com_coords=False)
         write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot)
         
-        coords, field_set = read_arepo_hdf5(USER['input_file'])
+        coords, field_set = read_hdf5(USER['input_file'])
     else:
-        coords, field_set = read_arepo_hdf5(USER['source_file'])
+        coords, field_set = read_hdf5(USER['source_file'])
 
     vprint("Building field interpolator.")
     kdtree = build_kdtree(coords, field_set)
