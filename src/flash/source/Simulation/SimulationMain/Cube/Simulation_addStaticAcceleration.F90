@@ -1,15 +1,38 @@
-!******************************************************************************
-!
-!  Routine:     AddDiskMassAcceleration()
-!
-!  Description: Adds acceleration due to a galactic potential disk+halo
-!  is called from Gravity_accelOneRow
-!
-!  could use an interface that is then implemented by a specific galactic potential
-!  would switching between different models easy, BUT lazynessssss s
-!
-!  this is a dummy implementation with nothing in it
-!  the proper function should be in the Simulation folder, with the needed implementation
+!!****if* source/Simulation/SimulationMain/Cube/Simulation_addStaticAcceleration
+!!
+!! NAME
+!!
+!!   Simulation_addStaticAcceleration
+!!
+!! SYNOPSIS
+!!
+!!   Simulation_addStaticAcceleration(pos sweepDir blockID numCells grav)
+!!
+!! DESCRIPTION
+!!
+!!   Modifies the grav array by adding other gravitational acceleration
+!!   distributions to the existing array. Currently only supports
+!!   Z-directional accelerations but can be expanded to add other
+!!   components for the X and Y sweeps.
+!!
+!! ARGUMENTS
+!!
+!!   pos      - Row indices transverse to the sweep direction
+!!   sweepDir - The sweep direction:  allowed values are
+!!              SWEEP_X, SWEEP_Y, SWEEP_Z which are defined
+!!              in constants.h
+!!   blockID  - block ID number
+!!   numCells - Number of cells to update in grav array
+!!   grav     - array of gravitational acceleration data for each cell.
+!!
+!! NOTES
+!!
+!!   o This routinue was originally designed for the StratBox Torch problem by
+!!     Juan Ibanez-Mejia. It was subsequently refactored by Aaron Tran in 2019,
+!!     and then lightly modified and documented by Sean C. Lewis in 2023 for
+!!     use in the VorAMR Torch extension.
+!!
+!!*** 
 
 subroutine Simulation_addStaticAcceleration (pos, sweepDir, blockID, numCells, grav)
 !==============================================================================

@@ -494,7 +494,7 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
     
-    hydro, grav, mult, se = initialize_workers() #- commented out for voramr txt testing SCL 03/01/23 
+    hydro, grav, mult, se = initialize_workers()
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
@@ -515,6 +515,7 @@ def run_torch(user_initial_conditions, user_parameters):
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")
+
     state = TorchState(hydro, grav, mult)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])

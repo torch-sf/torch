@@ -236,8 +236,6 @@
 #define DEBUG_GRID
 #endif
 
-!#define DEBUG_GRID ! -SCL 11/14/22
-
 subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
      startingPos, datablock, dataSize)
 
@@ -255,8 +253,7 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
   integer, intent(in) :: blockID, structIndex, beginCount, gridDataStruct
   integer, dimension(MDIM), intent(in) :: startingPos
   integer, dimension(3), intent(in) :: dataSize
-  real, dimension(dataSize(1), dataSize(2), dataSize(3)),intent(in) :: datablock
-  real, dimension(dataSize(1), dataSize(2), dataSize(3)) :: datablock_prime 
+  real, dimension(datasize(1), dataSize(2), dataSize(3)),intent(in) :: datablock
   real, pointer, dimension(:,:,:,:) :: solnData
 
 
@@ -267,16 +264,6 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
   logical :: getIntPtr
 
 #ifdef DEBUG_GRID
-  ! Adding input debug statements - SCL 11/15/22
-  !print*,"Inside Grid_putBlkData()"
-  !print*, "blockID: ", blockID
-  !print*, "structIndex: ", structIndex
-  !print*, "beginCount: ", beginCount
-  !print*, "gridDataStruct: ", gridDataStruct
-  !print*, "startingPos: ", startingPos
-  !print*, "dataSize: ", dataSize
-  !print*, "datablock: ", datablock
-
   isget = .true.
   call gr_checkDataType(blockID,gridDataStruct,imax,jmax,kmax,isget)
 
@@ -303,6 +290,7 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
   if ((dataSize(1) > imax) .or. &
        (dataSize(2)> jmax) .or. &
        (dataSize(3) > kmax)) then
+     
      print *, "Grid_putBlkData: dataSize(1) (2) or (3) too big"
      print *,"You are requesting more cells than block has in a dimension"
      call Driver_abortFlash("Grid_putBlkData: dataSize(1) (2) or (3) too big")
@@ -313,6 +301,7 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
   if ((dataSize(1)  < 1) .or. &
        (dataSize(2) < 1) .or. &
        (dataSize(3) < 1)) then
+     
      print *, "Grid_putBlkData: dataSize(1) (2) or (3) too small"
      print *,"You are requesting more < 1 cell in a dimension of block, 1 is the min"
      call Driver_abortFlash("Grid_putBlkData: dataSize(1) (2) or (3) too small")
@@ -448,9 +437,6 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
   xb = startingPos(IAXIS) + begOffset(IAXIS)
   xe = xb + dataSize(IAXIS) -1
 
-  ! Doing some array rotation - SCL
-  datablock_prime = datablock! RESHAPE(source=datablock, shape=[size(datablock,3),size(datablock,1),size(datablock,2)], order=[2,3,1])
-  
   if(getIntPtr) then
 !!$     select case (gridDataStruct)
 !!$     case(CENTER)
@@ -468,26 +454,21 @@ subroutine Grid_putBlkData(blockID, gridDataStruct, structIndex, beginCount, &
 !!$        work(xb:xe,yb:ye,zb:ze,blockid,1) = datablock(:,:,:) 
 !!$#endif
 !!$     end select
+     
      call gr_getInteriorBlkPtr(blockId,solnData,gridDataStruct)
-     solnData(structIndex,xb:xe,yb:ye,zb:ze)=datablock_prime(:,:,:)
+     solnData(structIndex,xb:xe,yb:ye,zb:ze)=datablock(:,:,:)
      call gr_releaseInteriorBlkPtr(blockID,solnData,gridDataStruct)
   else
-     !print*, "> No getIntPtr, just regular BlkPtr. Setting data."
-     !print*, "> blockID = ", blockID
-     !print*, "> gridDataStruct = ", gridDataStruct
-     !print*, "> structIndex = ", structIndex
-     !print*, "> xb,xe = ", xe,xb
-     !print*, "> yb,ye = ", yb,ye
-     !print*, "> zb,ze = ", zb,ze
-     !print*, "> datablock = ", datablock
+     
      call Grid_getBlkPtr(blockID,solnData,gridDataStruct)
-     solnData(structIndex,xb:xe,yb:ye,zb:ze)=datablock_prime(:,:,:)
+     solnData(structIndex,xb:xe,yb:ye,zb:ze)=datablock(:,:,:)
 !!$     if(gridDataStruct==SCRATCH) then
 !!$        solnData(xb:xe,yb:ye,zb:ze,structIndex)=datablock(:,:,:)
 !!$     else
 !!$     end if
      call Grid_releaseBlkPtr(blockID,solnData,gridDataStruct)
   end if
+  
   return
   
 end subroutine Grid_putBlkData
