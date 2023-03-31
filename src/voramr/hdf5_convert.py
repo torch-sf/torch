@@ -82,7 +82,7 @@ def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=Fal
     return coords_cor, vels_cor, scoords_cor, svels_cor
 
 def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
-                         scoords, svels, smass, sinitmass, sfmtime, smetal, local_ref=None):
+                         scoords, svels, smass, sinitmass, sfmtime, smetal, use_localRef=False, local_ref=[0.0,0.0,0.0]):
     # Write all gas data to file to be included in interpolation kdtree regardless if we
     # are refining on a region of interest. Include all field values.
     #f = h5py.File("kdtree-"+output_filename, 'w')
@@ -102,7 +102,7 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     # Recreate gas dataset
     #group = f.create_group('PartType0')
     
-    if(local_ref):
+    if(use_localRef):
         vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Reading ",output_filename)
         # open file to fill with region-of-interest gas only --> FLASH refinement
         # therefore only need coordinate data, commented out all other field values
@@ -155,13 +155,13 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     vprint("Wrote FLASH refinement gas and stars to", output_filename)
     f.close()
 
-def write_voramr_data_to_txt_file(voramr_txt_filename, coords, local_ref=None):
+def write_voramr_data_to_txt_file(voramr_txt_filename, coords, use_localRef=False, local_ref=[0.0,0.0,0.0]):
     # Meant to provide a way to get away from serial hdf5 read in FLASH.
     # This routine writes the file properly, but the FLASH side is still
     # in dev as of Apr 1st, 2023 - SCL
     vprint("~~ Writing input gas coordinate data to text file ~~")
     f = open(voramr_txt_filename, 'w')
-    if(local_ref):
+    if(use_localRef):
         vprint("Doing local refinement")
         locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
         diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)

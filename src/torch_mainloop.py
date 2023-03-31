@@ -475,7 +475,7 @@ def run_torch(user_initial_conditions, user_parameters):
                                                                                scoords, svels,
                                                                                use_com_coords=False)
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
-                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['local_ref'])
+                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['use_localRef'], USER['local_ref'])
 
             #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
             coords, field_set = read_hdf5("interp-data.hdf5")
@@ -485,7 +485,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
         # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
         #vprint('About to call write_voramr_data_to_txt_file')
-        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['local_ref'])
+        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['use_localRef'], USER['local_ref'])
 
         vprint("Building field interpolator.")
         kdtree = build_kdtree(coords, field_set)

@@ -277,11 +277,13 @@ def user_parameters():
 
     # <VorAMR>
 
-    p['with_voramr'] = True #False
-    p['source_file'] = "snapshot_518_9.hdf5"#"voramr_test.hdf5"
+    p['with_voramr'] = flashp['use_voramr']
+    p['source_file'] = flashp['voramr_source']
     p['convert_file'] = True
-    p['local_ref'] = None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
-    p['input_file'] = "voramr_input.hdf5"
+    p['use_localRef'] = flashp['use_localRef']
+    p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
+    #None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
+    p['input_file'] = flashp['voramr_input']
     p['pickle_kdtree'] = False
     p['pickle_file_name'] = "kdtree.pickle"
     p['numBlocks'] = 15000 #345

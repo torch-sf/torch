@@ -42,6 +42,8 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
        Grid_getBlkPtr, Grid_releaseBlkPtr,Grid_getCellCoords,&
        Grid_getBlkIndexLimits, Grid_getBlkData, &
        Grid_getBlkIDFromPos
+  use Simulation_data
+  use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   
   !use Simulation_data, ONLY : sim_ptMass, sim_densityThreshold, sim_print
 
@@ -81,6 +83,13 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
   real :: xcoord, ycoord, zcoord ! Imported gas particle coordinates
 !--------------------------------------------------------------
 
+  call RuntimeParameters_get('use_voramr', use_voramr)
+  if (.not.use_voramr) then
+     print*, "Skipping VorAMR"
+     call Logfile_stamp('Skipping VorAMR', "[pt_initVoronoiPositions]")
+     return
+  endif
+    
   if (pt_meshMe.EQ.MASTER_PE) then
      call Logfile_stamp('VorAMR. Building refined grid', "[pt_initVoronoiPositions]")
   endif
@@ -88,12 +97,14 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
   updateRefine=.true. !.false.
   if(partPosInitialized) return
 
+  call RuntimeParameters_get('voramr_input', voramr_input)
+  
   pt_numLocal=0
   if (pt_meshMe .EQ. MASTER_PE) then
      print *, 'Starting HDF5 Fortran Read'
      CALL h5open_f(error)
-     print*, 'Open the file: ', filename
-     CALL h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
+     print*, 'Open the file: ', voramr_input !filename
+     CALL h5fopen_f (voramr_input, H5F_ACC_RDWR_F, file_id, error)
      print*, 'Open the group: ', group1name
      CALL h5gopen_f (file_id, group1name, group1_id, error)
      print*, 'Open the dataset: ', coords_dsetname

@@ -58,14 +58,14 @@ module Simulation_data
 !  logical, save :: sim_stratify_heating, sim_constant_heating
 
    !! VorAMR stuff
-   !real, save :: sim_smlRho
-   !real, save :: sim_ptMass, sim_densityThreshold
-   !integer, save :: sim_meshMe, sim_minBlks
-   !logical, save :: sim_print=.false.
-
+   logical, save :: use_voramr, use_localRef, refPartCount
+   character(len=255),save :: voramr_source, voramr_input
+   real, save :: localRef_x, localRef_y, localRef_z, localRef_r
+   
    !! static grav field parameters
    logical, save :: sim_withStaticGrav
    real, save :: sim_aParm1, sim_aParm2, sim_aParm3, sim_aParm4
-end module Simulation_data
+
+ end module Simulation_data
 
 

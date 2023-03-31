@@ -51,6 +51,17 @@ PARAMETER sim_tdust     REAL    18.0
 #PARAMETER	h_cr					REAL	6.1712e21
 #PARAMETER	use_constant_heating	BOOLEAN	FALSE
 
+# VorAMR Parameters
+PARAMETER use_voramr        BOOLEAN False
+PARAMETER voramr_source     STRING  "snapshot.hdf5"
+PARAMETER voramr_input      STRING  "voramr_input.hdf5"
+PARAMETER use_localRef      BOOLEAN False
+PARAMETER localRef_x        REAL    0.0
+PARAMETER localRef_y        REAL    0.0
+PARAMETER localRef_z        REAL    0.0
+PARAMETER localRef_r        REAL    0.0
+PARAMETER refine_on_particle_count BOOLEAN False
+
 # Static potential parameters
 PARAMETER sim_aParm1        REAL 0.0
 PARAMETER sim_aParm2        REAL 0.0
