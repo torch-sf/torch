@@ -29,14 +29,6 @@ bx0 = 0.0e0
 by0 = 0.0e0
 bz0 = 3.0e-6
 
-# ================
-# VorAMR extension
-# ================
-
-refine_on_particle_count=.true.
-min_particles_per_blk=4096 #0
-max_particles_per_blk=4096 #1 #500000 # 50000
-pt_maxPerProc = 20000000 # COMMENTED OUT SAME PARAM on LINE 259
 
 # ===================
 # physics/Eos/EosMain
@@ -256,7 +248,7 @@ useParticles        = T
 useSinkParticles    = .true.
 
 # maximum number of total particles, not just rays
-# pt_maxPerProc   = 10000
+pt_maxPerProc   = 10000
 
 # --------------------------------------------
 # Particles/ParticlesMain/active/SinkNoAdvance
@@ -473,6 +465,10 @@ rt_ion_min = 1e-8
 # rapidly from high to zero, making things unstable. -JW
 rt_neutral_min = 1e-10
 
+# temperature that radiation will heat gas to, used as a limiter of 
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+rt_dt_temp     = 1.0e5
+
 ph_sampling     = 2.0
 ph_initHPlevel  = 2
 ph_inBlockSplit = T
@@ -481,6 +477,10 @@ ph_maxNRays     = 1000000 #300000
 ph_raysToBundle = 5
 ph_CommCheckInterval = 20
 ph_radPressure  = T
+
+# cfl factor used to limit velocity of radiation pressure, used as a limiter of 
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+cfl_radPressure = 0.3
 
 early_term_FUV  = T
 sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
