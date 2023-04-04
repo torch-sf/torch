@@ -314,7 +314,7 @@ def user_parameters():
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
-    p['with_winds'] = True  # allow stars to deposit hot winds
+    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
 
