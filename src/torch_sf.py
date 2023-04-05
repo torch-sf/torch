@@ -284,6 +284,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_pos = hydro.get_particle_position(sink_tag)
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
+        sink_angMom = hydro.get_particle_ang_mom(sink_tag)  # Added -SA 20230405
 
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
@@ -316,9 +317,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # Remove newly-created stars from sink's queue
             state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
 
-            # Remove the mass from the sink.
-            sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun)
+            # Remove the mass from the sink and corresponding angular momentum fraction. -SA 20230405
+            remaining_mass_frac = (sink_mass - (np.sum(spawn_masses)|units.MSun)) /sink_mass #fraction of mass that remains (for ang_mom decrease) -SA 20230405
+            sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun) # Now we can update the sink mass (comment added -SA 20230405)
             hydro.set_particle_mass(sink_tag, sink_mass)
+            hydro.set_particle_ang_mom(sink_tag, sink_angMom*remaining_mass_frac)  #Remove ang_mom from sink, based on mass of stars formed -SA 20230405
+
 
             star          = Particles(nnew)
             star.mass     = spawn_masses | units.MSun
