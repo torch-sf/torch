@@ -60,6 +60,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     velocity = hydro.get_particle_velocity(newtags)
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
+    angMom   = hydro.get_particle_ang_mom(newtags) # add angular momentum code -SA 20230301
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -75,6 +76,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
     add_star.radius = 100 | units.AU # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
+    add_star.ang_mom = angMom # add angular mometum code -SA 20230301
 # don't need to carry this around because we don't need history
 # just update directly in hydro
     #if with_lyc:
