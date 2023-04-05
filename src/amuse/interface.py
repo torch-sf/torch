@@ -604,7 +604,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
-    def get_sink_ang_mom_array():
+    def get_particle_ang_mom_array():  #previously get_sink_ang_mom_array -SA 20230405
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN, unit=NO_UNIT)
@@ -1103,11 +1103,11 @@ class Flash(CommonCode):
 
         return vel_array
 
-    def get_sink_ang_mom(self, tags):
+    def get_particle_ang_mom(self, tags): #previously get_sink_ang_mom -SA 20230405
 
-        [lx, ly, lz] = self.get_sink_ang_mom_array(tags)
+        [lx, ly, lz] = self.get_particle_ang_mom_array(tags)
 
-        #print "In get_sink_ang_mom"
+        #print "In get_particle_ang_mom"
         #print lx, ly, lz
 
         ang_mom_array = np.array([lx.value_in(units.cm**2.0 * units.g / units.s), ly.value_in(units.cm**2.0 * units.g / units.s),
@@ -1122,7 +1122,7 @@ class Flash(CommonCode):
             ang_mom_array = ang_mom_array.flatten()
 
         #print ang_mom_array
-        #print "Leaving get_sink_ang_mom"
+        #print "Leaving get_particle_ang_mom"
 
         return ang_mom_array
 
@@ -1880,7 +1880,8 @@ class Flash(CommonCode):
                     'set_particle_velocity',
                     'get_sink_mean_cs',
                     'get_sink_gas_mean_velocity',
-                    'get_sink_ang_mom',
+#                    'get_sink_ang_mom', #changed to get_particle - SA 20230405
+                    'get_particle_ang_mom', 
                     'get_sink_gas_var_velocity',
                     'get_particle_acceleration',
                     'make_sink',
