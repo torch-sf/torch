@@ -12,7 +12,7 @@ from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
 
-def get_multiplicity(m_arr, binaries=True, mult='field'):
+def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
 
     def interpolate(m_low, m_high, CF_low, CF_high, m):
         a = (CF_high - CF_low) / (m_high - m_low)
@@ -540,7 +540,7 @@ def orbits(mass_array, binaries=True, mult='field', pdist='field', qdist='field'
         return semi_major_axis.as_quantity_in(units.AU)
 
 
-    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult = mult, pdist = pdist, qdist = qdist, edist = edist):
+    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult_frac = mult_frac, pdist = pdist, qdist = qdist, edist = edist):
         """
         Generates binaries from arrays of masses
         The input array has no units

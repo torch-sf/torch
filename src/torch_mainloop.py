@@ -426,7 +426,7 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
             binaries=USER['binaries'],
-            mult=USER['mult'],
+            mult_frac=USER['mult_frac'],
             pdist=USER['pdist'],
             qdist=USER['qdist'],
             edist=USER['edist']

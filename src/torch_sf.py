@@ -209,7 +209,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, sum_small=False,
-                binaries=True, sample_imf_bins=100, mult='field',
+                binaries=True, sample_imf_bins=100, mult_frac='field',
                 pdist='field', qdist='field', edist='field'):
 
     """Check hydro for new sinks, queue stars for spawning"""
@@ -241,7 +241,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
                             sum_small=sum_small, binaries=binaries,
-                            mult=mult, pdist=pdist, qdist=qdist, edist=edist
+                            mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
             )
             
             tprint("... sink tag {}".format(sink_tag), end='')

@@ -301,7 +301,7 @@ def user_parameters():
 
     p['binaries'] = True
     if p['binaries']: #Not used if binaries is false, can leave to default values                                                                                                                                                                                          
-        p['mult'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                                                                                                                   
+        p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                                                                                                                   
         p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                                                                                                        
         p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                                                                                                     
         p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
