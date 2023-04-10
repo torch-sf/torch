@@ -1179,4 +1179,121 @@ Instead of supplying ./configure with arguments when setting up AMUSE, all relev
 
 After this point everything is described in the guide.
 
+\subsection{Stampede2}
+This setup guide is credited to Brooke Polak.
+
+After downloading AMUSE, Torch, and FLASH via git, load the following modules in \texttt{$\sim$/.profile}
+\begin{lstlisting}[language=bash]
+module load gcc/9.1.0 
+module load impi/19.0.9
+module load python3/3.8.2
+module load hdf5/1.10.4
+module load gsl/2.6
+module load fftw3
+module load mkl
+\end{lstlisting}
+
+And, specify your paths in \texttt{$\sim$/.bashrc}
+\begin{lstlisting}[language=bash]
+export AMUSE_DIR=/home1/05402/bp4928/TORCH/amuse
+export FLASH_DIR=/home1/05402/bp4928/TORCH/FLASH4.6.2
+export TORCH_DIR=/home1/05402/bp4928/TORCH/torch
+export MODLOC=/opt/apps
+export MPIHOME=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi/intel64
+export MPI_HOME=$MPI_HOME
+export MPI_RUN=$MPI_HOME/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+export HDF5_HOME=$MODLOC/gcc9_1/hdf5/1.10.4/x86_64
+export HDF5DIR=$HDF5_HOME/lib
+export HDF5INCLUDE=$HDF5_HOME/include
+export HDF5LIB="hdf5_fortran -lhdf5"
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${TACC_MKL_LIB}:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export LIBRARY_PATH=${TACC_MKL_LIB}:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+\end{lstlisting}
+
+Setup your conda environment following these steps:
+\begin{lstlisting}
+cd /where/you/want/conda/install
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-py39_4.9.2-Linux-x86_64.sh
+source ~/.profile
+conda deactivate
+conda config --set auto_activate_base false
+source ~/.profile
+mkdir {your/conda_env/directory} 
+conda create --prefix {your/conda_env/directory}/{env_name} python=3.9
+conda activate {your/conda_env/directory}/{env_name} #give absolute path so conda can find your env
+conda install ipython matplotlib numpy scipy docutils gsl gmp h5py mpfr nose 
+conda install liblapack (?)
+conda clean --all 
+pip install --no-cache-dir mpi4py
+\end{lstlisting}
+
+FLASH setup:
+\begin{lstlisting}
+cd torch
+./install.sh
+FLASH SETUP
+in $FLASH_DIR/bin/setup.py
+change sys.setcheckinterval() to sys.setswitchinterval()
+in $FLASH_DIR/sites
+cp -r sites/cartesius.surfsara.nl sites/stampede2.tacc.utexas.edu
+in $FLASH_DIR/sites/stampede2.tacc.utexas.edu/Makefile.h set
+MPI_PATH   = ${MPI_HOME}
+HDF5_PATH  = ${HDF5_HOME}
+and replace all instances of mpifort with mpif90
+in $FLASH_DIR/sites/Aliases
+add:
+stampede2.tacc.utexas.edu login1.stampede2.tacc.utexas.edu
+stampede2.tacc.utexas.edu login2.stampede2.tacc.utexas.edu
+stampede2.tacc.utexas.edu login3.stampede2.tacc.utexas.edu
+./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev +cube16 -maxblocks=50 
+cd object
+make -j
+\end{lstlisting}
+
+AMUSE setup:
+\begin{lstlisting}
+cd amuse
+./configure --with-fftw=$TACC_FFTW3_INC --with-hdf5=$MODLOC/gcc9_1/hdf5/1.10.4/x86_64/bin/h5c++ --with-gmp=/home1/05402/bp4928/TORCH/env/torch_env --with-mpfr=/home1/05402/bp4928/TORCH/env/torch_env --with-gsl-prefix=/home1/05402/bp4928/TORCH/env/torch_env 
+pip install -e .
+make framework
+make flash.code
+make kepler.code
+make ph4.code
+make seba.code
+make smalln.code
+--- petar 
+in amuse/src/amuse/community/petar/Makefile: if commented out, uncomment the following:
+add -I flag before {$INCLUDE}
+# arch
+ CXXFLAGS += -march=core-avx2
+ CXXFLAGS += -D INTRINSIC_X86
+ CXXFLAGS += -D USE_SIMD
+ CXXFLAGS += -D DIV_FIX
+make petar.code
+\end{lstlisting}
+
+SLURM submit script:
+\begin{lstlisting}
+#!/bin/sh
+#SBATCH --job-name=test
+#SBATCH -N 1
+#SBATCH -n 32
+#SBATCH -p skx-dev
+#SBATCH --time=0:10:00
+export FI_PROVIDER=tcp
+ibrun -n 1 /home1/05402/bp4928/TORCH/env/torch_env/bin/python torch_user.py
+\end{lstlisting}
+
 \end{document}
