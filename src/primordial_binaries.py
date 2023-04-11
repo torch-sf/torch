@@ -1,9 +1,7 @@
 """
 Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017) and Winters et al. (2019)
-Claude Cournoyer-Cloutier, McMaster University, 2020
-The functions get_multiplicity, get_period and get_eccentricity have been reworked
-There is still some work to be done on get_companion_masses, which still defaults the gamma (June 3, 2020) --> Done, date unknown, CCC
-Version used in paper I took the log twice in the period distribution, resulting in an absence of close massive binaries --> Fixed, 11/2021, CCC
+Claude Cournoyer-Cloutier, McMaster University, 2020, 2021, 2023
+Version used in CCC+21 took the log twice in the period distribution, resulting in an absence of close massive binaries --> Fixed, 11/2021, CCC
 """
 
 import numpy as np
@@ -21,7 +19,7 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
 
     def companion_frequency(m):
 
-        if mult == 'field':
+        if mult_frac == 'field':
     
             """
             For masses below 0.6 M_sun, we use the primary mass dependent binary fraction from Winters et al. (2020)
@@ -30,11 +28,11 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
             """
             
             if m < 0.15:
-                CF = 0.16
+                CF = 0.19
             elif 0.15 <= m < 0.3:
-                CF = 0.214
+                CF = 0.23
             elif 0.3 <= m < 0.6:
-                CF = 0.282                
+                CF = 0.30
             elif 0.6 <= m < 0.8:
                 CF = interpolate(0.6, 0.8, 0.282, 0.4, m)                        
             elif 0.8 <= m < 1.2:
@@ -525,7 +523,7 @@ def get_eccentricity(mass, period, edist = 'field'):
 
 
 
-def orbits(mass_array, binaries=True, mult='field', pdist='field', qdist='field', edist='field'):
+def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='field', edist='field'):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
         """
@@ -546,7 +544,7 @@ def orbits(mass_array, binaries=True, mult='field', pdist='field', qdist='field'
         The input array has no units
         """
 
-        multiplicity  = get_multiplicity(mass_array, binaries, mult)[0]
+        multiplicity  = get_multiplicity(mass_array, binaries, mult_frac)[0]
         masses        = []
         system_masses = []
         positions     = []
