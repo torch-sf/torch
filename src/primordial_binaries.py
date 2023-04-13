@@ -97,24 +97,41 @@ def get_period(mass, pdist='field'):
         def probability(m):
             
             if m < 0.15:
-                log_period = np.log10(365.25) + (3./2) * np.random.normal(0.845, 1.04)
+                a = 10**(rng.normal(np.log10(3.9), 0.6)) #limit to 0.01 and 1e4
             elif 0.15 <= m < 0.30:
-                log_period = np.log10(365.25) + (3./2) * np.random.normal(1.04, 1.21)
-            elif 0.30 <= m < 0.60:
-                log_period = np.log10(365.25) + (3./2) * np.random.normal(1.69, 1.48)
+                a = 10**(rng.normal(np.log10(10), 1.1))
+            elif 0.30 <= m:
+                a = 10**(rng.normal(np.log10(26), 1.2))
+            return a
+        
+        def mass_ratio(m):
             
-            return log_period
+            q = 0
+            while q*m < 0.08:
+                q = rng.uniform(0, 1)
+            
+            return q
         
         def period(m):
             
+            q = mass_ratio(m)
+            m2 = q*m
             p = 0
             while (p < 0.5) or (p > 7.5):
-                p = probability(m)
+                a = probability(m) | units.AU
+                M = (m+m2) | units.MSun
+                # Can eventually use AMUSE here
+                #units.constants.G
+                #a_cm = 1.496e13*a #cm
+                #G = 6.674e-8
+                #msun = 1.988e33
+                p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constant.G*M)).value_in(units.days))
             
-            return p
+            return p, q
         
-        period_m_dwarf = period(m)
-        return period_m_dwarf
+        period_m_dwarf, q_m_dwarf = period(m)
+        
+        return period_m_dwarf, q_m_dwarf
     
     
     def solar_and_above(m):
@@ -235,16 +252,18 @@ def get_period(mass, pdist='field'):
 
     if pdist == 'field':
         if mass < 0.6:
-            p = m_dwarfs(mass)
+            p = m_dwarfs(mass)[0]
+            q = m_dwarfs(mass)[1]
         else:
             p = solar_and_above(mass)
+            q = -1
     else:
         print('Please select a valid argument for the period distribution. Options are \'field\' and TBD.')
 
-    return p
+    return p, q
 
 
-def get_companion_mass(mass, period, qdist='field'):
+def get_companion_mass(mass, period, q_tmp, qdist='field'):
     
     """
     From Moe & di Stefano (2017), except for M-dwarfs from Winters et al. (2019)
@@ -438,7 +457,7 @@ def get_companion_mass(mass, period, qdist='field'):
         
         return prob
     
-    def mass_ratio(m, P, q_temp):
+    def mass_ratio(m, P, q_tmp):
         
         q = 0
         h = 10
@@ -448,7 +467,7 @@ def get_companion_mass(mass, period, qdist='field'):
             low = np.max([0.1, 0.08 / m])
             q = rng.uniform(low, 1)
             if m < 0.6:
-                q = q_temp
+                q = q_tmp
                 # Exit loop
                 prob = 1
                 h = 0
@@ -550,12 +569,12 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='f
         for i in range(len(multiplicity)):
 
             if multiplicity[i] == 1:
-                primary_mass    = mass_array[i]
-                log_period      = get_period(primary_mass, pdist)
-                companion_mass  = get_companion_mass(primary_mass, log_period, qdist) | units.MSun
-                eccentricity    = get_eccentricity(primary_mass, log_period, edist)
-                primary_mass    = primary_mass | units.MSun
-                semi_major_axis = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
+                primary_mass      = mass_array[i]
+                log_period, q_tmp = get_period(primary_mass, pdist)
+                companion_mass    = get_companion_mass(primary_mass, log_period, q_tmp, qdist) | units.MSun
+                eccentricity      = get_eccentricity(primary_mass, log_period, edist)
+                primary_mass      = primary_mass | units.MSun
+                semi_major_axis   = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
                 E = random.uniform(-1 * np.pi, np.pi)
                 true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
