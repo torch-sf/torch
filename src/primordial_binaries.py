@@ -120,12 +120,7 @@ def get_period(mass, pdist='field'):
             while (p < 0.5) or (p > 7.5):
                 a = probability(m) | units.AU
                 M = (m+m2) | units.MSun
-                # Can eventually use AMUSE here
-                #units.constants.G
-                #a_cm = 1.496e13*a #cm
-                #G = 6.674e-8
-                #msun = 1.988e33
-                p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constant.G*M)).value_in(units.days))
+                p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constants.G*M)).value_in(units.yr)*(365.25))
             
             return p, q
         
