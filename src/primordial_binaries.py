@@ -87,7 +87,7 @@ def get_period(mass, pdist='field'):
     """
     
     def interpolate(p_high, p_low, prob_high, prob_low, p):
-        a = (prob_high - prob_low) / (10 ** p_high - 10 ** p_low)
+        a = (prob_high - prob_low) / (p_high - p_low)
         b = prob_high - a * p_high
         return a * p + b
     
