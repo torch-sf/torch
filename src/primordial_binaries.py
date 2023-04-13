@@ -122,7 +122,7 @@ def get_period(mass, pdist='field'):
         def probability(m, x):
             
             if 0.6 <= m < 1.6:
-
+                prob_max = 0.095
                 if 0.5 <= x < 1.5:
                     prob = 0.027
                 elif 1.5 <= x < 2.5:
@@ -142,6 +142,7 @@ def get_period(mass, pdist='field'):
         
         
             elif 1.6 <= m < 5:
+                prob_max = 0.13
                 if 0.5 <= x < 1.5:
                     prob = 0.07
                 elif 1.5 <= x < 2.5:
@@ -160,6 +161,7 @@ def get_period(mass, pdist='field'):
                     prob = 0
     
             elif 5 <= m < 9:
+                prob_max = 0.22
                 if 0.5 <= x < 1.5:
                     prob = 0.14
                 elif 1.5 <= x < 2.5:
@@ -178,6 +180,7 @@ def get_period(mass, pdist='field'):
                     prob = 0
                         
             elif 9 <= m < 16:
+                prob_max = 0.26
                 if 0.5 <= x < 1.5:
                     prob = 0.19
                 elif 1.5 <= x < 2.5:
@@ -196,6 +199,7 @@ def get_period(mass, pdist='field'):
                     prob = 0
                                                                                             
             elif m >= 16:
+                prob_max = 0.32
                 if 0.5 <= x < 1.5:
                     prob = 0.29
                 elif 1.5 <= x < 2.5:
@@ -217,13 +221,13 @@ def get_period(mass, pdist='field'):
                                                                                                                                                                     
                                                                                                                                                                     
         def period(m):
-                                                                                                                                                                        
-            p = 1
+            p = rng.uniform(0.5, 7.5)
             h = 1
-            while probability(m, p) < h:
-                 p = random.uniform(0.5, 7.5)
-                 h = random.uniform(0, 0.32)
-                                                                                                                                                                                        
+            prob, prob_max = probability(m, p)
+            while prob < h:
+                p = random.uniform(0.5, 7.5)
+                h = random.uniform(0, prob_max)
+                prob, prob_max = probability(m, p)
             return p
 
         period_above_solar = period(m)
