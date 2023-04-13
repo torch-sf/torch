@@ -230,8 +230,117 @@ def get_period(mass, pdist='field'):
                     prob = 0
                                                                                                                                                                 
             return prob
-                                                                                                                                                                    
-                                                                                                                                                                    
+
+        def period(m):
+            p = rng.uniform(0.5, 7.5)
+            h = 1
+            prob, prob_max = probability(m, p)
+            while prob < h:
+                p = random.uniform(0.5, 7.5)
+                h = random.uniform(0, prob_max)
+                prob, prob_max = probability(m, p)
+            return p
+                                    
+        period_above_solar = period(m)
+        return period_above_solar
+        
+    def inner_solar_and_above(m):
+        
+        def probability(m, x):
+            
+            if 0.6 <= m < 1.6:
+                frac_close = 15./50
+                prob_max = np.max([0.095 * (1-frac_close), 0.057*frac_close])
+                if 0.5 <= x < 1.5:
+                    prob = 0.027 * frac_close
+                elif 1.5 <= x < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.057, 0.027, x) * frac_close
+                elif 2.5 <= x < 3.5:
+                    prob = 0.057 * frac_close
+                elif 3.5 <= x < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.095 * (1-frac_close), 0.057 * frac_close, x)
+                elif 4.5 <= x < 5.5:
+                    prob = 0.095 * (1-frac_close)
+                elif 5.5 <= x < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.075, 0.095, x) * (1-frac_close)
+                elif 6.5 <= x < 7.5:
+                    prob = 0.075 * (1-frac_close)
+                else:
+                    prob = 0
+        
+            elif 1.6 <= m < 5:
+                frac_close = 37./59
+                prob_max = np.max([0.13 * (1-frac_close), 0.12*frac_close])
+                if 0.5 <= x < 1.5:
+                    prob = 0.07 * frac_close
+                elif 1.5 <= x < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.12, 0.07, x) * frac_close
+                elif 2.5 <= x < 3.7:
+                    prob = 0.12 * frac_close
+                elif 3.7 <= x < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.13*(1-frac_close), 0.12*frac_close, x)
+                elif 4.5 <= x < 5.5:
+                    prob = 0.13 * (1-frac_close)
+                elif 5.5 <= x < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.09, 0.13, x) * (1-frac_close)
+                elif 6.5 <= x < 7.5:
+                    prob = 0.09 * (1-frac_close)
+                else:
+                    prob = 0
+
+            elif 5 <= m < 9:
+                frac_close = 63./76
+                prob_max = np.max([0.2 * (1-frac_close), 0.22*frac_close])
+                if 0.5 <= x < 1.5:
+                    prob = 0.14 * frac_close
+                elif 1.5 <= x < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.22, 0.14, x) * frac_close
+                elif 2.5 <= x < 3.7:
+                    prob = 0.22 * frac_close
+                elif 3.7 <= x < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.20 * (1-frac_close), 0.22 * frac_close, x)
+                elif 4.5 <= x < 5.5:
+                    prob = 0.20 * (1-frac_close)
+                elif 5.5 <= x < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.11, 0.20, x) * (1-frac_close)
+                elif 6.5 <= x < 7.5:
+                    prob = 0.11 * (1-frac_close)
+                else:
+                    prob = 0
+        
+            elif 9 <= m < 16:
+                frac_close = 80./84
+                prob_max = np.max([0.26*(1-frac_close), 0.23*frac_close])
+                if 0.5 <= x < 1.5:
+                    prob = 0.19*frac_close
+                elif 1.5 <= x < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.26, 0.19, x)*frac_close
+                elif 2.5 <= x < 3.7: # Extend to 3.7
+                    prob = 0.26*frac_close
+                elif 3.7 <= x < 4.5:
+                    prob = interpolate(4.5, 3.5, 0.23*(1-frac_close), 0.26*frac_close, x)
+                elif 4.5 <= x < 5.5:
+                    prob = 0.23*(1-frac_close)
+                elif 5.5 <= x < 6.5:
+                    prob = interpolate(6.5, 5.5, 0.13, 0.23, x)*(1-frac_close)
+                elif 6.5 <= x < 7.5:
+                    prob = 0.13*(1-frac_close)
+            else:
+                prob = 0
+
+            elif m >= 16:
+                prob_max = 0.32
+                if 0.5 <= x < 1.5:
+                    prob = 0.29
+                elif 1.5 <= x < 2.5:
+                    prob = interpolate(2.5, 1.5, 0.32, 0.29, x)
+                elif 2.5 <= x < 3.7: # Extend to 3.7
+                    prob = 0.32
+                else:
+                    prob = 0
+                        
+            return prob, prob_max
+                
         def period(m):
             p = rng.uniform(0.5, 7.5)
             h = 1
@@ -251,6 +360,13 @@ def get_period(mass, pdist='field'):
             q = m_dwarfs(mass)[1]
         else:
             p = solar_and_above(mass)
+            q = -1
+    elif pdist == 'inner':
+        if mass < 0.6:
+            p = m_dwarfs(mass)[0]
+            q = m_dwarfs(mass)[1]
+        else:
+            p = inner_solar_and_above(mass)
             q = -1
     else:
         print('Please select a valid argument for the period distribution. Options are \'field\' and TBD.')
