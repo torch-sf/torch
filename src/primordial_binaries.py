@@ -325,8 +325,8 @@ def get_period(mass, pdist='field'):
                     prob = interpolate(6.5, 5.5, 0.13, 0.23, x)*(1-frac_close)
                 elif 6.5 <= x < 7.5:
                     prob = 0.13*(1-frac_close)
-            else:
-                prob = 0
+                else:
+                    prob = 0
 
             elif m >= 16:
                 prob_max = 0.32
