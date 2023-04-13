@@ -1,5 +1,5 @@
 """
-Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017) and Winters et al. (2019)
+Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017), Winters et al. (2019) and Offner et al. (2022)
 Claude Cournoyer-Cloutier, McMaster University, 2020, 2021, 2023
 Version used in CCC+21 took the log twice in the period distribution, resulting in an absence of close massive binaries --> Fixed, 11/2021, CCC
 """
@@ -22,9 +22,9 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
         if mult_frac == 'field':
     
             """
-            For masses below 0.6 M_sun, we use the primary mass dependent binary fraction from Winters et al. (2020)
-            Above 0.8 M_sun, we use these from Moe & Di Stefano (2017) -- we use binary fraction + triple/quad frac
-            Between mass bins, we interpolate
+            For masses below 0.6 MSun, we use the primary mass dependent binary fraction from Winters et al. (2019)
+            as reported and corrected in Offner et al. (2022). Above 0.8 MSun, we use the multiple star fraction
+            (binary + triple/quad fraction). Between mass bins, we interpolate.
             """
             
             if m < 0.15:
@@ -79,9 +79,11 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
 def get_period(mass, pdist='field'):
     
     """
-    For masses below 0.6 M_sun, we use the lognormal period distributions from Winters et al.
-    For masses above 0.6 M_sun, we use the period distributions from Moe & Di Stefano
-    We extend the period distrbutions up and down to 1.6 M_sun from 1.2 and 2 M_sun
+    For masses below 0.6 MSun, we use the lognormal period distributions from Winters et al. (2019).
+    The means are those reported in Offner et al. (2022) and the standard deviations are obtained
+    from the FWHM = 2.355 sigma, from the figures shown in Winters et al. (2019).
+    For masses above 0.6 MSun, we use the period distributions from Moe & Di Stefano. We extend the
+    period distrbutions up and down to 1.6 MSun from 1.2 and 2 MSun.
     """
     
     def interpolate(p_high, p_low, prob_high, prob_low, p):
@@ -116,8 +118,6 @@ def get_period(mass, pdist='field'):
     
     
     def solar_and_above(m):
-        
-        # Out of all the probabilities defined below, the maximum is 0.32
         
         def probability(m, x):
             
@@ -243,234 +243,227 @@ def get_period(mass, pdist='field'):
 def get_companion_mass(mass, period, qdist='field'):
     
     """
-    All from Moe & Di Stefano, due to incompleteness of mass ratio distribution for M-dwarfs
-    The solar-type distribution is extended down to 0.08 M_sun
+    From Moe & di Stefano (2017), except for M-dwarfs from Winters et al. (2019)
+    M-dwarfs have a uniform distribution of mass ratios; the mass ratio is already
+    selected in the period step for M-dwarfs. The mass bins are extended, there is
+    no interpolation.
     """
     
-    def interpolate(p_low, p_high, g_low, g_high, p):
-        a = (g_high - g_low) / (10 ** p_high - 10 ** p_low)
-        b = g_high - a * p_high
-        return a * 10**p + b
-    
-    
-    def gamma_solar(P, x):
-        """
-        Returns the power law exponent for stellar masses between 0.08 MSun and 1.6 MSun
-        """        
-        if 0.3 <= x:
-            if P <= 5:
-                gamma = -0.5
-            elif 5 < P:
-                gamma = interpolate(5, 7, -0.5, -1.1, P)
-
-        elif x < 0.3:
-            gamma = 0.3
+    # Between 0.6 and 1.6 MSun
+    def prob_solar(P, x):
         
+        # Period ranges
+        if 0.5 <= P < 6:
+            g_small = 0.3
+            g_large = -0.5
         else:
-            print('Err. in gamma solar, default to gamma=0 !')
-            print(('Period =', P, 'and q =', x))
-            gamma = 0
-
-        return gamma
-    
-    
-    def gamma_AB(P, x):
-        """
-        Returns the power law exponent for stellar masses between 1.6 MSun and 5 MSun
-        """        
-        if 0.3 <= x < 1:
-            if P < 1.5:
-                gamma = -0.5
-            elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, -0.5, -0.9, P)
-            elif 2.5 <= P < 3.5:
-                gamma = -0.9
-            elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -0.9, -1.4, P)
-            elif 4.5 <= P < 5.5:
-                gamma = -1.4
-            elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -1.4, -2.0, P)
-            elif 6 <= P <= 7.5:
-                gamma = -2.0
-    
-        elif 0.1 <= x < 0.3:
-            if P < 1.5:
-                gamma = 0.2
-            elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, 0.2, 0.1, P)
-            elif 2.5 <= P < 3.5:
-                gamma = 0.1
-            elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, 0.1, -0.5, P)
-            elif 4.5 <= P < 5.5:
-                gamma = -0.5
-            elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -0.5, -1.0, P)
-            elif 6 <= P <= 7.5:
-                gamma = -1.0
-
-        else:
-            print('Err. in gamma AB, default to gamma=0 !')
-            print(('Period =', P, 'and q =', x))
-            gamma = 0
-
-        return gamma
-                                
-                                
-    def gamma_early(P, x):
-        """
-        Returns the power law exponent for stellar masses above 5 MSun
-        """                                    
-        if 0.3 <= x < 1:
-            if 0.5 <= P < 1.5:
-                gamma = -0.5
-            elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, -0.5, -1.7, P)
-            elif 2.5 <= P < 3.5:
-                gamma = -1.7
-            elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -1.7, -2.0, P)
-            elif 4.5 <= P <= 7.5:
-                gamma = -2.0
-                                                                                
-        elif 0.1 <= x < 0.3:
-            if 0.5 <= P < 1.5:
-                gamma = 0.1
-            elif 1.5 <= P < 2.5:
-                gamma = interpolate(1.5, 2.5, 0.1, -0.2, P)
-            elif 2.5 <= P < 3.5:
-                gamma = -0.2
-            elif 3.5 <= P < 4.5:
-                gamma = interpolate(3.5, 4.5, -0.2, -1.2, P)
-            elif 4.5 <= P < 5.5:
-                gamma = -1.2
-            elif 5.5 <= P < 6.5:
-                gamma = interpolate(5.5, 6.5, -1.2, -1.5, P)
-            elif 6.5 <= P <= 7.5:
-                gamma = -1.5
-                                                                                                                                            
-        else:
-            print('Err. in gamma early, default to gamma=0 !')
-            print(('Period =', P, 'and q =', x))
-            gamma = 0
-                                                                                                                                                    
-        return gamma
-
-
-    def twin_solar(m, P):
-        """
-        Returns the excess twin fraction for stellar masses between 0.08 MSun and 1.6 MSun
-        """
-        if P <= 1.5:
-            twin = 0.3
-        elif 1.5 < P <= 2.5:
-            twin = interpolate(2.5, 1.5, 0.2, 0.3, P)
-        elif 2.5 < P <= 3.5:
-            twin = 0.2
-        elif 3.5 < P <= 4.5:
-            twin = interpolate(4.5, 3.5, 0.1, 0.2, P)
-        elif 4.5 < P <= 5.5:
-            twin = 0.1
-        elif 5.5 < P <= 6.5:
-            twin = interpolate(6.5, 5.5, 0, 0.1, P)
-        else:
-            twin = 0
-        return twin
-    
-    
-    def twin_AB(m, P):
-        """
-        Returns the excess twin fraction for stellar masses between 1.6 MSun and 5 MSun
-        """
-        if P <= 1.5:
-            twin = 0.22
-        elif 1.5 < P <= 2.5:
-            twin = interpolate(2.5, 1.5, 0.1, 0.22, P)
-        elif 2.5 < P <= 3.5:
-            twin = 0.1
-        elif 3.5 < P <= 4.5:
-            twin = interpolate(4.5, 3.5, 0, 0.1, P)
-        else:
-            twin = 0
-        return twin
-    
-    
-    def twin_midB(m, P):
-        """
-        Returns the excess twin fraction for stellar masses between 5 MSun and 9 MSun
-        """
-        if P <= 1.5:
-            twin = 0.17
-        elif 1.5 < P <= 2.5:
-            twin = interpolate(2.5, 1.5, 0, 0.17, P)
-        else:
-            twin = 0
-        return twin
-    
-    
-    def twin_earlyB(m, P):
-        """
-        Returns the excess twin fraction for stellar masses between 9 MSun and 16 MSun
-        """
-        if P <= 1.5:
-            twin = 0.14
-        elif 1.5 < P <= 2.5:
-            twin = interpolate(2.5, 1.5, 0, 0.14, P)
-        else:
-            twin = 0
-        return twin
-    
-    
-    def twin_O(m, P):
-        """
-        Returns the excess twin fraction for stellar masses above 16 MSun
-        """
-        if P <= 1.5:
-            twin = 0.08
-        elif 1.5 < P <= 2.5:
-            twin = interpolate(2.5, 1.5, 0, 0.08, P)
-        else:
-            twin = 0
-        return twin
-
-
-    def mass_ratio(m, P):
-        q = 1
-        h = 10
-        g = 0
-        t = 0
-
-        def prob(q, g, t):
-            if q < 0.95:
-                prob = q ** g
+            g_small = 0.3
+            g_large = -1.1
+        
+        # Match the values at q=0.3
+        corr_fac = 0.3**(g_small-g_large)
+        
+        # Excess twin fraction
+        if x >= 0.95:
+            if P <= 2:
+                twin = 0.3
+            elif 2 < P <= 4:
+                twin = 0.2
+            elif 4 < P <= 6:
+                twin = 0.1
             else:
-                prob = q ** g + t
-            return prob
-
-        while prob(q, g, t) < h:
+                twin = 0
+        else:
+            twin = 0
+        
+        # Probabilities
+        if x < 0.3:
+            prob = x**g_small + twin
+        else:
+            prob = corr_fac * x**g_large + twin
+        
+        return prob
+    
+    # Between 1.6 and 5 MSun
+    def prob_AB(P, x):
+        
+        # Period ranges
+        if 0.5 <= P < 2:
+            g_small = 0.2
+            g_large = -0.5
+        elif 2 <= P < 4:
+            g_small = 0.1
+            g_large = -0.9
+        elif 4 <= P < 6:
+            g_small = -0.5
+            g_large = -1.4
+        else:
+            g_small = -1.0
+            g_large = -2.0
+        
+        # Match the values at q=0.3
+        corr_fac = 0.3**(g_small-g_large)
+        
+        # Excess twin fraction
+        if x >= 0.95:
+            if P <= 2:
+                twin = 0.22
+            elif 2 < P <= 4:
+                twin = 0.10
+            else:
+                twin = 0
+        else:
+            twin = 0
+        
+        # Probabilities
+        if x < 0.3:
+            prob = x**g_small + twin
+        else:
+            prob = corr_fac * x**g_large + twin
+        
+        return prob
+    
+    # Between 5 and 9 MSun
+    def prob_midB(P, x):
+        
+        # Period ranges
+        if 0.5 <= P < 2:
+            g_small = 0.1
+            g_large = -0.5
+        elif 2 <= P < 4:
+            g_small = -0.2
+            g_large = -1.7
+        elif 4 <= P < 6:
+            g_small = -1.2
+            g_large = -2.0
+        else:
+            g_small = -1.5
+            g_large = -2.0
+        
+        # Match the values at q=0.3
+        corr_fac = 0.3**(g_small-g_large)
+        
+        # Excess twin fraction
+        if x >= 0.95:
+            if P <= 2:
+                twin = 0.17
+            else:
+                twin = 0
+        else:
+            twin = 0
+        
+        # Probabilities
+        if x < 0.3:
+            prob = x**g_small + twin
+        else:
+            prob = corr_fac * x**g_large + twin
+        
+        return prob
+    
+    # Between 9 and 16 MSun
+    def prob_earlyB(P, x):
+        
+        # Period ranges
+        if 0.5 <= P < 2:
+            g_small = 0.1
+            g_large = -0.5
+        elif 2 <= P < 4:
+            g_small = -0.2
+            g_large = -1.7
+        elif 4 <= P < 6:
+            g_small = -1.2
+            g_large = -2.0
+        else:
+            g_small = -1.5
+            g_large = -2.0
+        
+        # Match the values at q=0.3
+        corr_fac = 0.3**(g_small-g_large)
+        
+        # Excess twin fraction
+        if x >= 0.95:
+            if P <= 2:
+                twin = 0.14
+            else:
+                twin = 0
+        else:
+            twin = 0
+        
+        # Probabilities
+        if x < 0.3:
+            prob = x**g_small + twin
+        else:
+            prob = corr_fac * x**g_large + twin
+        
+        return prob
+    
+    # Above 16 MSun
+    def prob_O(P, x):
+        
+        # Period ranges
+        if 0.5 <= P < 2:
+            g_small = 0.1
+            g_large = -0.5
+        elif 2 <= P < 4:
+            g_small = -0.2
+            g_large = -1.7
+        elif 4 <= P < 6:
+            g_small = -1.2
+            g_large = -2.0
+        else:
+            g_small = -1.5
+            g_large = -2.0
+        
+        # Match the values at q=0.3
+        corr_fac = 0.3**(g_small-g_large)
+        
+        # Excess twin fraction
+        if x >= 0.95:
+            if P <= 2:
+                twin = 0.08
+            else:
+                twin = 0
+        else:
+            twin = 0
+        
+        # Probabilities
+        if x < 0.3:
+            prob = x**g_small + twin
+        else:
+            prob = corr_fac * x**g_large + twin
+        
+        return prob
+    
+    def mass_ratio(m, P, q_temp):
+        
+        q = 0
+        h = 10
+        prob = 0
+        
+        while prob < h:
             low = np.max([0.1, 0.08 / m])
-            q = random.uniform(low, 1)
-            if m <= 1.6:
-                g = gamma_solar(P, q)
-                t = twin_solar(m, P)
-                h = random.uniform(0, low ** g)
-            if 1.6 < m <= 5:
-                g = gamma_AB(P, q)
-                t = twin_AB(m, P)
-                h = random.uniform(0, low ** g)
-            if 5 < m <= 9:
-                g = gamma_early(P, q)
-                t = twin_midB(m, P)
-                h = random.uniform(0, low ** g)
-            if 9 < m <= 16:
-                g = gamma_early(P, q)
-                t = twin_earlyB(m, P)
-                h = random.uniform(0, low ** g)
-            if 16 < m:
-                g = gamma_early(P, q)
-                t = twin_O(m, P)
-                h = random.uniform(0, low ** g)
+            q = rng.uniform(low, 1)
+            if m < 0.6:
+                q = q_temp
+                # Exit loop
+                prob = 1
+                h = 0
+            elif 0.6 < m <= 1.6:
+                prob = prob_solar(P, q)
+                h = rng.uniform(0, np.max([prob_solar(P, 0.1), prob_solar(P, 0.3), prob_solar(P, 1)]))
+            elif 1.6 < m <= 5:
+                prob = prob_AB(P, q)
+                h = rng.uniform(0, np.max([prob_AB(P, 0.1), prob_AB(P, 0.3), prob_AB(P, 1)]))
+            elif 5 < m < 9:
+                prob = prob_midB(P, q)
+                h = rng.uniform(0, np.max([prob_midB(P, 0.1), prob_midB(P, 0.3), prob_midB(P, 1)]))
+            elif 9 < m < 16:
+                prob = prob_earlyB(P, q)
+                h = rng.uniform(0, np.max([prob_earlyB(P, 0.1), prob_earlyB(P, 0.3), prob_earlyB(P, 1)]))
+            else:
+                prob = prob_O(P, q)
+                h = rng.uniform(0, np.max([prob_O(P, 0.1), prob_O(P, 0.3), prob_O(P, 1)]))
+            
             mass_ratio = q
         
         return mass_ratio
