@@ -690,8 +690,8 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='f
                 E = np.random.uniform(-1 * np.pi, np.pi)
                 true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
                 inclination                     = np.random.uniform(-np.pi / 2, np.pi / 2) | units.rad
-                longitude_of_the_ascending_node = np.random.vonmisesvariate(np.pi, 0) | units.rad
-                argument_of_periapsis           = np.random.vonmisesvariate(np.pi, 0) | units.rad
+                longitude_of_the_ascending_node = np.random.vonmises(np.pi, 0) | units.rad
+                argument_of_periapsis           = np.random.vonmises(np.pi, 0) | units.rad
 
                 binary = generate_binaries(primary_mass, companion_mass, semi_major_axis, eccentricity, true_anomaly, inclination, longitude_of_the_ascending_node, argument_of_periapsis, G = units.constants.G)
 
