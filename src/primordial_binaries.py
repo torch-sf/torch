@@ -604,7 +604,7 @@ def get_companion_mass(mass, period, q_tmp, qdist='field'):
 
     
     if qdist == 'field':
-        mr = mass_ratio(mass, period)
+        mr = mass_ratio(mass, period, q_tmp)
         cm = mass * mr
     else:
         print('Please select a valid argument for the mass ratio distribution. Options are \'field\' and TBD.')
