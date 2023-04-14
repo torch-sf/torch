@@ -5,7 +5,7 @@ Version used in CCC+21 took the log twice in the period distribution, resulting 
 """
 
 import numpy as np
-import random
+#import random
 from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
@@ -59,7 +59,7 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
 
     if (binaries):
         for m in m_arr:
-            mult_prob = random.random()
+            mult_prob = np.random.uniform()
             if mult_prob <= companion_frequency(m):
                 multiplicity.append(1)
                 primaries.append(m)
@@ -97,18 +97,18 @@ def get_period(mass, pdist='field'):
         def probability(m):
             
             if m < 0.15:
-                a = 10**(rng.normal(np.log10(3.9), 0.6)) #limit to 0.01 and 1e4
+                a = 10**(np.random.normal(np.log10(3.9), 0.6)) #limit to 0.01 and 1e4
             elif 0.15 <= m < 0.30:
-                a = 10**(rng.normal(np.log10(10), 1.1))
+                a = 10**(np.random.normal(np.log10(10), 1.1))
             elif 0.30 <= m:
-                a = 10**(rng.normal(np.log10(26), 1.2))
+                a = 10**(np.random.normal(np.log10(26), 1.2))
             return a
         
         def mass_ratio(m):
             
             q = 0
             while q*m < 0.08:
-                q = rng.uniform(0, 1)
+                q = np.random.uniform(0, 1)
             
             return q
         
@@ -232,12 +232,12 @@ def get_period(mass, pdist='field'):
             return prob
 
         def period(m):
-            p = rng.uniform(0.5, 7.5)
+            p = np.random.uniform(0.5, 7.5)
             h = 1
             prob, prob_max = probability(m, p)
             while prob < h:
-                p = random.uniform(0.5, 7.5)
-                h = random.uniform(0, prob_max)
+                p = np.random.uniform(0.5, 7.5)
+                h = np.random.uniform(0, prob_max)
                 prob, prob_max = probability(m, p)
             return p
                                     
@@ -325,8 +325,8 @@ def get_period(mass, pdist='field'):
                     prob = interpolate(6.5, 5.5, 0.13, 0.23, x)*(1-frac_close)
                 elif 6.5 <= x < 7.5:
                     prob = 0.13*(1-frac_close)
-                else:
-                    prob = 0
+            else:
+                prob = 0
 
             elif m >= 16:
                 prob_max = 0.32
@@ -342,12 +342,12 @@ def get_period(mass, pdist='field'):
             return prob, prob_max
                 
         def period(m):
-            p = rng.uniform(0.5, 7.5)
+            p = np.random.uniform(0.5, 7.5)
             h = 1
             prob, prob_max = probability(m, p)
             while prob < h:
-                p = random.uniform(0.5, 7.5)
-                h = random.uniform(0, prob_max)
+                p = np.random.uniform(0.5, 7.5)
+                h = np.random.uniform(0, prob_max)
                 prob, prob_max = probability(m, p)
             return p
 
@@ -576,7 +576,7 @@ def get_companion_mass(mass, period, q_tmp, qdist='field'):
         
         while prob < h:
             low = np.max([0.1, 0.08 / m])
-            q = rng.uniform(low, 1)
+            q = np.random.uniform(low, 1)
             if m < 0.6:
                 q = q_tmp
                 # Exit loop
@@ -584,19 +584,19 @@ def get_companion_mass(mass, period, q_tmp, qdist='field'):
                 h = 0
             elif 0.6 < m <= 1.6:
                 prob = prob_solar(P, q)
-                h = rng.uniform(0, np.max([prob_solar(P, 0.1), prob_solar(P, 0.3), prob_solar(P, 1)]))
+                h = np.random.uniform(0, np.max([prob_solar(P, 0.1), prob_solar(P, 0.3), prob_solar(P, 1)]))
             elif 1.6 < m <= 5:
                 prob = prob_AB(P, q)
-                h = rng.uniform(0, np.max([prob_AB(P, 0.1), prob_AB(P, 0.3), prob_AB(P, 1)]))
+                h = np.random.uniform(0, np.max([prob_AB(P, 0.1), prob_AB(P, 0.3), prob_AB(P, 1)]))
             elif 5 < m < 9:
                 prob = prob_midB(P, q)
-                h = rng.uniform(0, np.max([prob_midB(P, 0.1), prob_midB(P, 0.3), prob_midB(P, 1)]))
+                h = np.random.uniform(0, np.max([prob_midB(P, 0.1), prob_midB(P, 0.3), prob_midB(P, 1)]))
             elif 9 < m < 16:
                 prob = prob_earlyB(P, q)
-                h = rng.uniform(0, np.max([prob_earlyB(P, 0.1), prob_earlyB(P, 0.3), prob_earlyB(P, 1)]))
+                h = np.random.uniform(0, np.max([prob_earlyB(P, 0.1), prob_earlyB(P, 0.3), prob_earlyB(P, 1)]))
             else:
                 prob = prob_O(P, q)
-                h = rng.uniform(0, np.max([prob_O(P, 0.1), prob_O(P, 0.3), prob_O(P, 1)]))
+                h = np.random.uniform(0, np.max([prob_O(P, 0.1), prob_O(P, 0.3), prob_O(P, 1)]))
             
             mass_ratio = q
         
@@ -628,7 +628,7 @@ def get_eccentricity(mass, period, edist = 'field'):
     
     def get_ecc(m, P):
         if P <= 0.55:
-            ecc = random.uniform(0, ecc_max(P))
+            ecc = np.random.uniform(0, ecc_max(P))
         else:
             t = 0
             e = 1
@@ -636,9 +636,9 @@ def get_eccentricity(mass, period, edist = 'field'):
             n = 0
             while (e ** n) < h:
                 emax = ecc_max(P)
-                ecc  = random.uniform(0, emax)
+                ecc  = np.random.uniform(0, emax)
                 n    = prob_eta(m, P)
-                h    = random.uniform(0, emax ** n)
+                h    = np.random.uniform(0, emax ** n)
         return ecc
     
     if edist == 'field':
@@ -687,11 +687,11 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='f
                 primary_mass      = primary_mass | units.MSun
                 semi_major_axis   = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
-                E = random.uniform(-1 * np.pi, np.pi)
+                E = np.random.uniform(-1 * np.pi, np.pi)
                 true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
-                inclination                     = random.uniform(-np.pi / 2, np.pi / 2) | units.rad
-                longitude_of_the_ascending_node = random.vonmisesvariate(np.pi, 0) | units.rad
-                argument_of_periapsis           = random.vonmisesvariate(np.pi, 0) | units.rad
+                inclination                     = np.random.uniform(-np.pi / 2, np.pi / 2) | units.rad
+                longitude_of_the_ascending_node = np.random.vonmisesvariate(np.pi, 0) | units.rad
+                argument_of_periapsis           = np.random.vonmisesvariate(np.pi, 0) | units.rad
 
                 binary = generate_binaries(primary_mass, companion_mass, semi_major_axis, eccentricity, true_anomaly, inclination, longitude_of_the_ascending_node, argument_of_periapsis, G = units.constants.G)
 
