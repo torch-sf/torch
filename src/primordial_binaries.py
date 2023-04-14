@@ -229,7 +229,7 @@ def get_period(mass, pdist='field'):
                 else:
                     prob = 0
                                                                                                                                                                 
-            return prob
+            return prob, prob_max
 
         def period(m):
             p = np.random.uniform(0.5, 7.5)
