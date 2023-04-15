@@ -90,30 +90,43 @@ def collect_small_stars_mass(masses,m_small=1.0):
     # footwork with the arrays.
 
     # adapt code to vary clump mass cutoff
-    small_masses = masses[np.where(masses < m_small)] # Smaller than m_small [MSun].
-    masses = masses[np.where(masses >= m_small)]  # Everyone else.
+    #small_masses = masses[np.where(masses < m_small)] # Smaller than m_small [MSun].
+    #masses = masses[np.where(masses >= m_small)]  # Everyone else.
 
-    b = 0
+    #b = 0
     # If there are any left smaller than 1.0 MSun, sum with others
     # that are smaller than 1.0 MSun until there are none left.
 
-    if (len(small_masses) > 1):
-        while(small_masses[-1] < m_small and len(small_masses[b:])>1):
+    #if (len(small_masses) > 1):
+    #    while(small_masses[-1] < m_small and len(small_masses[b:])>1):
 
-            small_masses[b] = small_masses[b]+small_masses[-1]
-            small_masses = np.delete(small_masses, -1)
-            if (len(small_masses[b:]) > 1):
-                if(small_masses[b] >= m_small):
-                    b += 1
+    #        small_masses[b] = small_masses[b]+small_masses[-1]
+    #        small_masses = np.delete(small_masses, -1)
+    #        if (len(small_masses[b:]) > 1):
+    #            if(small_masses[b] >= m_small):
+    #                b += 1
 
         # If the last one is smaller than 1.0 MSun, lump that bit into
         # the last star.
-        if (small_masses[-1] < m_small):
-            small_masses[-2] = small_masses[-2] + small_masses[-1]
-            small_masses = np.delete(small_masses, -1)
+    #    if (small_masses[-1] < m_small):
+    #        small_masses[-2] = small_masses[-2] + small_masses[-1]
+    #        small_masses = np.delete(small_masses, -1)
 
-    masses = np.append(masses, small_masses)
+    #masses = np.append(masses, small_masses)
+    p1 = 0
+    p2 = 1
 
+    while masses[p2] < m_small:
+        p2+=1
+
+    while p2>p1:
+        if masses[p1]+masses[p2] < m_small:
+            masses[p2] = masses[p1]+masses[p2]
+            masses[p1] = np.NaN
+            p1+=1
+        else:
+            p2-=1
+    masses=masses[~np.isnan(masses)]
     return masses
 
 
