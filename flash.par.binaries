@@ -234,7 +234,7 @@ useParticles        = T
 useSinkParticles    = .true.
 
 # maximum number of total particles, not just rays
-pt_maxPerProc   = 10000
+pt_maxPerProc   = 100000
 
 # --------------------------------------------
 # Particles/ParticlesMain/active/SinkNoAdvance
