@@ -74,6 +74,7 @@ justification=justified]{caption} % Captions in figure floats
 \newcommand*\mean[1]{\bar{#1}}
 \renewcommand{\vec}[1]{\boldsymbol{#1}}  % Bold vectors
 \newcommand*{\tsup}{\textsuperscript}
+\newcommand*{\tab}{\hspace*{10mm}}
 
 % Sets, operators
 \newcommand*{\ints}{\mathbb{Z}}
@@ -261,6 +262,7 @@ repos.
 % Build FLASH
 % -----------
 \subsection{Build FLASH (Josh thesis Appendix A.2 + FLASH docs)}
+\label{sec:build_flash}
 
 Let's \texttt{cd} to the FLASH4.6.2 directory and setup a turbulent sphere
 collapse problem.
@@ -867,7 +869,9 @@ WARNING: There was an error initializing an OpenFabrics device.
 
     \item \textbf{How do I decipher FLASH setup calls and runtime parameters?}
 
-        Look at \texttt{bin/setup\_shortcuts.txt} and \texttt{object/setup\_params}.
+	Look at \texttt{bin/setup\_shortcuts.txt} and \texttt{object/setup\_params}. 
+	Appendix \ref{sec:flash_files} lists the file strucutre for Flash when compiled
+	for the turbulent sphere problem.
 
     \item \textbf{A runtime parameter X has little or no documentation in
         \texttt{object/setup\_params}.  What do I do?}
@@ -1295,5 +1299,110 @@ SLURM submit script:
 export FI_PROVIDER=tcp
 ibrun -n 1 /home1/05402/bp4928/TORCH/env/torch_env/bin/python torch_user.py
 \end{lstlisting}
+
+\newpage
+\section{Flash file structure}
+\label{sec:flash_files}
+Below is the file structure of the Flash code as defined when using \texttt{./setup} command 
+for the turbulent sphere example in Section \ref{sec:build_flash}.
+
+\texttt{
++amuseUSM\\
+\tab+amuseUnsplit\\
+\tab\tab += Driver/DriverMain/Unsplit/Couple\_AMUSE\\
+\tab\tab\tab Driver\_computeDt.F90\\  
+\tab\tab\tab Driver\_evolveFlash.F90\\
+\tab +usm\\
+\tab\tab += physics/Hydro/HydroMain/unsplit/MHD\_StaggeredMesh\\
+\tab\tab\tab Config\\
+\tab\tab\tab Makefile\\
+\tab\tab\tab amr\_runtime\_parameters.tpl\\
+\tab\tab\tab hy\_uhd\_HLLD.F90\\
+\tab\tab\tab hy\_uhd\_addOhmicHeating.F90\\
+\tab\tab\tab hy\_uhd\_eigenVector.F90\\
+\tab\tab\tab hy\_uhd\_staggeredDivb.F90\\
+\tab\tab\tab hy\_uhd\_addBiermannFluxes.F90\\ 
+\tab\tab\tab hy\_uhd\_addResistiveFluxes.F90\\
+\tab\tab\tab hy\_uhd\_getElectricFields.F90\\
+\tab\tab\tab hy\_uhd\_unsplit.F90\\
+\tab\tab\tab hy\_uhd\_addHallFluxes.F90\\
+\tab\tab\tab hy\_uhd\_biermannSource.F90\\
+\tab\tab\tab hy\_uhd\_getFluxDeriv.F90\\
+\tab\tab -= physics/Hydro/HydroMain/split/MHD\_8Wave\\
++amuseMG\\
+\tab += physics/Gravity/GravityMain/Poisson/Multigrid/Couple\_AMUSE\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab Gravity\_interface.F90\\
+\tab\tab Gravity\_potentialListOfBlocksPDENonly.F90\\
+\tab\tab Gravity\_getAccelAtPoint.F90\\
+\tab\tab Gravity\_getPotentialAtPoint.F90\\ 
+\tab\tab Gravity\_potentialListOfBlocks.F90\\ 
+\tab -= physics/Gravity/GravityMain/Poisson/BHTree\\
++rayPE\\
+\tab += Particles/ParticlesMain/ray\_pe/MultiSourceSimple/Active/Sink\\
+\tab\tab Makefile\\
+\tab\tab pt\_assignRaySink.F90\\
+\tab += physics/RadTrans/RadTransMain/RayRad/SinksRad\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab RadTrans.F90\\
+\tab\tab RadTrans\_combine2.F90\\
+\tab\tab RadTrans\_computeDt.F90\\
+\tab\tab calc\_ionization.F90\\
+\tab\tab rt\_data.F90\\
+\tab\tab RadTrans\_combine.F90\\
+\tab\tab RadTrans\_combine3.F90\\
+\tab\tab RadTrans\_interface.F90\\
+\tab\tab get\_ionization.F90\\
+\tab\tab rt\_init.F90\\
++handCnew\\
+\tab += physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat/mol\_and\_dust/solver\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab CoolVars.F90\\
+\tab\tab Cool\_init.F90\\
+\tab\tab Heat.F90\\
+\tab\tab HeatCoolInterface.F90\\
+\tab\tab RadHeat.F90\\
+\tab\tab heatCool.F90\\
++amuseSinksAndStars\\
+\tab += Particles/ParticlesMain/active/Sink/Couple\_AMUSE/Couple\_AMUSE\_Sinks\_and\_Stars\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab Particles\_addNew.F90\\
+\tab\tab Particles\_data.F90\\
+\tab\tab Particles\_sinkCreateAccrete.F90\\
+\tab\tab Particles\_updateGridVarSinksOnly.F90\\
+\tab\tab Particles\_advance.F90\\
+\tab\tab Particles\_init.F90\\
+\tab\tab Particles\_sort.F90\\
+\tab\tab Particles\_computeDt.F90\\
+\tab\tab Particles\_interface.F90\\
+\tab\tab Particles\_updateGridVarMassiveOnly.F90\\
+\tab\tab pt\_gatherGlobal.F90\\
+\tab\tab sort.F90\\
+\tab\tab qsort2D.F90\\
++amuseWinds\\
+\tab += Particles/ParticlesMain/active/Sink/Couple\_AMUSE/wind\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab Particles\_computeDt.F90\\
+\tab\tab Particles\_windData.F90\\
+\tab\tab Particles\_advance.F90\\
+\tab\tab Particles\_wind.F90\\
+\tab\tab pt\_windInterface.F90\\
+\tab\tab inject\_direct.F90\\
+\tab\tab overlap.F90\\
+\tab\tab normal\_rand.F90\\
++enerInj\\
+\tab += Particles/ParticlesMain/energyInjection\\
+\tab\tab Config\\
+\tab\tab Makefile\\
+\tab\tab Particles\_energyInjection.F90\\
+\tab\tab pt\_enerInjInterface.F90\\
+\tab\tab overlap.F90\\
+}
+
 
 \end{document}
