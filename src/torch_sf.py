@@ -320,8 +320,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # Remove the mass from the sink and corresponding angular momentum fraction. -SA 20230405
             remaining_mass_frac = (sink_mass - (np.sum(spawn_masses)|units.MSun)) /sink_mass #fraction of mass that remains (for ang_mom decrease) -SA 20230405
             sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun) # Now we can update the sink mass (comment added -SA 20230405)
+            print("sink angular momentum before ang_mom removal: ", sink_angMom) # SA 20230407
             hydro.set_particle_mass(sink_tag, sink_mass)
-            hydro.set_particle_ang_mom(sink_tag, sink_angMom*remaining_mass_frac)  #Remove ang_mom from sink, based on mass of stars formed -SA 20230405
+            sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,0] #Remove ang_mom from sink, based on mass of stars formed -SA 20230405
+            sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,1] #For each direction separately
+            sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,2]
+            hydro.set_particle_ang_mom(sink_tag, [sink_angMom_x, sink_angMom_y, sink_angMom_z] ) #Assign new sink ang mom
 
 
             star          = Particles(nnew)
@@ -342,7 +346,6 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             ## We only want the unit vector for the magnitude of the sink's ang_mom.
             ## This lets us set the direction of the star's angular momentum without
             ## handling the proper ang_mom conservation. -SA 20230405
-            print("sink angular momentum before ang_mom removal: ", sink_angMom)
             star_angMom_mag = np.sqrt(star_angMom[0]**2 + star_angMom[1]**2 + star_angMom[2]**2)
             ## Now set the star angular momentum
             star.ang_mom = ( star_angMom/star_angMom_mag )
@@ -353,7 +356,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-            hydro.set_particle_ang_mom(star_tag, star.ang_mom)  # Add angular momentum -SA 20230301
+            hydro.set_particle_ang_mom(star_tag, [star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2]] )  # Add angular momentum -SA 20230425
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
