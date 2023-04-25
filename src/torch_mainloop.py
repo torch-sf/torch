@@ -108,6 +108,9 @@ def initialize_workers():
         grav.parameters.stopping_conditions_timeout = USER['set_timeout'] 
         if USER['restart_from_stall']:
             grav.parameters.r_out = grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
+        if USER['test_binary']:
+            grav.parameters.r_out = 12.5*grav.parameters.r_bin # Force this value for an isolated binary, CCC 24/04/2023
+            grav.parameters.dt_soft = 1.0 | units.kyr # Force this value for an isolated binary, CCC 24/04/2023
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -494,6 +497,9 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.r_bin = USER['r_bin']
             grav.parameters.begin_time = hy_time
             grav.parameters.stopping_conditions_timeout = USER['set_timeout']
+            if USER['test_binary']: # Isolated binary, CCC 24/04/2023
+                grav.parameters.r_out = 12.5*grav.parameters.r_bin
+                grav.parameters.dt_soft = 1.0 | units.kyr # Force this value for an isolated binary, CCC 24/04/2023
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
