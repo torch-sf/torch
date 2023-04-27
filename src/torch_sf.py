@@ -214,6 +214,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
 
     """Check hydro for new sinks, queue stars for spawning"""
 
+    new_sink_ = False # CCC 27/04/2023, to save original sink list
+    
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
     if num_sinks == 0:
@@ -233,6 +235,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             state.all_positions[sink_tag]  = np.empty([0,3]) #Added by CCC for binaries, May 7, 2020 (below too)
             state.all_velocities[sink_tag] = np.empty([0,3])
             tprint("... new sink tag {}".format(sink_tag))
+            new_sink_ = True # CCC 27/04/2023, to save original sink list
 
         while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
             new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
@@ -254,10 +257,9 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             state.all_positions[sink_tag]  = np.concatenate((state.all_positions[sink_tag], new_positions))
             state.all_velocities[sink_tag] = np.concatenate((state.all_velocities[sink_tag], new_velocities))
 
-
     hydro.set_particle_pointers('mass')
-
-    return
+    
+    return new_sink_ # CCC 27/04/2023, to save original sink list
 
 
 def make_stars_from_sinks(state, hydro, sink_rad=None):

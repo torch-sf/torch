@@ -419,18 +419,21 @@ def evolve(state, hydro, grav, mult, se):
         hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
-        queue_stars(state, hydro,
-            min_imf_mass=USER['min_imf_mass'],
-            max_imf_mass=USER['max_imf_mass'],
-            sample_imf_mass=USER['sample_imf_mass'],
-            sample_imf_bins=USER['sample_imf_bins'],
-            sum_small=USER['sum_small'],
-            binaries=USER['binaries'],
-            mult_frac=USER['mult_frac'],
-            pdist=USER['pdist'],
-            qdist=USER['qdist'],
-            edist=USER['edist']
-        )
+        # Change structure to write checkpoint if sink formed, CCC 26/04/2023
+        queued_stars = queue_stars(state, hydro,
+                                   min_imf_mass=USER['min_imf_mass'],
+                                   max_imf_mass=USER['max_imf_mass'],
+                                   sample_imf_mass=USER['sample_imf_mass'],
+                                   sample_imf_bins=USER['sample_imf_bins'],
+                                   sum_small=USER['sum_small'],
+                                   binaries=USER['binaries'],
+                                   mult_frac=USER['mult_frac'],
+                                   pdist=USER['pdist'],
+                                   qdist=USER['qdist'],
+                                   edist=USER['edist'] )
+        #Write checkpoint at sink formation to have a record of the binaries and stars to be formed, CCC 26/04/2023                                                                                     
+        if queued_stars:
+            state.force_output(overwrite=USER['overwrite'])
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
             add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
