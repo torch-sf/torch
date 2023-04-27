@@ -82,13 +82,41 @@ def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=Fal
     return coords_cor, vels_cor, scoords_cor, svels_cor
 
 def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
-                         scoords, svels, smass, sinitmass, sfmtime, smetal, use_localRef=False, local_ref=[0.0,0.0,0.0]):
+                         scoords, svels, smass, sinitmass, sfmtime, smetal,
+                         use_localRef=False, local_ref=[0.0,0.0,0.0], recenter_coords=False):
     # Write all gas data to file to be included in interpolation kdtree regardless if we
     # are refining on a region of interest. Include all field values.
     #f = h5py.File("kdtree-"+output_filename, 'w')
     f = h5py.File("interp-data.hdf5", 'w') 
     group = f.create_group('PartType0')
-    dset = group.create_dataset('Coordinates', data=coords, dtype='d')
+    coords_i = coords.copy()
+    if (local_ref and recenter_coords):
+        # Only want to limit what we write to interpolation file if we are rescaling coords,
+        # since then we are presumably zooming in on ROI and do not need to interp
+        # to full computational domain.
+        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
+        diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
+        ind = np.where(diffr < locr)
+        # Set particle coord array to be only those within ROI.
+        #print(coords*3.24078e-19,coords.shape)
+        coords_i = coords.copy()[ind]
+        #print(coords*3.24078e-19,coords.shape)
+        vels = vels[ind]
+        masses = masses[ind]
+        vprint("Shifting coordinates and velocities of interpolation file for recentered local refinement")
+        # RESCALING SCOORDS AND SVELS FOR ROI NOT IMPLEMENTED YET - SCL 04/15/23
+        coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords_i, vels, masses, scoords, svels, use_com_coords=False)
+        coords_i = coords_cor
+        #print(coords*3.24078e-19, coords.shape)
+        #for c in coords:
+        #    print(c)
+        #print(a)
+        vels = vels_cor
+        dens = dens[ind]
+        ie = ie[ind]
+        gpot = gpot[ind]
+    vprint("{} particles saved to interp-data.hdf5".format(len(coords)))
+    dset = group.create_dataset('Coordinates', data=coords_i, dtype='d')
     dset = group.create_dataset('Velocities', data=vels, dtype='d')
     dset = group.create_dataset('Density', data=dens, dtype='d')
     dset = group.create_dataset('Masses', data=masses, dtype='d')
@@ -103,23 +131,48 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     #group = f.create_group('PartType0')
     
     if(use_localRef):
-        vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Reading ",output_filename)
+        vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Opening",output_filename)
         # open file to fill with region-of-interest gas only --> FLASH refinement
         # therefore only need coordinate data, commented out all other field values
         # to reduce file size.
         f = h5py.File(output_filename, 'w')
         group = f.create_group('PartType0')
+        
+        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
         vprint("locx = ", local_ref[0])
         vprint("locy = ", local_ref[1])
         vprint("locz = ", local_ref[2])
         vprint("locr = ", local_ref[3])
-        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
-        diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
-        ind = np.where(diffr < locr)
-        vprint("INDICIES < locr:", ind)
-        vprint("coords shape: ", coords[ind].shape)
-        
-        dset = group.create_dataset('Coordinates', data=coords[ind], dtype='d')
+
+        #diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
+        #ind = np.where(diffr < locr)
+        # Set particle coord array to be only those within ROI.
+        #coords = coords[ind] 
+        #vprint("INDICIES < locr:", ind)
+        #vprint("coords shape: ", coords.shape)
+
+        # New addition 04/18/23 extracting particles inside cube of side 2/sqrt(2)*locr centered at loc{x,y,z}
+        # From https://stackoverflow.com/questions/42352622/finding-points-within-a-bounding-box-with-numpy
+        vprint("Creating new mask for particles in bounding cube of side 2*locr/sqrt(2)")
+        sqrt2 = np.sqrt(2)
+        bound_x = np.logical_and(coords[:, 0] > locx-locr/sqrt2, coords[:, 0] < locx+locr/sqrt2)
+        bound_y = np.logical_and(coords[:, 1] > locy-locr/sqrt2, coords[:, 1] < locy+locr/sqrt2)
+        bound_z = np.logical_and(coords[:, 2] > locz-locr/sqrt2, coords[:, 2] < locz+locr/sqrt2)
+        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
+        coords = coords[bb_filter]
+        vprint("len boundx:", len(np.where(bound_x==True)[0]))
+        vprint("len boundy:", len(np.where(bound_y==True)[0]))
+        vprint("len boundz:", len(np.where(bound_z==True)[0]))
+        vprint("len boundx and boundy:", len(np.where(np.logical_and(bound_x, bound_y) == True)[0]))
+        vprint("INDICIES < locr:", len(np.where(bb_filter==True)[0]))
+        vprint("coords shape: ", coords.shape)
+
+        if (recenter_coords):
+            x_cor = (coords[:,0].max()+coords[:,0].min())/2
+            y_cor = (coords[:,1].max()+coords[:,1].min())/2
+            z_cor = (coords[:,2].max()+coords[:,2].min())/2
+            coords = coords - np.array([x_cor, y_cor, z_cor]).reshape(1,3)
+        dset = group.create_dataset('Coordinates', data=coords, dtype='d')
         #dset = group.create_dataset('Velocities', data=vels[ind], dtype='d')
         #dset = group.create_dataset('Density', data=dens[ind], dtype='d')
         #dset = group.create_dataset('Masses', data=masses[ind], dtype='d')
