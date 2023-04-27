@@ -45,6 +45,7 @@ refineonjeanslength = .true. #.false.
 
 # Restrict initial refinement by only placing particles within radius 
 use_localRef = .false. #.true.
+center_localRef = .false.
 localRef_x = 3.20621187e+20 # cm
 localRef_y = 6.24367575e+20
 localRef_z = -1.51873194e+20
