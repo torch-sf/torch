@@ -283,6 +283,7 @@ def user_parameters():
     p['use_localRef'] = flashp['use_localRef']
     p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
     #None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
+    p['center_local_ref'] = flashp['center_localRef']
     p['input_file'] = flashp['voramr_input']
     p['pickle_kdtree'] = False
     p['pickle_file_name'] = "kdtree.pickle"
@@ -311,7 +312,7 @@ def user_parameters():
 
     # <star/n-body gravity & binaries>
 
-    p['with_petar'] = True
+    p['with_petar'] = False #True
 
     # <stellar evolution>
 
@@ -340,7 +341,7 @@ def user_parameters():
 
     ntasks = get_ntasks_from_run_script("submit")
 
-    p['num_grav_workers'] = 8 # must be power of 2 for PeTar
+    p['num_grav_workers'] = 1#8 # must be power of 2 for PeTar
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
     
