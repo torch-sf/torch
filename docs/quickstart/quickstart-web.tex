@@ -585,22 +585,63 @@ A normal Torch run initializes from a "cubefile" like \texttt{cube128} or one ge
 
 \subsection{How to use VorAMR}
 
-As of March 21st 2023, \texttt{VorAMR} exists only on the "vorch" branch of Torch. Do: `git checkout vorch` first to obtain all \texttt{VorAMR} dependencies.
-
 \texttt{VorAMR} is installed alongside Torch but is turned off by default; Torch operates normally with \texttt{VorAMR} turned off. 
-To turn \texttt{VorAMR} on, switches must be flipped in two separate places: in the FLASH source which is installed into 
-\$FLASH\_HOME and the Torch source.
+To turn \texttt{VorAMR} on, switches must be flipped in the flash.par file. Note, the file \texttt{flash.par.turbsph\_standard} does not have \texttt{VorAMR} switches, \texttt{flash.par.voramr} is meant to be identical but with the \texttt{VorAMR} switches included.
 
-1. In \texttt{torch/src/flash/source/Simulation/SimulationMain/Cube/pt\_initVoronoiPositions.F90}, uncomment \texttt{\#define VORAMR}.
+\begin{lstlisting}[language=bash]
+# ================
+# VorAMR extension
+# ================
+use_voramr = .true. # main control switch
+voramr_source = "snapshot_518_9.hdf5" # source data to be converted
+voramr_input = "voramr_input.hdf5" # name of file to be read-in by FLASH
 
-2. In \texttt{torch/torch\_user.py user\_parameters()} set the following: \texttt{p["with\_voramr"] = True} and provide the file names as required.
+refine_on_particle_count = .true. # builds grid based on source data - BE SURE TO TURN OFF FOR NORMAL TORCH
+min_particles_per_blk    = 4096 # Assumes 16x16x16 blocks
+max_particles_per_blk    = 4096 
+pt_maxPerProc            = 10000000 # Enough to fit all particles on one proc - CAN BE REDUCED FOR NORMAL TORCH
+refineonjeanslength = .true. 
 
-The \texttt{source\_file} is the raw output data that you want to interpolate into Torch. \texttt{convert\_file} will apply the 
-routines in \texttt{hdf5\_convert.py} to the source data (unit conversions, centering, and velocity normalization) and output 
-a simplified hdf5 file that mimics the AREPO data structure. \texttt{pickle\_kdtree} will pickle the k-dimensional tree generated 
-by \texttt{kdtree.py} for quick use on successive runs.
+# Restrict initial refinement by only placing particles within radius 
+use_localRef = .false. 
+center_localRef = .false. # Crops FLASH domain centered at localRef_{x,y,z} and centers new domain
+# Local refinement center and radius
+localRef_x = 3.20621187e+20 # cm
+localRef_y = 6.24367575e+20
+localRef_z = -1.51873194e+20
+localRef_r = 1.543e+20
 
-Once \texttt{VorAMR} is turned on, install torch \texttt{. ./install.sh}.
+# Background Potential
+sim_withStaticGrav = .true.
+              # AREPO 518_9   # Hill et al 2012
+sim_aParm1  = 1.31142525e-72  #4.39996789e-9  # [cm/s^2]     # 1.42E-3 [kpc/Myr^2]
+sim_aParm2  = 1.35401904e-52  #5.51293615e-31 # [1/s^2]      # 5.49E-4 [1/Myr^2]
+sim_aParm3  = -2.36078509e-30 #5.55421965e20  # [cm]         # 0.18E0  [kpc]
+sim_aParm4  = 4.06112841e-11  #1.62715932e-53 # [1/(cm s^2)] #5 .0E-5  [1/kpc Myr^2]
+\end{lstlisting}
+
+Some of these switches are reflected in the \texttt{torch\_user.py} file, all \texttt{flashp[`..']} data is extracted directly from \texttt{flash.par}:
+
+\begin{lstlisting}[language=python]
+    p = {}
+    flashp = FlashPar("flash.par")
+
+    # <VorAMR>
+
+    p['with_voramr'] = flashp['use_voramr']
+    p['source_file'] = flashp['voramr_source']
+    p['convert_file'] = True # Runs source_file through src/voramr/hdf5_convert.py 
+    p['use_localRef'] = flashp['use_localRef']
+    p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
+    p['center_local_ref'] = flashp['center_localRef']
+    p['input_file'] = flashp['voramr_input']
+    p['pickle_kdtree'] = False # saves kdtree built from source_file used in interpolation. Useful if memory strained.
+    p['pickle_file_name'] = "kdtree.pickle"
+    p['numBlocks'] = 15000 # Quirky parameter, just set to any number larger than total num actual blocks and FLASH will figure it out.
+    p['cellsPerBlock'] = 16
+\end{lstlisting}
+
+Once \texttt{VorAMR} is turned on, install torch as normal \texttt{. ./install.sh}.
 
 Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid to fit on a single processor. 
 
@@ -611,19 +652,28 @@ Then, setup FLASH with enough MAXBLOCKS to allow for the expected refined grid t
 
 Change the `lrefine\_max` value in flash.par to be whatever level you wish the grid to reach at its highest refinement regions. To acheive maximum consistency with the structure of the input data, `lrefine\_max` should be set such that the highest refinement FLASH blocks will contain as many input data points as cells (4096 for +cube16 blocks).
 
-Uncomment the \texttt{VorAMR} parameters in flash.par. Be sure to re-comment these if you later starting a "normal" Torch run.
-
-\begin{lstlisting}[language=bash]
-refine_on_particle_count=.true.
-min_particles_per_blk=4096
-max_particles_per_blk=4096 
-pt_maxPerProc = 10000000
-\end{lstlisting}
-
 If your source data contains star particles that you would like to include in Torch, edit \texttt{user\_initial\_conditions()} in \texttt{torch\_user.py} to read in the particle data, incorporate them into an \texttt{AMUSE} particle set, and initialize them via the \texttt{hydro} class.
 
-Finally, run Torch with only 1 processor assigned to \texttt{flash\_worker} (if running default worker partitions, this would be 6 total processors: 1 driver, 2 \texttt{ph4}, 1 \texttt{SeBa}, 1 \texttt{multiples}, 1 \texttt{FLASH}).
+It is then recommended to change the following \texttt{flash.par} parameters to force \texttt{VorAMR} to output a checkpoint file as fast as possible. That resulting checkpoint can the be restarted from with \texttt{VorAMR} turned off.
 
+\begin{lstlisting}[language=bash]
+tmax            = 6.30e8 # two init timesteps 
+dtinit          = 3.15e8
+dtmin           = 3.15e7
+
+checkpointFileIntervalTime  = 3.15e7 # dt_min
+plotFileIntervalTime        = 3.15e8
+particleFileIntervalTime    = 3.15e8 
+\end{lstlisting}
+
+Finally, run Torch with only 1 processor assigned to \texttt{flash\_worker} (if running default worker partitions, this would be 6 total processors: 1 driver, 2 \texttt{ph4}, 1 \texttt{SeBa}, 1 \texttt{multiples}, 1 \texttt{FLASH}). Note, when restarting from a \texttt{VorAMR} checkpoint, any number of processors can be used as long as \texttt{use\_voramr = .false.}
+
+In addition to the usual Torch output, \texttt{VorAMR} produces two more files:
+\begin{enumerate}
+	\item \texttt{voramr\_input.hdf5} - the particle data extracted from the source data. This is what \texttt{FLASH} sees and will refine on.
+	\item \texttt{interp-data.hdf5} - the file from which the interpolation kdtree is built. Only \texttt{AMUSE} sees this file, but then passes info from it to \texttt{FLASH}. This file will always contain all data from the source file.
+\end{enumerate}
+These files are both produced as sometimes we only want \texttt{FLASH} to refine on a portion of the source data, but we want \texttt{AMUSE} to have an accurate kdtree for all data to avoid domain edge effects during interpolation.
 % ============
 % Known Issues
 % ============
@@ -643,6 +693,7 @@ combat such zones, a few tactics include:
         enabled in the example Torch flash.par files).  This is controlled by
         the FLASH runtime parameter \texttt{dr\_usePosdefComputeDt}, among
         others.
+    \item \texttt{VorAMR} is currently hardcoded to extract data from and refine on data from AREPO file structures. To change to other file structures, edits will need to be made to at least \texttt{src/voramr/hdf5\_convert.py} and possibly \texttt{src/flash/source/Simulation/SimulationMain/Cube/pt\_initVoronoiPositions.F90}
 \end{itemize}
 See \url{http://flash.uchicago.edu/pipermail/flash-users/2019-May/002908.html}
 for a nice explanation by Sasha Tchekhovskoy.
@@ -673,6 +724,7 @@ not recommended for use yet.
 \begin{itemize}
 	\item \texttt{VorAMR} can only run with ONE oversubscribed processor for the \texttt{flash\_worker} due to the use of serial HDF5 open/read calls within \texttt{FLASH}. Data conversion and grid build times can be on the order of days.
 	\item Users are recommended to augment a Torch+\texttt{VorAMR} run to output a checkpoint file after ONE timestep. Then, restart from the checkpoint in a clean Torch build without \texttt{VorAMR} turned on.
+	\item Sometimes \texttt{VorAMR} will run fine, but the resulting grid does not appear to be refined. Check in \texttt{turbsph.log} and see if the number of particles reported matches the dimensions of the array sent so FLASH (reported in slurm file) and what FLASH actually reads (reported in flash\_worker.out). If there is a mismatch, then it's likely that some refinement particles are being placed outside of the computational domain. Make sure your domain dimensions correctly reflect the source data.
 \end{itemize}
 
 % ===========
