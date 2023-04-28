@@ -15,10 +15,14 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.integrate import quad
 
-from amuse.units import units
+from amuse.units import constants, units #constants added for tests, CCC 28/04/2023
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
+
+# CCC 28/04/2023, temporary, use same convention as for single stars later on
+from amuse.community.seba.interface import SeBa
+from amuse.datamodel import Particles
 
 h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
@@ -33,6 +37,178 @@ E_lyc = 13.6*E_ev  # 13.6 eV
 # gamma = 2.5 (Bergin et al 2004)
 sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
+
+#CCC 28/04/2023, temporary
+def evolve_binary_test(dt, worker, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max):
+    
+    #code = SeBa()
+    code = worker
+
+    _stars = Particles(2)
+    _stars[0].mass = mass_of_star1
+    _stars[1].mass = mass_of_star2
+
+    mu = _stars.mass.sum() * constants.G
+    #semi_major_axis = (
+    #    ((orbital_period / (2.0 * np.pi))**2) * mu)**(1.0 / 3.0)
+
+    _binaries = Particles(1)
+
+    binary = _binaries[0]
+    binary.semi_major_axis = semi_major_axis
+    binary.eccentricity = eccentricity
+    binary.child1 = _stars[0]
+    binary.child2 = _stars[1]
+
+    # we add the single stars first, as the binaries will refer to these
+    code.particles.add_particles(_stars)
+    code.binaries.add_particles(_binaries)
+
+    from_seba_to_model = code.particles.new_channel_to(_stars)
+    from_seba_to_model.copy()
+
+    from_seba_to_model_binaries = code.binaries.new_channel_to(_binaries)
+    from_seba_to_model_binaries.copy()
+
+    previous_type_child1 = binary.child1.stellar_type
+    previous_type_child2 = binary.child2.stellar_type
+
+    results = []
+    current_time = 0 | units.Myr
+    while current_time < (age_max):
+        code.update_time_steps()
+        if code.binaries[0].time_step + current_time <= age_max:
+            deltat = code.binaries[0].time_step
+        else:
+            deltat = age_max - current_time
+        #deltat = np.min([code.binaries[0].time_step, dt])
+        current_time = current_time + deltat
+        code.evolve_model(current_time)
+        from_seba_to_model.copy()
+        from_seba_to_model_binaries.copy()
+    # Fix units -- THIS IS NOT GOOD PRACTICE, TO MODIFY CCC 28/04/2023
+    results = np.array([binary.age.value_in(units.Myr), binary.child1.mass.value_in(units.MSun), binary.child1.radius.value_in(units.RSun), binary.child1.temperature.value_in(units.K), 
+             binary.child2.mass.value_in(units.MSun), binary.child2.radius.value_in(units.RSun), binary.child2.temperature.value_in(units.K)])
+
+    #code.stop()
+    return results
+
+# CCC 28/04/2023, temporary
+def binary_evolution(time, dt, state, hydro, worker,
+    with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
+    massloss_method=None, min_feedback_mass=None):
+    """
+    NOTE: time = target time to evolve TO, including the dt already.
+    Chosen to follow AMUSE worker convention.
+    """
+    assert massloss_method is not None
+    assert min_feedback_mass is not None
+
+    # We call SeBa on indiv stars, but get/set hydro star props in bulk.
+
+    # Always recompute star's age from hydro time and particle creation time.
+    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
+    # age at each bridge step would introduce error.  (2) Multiple ways to
+    # query star age may not agree exactly.
+    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+
+    # Update ALL the star properties in bulk for consistency.
+    # Keep the old mass and type (in case we exit loop early, as for SN)
+    new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
+    new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
+    #new_radius = state.stars.radius
+    #binary[0].radius = 36.2885208442 | units.RSun                                                                        
+    #binary[1].radius = 14.6288783968 | units.RSun
+    
+    dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
+    vterm   = np.zeros(len(state.stars)) | units.cm / units.s
+    nion    = np.zeros(len(state.stars)) | units.s**-1
+    eion    = np.zeros(len(state.stars)) | units.erg
+    sigh    = np.zeros(len(state.stars)) | units.cm**2
+    npe     = np.zeros(len(state.stars)) | units.s**-1
+    epe     = np.zeros(len(state.stars)) | units.erg
+    sigpe   = np.zeros(len(state.stars)) | units.cm**2
+
+    # follow FLASH idiom; return dt after SN deposit
+    se_dt = 1e99 | units.s
+
+    for i, s in enumerate(state.stars):
+        
+        # Do not do anything for the second star on its own
+        if i==1:
+            continue
+
+        if went_supernova(s.stellar_type):
+            continue
+
+        # SE code accepts initial mass, not the current mass
+        # the "se_" prefix denotes quantities after +dt evolve
+        tprint('Try binary evolution...')
+        _tmp = evolve_binary_test(dt, worker, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
+        tprint(_tmp)
+        # Stellar types not included yet, to add
+        se_time    = _tmp[0] | units.Myr
+        se_mass1   = _tmp[1] | units.MSun
+        se_mass2   = _tmp[4] | units.MSun
+        se_radius1 = _tmp[2] | units.RSun
+        se_radius2 = _tmp[5] | units.RSun
+        se_temp1   = _tmp[3] | units.K
+        se_temp2   = _tmp[6] | units.K
+        
+        assert se_time - t_evol[i] < 1e3 | units.s
+        del se_time  # not needed
+
+        if s.mass >= min_feedback_mass:
+
+            if with_lyc:
+                _tmp = compute_eion_nion_sigh(se_mass1, se_temp1, se_radius1)
+                eion[0] = _tmp[0]
+                nion[0] = _tmp[1]
+                sigh[0] = _tmp[2]
+                _tmp = compute_eion_nion_sigh(se_mass2, se_temp2, se_radius2)
+                eion[1] = _tmp[0]
+                nion[1] = _tmp[1]
+                sigh[1] = _tmp[2]
+            if with_pe_heat:
+                _tmp = compute_epe_npe(se_temp1, se_radius1)
+                epe[0] = _tmp[0]
+                npe[0] = _tmp[1]
+                sigpe[0] = sigDust
+                _tmp = compute_epe_npe(se_temp2, se_radius2)
+                epe[1] = _tmp[0]
+                npe[1] = _tmp[1]
+                sigpe[1] = sigDust
+
+        new_mass[0] = se_mass1
+        new_mass[1] = se_mass2
+        tprint('New masses set to', new_mass[0], new_mass[1])
+
+    # This assumes steps are relatively small in the mass loss rate of stars,
+    # so that gravity can use the mass after all the wind mass loss has
+    # occcured. Otherwise we'd have to average mass loss and keep up with old
+    # and new masses and it just gets ugly.
+    state.stars.mass = new_mass
+    state.stars.stellar_type = new_type
+
+    # Update star radii for N-body collisions in petar -BP 08.19.22
+    state.stars.radius = np.array([se_radius1, se_radius2])
+
+    hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+
+    # TODO not sure if as_quantity_in(...) calls are actually needed.
+    # FLASH worker has its own unit converter.  -AT, 2019Oct14
+    hydro.set_particle_nion(state.stars.tag, nion)
+    hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))
+    hydro.set_particle_sigh(state.stars.tag, sigh)
+
+    hydro.set_particle_npep(state.stars.tag, npe)
+    hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
+    hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
+
+    hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
+    hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+
+    return se_dt
 
 
 def stellar_evolution(time, dt, state, hydro, worker,

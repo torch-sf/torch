@@ -57,7 +57,7 @@ from amuse.community.smalln.interface import SmallN
 from amuse.community.petar.interface import Petar
 from amuse.couple import multiples
 
-from torch_se import stellar_evolution
+from torch_se import stellar_evolution, binary_evolution
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
@@ -281,16 +281,30 @@ def evolve(state, hydro, grav, mult, se):
 
             if USER['with_se']:
                 tprint("Do stellar evolution")
-                # update both stars set and hydro properties
-                se_dt = stellar_evolution(
-                    hy_time+dt, dt, state, hydro, se,
-                    with_lyc          = USER['with_lyc'],
-                    with_pe_heat      = USER['with_pe_heat'],
-                    with_winds        = USER['with_winds'],
-                    with_sn           = USER['with_sn'],
-                    massloss_method   = USER['massloss_method'],
-                    min_feedback_mass = USER['min_feedback_mass'],
-                )
+                # CCC 28/04/2023
+                if USER['test_interacting_binary']:
+                    tprint("Interacting binary")
+                    se_dt = binary_evolution(
+                        hy_time+dt, dt, state, hydro, se,
+                        with_lyc          = USER['with_lyc'],
+                        with_pe_heat      = USER['with_pe_heat'],
+                        with_winds        = USER['with_winds'],
+                        with_sn           = USER['with_sn'],
+                        massloss_method   = USER['massloss_method'],
+                        min_feedback_mass = USER['min_feedback_mass'],
+                    )
+                else:
+                    tprint("Stars treated as single")
+                    # update both stars set and hydro properties
+                    se_dt = stellar_evolution(
+                        hy_time+dt, dt, state, hydro, se,
+                        with_lyc          = USER['with_lyc'],
+                        with_pe_heat      = USER['with_pe_heat'],
+                        with_winds        = USER['with_winds'],
+                        with_sn           = USER['with_sn'],
+                        massloss_method   = USER['massloss_method'],
+                        min_feedback_mass = USER['min_feedback_mass'],
+                    )
                 #tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
