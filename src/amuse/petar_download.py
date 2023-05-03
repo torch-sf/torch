@@ -119,7 +119,8 @@ def new_option_parser():
     )
     result.add_option(
         "--fdps-version",
-        default='3370a770cb444eab106c81a6ebbc4cb9ef5226d6',
+        default='6fedb4b8bd7a504598e83a4189a7a83c533a0848', #version 7.0 to avoid nan velocities
+        #default='3370a770cb444eab106c81a6ebbc4cb9ef5226d6',
         #default='57c73ed2213bfbd9dbd05700fd60c8922be22103',
         dest="fdps_version",
         help="FDPS commit hash to download",
