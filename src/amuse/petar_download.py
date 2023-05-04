@@ -111,7 +111,8 @@ def new_option_parser():
     )
     result.add_option(
         "--sdar-version",
-        default='2d0f79f259ffd6dd972f27548698d91e7cd476d7',
+        default=‘a4ff4b3d076535684313a912ea31985c1431f827’, #version 7.0 to avoid same positions for stars
+        #default='2d0f79f259ffd6dd972f27548698d91e7cd476d7',
         #default='cebf0a9cbd17111c6917e1120452bb9f661e33b0',
         dest="sdar_version",
         help="SDAR commit hash to download",
