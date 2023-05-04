@@ -231,8 +231,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
+    new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
+    new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
+    new_radius = state.stars.radius        # Change radius for each star, CCC 04/05/2023
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -258,6 +259,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
         del se_time, se_evol_time  # not needed
 
         new_type[i] = se_type
+        new_radius[i] = se_radius
 
         if s.mass >= min_feedback_mass:
 
@@ -309,7 +311,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
     state.stars.stellar_type = new_type
 
     # Update star radii for N-body collisions in petar -BP 08.19.22
-    state.stars.radius = se_radius
+    # Edited CCC 04/05/2023 to give different radius for the stars
+    state.stars.radius = new_radius
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
