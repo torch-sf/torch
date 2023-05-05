@@ -72,6 +72,11 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vx   = velocity[:,0]
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
+    # Initial guess for the radius, before the stellar evolution step - CCC 04/05/2023
+    # It must be somewhat realistic in case there is a contact system
+    # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+    # Use linear MRR for entire mass range
+    add_star.radius = (0.85 * (mass / (1 | units.MSun)) ** 0.67) | units.RSun
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
