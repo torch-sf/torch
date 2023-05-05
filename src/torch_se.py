@@ -38,19 +38,17 @@ E_lyc = 13.6*E_ev  # 13.6 eV
 sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
-#CCC 28/04/2023, temporary
-def evolve_binary_test(dt, worker, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max):
+#CCC 05/05/2023, temporary
+# Remove worker as argument, use a fresh worker each time
+def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max):
     
-    #code = SeBa()
-    code = worker
-
+    code = SeBa()
+    code.initialize_code()
+    
+    # Create stars but do not add to grav
     _stars = Particles(2)
     _stars[0].mass = mass_of_star1
     _stars[1].mass = mass_of_star2
-
-    mu = _stars.mass.sum() * constants.G
-    #semi_major_axis = (
-    #    ((orbital_period / (2.0 * np.pi))**2) * mu)**(1.0 / 3.0)
 
     _binaries = Particles(1)
 
@@ -63,7 +61,7 @@ def evolve_binary_test(dt, worker, mass_of_star1, mass_of_star2, semi_major_axis
     # we add the single stars first, as the binaries will refer to these
     code.particles.add_particles(_stars)
     code.binaries.add_particles(_binaries)
-
+    
     from_seba_to_model = code.particles.new_channel_to(_stars)
     from_seba_to_model.copy()
 
@@ -75,23 +73,28 @@ def evolve_binary_test(dt, worker, mass_of_star1, mass_of_star2, semi_major_axis
 
     results = []
     current_time = 0 | units.Myr
+    print('Evolve model')
     while current_time < (age_max):
         code.update_time_steps()
         if code.binaries[0].time_step + current_time <= age_max:
             deltat = code.binaries[0].time_step
         else:
             deltat = age_max - current_time
-        #deltat = np.min([code.binaries[0].time_step, dt])
+        print(deltat, current_time)
         current_time = current_time + deltat
         code.evolve_model(current_time)
         from_seba_to_model.copy()
         from_seba_to_model_binaries.copy()
+        
+    print('Model evolved')    
     # Fix units -- THIS IS NOT GOOD PRACTICE, TO MODIFY CCC 28/04/2023
     results = np.array([binary.age.value_in(units.Myr), binary.child1.mass.value_in(units.MSun), binary.child1.radius.value_in(units.RSun), binary.child1.temperature.value_in(units.K), 
              binary.child2.mass.value_in(units.MSun), binary.child2.radius.value_in(units.RSun), binary.child2.temperature.value_in(units.K)])
 
-    #code.stop()
+    code.stop()
+    
     return results
+
 
 # CCC 28/04/2023, temporary
 def binary_evolution(time, dt, state, hydro, worker,
@@ -144,7 +147,7 @@ def binary_evolution(time, dt, state, hydro, worker,
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
         tprint('Try binary evolution...')
-        _tmp = evolve_binary_test(dt, worker, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
+        _tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
         tprint(_tmp)
         # Stellar types not included yet, to add
         se_time    = _tmp[0] | units.Myr
