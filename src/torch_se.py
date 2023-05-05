@@ -73,20 +73,22 @@ def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccent
 
     results = []
     current_time = 0 | units.Myr
-    print('Evolve model')
+    #print('Evolve model')
     while current_time < (age_max):
         code.update_time_steps()
+        #print('dt updated')
         if code.binaries[0].time_step + current_time <= age_max:
             deltat = code.binaries[0].time_step
+            #print('dt=', deltat)
+            current_time = current_time + deltat
         else:
-            deltat = age_max - current_time
-        print(deltat, current_time)
-        current_time = current_time + deltat
+            current_time = age_max
+            #print('Last step')
         code.evolve_model(current_time)
-        from_seba_to_model.copy()
-        from_seba_to_model_binaries.copy()
+        #print('evolved')
         
-    print('Model evolved')    
+        
+    #print('Model evolved')    
     # Fix units -- THIS IS NOT GOOD PRACTICE, TO MODIFY CCC 28/04/2023
     results = np.array([binary.age.value_in(units.Myr), binary.child1.mass.value_in(units.MSun), binary.child1.radius.value_in(units.RSun), binary.child1.temperature.value_in(units.K), 
              binary.child2.mass.value_in(units.MSun), binary.child2.radius.value_in(units.RSun), binary.child2.temperature.value_in(units.K)])
