@@ -312,15 +312,13 @@ def user_parameters():
 
     # <star/n-body gravity & binaries>
 
-<<<<<<< HEAD
     p['with_petar'] = True
     # Set this r_bin such that initially, when clusters are sparse and non-spherical, binaries with <r_bin separation
     # are properly handles. If you get up to cluster with 10,000+ stars, upon restart set this to 0.0 so PeTar automatically
     # selects the correct separation to apply SDAR, or you will get excessively large binary treees. -BP 13Apr23
     p['petar_rbin'] = 100.0 | units.AU
-=======
     p['with_petar'] = False #True
->>>>>>> d1ebbd777efeecd675613403a2546edc382eb475
+
 
     # <stellar evolution>
 
