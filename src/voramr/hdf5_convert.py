@@ -20,9 +20,9 @@ def extract_data(file_name, apply_consts=True):
         length, mass, velocity, hubble = 3.08567759e+21, 1.989e43, 1.0e5, 0.7
     f = h5py.File(file_name, 'r')
     ds = f['PartType0']
-    c = ds['Coordinates'][:]*length*hubble
-    d = ds['Density'][:]*mass*(1./hubble**2)*(1./length**3)
-    m = ds['Masses'][:]*mass*hubble
+    c = ds['Coordinates'][:]*length*(1./hubble)
+    d = ds['Density'][:]*mass*(hubble**2)*(1./length**3)
+    m = ds['Masses'][:]*mass*(1./hubble)
     ie = ds['InternalEnergy'][:]*velocity**2
     v = ds['Velocities'][:]*velocity
     gpot = ds['Potential'][:]*velocity**2
@@ -32,10 +32,10 @@ def extract_data(file_name, apply_consts=True):
 
     #Extract star dataset
     sds = f['PartType4']
-    c = sds['Coordinates'][:]*length*hubble
-    sm = sds['Masses'][:]*mass*hubble
+    c = sds['Coordinates'][:]*length*(1./hubble)
+    sm = sds['Masses'][:]*mass*(1./hubble)
+    im = sds['GFM_InitialMass'][:]*mass*(1./hubble)
     v = sds['Velocities'][:]*velocity
-    im = sds['GFM_InitialMass'][:]*mass*hubble
     a = sds['GFM_StellarFormationTime'][:]
     smet = sds['GFM_Metallicity'][:]
 
