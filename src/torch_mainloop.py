@@ -126,13 +126,13 @@ def initialize_workers():
     elif USER['with_petar']:
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = 1.496e15 | units.cm # 100AU
-        aveStarMass = 1.234e33 | units.g
-        velDisp = 1.7e5 | units.cm/units.s
-        G = 6.67e-8 | units.cm**3 / units.g / units.s**2
-        grav.parameters.r_out = 12.5*grav.parameters.r_bin
-        grav.parameters.dt_soft = (np.pi/8.0)*np.sqrt(((grav.parameters.r_out/2.0)**3)/(2*G*aveStarMass))
-        grav.parameters.r_search_min = grav.parameters.r_out + 3.0*grav.parameters.dt_soft*velDisp
+        grav.parameters.r_bin = USER['petar_rbin'] #1.496e15 | units.cm # 100AU
+        #aveStarMass = 1.234e33 | units.g
+        #velDisp = 1.7e5 | units.cm/units.s
+        #G = 6.67e-8 | units.cm**3 / units.g / units.s**2
+        #grav.parameters.r_out = 12.5*grav.parameters.r_bin
+        #grav.parameters.dt_soft = (np.pi/8.0)*np.sqrt(((grav.parameters.r_out/2.0)**3)/(2*G*aveStarMass))
+        #grav.parameters.r_search_min = grav.parameters.r_out + 3.0*grav.parameters.dt_soft*velDisp
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -209,6 +209,7 @@ def evolve(state, hydro, grav, mult, se):
         print("nbody time = ",nbody.time)
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = dt_nbody
+    dt_old = dt
 
     num_stars = hydro.get_number_of_particles()
     
@@ -350,8 +351,14 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        if USER['with_petar']:
-                            grav.parameters.dt_soft = dt
+                        #if USER['with_petar']:
+                        #    grav.parameters.dt_soft = dt
+                        grav.parameters.dt_soft = dt
+                        if USER['with_petar'] and dt != dt_old:
+                            grav.parameters.r_out = 0.0 | units.cm
+                            grav.parameters.r_search_min = 0.0 | units.cm
+                            grav.parameters.r_bin = USER['petar_rbin']
+                        dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
                         pool.add_request(req_grav, handle_result, ["grav", it])
@@ -373,6 +380,12 @@ def evolve(state, hydro, grav, mult, se):
                     else:
                         if USER['with_petar']:
                             grav.parameters.dt_soft = dt
+                            if USER['with_petar'] and dt != dt_old:
+                                grav.parameters.r_out = 0.0 | units.cm
+                                grav.parameters.r_search_min = 0.0 | units.cm
+                                grav.parameters.r_bin = USER['petar_rbin']
+                            dt_old = dt
+
                         start_t = time.time()
                         grav.evolve_model(hy_time+dt)
                         gr_evolve_time = time.time()-start_t
@@ -386,9 +399,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
 
-
-                #if USER['with_petar']:
-                    #remove_merged_stars(state, hydro, grav)
 
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
