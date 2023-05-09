@@ -61,7 +61,7 @@ subroutine Simulation_addStaticAcceleration (pos, sweepDir, blockID, numCells, g
   integer, dimension(LOW:HIGH,MDIM):: blkLimits, blkLimitsGC
   integer :: sizeX, sizeY, sizeZ
   logical :: gcell = .true.
-  real    :: zHeight, rhoNFW, abszHeight
+  real    :: zHeight, rhoNFW, abszHeight, offset
 
   if (.not. sim_withStaticGrav) then
     return
@@ -69,6 +69,11 @@ subroutine Simulation_addStaticAcceleration (pos, sweepDir, blockID, numCells, g
 
   if(sweepdir .ne. SWEEP_Z) then
     return
+  endif
+
+  offset=0.0
+  if(center_localRef) then
+     offset = localRef_z
   endif
 
   call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
@@ -97,7 +102,8 @@ subroutine Simulation_addStaticAcceleration (pos, sweepDir, blockID, numCells, g
           !                       & sim_aParm2 * zHeight + sim_aParm4 * zHeight * abszHeight !- &
                                  !& sim_aParm5 * zHeight*zHeight*zHeight
           ! polynomial fit for background potential from VorAMR input data - SCL 
-          grav(ii) = grav(ii) + sim_aParm1*zHeight**3 + sim_aParm2*zHeight**2 + sim_aParm3*zHeight + sim_aParm4
+          grav(ii) = grav(ii) + sim_aParm1*(zHeight+offset)**3 + sim_aParm2*(zHeight+offset)**2 + &
+                              & sim_aParm3*(zHeight+offset) + sim_aParm4
 			!else
 			!	rhoNFW   = sim_rho_s / ( abszHeight / sim_rs * ( 1d0 + abszHeight / sim_rs )**2d0 )
 			!	grav(ii) = grav(ii) -4./3d0 * sim_GravConst * PI * rhoNFW * zheight
