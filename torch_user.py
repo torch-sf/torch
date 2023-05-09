@@ -283,6 +283,7 @@ def user_parameters():
     p['use_localRef'] = flashp['use_localRef']
     p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
     #None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
+    p['center_local_ref'] = flashp['center_localRef']
     p['input_file'] = flashp['voramr_input']
     p['pickle_kdtree'] = False
     p['pickle_file_name'] = "kdtree.pickle"
@@ -311,11 +312,15 @@ def user_parameters():
 
     # <star/n-body gravity & binaries>
 
+<<<<<<< HEAD
     p['with_petar'] = True
     # Set this r_bin such that initially, when clusters are sparse and non-spherical, binaries with <r_bin separation
     # are properly handles. If you get up to cluster with 10,000+ stars, upon restart set this to 0.0 so PeTar automatically
     # selects the correct separation to apply SDAR, or you will get excessively large binary treees. -BP 13Apr23
     p['petar_rbin'] = 100.0 | units.AU
+=======
+    p['with_petar'] = False #True
+>>>>>>> d1ebbd777efeecd675613403a2546edc382eb475
 
     # <stellar evolution>
 
@@ -344,7 +349,7 @@ def user_parameters():
 
     ntasks = get_ntasks_from_run_script("submit")
 
-    p['num_grav_workers'] = 8 # must be power of 2 for PeTar
+    p['num_grav_workers'] = 1#8 # must be power of 2 for PeTar
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
     

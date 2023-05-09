@@ -58,7 +58,7 @@ module Simulation_data
 !  logical, save :: sim_stratify_heating, sim_constant_heating
 
    !! VorAMR stuff
-   logical, save :: use_voramr, use_localRef, refPartCount
+   logical, save :: use_voramr, use_localRef, refPartCount, center_localRef
    character(len=255),save :: voramr_source, voramr_input
    real, save :: localRef_x, localRef_y, localRef_z, localRef_r
    

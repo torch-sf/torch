@@ -56,6 +56,7 @@ PARAMETER use_voramr        BOOLEAN False
 PARAMETER voramr_source     STRING  "snapshot.hdf5"
 PARAMETER voramr_input      STRING  "voramr_input.hdf5"
 PARAMETER use_localRef      BOOLEAN False
+PARAMETER center_localRef   BOOLEAN False
 PARAMETER localRef_x        REAL    0.0
 PARAMETER localRef_y        REAL    0.0
 PARAMETER localRef_z        REAL    0.0

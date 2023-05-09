@@ -188,8 +188,6 @@ def initialize_workers():
 
 def evolve(state, hydro, grav, mult, se):
     
-    time_file = open("grav_timer.txt",'w')
-
     # FLASH loop control
     hy_dt           = hydro.get_timestep()
     hy_step         = hydro.get_current_step()
@@ -389,8 +387,7 @@ def evolve(state, hydro, grav, mult, se):
                         start_t = time.time()
                         grav.evolve_model(hy_time+dt)
                         gr_evolve_time = time.time()-start_t
-                        time_file.write(str(gr_evolve_time)+" "+str(num_stars)+" "+str(hy_time+dt)+"\n") 
-                        time_file.flush()
+                        
                     tprint("Advance hydro")
                     hydro.evolve_model(hy_time+dt)
                     
@@ -576,7 +573,8 @@ def run_torch(user_initial_conditions, user_parameters):
                                                                                scoords, svels,
                                                                                use_com_coords=False)
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
-                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet, USER['use_localRef'], USER['local_ref'])
+                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet,
+                                 USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
 
             #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
             coords, field_set = read_hdf5("interp-data.hdf5")
