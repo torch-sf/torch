@@ -174,7 +174,15 @@ def evolve(state, hydro, grav, mult, se):
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
-
+    
+    # Minimum number of stars for PeTar. Default corresponds to 2 stars, test_binary to 3 stars
+    # For test binary, try turning PeTar off - CCC 09/05/2023
+    min_num_stars = 1
+    if USER['with_petar']:
+        min_num_stars = 2
+    if USER['test_binary']:
+        min_num_stars = 3
+        
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
     se_dt = 1e99 | units.s
@@ -236,7 +244,7 @@ def evolve(state, hydro, grav, mult, se):
         if num_stars > 0:
 
             # initialize PeTar once more than 1!!! star forms
-            if num_stars > 1 and first_star == 0:
+            if num_stars >= min_num_stars and first_star == 0:
                 first_star = 1
                 if USER['with_petar']:
                     tprint("First stars have formed. Initializing PETAR.")
@@ -319,7 +327,7 @@ def evolve(state, hydro, grav, mult, se):
             ### Evolve models.
             ### --------------
 
-            if num_stars > 1:
+            if num_stars >= min_num_stars: # > 1 --> >= min_num_stars, CCC 11/05/2023
                 if USER['evolve_async']:
                 # Example async request code:
                 # amuse/src/amuse/test/suite/compile_tests/test_python_implementation.py
@@ -475,7 +483,7 @@ def evolve(state, hydro, grav, mult, se):
             # sync velocity to stars + gravity code(s) from hydro
             state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
 
-            if num_stars > 1: # Don't run N-body with one star
+            if num_stars >= min_num_stars: # Don't run N-body with one star & > 1 --> >= min_num_stars, CCC 11/05/2023
                 state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
                 if USER['with_multiples']:
                     mult.channel_from_code_to_memory.copy()     # grav  -> multiples
