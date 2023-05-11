@@ -121,9 +121,7 @@ def binary_evolution(time, dt, state, hydro, worker,
     # Keep the old mass and type (in case we exit loop early, as for SN)
     new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
     new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    #new_radius = state.stars.radius
-    #binary[0].radius = 36.2885208442 | units.RSun                                                                        
-    #binary[1].radius = 14.6288783968 | units.RSun
+    #new_radius = np.array([36.2885208442 | units.RSun, 14.6288783968 | units.RSun]) #CCC Hardcoded for first test
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
@@ -238,7 +236,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Keep the old mass and type (in case we exit loop early, as for SN)
     new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
     new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    new_radius = state.stars.radius        # Change radius for each star, CCC 04/05/2023
+    new_radius = np.array([36.2885208442 | units.RSun, 14.6288783968 | units.RSun])  # Hardcoded for first test, Change radius for each star, CCC 04/05/2023
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -264,7 +262,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
         del se_time, se_evol_time  # not needed
 
         new_type[i] = se_type
-        new_radius[i] = se_radius
+        new_radius[i] = se_radius #Maybe temorary strucutre, CCC 09/05/2023
 
         if s.mass >= min_feedback_mass:
 
