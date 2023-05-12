@@ -28,8 +28,9 @@ h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
-sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
-E_ev = 1.60222497096e-12 # energy of 1 eV in erg
+sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4
+sig0  = 6.304e-18 # Photoionization cross section at threshold for hydrogen
+E_ev  = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
 # Cross section for dust per hydrogen atom.
 # Value = tau / N_H where tau = gamma * Av (Draine and Bertoli 96)
@@ -73,30 +74,20 @@ def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccent
 
     results = []
     current_time = 0 | units.Myr
-    #print('Evolve model')
     while current_time < (age_max):
         code.update_time_steps()
-        #print('dt updated')
         if code.binaries[0].time_step + current_time <= age_max:
             deltat = code.binaries[0].time_step
-            #print('dt=', deltat)
             current_time = current_time + deltat
         else:
             current_time = age_max
-            #print('Last step')
         code.evolve_model(current_time)
-        #print('evolved')
-        
-        
-    #print('Model evolved')    
-    # Fix units -- THIS IS NOT GOOD PRACTICE, TO MODIFY CCC 28/04/2023
-    results = np.array([binary.age.value_in(units.Myr), binary.child1.mass.value_in(units.MSun), binary.child1.radius.value_in(units.RSun), binary.child1.temperature.value_in(units.K), 
-             binary.child2.mass.value_in(units.MSun), binary.child2.radius.value_in(units.RSun), binary.child2.temperature.value_in(units.K)])
+          
+    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type]
 
     code.stop()
     
     return results
-
 
 # CCC 28/04/2023, temporary
 def binary_evolution(time, dt, state, hydro, worker,
@@ -116,12 +107,33 @@ def binary_evolution(time, dt, state, hydro, worker,
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
     t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+    
+    # Set radius to physical radius for restart with user ICs
+    # This assumes the stars are ZAMS, which may be incorrect 
+    _attributes = state.stars.get_attribute_names_defined_in_store()
+    if 'radius' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # It must be somewhat realistic in case there is a contact system
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MRR for upper mass range
+        state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    if 'luminosity' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MLR for upper mass range
+        state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
+    if 'temperature' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Use BB luminosity and radius, luminosity
+        state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
     new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
     new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    #new_radius = np.array([36.2885208442 | units.RSun, 14.6288783968 | units.RSun]) #CCC Hardcoded for first test
+    new_radius = state.stars.radius        # Same structure as type & mass - CCC 12/05/2023
+    new_temp   = state.stars.temperature   
+    new_lum    = state.stars.luminosity
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
@@ -148,15 +160,18 @@ def binary_evolution(time, dt, state, hydro, worker,
         # the "se_" prefix denotes quantities after +dt evolve
         tprint('Try binary evolution...')
         _tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
-        tprint(_tmp)
-        # Stellar types not included yet, to add
-        se_time    = _tmp[0] | units.Myr
-        se_mass1   = _tmp[1] | units.MSun
-        se_mass2   = _tmp[4] | units.MSun
-        se_radius1 = _tmp[2] | units.RSun
-        se_radius2 = _tmp[5] | units.RSun
-        se_temp1   = _tmp[3] | units.K
-        se_temp2   = _tmp[6] | units.K
+
+        se_time    = _tmp[0]
+        se_mass1   = _tmp[1]
+        se_mass2   = _tmp[2]
+        se_radius1 = _tmp[3]
+        se_radius2 = _tmp[4]
+        se_temp1   = _tmp[5]
+        se_temp2   = _tmp[6]
+        se_lum1    = _tmp[7]
+        se_lum2    = _tmp[8]
+        se_type1   = _tmp[9]
+        se_type2   = _tmp[10]
         
         assert se_time - t_evol[i] < 1e3 | units.s
         del se_time  # not needed
@@ -185,6 +200,14 @@ def binary_evolution(time, dt, state, hydro, worker,
         new_mass[0] = se_mass1
         new_mass[1] = se_mass2
         tprint('New masses set to', new_mass[0], new_mass[1])
+        new_type[0] = se_type1
+        new_type[1] = se_type2
+        new_radius[0] = se_radius1
+        new_radius[1] = se_radius2
+        new_temp[0] = se_temp1
+        new_temp[1] = se_temp2
+        new_lum[0] = se_lum1
+        new_lum[1] = se_lum2
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
@@ -195,7 +218,10 @@ def binary_evolution(time, dt, state, hydro, worker,
 
     # Update star radii for N-body collisions in petar -BP 08.19.22
     state.stars.radius = np.array([se_radius1, se_radius2])
-
+    # Also update temperature and luminosity -CCC 12/05/2023
+    state.stars.temperature = new_temp
+    state.stars.luminosity = new_lum
+    
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
@@ -231,12 +257,34 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
     t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+    
+    # Set radius to physical radius for restart with user ICs
+    # This assumes the stars are ZAMS, which may be incorrect 
+    _attributes = state.stars.get_attribute_names_defined_in_store()
+    if 'radius' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # It must be somewhat realistic in case there is a contact system
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MRR for upper mass range
+        state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    if 'luminosity' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MLR for upper mass range
+        state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
+    if 'temperature' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Use BB luminosity and radius, luminosity
+        state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
     new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
     new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    new_radius = np.array([36.2885208442 | units.RSun, 14.6288783968 | units.RSun])  # Hardcoded for first test, Change radius for each star, CCC 04/05/2023
+    new_radius = state.stars.radius        # Same structure as type & mass - CCC 12/05/2023
+    new_temp   = state.stars.temperature   
+    new_lum    = state.stars.luminosity 
+    
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -261,8 +309,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
         assert se_time - t_evol[i] < 1e3 | units.s
         del se_time, se_evol_time  # not needed
 
-        new_type[i] = se_type
-        new_radius[i] = se_radius #Maybe temorary strucutre, CCC 09/05/2023
+        new_type[i]   = se_type
+        new_radius[i] = se_radius #Maybe temporary structure, CCC 09/05/2023
+        new_temp[i]   = se_temp
+        new_lum[i]    = se_lum
 
         if s.mass >= min_feedback_mass:
 
@@ -316,6 +366,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Update star radii for N-body collisions in petar -BP 08.19.22
     # Edited CCC 04/05/2023 to give different radius for the stars
     state.stars.radius = new_radius
+    # Also update temperature and luminosity -CCC 12/05/2023
+    state.stars.temperature = new_temp
+    state.stars.luminosity = new_lum
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
