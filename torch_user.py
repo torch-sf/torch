@@ -335,6 +335,9 @@ def user_parameters():
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
+        
+    if p['test_interacting_binary']:
+        p['num_hy_workers'] -= 1 # Free one worker for binary evolution
 
     if p['with_multiples']:
         p['num_hy_workers'] -= 2  # SmallN, Kepler
