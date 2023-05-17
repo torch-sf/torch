@@ -74,6 +74,9 @@ def stellar_evolution(time, dt, state, hydro, worker,
         if went_supernova(s.stellar_type):
             continue
 
+        if s.mass < min_feedback_mass:
+            continue
+
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
         _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
