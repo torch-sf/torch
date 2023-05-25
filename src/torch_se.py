@@ -46,35 +46,34 @@ def stellar_evolution(time, dt, state, hydro, worker,
     assert min_feedback_mass is not None
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
+    # index of feedback stars to evolve
+    idx = np.where(state.stars.mass >= min_feedback_mass)
 
     # Always recompute star's age from hydro time and particle creation time.
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag[idx])
 
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
-    vterm   = np.zeros(len(state.stars)) | units.cm / units.s
-    nion    = np.zeros(len(state.stars)) | units.s**-1
-    eion    = np.zeros(len(state.stars)) | units.erg
-    sigh    = np.zeros(len(state.stars)) | units.cm**2
-    npe     = np.zeros(len(state.stars)) | units.s**-1
-    epe     = np.zeros(len(state.stars)) | units.erg
-    sigpe   = np.zeros(len(state.stars)) | units.cm**2
+    new_type = state.stars.stellar_type[idx]  # could update state.stars.{stellar_type,mass} directly,
+    new_mass = state.stars.mass[idx]          # but use intermediate variables to be consistent w/ other props
+    dm_dt   = np.zeros(len(state.stars[idx])) | units.g / units.s
+    vterm   = np.zeros(len(state.stars[idx])) | units.cm / units.s
+    nion    = np.zeros(len(state.stars[idx])) | units.s**-1
+    eion    = np.zeros(len(state.stars[idx])) | units.erg
+    sigh    = np.zeros(len(state.stars[idx])) | units.cm**2
+    npe     = np.zeros(len(state.stars[idx])) | units.s**-1
+    epe     = np.zeros(len(state.stars[idx])) | units.erg
+    sigpe   = np.zeros(len(state.stars[idx])) | units.cm**2
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
-    for i, s in enumerate(state.stars):
+    for i, s in enumerate(state.stars[idx]):
 
         if went_supernova(s.stellar_type):
-            continue
-
-        if s.mass < min_feedback_mass:
             continue
 
         # SE code accepts initial mass, not the current mass
@@ -132,26 +131,26 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
-    state.stars.mass = new_mass
-    state.stars.stellar_type = new_type
+    state.stars.mass[idx] = new_mass
+    state.stars.stellar_type[idx] = new_type
 
     # Update star radii for N-body collisions in petar -BP 08.19.22
-    state.stars.radius = se_radius
+    state.stars.radius[idx] = se_radius
 
-    hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+    hydro.set_particle_mass(state.stars.tag[idx], state.stars.mass[idx])
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
     # FLASH worker has its own unit converter.  -AT, 2019Oct14
-    hydro.set_particle_nion(state.stars.tag, nion)
-    hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))
-    hydro.set_particle_sigh(state.stars.tag, sigh)
+    hydro.set_particle_nion(state.stars.tag[idx], nion)
+    hydro.set_particle_eion(state.stars.tag[idx], eion.as_quantity_in(units.erg))
+    hydro.set_particle_sigh(state.stars.tag[idx], sigh)
 
-    hydro.set_particle_npep(state.stars.tag, npe)
-    hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
-    hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
+    hydro.set_particle_npep(state.stars.tag[idx], npe)
+    hydro.set_particle_epep(state.stars.tag[idx], epe.as_quantity_in(units.erg)) # Set average energy of PE photon
+    hydro.set_particle_sigd(state.stars.tag[idx], sigpe) # Set cross section of dust to PE photons.
 
-    hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
-    hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+    hydro.set_particle_wind_mass(state.stars.tag[idx], dm_dt.as_quantity_in(units.g/units.s))
+    hydro.set_particle_wind_vel(state.stars.tag[idx], vterm.as_quantity_in(units.cm/units.s))
 
     return se_dt
 
