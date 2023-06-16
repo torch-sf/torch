@@ -620,7 +620,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN, unit=NO_UNIT)
         for x in ['lx','ly','lz']:
-            function.addParameter(x, dtype='d', direction=function.IN, unit=speed)
+            function.addParameter(x, dtype='d', direction=function.IN, unit=length*mass*speed) #fix units -SA 20230428
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
