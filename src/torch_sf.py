@@ -322,10 +322,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun) # Now we can update the sink mass (comment added -SA 20230405)
             print("sink angular momentum before ang_mom removal: ", sink_angMom) # SA 20230407
             hydro.set_particle_mass(sink_tag, sink_mass)
-            sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,0] #Remove ang_mom from sink, based on mass of stars formed -SA 20230405
-            sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,1] #For each direction separately
-            sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)[:,2]
-            hydro.set_particle_ang_mom(sink_tag, [sink_angMom_x, sink_angMom_y, sink_angMom_z] ) #Assign new sink ang mom
+            sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) #Remove ang_mom from sink, based on mass of stars formed -SA 20230405
+            sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) #For each direction separately
+            sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            hydro.set_particle_ang_mom(sink_tag, sink_angMom_x, sink_angMom_y, sink_angMom_z, 1 ) #Assign new sink ang mom
 
 
             star          = Particles(nnew)
@@ -340,15 +340,15 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             # Calculate star angular momentum -SA 20230103
             ## First, we want to add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
-            size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation
-            star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = 3)
-            star_angMom = sink_angMom * star_angMom_vary
+            size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation, currently chosen arbitrarily
+            star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = (nnew,3))
+            star_angMom = (sink_angMom * star_angMom_vary)
             ## We only want the unit vector for the magnitude of the sink's ang_mom.
             ## This lets us set the direction of the star's angular momentum without
             ## handling the proper ang_mom conservation. -SA 20230405
-            star_angMom_mag = np.sqrt(star_angMom[0]**2 + star_angMom[1]**2 + star_angMom[2]**2)
+            star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
             ## Now set the star angular momentum
-            star.ang_mom = ( star_angMom/star_angMom_mag )
+            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i].value_in(units.cm**2.0 * units.g / units.s)) for i in range(nnew)]
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -356,7 +356,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-            hydro.set_particle_ang_mom(star_tag, [star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2]] )  # Add angular momentum -SA 20230425
+            print("Setting star angular momentum now - e.g., ", star.ang_mom[0])
+            hydro.set_particle_ang_mom(star_tag, star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2], nnew )  # Add angular momentum -SA 20230425
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
