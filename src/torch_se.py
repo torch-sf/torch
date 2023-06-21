@@ -83,7 +83,7 @@ def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccent
             current_time = age_max
         code.evolve_model(current_time)
           
-    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type]
+    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type, binary.semi_major_axis]
 
     code.stop()
     
@@ -153,8 +153,9 @@ def binary_evolution(time, dt, state, hydro, worker,
         if i==1:
             continue
 
-        if went_supernova(s.stellar_type):
-            continue
+        # Comment out for test binary with primary as BH
+        #if went_supernova(s.stellar_type):
+        #    continue
 
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
@@ -172,11 +173,13 @@ def binary_evolution(time, dt, state, hydro, worker,
         se_lum2    = _tmp[8]
         se_type1   = _tmp[9]
         se_type2   = _tmp[10]
+        se_sma     = _tmp[11]
+        tprint('New semi-major axis is', se_sma)
         
         assert se_time - t_evol[i] < 1e3 | units.s
         del se_time  # not needed
 
-        if s.mass >= min_feedback_mass:
+        if s.initial_mass >= min_feedback_mass:
 
             if with_lyc:
                 _tmp = compute_eion_nion_sigh(se_mass1, se_temp1, se_radius1)
@@ -196,10 +199,28 @@ def binary_evolution(time, dt, state, hydro, worker,
                 epe[1] = _tmp[0]
                 npe[1] = _tmp[1]
                 sigpe[1] = sigDust
+            # Test winds, CCC 26/05/2023
+            if with_winds:
+                _tmp = compute_dmdt_vterm(state.stars[0].mass, se_temp1, se_radius1, se_mass1, se_lum1, dt,
+                                            massloss_method=massloss_method)
+                dm_dt[0] = _tmp[0]
+                vterm[0] = _tmp[1]
+                _tmp = compute_dmdt_vterm(state.stars[1].mass, se_temp2, se_radius2, se_mass2, se_lum2, dt,
+                                            massloss_method=massloss_method)
+                dm_dt[1] = _tmp[0]
+                vterm[1] = _tmp[1]
 
         new_mass[0] = se_mass1
         new_mass[1] = se_mass2
         tprint('New masses set to', new_mass[0], new_mass[1])
+        tprint('Masses from winds', state.stars[0].mass-dt*dm_dt[0], state.stars[1].mass-dt*dm_dt[1])
+        # First order check for CE ejection, CCC 20/06/2023
+        if (new_mass[1]/(state.stars[1].mass-dt*dm_dt[1]) < 0.9) or (new_mass[0]/(state.stars[0].mass-dt*dm_dt[0]) < 0.9):
+            tprint('Ejection of common envelope!')
+            E_bind = 4*(units.constants.G * new_mass[0]/(2*se_sma)) * abs((state.stars[1].mass)-(new_mass[1]))
+            tprint('Inject', E_bind.in_(units.erg), 'on the grid')
+            _tmp = hydro.energy_injection(E_bind, 1.0, abs((state.stars[1].mass)-(new_mass[1])), s.x, s.y, s.z)
+            
         new_type[0] = se_type1
         new_type[1] = se_type2
         new_radius[0] = se_radius1
@@ -217,7 +238,8 @@ def binary_evolution(time, dt, state, hydro, worker,
     state.stars.stellar_type = new_type
 
     # Update star radii for N-body collisions in petar -BP 08.19.22
-    state.stars.radius = np.array([se_radius1, se_radius2])
+    #state.stars.radius = np.array([se_radius1, se_radius2])
+    state.stars.radius = new_radius
     # Also update temperature and luminosity -CCC 12/05/2023
     state.stars.temperature = new_temp
     state.stars.luminosity = new_lum
