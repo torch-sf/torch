@@ -60,6 +60,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     velocity = hydro.get_particle_velocity(newtags)
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
+    angMom   = hydro.get_particle_ang_mom(newtags) # add angular momentum code -SA 20230301
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -75,6 +76,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
     add_star.radius = 100 | units.AU # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
+    add_star.ang_mom = angMom # add angular mometum code -SA 20230301
 # don't need to carry this around because we don't need history
 # just update directly in hydro
     #if with_lyc:
@@ -285,6 +287,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_pos = hydro.get_particle_position(sink_tag)
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
+        sink_angMom = hydro.get_particle_ang_mom(sink_tag)  # Added -SA 20230405
 
         # Add quick print statement to double check sink accretion method for jets -SA 20221012
         tprint("Sink mass before forming stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))  
@@ -324,9 +327,18 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             state.all_masses[sink_tag] = state.all_masses[sink_tag][nnew:]
             state.starjet_masses[sink_tag] = state.starjet_masses[sink_tag][nnew:]  # Added -SA 20220819
 
-            # Remove the mass from the sink.
-            sink_mass = sink_mass - (np.sum(spawn_starjet)|units.MSun) # Change to remove spawn_starjet instead of spawn_masses -SA 20220819
+            # Remove the mass from the sink and jet, as well as the corresponding angular momentum fraction. -SA updated 20230712
+            remaining_mass_frac = (sink_mass - (np.sum(spawn_starjet)|units.MSun)) /sink_mass #fraction of mass that remains (for ang_mom decrease) -SA 20230405
+            sink_mass = sink_mass - (np.sum(spawn_starjet)|units.MSun) # Update the sink mass -SA 20230405 (updated to remove spawn_starjet instead of span_masses - SA 20230712)
+            #print("sink angular momentum before ang_mom removal: ", sink_angMom) # SA 20230407
+            
             hydro.set_particle_mass(sink_tag, sink_mass)
+            #Remove ang_mom from sink, based on mass of stars formed, for each direction -SA 20230405
+            sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) 
+            sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            hydro.set_particle_ang_mom(sink_tag, sink_angMom_x, sink_angMom_y, sink_angMom_z, 1 ) #Assign new sink ang mom
+
 
             star          = Particles(nnew)
             star.mass     = spawn_masses | units.MSun # Leave this as spawn_masses to form correct stellar mass - SA 20220819
@@ -338,12 +350,25 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
             star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
+            # Calculate star angular momentum -SA 20230103
+            ## Add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
+            size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation, currently chosen arbitrarily
+            star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = (nnew,3))
+            star_angMom = (sink_angMom * star_angMom_vary)
+            ## We only need the unit vector of the sink's ang_mom since we want to set the direction of the star's ang. mom. without
+            ## handling the full ang_mom conservation. -SA 20230405
+            star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
+            ## Now set the star angular momentum
+            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i].value_in(units.cm**2.0 * units.g / units.s)) for i in range(nnew)]
+
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+            #print("Setting star angular momentum now - e.g., ", star.ang_mom[0])
+            hydro.set_particle_ang_mom(star_tag, star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2], nnew )  # Add angular momentum -SA 20230425
 
     # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
     tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))

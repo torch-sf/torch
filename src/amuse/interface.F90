@@ -2997,18 +2997,18 @@ call Driver_abortFlash('[get_sink_var_vel_array]: Not using sinks!')
 get_sink_var_vel_array=0
 END FUNCTION
 
-FUNCTION get_sink_ang_mom_array(tags,lx,ly,lz,nparts)
+FUNCTION get_particle_ang_mom_array(tags,lx,ly,lz,nparts) !previously get_sink_ang_mom_array -SA 20230405
 
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: lx, ly, lz, tags
-  integer :: get_sink_ang_mom_array, i, j, p, oldj, ierr
+  integer :: get_particle_ang_mom_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count
   integer, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 #ifdef bisect
 
-call get_particle_type_bounds('sink', type_begin, type_end, type_count)
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
 if (type_count .ge. 1) then
 
@@ -3071,17 +3071,17 @@ call MPI_AllReduce(MPI_IN_PLACE, lz, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 
 #else
-call Driver_abortFlash('[get_sink_ang_mom_array]: Not using bisect!')
+call Driver_abortFlash('[get_particle_ang_mom_array]: Not using bisect!')
 #endif
 #else
-call Driver_abortFlash('[get_sink_ang_mom_array]: Not using sinks!')
+call Driver_abortFlash('[get_particle_ang_mom_array]: Not using sinks!')
 #endif
 
 !print*, "lx =", lx, dr_globalMe
 !print*, "ly =", ly, dr_globalMe
 !print*, "lz =", lz, dr_globalMe
 
-get_sink_ang_mom_array=0
+get_particle_ang_mom_array=0
 END FUNCTION
 
 
