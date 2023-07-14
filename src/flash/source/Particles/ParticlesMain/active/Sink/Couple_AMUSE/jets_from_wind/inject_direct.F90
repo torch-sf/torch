@@ -386,9 +386,7 @@ if (snap_to_grid) then
     end if
     
     ! Use MPI_Bcast to send loc info to all processors
-    ! Need barrier to make sure every processor does this before proceeding
-    ! -SA 20230224
-    !call MPI_Barrier(gr_meshComm, ierr)
+    ! No need for additional MI_Barrier as Bcast command includes a barrier. -SA 20230714
     call MPI_Bcast(loc, 3, MPI_DOUBLE_PRECISION, procID, gr_meshComm, ierr)
         
 else
