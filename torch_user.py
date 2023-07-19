@@ -276,7 +276,20 @@ def user_parameters():
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'seba' #'puls' 
-    p['min_feedback_mass'] = 7.0 | units.MSun
+
+    p['min_feedback_mass'] = 7.0 | units.MSun #Minumum mass for producing stellar winds -SA 20230718
+    p['min_jet_mass'] = 1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
+    p['max_jet_mass'] = 7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
+    # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.
+    # However, if a stars mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
+    # of the 'jet_lifetime' set below) and then will produce winds.
+    # To produce winds by never produce jets, set 'min_jet_mass' to be greater than 'max_jet_mass'. - SA 20230718
+
+    # Set jet parameters - SA 20221108
+    p['jet_fraction'] = 0.33  # Set default to 0.0 if no jets
+    p['jet_lifetime'] = 1e5 | units.yr
+    p['jet_vel_frac'] = 1
+
 
     # <star particle creation>
 
@@ -286,11 +299,6 @@ def user_parameters():
     p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False  # agglomerate low-mass stars into particles with mass >= 1 Msun?
-
-    # Set jet parameters - SA 20221108
-    p['jet_fraction'] = 0.33  # Set default to 0.0 if no jets
-    p['jet_lifetime'] = 1e5 | units.yr
-    p['jet_vel_frac'] = 1 
 
     # <amuse file overwrite>
 
