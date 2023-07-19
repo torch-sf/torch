@@ -51,11 +51,13 @@ def user_initial_conditions(state, hydro):
 #    star.mass     = 1 | units.MSun
 #    star.position = [flashp['xmax'] - 1e10, 0, 0] | units.cm
 #    star.velocity = [1e5, 0, 0] | units.cm/units.s
+#    star.ang_mom  = [[0, 0, 1.0]] | units.cm**2.0 * units.g / units.s  #To set angular momentum of star -SA 20230718
 #
 #    star_tag = hydro.add_particles(star.x, star.y, star.z)
 #    hydro.set_particle_mass(star_tag, star.mass)
 #    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
 #    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+#    hydro.set_particle_ang_mom(star_tag, star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2])  #To set ang momentum of star - SA 20230718
 
     # ------------------------------------------------------------------------
     # SN with SE test: plop a star that goes SN within 5e11 seconds
