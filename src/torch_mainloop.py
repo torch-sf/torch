@@ -209,6 +209,8 @@ def evolve(state, hydro, grav, mult, se):
         # particles mis-sorted in the particles array. -JW
         hydro.particles_sort()
         add_particles_to_grav(state, hydro, grav, mult, se)
+        # Try to print state.stars for binaries here, CCC 19/07/2023
+        state.binaries = state.binaries_from_stars()
 
     if USER['evolve_async']:
         from amuse.rfi.async_request import AsyncRequestsPool

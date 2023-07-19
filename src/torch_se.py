@@ -83,7 +83,7 @@ def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccent
             current_time = age_max
         code.evolve_model(current_time)
           
-    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type, binary.semi_major_axis]
+    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type, binary.semi_major_axis, binary.eccentricity]
 
     code.stop()
     
@@ -160,7 +160,12 @@ def binary_evolution(time, dt, state, hydro, worker,
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
         tprint('Try binary evolution...')
-        _tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
+        # Test with data structure, CCC 19/07/2023
+        # For now, assume only one binary
+        binary = state.binaries[0]
+        print(binary)
+        _tmp = evolve_binary_test(dt, binary.child1.initial_mass, binary.child2.initial_mass, binary.initial_semi_major_axis, binary.initial_eccentricity, t_evol[i])
+        #_tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
 
         se_time    = _tmp[0]
         se_mass1   = _tmp[1]
@@ -174,7 +179,16 @@ def binary_evolution(time, dt, state, hydro, worker,
         se_type1   = _tmp[9]
         se_type2   = _tmp[10]
         se_sma     = _tmp[11]
+        se_ecc     = _tmp[12]
         tprint('New semi-major axis is', se_sma)
+        
+        # Update binary, CCC 19/07/2023
+        binary.child1.mass = se_mass1
+        binary.child2.mass = se_mass2
+        binary.semi_major_axis = se_sma
+        binary.eccentricity    = se_ecc
+        
+        print(binary)
         
         assert se_time - t_evol[i] < 1e3 | units.s
         del se_time  # not needed
