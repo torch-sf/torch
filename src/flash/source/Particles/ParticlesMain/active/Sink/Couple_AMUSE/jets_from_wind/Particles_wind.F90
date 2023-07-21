@@ -33,12 +33,16 @@ real, intent(in)       :: dt
 ! Injection info for winds.
 ! Global vars
 real*8, allocatable :: x(:), y(:), z(:), &
+               j_x(:), j_y(:), j_z(:), &
                dmdt(:), v_wind(:), c_time(:), bgdy(:)
+! Added ang momentum -SA 20230720
 
 integer    :: w_num
 ! Local vars
 real, allocatable      :: locx(:), locy(:), locz(:), locdmdt(:), locv_wind(:), &
 			  locc_time(:), locbgdy(:)
+
+real, allocatable      :: angmom_x(:), angmom_y(:), angmom_z(:) ! Added ang momentum -SA 20230720
 
 real                   :: mass, twind, bgdy_old
 			  
@@ -86,6 +90,7 @@ p_ind = 0
 call Particles_getGlobalNum(p_globalnum)
 
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
+allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
 
 w_numloc  = 0
@@ -93,6 +98,7 @@ w_num     = 0
 num_array = 0
 
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
+angmom_x = 0.0d0, angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 
 do p = p_begin, p_end
@@ -108,6 +114,9 @@ do p = p_begin, p_end
     locx(w_numloc)      = particles(POSX_PART_PROP, p)
     locy(w_numloc)      = particles(POSY_PART_PROP, p)
     locz(w_numloc)      = particles(POSZ_PART_PROP, p)
+    angmom_x(w_numloc)  = particles(X_ANG_PART_PROP, p)
+    angmom_y(w_numloc)  = particles(Y_ANG_PART_PROP, p)
+    angmom_z(w_numloc)  = particles(Z_ANG_PART_PROP, p) ! Added angular momentum -SA 20230718
     locdmdt(w_numloc)   = particles(DMDT_PART_PROP, p)
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
@@ -141,13 +150,17 @@ w_num = sum(num_array)
 
 if (allocated(x)) &
     deallocate(x, y, z)
+if (allocated(j_x)) &
+    deallocate(j_x, j_y, j_z) ! Added angular momentum -SA 20230718
 if (allocated(dmdt)) &
     deallocate(dmdt, v_wind, bgdy, c_time)
 
 allocate(x(w_num), y(w_num), z(w_num))
+allocate(j_x(w_num), j_y(w_num), j_z(w_num)) ! Added angular momentum -SA 20230718
 allocate(dmdt(w_num), v_wind(w_num), c_time(w_num), bgdy(w_num))
 
 x=0.0d0; y=0.0d0; z=0.0d0
+j_x=0.0d0; j_y=0.0d0; j_z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
 
 ! Set the displacement for the incoming data based on how many
@@ -173,6 +186,12 @@ call MPI_AllGatherv(locy, w_numloc, FLASH_REAL, y, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locz, w_numloc, FLASH_REAL, z, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
+call MPI_AllGatherv(angmom_x, w_numloc, FLASH_REAL, j_x, num_array, &
+           disp, FLASH_REAL, dr_globalComm, ierr)
+call MPI_AllGatherv(angmom_y, w_numloc, FLASH_REAL, j_y, num_array, &
+           disp, FLASH_REAL, dr_globalComm, ierr)
+call MPI_AllGatherv(angmom_z, w_numloc, FLASH_REAL, j_z, num_array, &
+           disp, FLASH_REAL, dr_globalComm, ierr)  ! Added angular momentum - SA 20230718
 call MPI_AllGatherv(locdmdt, w_numloc, FLASH_REAL, dmdt, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locv_wind, w_numloc, FLASH_REAL, v_wind, num_array, &
@@ -198,10 +217,11 @@ do p=1, w_num
 #ifdef debug2
   if (dr_globalMe .eq. 0) &
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
+    print*, "Calling inject direct with angular momentum vector: ", [j_x(p), j_y(p), j_z(p)], " -SA 202307"
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p))
+  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p)) !Added j_i -SA 20230718
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
   if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
@@ -219,9 +239,11 @@ end do
 deallocate(p_ind)
 
 deallocate(locx, locy, locz)
+deallocate(angmom_x, angmom_y, angmom_z) ! Add ang momentum -SA 20230720
 deallocate(locdmdt, locv_wind, locbgdy, locc_time)
 deallocate(dmdt, v_wind, c_time, bgdy)
 deallocate(x, y, z)
+deallocate(j_x, j_y, j_z)  ! Added ang momentum -SA 20230720 
 ! Let the Grid unit know we updated these variables to properly fill guard cells.
 
 call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VELY_VAR, VELZ_VAR, DENS_VAR /)

@@ -35,7 +35,8 @@
 
 
 
-subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+subroutine inject_direct(loc_in, angmom_in, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+! Add angular momentum as input param -SA 20230718
 
 !#define DEBUG
 #define DEBUG_ENERGY
@@ -74,6 +75,7 @@ implicit none
 integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
+real(dp), intent(in)    :: angmom_in(3)
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
 
@@ -96,6 +98,7 @@ real(dp) :: star_x, star_y, star_z, loc(3)
 real(dp) :: cell_top(3), cell_bot(3)
 real(dp) :: dVol
 real(dp) :: x,y,z, dx, dy, dz
+real(dp) :: j_x, j_y, j_z, ang_mom_mag !Add ang momentum -SA 20230720
 
 real(dp), save :: injectRadius, delta(3)
 real(dp) :: overlap_frac,  sumOverlap, oldDens, dDens, newDens, solidAngle
@@ -590,6 +593,16 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
 
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
+
+                    !!!  Test accessing new angular momentum property:
+                    j_x = angmom_in(1)
+                    j_y = angmom_in(2)
+                    j_z = angmom_in(3)
+                    print*, "Test accessing angular momentum: ", angmom_in, [j_x, j_y, j_z]
+
+                    ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
+                    print*, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
+
 
                     !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
                     !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
