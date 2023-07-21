@@ -530,3 +530,29 @@ perturb_std_dev  = 0.05
 # Use internal (and generally very limiting) timestep calculation
 # in inject_direct.F90?
 use_wind_compute_dt = .false.
+
+
+# ======================================================================================
+# Jets options
+#
+# Particles/ParticlesMain/active/SinkNoAdvance/Couple_AMUSE/jets_from_wind
+# ======================================================================================
+
+# These parameters are for running with jets. Added by SA 20230720
+# The jets module untilizes the winds code. When the mass and age of the star are such that
+# the code is set to produce a jet, the inject_direct.F90 script adds the angular and
+# radial dependence of the jet.
+
+# Currently each of the following parameters is also set in torch_user.py.  
+# MAKE SURE THEY MATCH!!
+
+minimum_jet_mass  = 1.988e33 #in grams - 1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
+maximum_jet_mass = 1.3923e3 #in grams - 7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
+# To ensure a single star only produces either jets OR winds, make sure 'min_wind_mass' and 'max_jet_mass' are equal.
+# However, if a star's mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
+# of the 'jet_lifetime' set below) and then will produce winds.
+# To produce winds but never produce jets, set 'min_jet_mass' to be greater than 'max_jet_mass'. - SA 20230718
+
+jet_mass_fraction = 0.33  # Set default to 0.0 if no jets
+jet_time = 3.154e12 #seconds = 1e5 | units.yr
+jet_vel_fraction = 1 
