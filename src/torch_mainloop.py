@@ -181,7 +181,7 @@ def evolve(state, hydro, grav, mult, se):
     if USER['with_petar']:
         min_num_stars = 2
     if USER['test_binary']:
-        min_num_stars = 3
+        min_num_stars = 10 #Change to 10 here, default is 3
         
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14

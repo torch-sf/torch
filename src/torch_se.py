@@ -41,10 +41,18 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 #CCC 05/05/2023, temporary
 # Remove worker as argument, use a fresh worker each time
-def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max):
+def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max, code):
     
-    code = SeBa()
-    code.initialize_code()
+    #code = SeBa()
+    #code.initialize_code()
+    
+    # Force SE code to stop and restart, CCC 20/07/2023
+    #code.stop()
+    #code = SeBa()
+    #code.initialize_code()
+    
+    print('Starting evolve binary...')
+    #code = worker
     
     # Create stars but do not add to grav
     _stars = Particles(2)
@@ -85,7 +93,10 @@ def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccent
           
     results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type, binary.semi_major_axis, binary.eccentricity]
 
-    code.stop()
+    #print('Stopping code...')
+    #code.stop()
+    #print('Code stopped')
+    print('End evolve binary')
     
     return results
 
@@ -146,27 +157,38 @@ def binary_evolution(time, dt, state, hydro, worker,
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
+    
+    # Try to initialize the worker here instead, CCC 20/07/2023
+    #code = SeBa()
+    #code.initialize_code()
 
-    for i, s in enumerate(state.stars):
+    for i, s in enumerate(state.binaries):
         
         # Do not do anything for the second star on its own
-        if i==1:
-            continue
+        #if i==1:
+        #    continue
 
         # Comment out for test binary with primary as BH
         #if went_supernova(s.stellar_type):
         #    continue
+        
+        # Try to initialize the worker here instead, CCC 20/07/2023
+        code = SeBa()
+        code.initialize_code()
 
         # SE code accepts initial mass, not the current mass
         # the "se_" prefix denotes quantities after +dt evolve
         tprint('Try binary evolution...')
         # Test with data structure, CCC 19/07/2023
-        # For now, assume only one binary
-        binary = state.binaries[0]
+        binary = state.binaries[i]
         print(binary)
-        _tmp = evolve_binary_test(dt, binary.child1.initial_mass, binary.child2.initial_mass, binary.initial_semi_major_axis, binary.initial_eccentricity, t_evol[i])
+        # Try adding worker as an argument
+        _tmp = evolve_binary_test(dt, binary.child1.initial_mass, binary.child2.initial_mass, binary.initial_semi_major_axis, binary.initial_eccentricity, t_evol[i], code)
         #_tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
 
+        # Try to stop the worker here instead, CCC 20/07/2023
+        code.stop()
+        
         se_time    = _tmp[0]
         se_mass1   = _tmp[1]
         se_mass2   = _tmp[2]
@@ -193,7 +215,7 @@ def binary_evolution(time, dt, state, hydro, worker,
         assert se_time - t_evol[i] < 1e3 | units.s
         del se_time  # not needed
 
-        if s.initial_mass >= min_feedback_mass:
+        if binary.child1.initial_mass >= min_feedback_mass:
 
             if with_lyc:
                 _tmp = compute_eion_nion_sigh(se_mass1, se_temp1, se_radius1)
@@ -215,39 +237,47 @@ def binary_evolution(time, dt, state, hydro, worker,
                 sigpe[1] = sigDust
             # Test winds, CCC 26/05/2023
             if with_winds:
-                _tmp = compute_dmdt_vterm(state.stars[0].mass, se_temp1, se_radius1, se_mass1, se_lum1, dt,
+                _tmp = compute_dmdt_vterm(binary.child1.mass, se_temp1, se_radius1, se_mass1, se_lum1, dt,
                                             massloss_method=massloss_method)
                 dm_dt[0] = _tmp[0]
                 vterm[0] = _tmp[1]
-                _tmp = compute_dmdt_vterm(state.stars[1].mass, se_temp2, se_radius2, se_mass2, se_lum2, dt,
+                _tmp = compute_dmdt_vterm(binary.child2.mass, se_temp2, se_radius2, se_mass2, se_lum2, dt,
                                             massloss_method=massloss_method)
                 dm_dt[1] = _tmp[0]
                 vterm[1] = _tmp[1]
 
-        new_mass[0] = se_mass1
-        new_mass[1] = se_mass2
+        # Update stars, CCC 20/07/2023
+        arg1 = np.where(state.stars.tag == binary.child1.tag)[0]
+        arg2 = np.where(state.stars.tag == binary.child2.tag)[0]
+        new_mass[arg1] = se_mass1
+        new_mass[arg2] = se_mass2
         tprint('New masses set to', new_mass[0], new_mass[1])
-        tprint('Masses from winds', state.stars[0].mass-dt*dm_dt[0], state.stars[1].mass-dt*dm_dt[1])
+        tprint('Masses from winds', binary.child1.mass-dt*dm_dt[0], binary.child2.mass-dt*dm_dt[1])
         # First order check for CE ejection, CCC 20/06/2023
-        if (new_mass[1]/(state.stars[1].mass-dt*dm_dt[1]) < 0.9) or (new_mass[0]/(state.stars[0].mass-dt*dm_dt[0]) < 0.9):
+        if (new_mass[1]/(binary.child2.mass-dt*dm_dt[1]) < 0.9) or (new_mass[0]/(binary.child1.mass-dt*dm_dt[0]) < 0.9):
             tprint('Ejection of common envelope!')
-            E_bind = 4*(units.constants.G * new_mass[0]/(2*se_sma)) * abs((state.stars[1].mass)-(new_mass[1]))
+            E_bind = 4*(units.constants.G * new_mass[0]/(2*se_sma)) * abs((binary.child2.mass)-(new_mass[1]))
             tprint('Inject', E_bind.in_(units.erg), 'on the grid')
-            _tmp = hydro.energy_injection(E_bind, 1.0, abs((state.stars[1].mass)-(new_mass[1])), s.x, s.y, s.z)
+            _tmp = hydro.energy_injection(E_bind, 1.0, abs((binary.child2.mass)-(new_mass[1])), s.x, s.y, s.z)
             
-        new_type[0] = se_type1
-        new_type[1] = se_type2
-        new_radius[0] = se_radius1
-        new_radius[1] = se_radius2
-        new_temp[0] = se_temp1
-        new_temp[1] = se_temp2
-        new_lum[0] = se_lum1
-        new_lum[1] = se_lum2
+        new_type[arg1] = se_type1
+        new_type[arg2] = se_type2
+        new_radius[arg1] = se_radius1
+        new_radius[arg2] = se_radius2
+        new_temp[arg1] = se_temp1
+        new_temp[arg2] = se_temp2
+        new_lum[arg1] = se_lum1
+        new_lum[arg2] = se_lum2
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
+    
+    # Try to stop the worker here instead, CCC 20/07/2023
+    #code.stop()
+    
+    # Update stars properties in bulk, CCC 20/07/2023
     state.stars.mass = new_mass
     state.stars.stellar_type = new_type
 

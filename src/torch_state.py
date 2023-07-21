@@ -331,7 +331,6 @@ class TorchState(object):
 
         def binding_energy(m1, m2, r, v2):
             E = m1 * m2 * v2 / (2 * (m1 + m2)) - ((units.constants.G * m1 * m2) / r)
-            print(m1, m2, r, v2, E)
             return E
 
         def semi_major(m1, m2, r, v2):
@@ -421,22 +420,20 @@ class TorchState(object):
         
         # Data structure
         binaries = Particles(len(tags_primaries))
-        binaries.child1 = Particles(len(tags_primaries))
-        binaries.child2 = Particles(len(tags_primaries))
         binaries.semi_major_axis = semi_major_axes
         binaries.eccentricity = eccentricities
         binaries.initial_semi_major_axis = semi_major_axes
         binaries.initial_eccentricity = eccentricities
-        for i in range(len(primaries)):
+        for i in range(len(binaries)):
+            binaries[i].child1, binaries[i].child2 = Particles(2)
             j = np.where(stars.tag == tags_primaries[i])[0]
-            binaries.child1[i].initial_mass = stars[j].initial_mass
-            binaries.child1[i].mass = stars[j].mass
-            binaries.child1[i].tag  = stars[j].tag
+            binaries[i].child1.initial_mass = stars[j].initial_mass
+            binaries[i].child1.mass = stars[j].mass
+            binaries[i].child1.tag  = stars[j].tag
             k = np.where(stars.tag == tags_companions[i])[0]
-            binaries.child2[i].initial_mass = stars[k].initial_mass
-            binaries.child2[i].mass = stars[k].mass
-            binaries.child2[i].tag  = stars[k].tag
-        print(binaries)
+            binaries[i].child2.initial_mass = stars[k].initial_mass
+            binaries[i].child2.mass = stars[k].mass
+            binaries[i].child2.tag  = stars[k].tag
 
         return binaries
 
