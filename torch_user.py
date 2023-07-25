@@ -15,9 +15,13 @@ from __future__ import division, print_function
 
 from amuse.datamodel import Particles
 from amuse.units import units
+from amuse.ext.orbital_elements import generate_binaries, new_binary_from_orbital_elements
 
 from torch_param import FlashPar
 from torch_mainloop import run_torch
+
+# Temporary, CCC 19/07/2023
+from amuse.io import write_set_to_file
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
@@ -38,11 +42,11 @@ def get_ntasks_from_run_script(name="run.sh"):
                 nodes =	int(''.join(char for char in w[1] if char.isdigit()))
                 nodes = int(os.getenv("SLURM_JOB_NUM_NODES"))
                 #print(nodes, 'nodes')
-    assert n is None
-    n = nodes*cores
-    assert n is not None
+    #assert n is None
+    #n = nodes*cores
+    #assert n is not None
     return int(os.getenv("SLURM_NTASKS"))
-    return n
+    #return n
 
 def user_initial_conditions(state, hydro):
     """
@@ -71,7 +75,7 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
 
     # ------------------------------------------------------------------------
-    # SN with SE test: plop a star that goes SN within 5e11 seconds
+#    # SN with SE test: plop a star that goes SN within 5e11 seconds
 
 #    star        = Particles(1)
 #    star.mass   = 3.09698e+34 | units.g
@@ -81,11 +85,11 @@ def user_initial_conditions(state, hydro):
 #    star.vx     = 0.0 | units.cm/units.s
 #    star.vy     = 0.0 | units.cm/units.s
 #    star.vz     = 0.0 | units.cm/units.s
-#
+
 #    oldmass = 5.10964e+34 | units.g  # about 25.5 MSun
 #    creation_time = hydro.get_time() - (2.3861e+14|units.s)  # 7.5611 Myr old
 #    # goes SN between 7.5611 and 7.5763 Myr (2.3861e14 to 2.3909e14 s)
-#
+
 #    tag = hydro.add_particles(star.x, star.y, star.z)
 #    hydro.set_particle_mass(tag, star.mass)
 #    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
@@ -93,23 +97,121 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
-#    # Multiples test: plop a binary system
+#    # SeBa test: close, massive binary
 
-#    star        = Particles(2)
-#    star.mass   = 1. | units.MSun
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
+    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
 
-#    # make bound binary                                                                                                                                                                                                                                                        
-#    star[0].x = -1.5e14 | units.cm  # 10 AU away
-#    star[1].vy = 1.0e5 | units.cm/units.s  # sqrt(GM/R) = 9.42e5 cm/s 
-#    
+    binary.initial_mass = binary.mass
+    #print(binary.initial_mass, binary.mass)
+    binary[0].mass = 72.9613855 | units.MSun
+    binary[1].mass = 36.2885208 | units.MSun
+    #binary[0].mass = 2.70798 | units.MSun
+    #binary[1].mass = 67.4538 | units.MSun
+    #print(binary.initial_mass, binary.mass)
+    
+    # Write a file of binaries, test
+    # CCC 19/07/2023
+    #write_set_to_file(binary, 'binaries0000.amuse', format='hdf5', append_to_file=False, overwrite_file=True)
+
+#    #Also set initial radius, CCC 28/04/2023
+#    binary[0].radius = 36.2885208442 | units.RSun
+#    binary[1].radius = 14.6288783968 | units.RSun
+    
+    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
+    #creation_time = hydro.get_time() - (1.84402e+14 | units.s) # 5.84735 Myr old, before common envelope
+    tag = hydro.add_particles(binary.x, binary.y, binary.z)
+    hydro.set_particle_mass(tag, binary.mass)
+    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
+    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
+    hydro.set_particle_creation_time(tag, creation_time)
+    
+    # ------------------------------------------------------------------------
+    # SeBa test: add two more times the same close massive binary, and the two stars as single
+
+    # 2nd system
+    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
+
+    binary.initial_mass = binary.mass
+    binary[0].mass = 72.9613855 | units.MSun
+    binary[1].mass = 36.2885208 | units.MSun
+    
+    # Adjust positions
+    binary.x = binary.x - (1 | units.pc)
+    binary.y = binary.y + (1 | units.pc)
+    
+    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
+    #creation_time = hydro.get_time()
+    tag = hydro.add_particles(binary.x, binary.y, binary.z)
+    hydro.set_particle_mass(tag, binary.mass)
+    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
+    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
+    hydro.set_particle_creation_time(tag, creation_time)
+    
+    # 3rd system
+    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
+
+    binary.initial_mass = binary.mass
+    binary[0].mass = 72.9613855 | units.MSun
+    binary[1].mass = 36.2885208 | units.MSun
+    
+    # Adjust positions
+    binary.x = binary.x + (1 | units.pc)
+    binary.y = binary.y - (1 | units.pc)
+    
+    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
+    #creation_time = hydro.get_time()
+    tag = hydro.add_particles(binary.x, binary.y, binary.z)
+    hydro.set_particle_mass(tag, binary.mass)
+    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
+    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
+    hydro.set_particle_creation_time(tag, creation_time)
+    
+    # Singles
+    #singles = Particles(2)
+    #singles[0].initial_mass = 80. | units.MSun
+    #singles[0].mass         = 72.9613855 | units.MSun
+    #singles[0].x            = -1 | units.pc
+    #singles[0].y            = -1 | units.pc
+    #singles[0].z            = 0 | units.pc
+    #singles[0].vx           = 0 | units.cm/units.s
+    #singles[0].vy           = 0 | units.cm/units.s
+    #singles[0].vz           = 0 | units.cm/units.s
+    #singles[1].initial_mass = 40. | units.MSun
+    #singles[1].mass         = 36.2885208 | units.MSun
+    #singles[1].x            = 1 | units.pc
+    #singles[1].y            = 1 | units.pc
+    #singles[1].z            = 0 | units.pc
+    #singles[1].vx           = 0 | units.cm/units.s
+    #singles[1].vy           = 0 | units.cm/units.s
+    #singles[1].vz           = 0 | units.cm/units.s
+    
+    #creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
+    #tag = hydro.add_particles(singles.x, singles.y, singles.z)
+    #hydro.set_particle_mass(tag, singles.mass)
+    #hydro.set_particle_velocity(tag, singles.vx, singles.vy, singles.vz)                                                                                                                 
+    #hydro.set_particle_oldmass(tag, singles.initial_mass) # for SE code
+    #hydro.set_particle_creation_time(tag, creation_time)
+    
+    
+    # ------------------------------------------------------------------------  
+#    # Multiples test: plop a binary system 
+
+#    star           = Particles(2)
+#    star[0].mass   = 50. | units.MSun
+#    star[1].mass   = 30. | units.MSun
+#    star.x         = 0.0 | units.cm
+#    star.y         = 0.0 | units.cm
+#    star.z         = 0.0 | units.cm
+#    star.vx        = 0.0 | units.cm/units.s
+#    star.vy        = 0.0 | units.cm/units.s
+#    star.vz        = 0.0 | units.cm/units.s
+
+    # make bound binary                                                                                                                                                                                                                                                        
+#    star[0].x = -1.496e14 | units.cm  # 10 AU away
+#    star[1].vy = 5.0e6 | units.cm/units.s  # sqrt(GM/R) = 6.66e6 cm/s 
+    
 #    creation_time = hydro.get_time()  # comes with AMUSE units
-#
+
 #    tag = hydro.add_particles(star.x, star.y, star.z)
 #    hydro.set_particle_mass(tag, star.mass)
 #    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
@@ -265,10 +367,10 @@ def user_parameters():
 
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
-    p['restart_with_user_ics'] = False  # meant for testing
+    p['restart_with_user_ics'] = True  # meant for testing
     p['restart_from_stall'] = False # did PeTar stall and exit? Sets r_out = r_bin for first Torch loop
-    p['test_binary'] = False # meant for testing
-    p['test_interacting_binary'] = False # meant for testing. TO DO: change to a true flag for binary interactions
+    p['test_binary'] = True # meant for testing
+    p['test_interacting_binary'] = True
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
@@ -302,10 +404,9 @@ def user_parameters():
     # <star particle creation>
 
     p['binaries'] = True
-    #Not used if binaries is false, can leave to default values                                                                
-    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
-    p['pdist'] = 'field' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
-    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.
+    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                                              
+    p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                                        
+    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                              
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100.0 | units.MSun
@@ -325,7 +426,7 @@ def user_parameters():
 
 
     p['num_grav_workers'] = 2 # must be power of 2 for PeTar 
-    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
+    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 4  # amuse + binary evolution (two systems)
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_petar']:
@@ -335,9 +436,6 @@ def user_parameters():
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
-        
-    if p['test_interacting_binary']:
-        p['num_hy_workers'] -= 1 # Free one worker for binary evolution
 
     if p['with_multiples']:
         p['num_hy_workers'] -= 2  # SmallN, Kepler
