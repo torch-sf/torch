@@ -278,7 +278,7 @@ def user_parameters():
     p['massloss_method'] = 'seba' #'puls' 
 
     p['min_feedback_mass'] = 7.0 | units.MSun #Minumum mass for calling stelar evolution? Check this. -SA 20230719
-    p['minimum_wind_mass'] = flashp['min_wind_mas'] | units.g #Read this in to make it easy to compare iwth min_feedback_mass
+    p['minimum_wind_mass'] = flashp['min_wind_mass'] | units.g #Read this in to make it easy to compare with min_feedback_mass
     p['min_jet_mass'] = flashp['minimum_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
     p['max_jet_mass'] = flashp['maximum_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
     # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.

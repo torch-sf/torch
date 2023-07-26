@@ -98,7 +98,7 @@ w_num     = 0
 num_array = 0
 
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
-angmom_x = 0.0d0, angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
+angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 
 do p = p_begin, p_end
