@@ -279,8 +279,8 @@ def user_parameters():
 
     p['min_feedback_mass'] = 7.0 | units.MSun #Minumum mass for calling stelar evolution? Check this. -SA 20230719
     p['minimum_wind_mass'] = flashp['min_wind_mass'] | units.g #Read this in to make it easy to compare with min_feedback_mass
-    p['min_jet_mass'] = flashp['minimum_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
-    p['max_jet_mass'] = flashp['maximum_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
+    p['minmum_jet_mass'] = flashp['min_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
+    p['maximum_jet_mass'] = flashp['max_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
     # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.
     # However, if a stars mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
     # of the 'jet_lifetime' set below) and then will produce winds.
