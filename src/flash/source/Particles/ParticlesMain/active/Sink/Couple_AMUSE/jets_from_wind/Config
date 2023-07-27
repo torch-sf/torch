@@ -39,6 +39,20 @@ PARAMETER mass_load         BOOLEAN TRUE
 PARAMETER add_therm_e       BOOLEAN FALSE
 
 
+# Jet Parameters - Added 20230726 -SA
+# minumum mass to inject a jet
+PARAMETER min_jet_mass      REAL    1.988e33 	# 1.0 solar masses
+# Maximum mass to inject a jet - should usually equal min_wind_mass
+PARAMETER max_jet_mass      REAL	1.3923e34   # 7 solar masses
+# Jet life time (after this time, we stop injecting the jet)
+PARAMETER jet_time 			REAL	3.154e12	# 1e5 yr
+# Fraction of keplerian velocity used for the jet 
+# This likely isn't needed here, but let's add it to the Config in case
+PARAMETER jet_vel_fraction  REAL    1.0
+# Mass injected by jet as a fraction of the final stellar mass
+# This likely isn't needed here, but let's add it to the Config in case
+PARAMETER jet_mass_fraction REAL    0.33
+
 # Target wind injection temperature.
 # Sets the mass loading of the wind to attempt to hit
 # the target temperature in the gas using the shock temperature
