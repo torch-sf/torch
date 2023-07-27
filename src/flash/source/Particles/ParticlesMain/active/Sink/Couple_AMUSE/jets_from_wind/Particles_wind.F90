@@ -52,6 +52,10 @@ integer                :: p_begin, p_end, p_num, p_globalnum, w_numloc
 ! Storage of the local indices that are actual wind stars.
 integer, allocatable   :: p_ind(:)
 
+! Handling jet versus wind option -SA 20230726
+logical :: jet_switch
+character(len=4), allocatable :: jet_wind(:)
+
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
                           disp(dr_globalNumProcs), ierr, i, p, &
@@ -71,6 +75,9 @@ logical, save          :: first_call = .true.
 
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+  call RuntimeParameters_get("min_jet_mass", min_jet_mass)
+  call RuntimeParameters_get("max_jet_mass", max_jet_mass)
+  call RuntimeParameters_get("jet_time", jet_time)
   first_call = .false.
 end if
 
@@ -92,6 +99,7 @@ call Particles_getGlobalNum(p_globalnum)
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
+allocate(jet_wind(p_globalnum)) ! Added 20230726 -SA
 
 w_numloc  = 0
 w_num     = 0
@@ -100,15 +108,34 @@ num_array = 0
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
+jet_wind = "none" ! Added 20230726 -SA
 
 do p = p_begin, p_end
 #ifdef debug
   print*, "Particle mass =", particles(MASS_PART_PROP, p)
   print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
-#endif
+#endif 
+
+  ! Test if jets should be on - added 20230726 -SA
+  if ( (particles(MASS_PART_PROP, p) .gt. min_jet_mass) .and. &
+       (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
+       ( (time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
+    ! if in the mass range and less than the age of the jet
+    jet_switch = .true.
+  
+  else 
+    ! This could be because there is no feedback or because we want spherical winds
+    jet_switch = .false.
+  
+  end if
+
+  ! Now test for wind condition:  - Added comment and jet_switch 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .gt. min_wind_mass) .and. &
+     (jet_switch .eq. .false. ) .and.  &
      (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
-     
+    
+    print,* "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
+
     w_numloc = w_numloc + 1
   
     locx(w_numloc)      = particles(POSX_PART_PROP, p)
@@ -121,7 +148,29 @@ do p = p_begin, p_end
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
+    jet_wind(w_numloc)  = "wind"  ! Added jet/wind switch -SA 20230726
     p_ind(w_numloc)     = p
+
+  ! Now check for jet condition: - Added 20230726 -SA
+  else if ( (jet_switch .eq. .true. ) .and. &
+            (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
+
+    print,* "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
+
+    w_numloc = w_numloc + 1 
+  
+    locx(w_numloc)      = particles(POSX_PART_PROP, p)
+    locy(w_numloc)      = particles(POSY_PART_PROP, p)
+    locz(w_numloc)      = particles(POSZ_PART_PROP, p)
+    angmom_x(w_numloc)  = particles(X_ANG_PART_PROP, p)
+    angmom_y(w_numloc)  = particles(Y_ANG_PART_PROP, p)
+    angmom_z(w_numloc)  = particles(Z_ANG_PART_PROP, p) ! Added angular momentum -SA 20230718
+    locdmdt(w_numloc)   = particles(DMDT_PART_PROP, p)
+    locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
+    locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
+    locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
+    jet_wind(w_numloc)  = "jet"  ! Added jet/wind switch -SA 20230726
+    p_ind(w_numloc)     = p 
 
   end if
 end do
@@ -154,14 +203,18 @@ if (allocated(j_x)) &
     deallocate(j_x, j_y, j_z) ! Added angular momentum -SA 20230718
 if (allocated(dmdt)) &
     deallocate(dmdt, v_wind, bgdy, c_time)
+if (allocated(jw_switch)) &
+    deallocate(jw_switch) ! Added 20230726 -SA
 
 allocate(x(w_num), y(w_num), z(w_num))
 allocate(j_x(w_num), j_y(w_num), j_z(w_num)) ! Added angular momentum -SA 20230718
 allocate(dmdt(w_num), v_wind(w_num), c_time(w_num), bgdy(w_num))
+allocate(jw_switch(w_num)) ! Added 20230726 -SA 
 
 x=0.0d0; y=0.0d0; z=0.0d0
 j_x=0.0d0; j_y=0.0d0; j_z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
+jw_switch = "none"
 
 ! Set the displacement for the incoming data based on how many
 ! particles are coming in from each processor. Note the displacement
@@ -200,7 +253,10 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
-		   
+call MPI_AllGatherv(jet_switch, w_numloc, FLASH_LOGICAL, jw_switch, num_array, &
+           disp, FLASH_CHAR, dr_globalComm, ierr)  ! Not sure this is a real variable type -SA 20230726
+
+
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
 #ifdef debug
@@ -217,11 +273,13 @@ do p=1, w_num
 #ifdef debug2
   if (dr_globalMe .eq. 0) &
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
-    print*, "Calling inject direct with angular momentum vector: ", [j_x(p), j_y(p), j_z(p)], " -SA 202307"
+    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch, " -SA 202307"
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p)) !Added j_i -SA 20230718
+  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p), jw_switch) 
+  !Added j_i -SA 20230718
+  !Added jw_switch -SA 20230726
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
   if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
@@ -244,6 +302,7 @@ deallocate(locdmdt, locv_wind, locbgdy, locc_time)
 deallocate(dmdt, v_wind, c_time, bgdy)
 deallocate(x, y, z)
 deallocate(j_x, j_y, j_z)  ! Added ang momentum -SA 20230720 
+deallocate(jet_wind, jw_switch) !Added -SA 20230726
 ! Let the Grid unit know we updated these variables to properly fill guard cells.
 
 call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VELY_VAR, VELZ_VAR, DENS_VAR /)
