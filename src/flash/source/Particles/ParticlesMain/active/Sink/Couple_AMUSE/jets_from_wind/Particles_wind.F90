@@ -44,7 +44,7 @@ real, allocatable      :: locx(:), locy(:), locz(:), locdmdt(:), locv_wind(:), &
 
 real, allocatable      :: angmom_x(:), angmom_y(:), angmom_z(:) ! Added ang momentum -SA 20230720
 
-real                   :: mass, twind, bgdy_old
+real                   :: mass, twind, bgdy_old, time
 			  
 ! For counting particles.
 integer                :: p_begin, p_end, p_num, p_globalnum, w_numloc
@@ -54,7 +54,8 @@ integer, allocatable   :: p_ind(:)
 
 ! Handling jet versus wind option -SA 20230726
 logical :: jet_switch
-character(len=4), allocatable :: jet_wind(:), jw_switch
+integer, allocatable :: jet_wind(:), jw_switch(:)
+integer :: jet_flag, wind_flag
 
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
@@ -80,6 +81,9 @@ if (first_call) then
   call RuntimeParameters_get("jet_time", jet_time)
   first_call = .false.
 end if
+
+! Access current time of the code (see also twind below):
+time = dr_simTime + dt  !SA 20230728
 
 min_wind_dt = 1d99
 
@@ -108,13 +112,21 @@ num_array = 0
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
-jet_wind = "none" ! Added 20230726 -SA
+jet_wind = 0 ! Added 20230726 -SA
 
 do p = p_begin, p_end
 #ifdef debug
   print*, "Particle mass =", particles(MASS_PART_PROP, p)
   print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
 #endif 
+
+  ! Now testing for jet and wind condition. SA 20230728 
+  ! When setting the jet vs wind flags (jet_wind and jw_switch) use the following:
+  ! If jets should be on, set to:
+  jet_flag = 1
+  ! If winds should be on, set to:
+  wind_flag = 2
+  ! Default to setting flags (jet_wind and jw_switch) to 0 if neither
 
   ! Test if jets should be on - added 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
@@ -131,10 +143,10 @@ do p = p_begin, p_end
 
   ! Now test for wind condition:  - Added comment and jet_switch 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_wind_mass) .and. & !changed .gt. to .ge. -SA 20230728
-     (jet_switch .eq. .false. ) .and.  &
+     (jet_switch .eqv. .false. ) .and.  &
      (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
     
-    print,* "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
+    print*, "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
 
     w_numloc = w_numloc + 1
   
@@ -148,14 +160,14 @@ do p = p_begin, p_end
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
-    jet_wind(w_numloc)  = "wind"  ! Added jet/wind switch -SA 20230726
+    jet_wind(w_numloc)  = wind_flag  ! Added jet/wind switch -SA 20230726
     p_ind(w_numloc)     = p
 
   ! Now check for jet condition: - Added 20230726 -SA
-  else if ( (jet_switch .eq. .true. ) .and. &
+  else if ( (jet_switch .eqv. .true. ) .and. &
             (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
 
-    print,* "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
+    print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
 
     w_numloc = w_numloc + 1 
   
@@ -169,7 +181,7 @@ do p = p_begin, p_end
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
-    jet_wind(w_numloc)  = "jet"  ! Added jet/wind switch -SA 20230726
+    jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
     p_ind(w_numloc)     = p 
 
   end if
@@ -214,7 +226,7 @@ allocate(jw_switch(w_num)) ! Added 20230726 -SA
 x=0.0d0; y=0.0d0; z=0.0d0
 j_x=0.0d0; j_y=0.0d0; j_z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
-jw_switch = "none"
+jw_switch = 0
 
 ! Set the displacement for the incoming data based on how many
 ! particles are coming in from each processor. Note the displacement
@@ -253,8 +265,8 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
-call MPI_AllGatherv(jet_wind, w_numloc, FLASH_STRING, jw_switch, num_array, &
-           disp, FLASH_STRING, dr_globalComm, ierr)  ! Not sure this is a real variable type -SA 20230726
+call MPI_AllGatherv(jet_wind, w_numloc, MPI_INTEGER, jw_switch, num_array, &
+           disp, MPI_INTEGER, dr_globalComm, ierr)  ! Fixed var type - SA 20230728
 
 
 ! Now all procs have an array of each value in the same order, so we can

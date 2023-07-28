@@ -596,7 +596,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad  = sqrt(rad2)
 
                     if (jet_wind .eq. "jet") then
-                        print,* "inject_direct.F90: injecting jet"
+                        print*, "inject_direct.F90: injecting jet"
 
                         !!!  Test accessing new angular momentum property:
                         j_x = angmom_in(1)
@@ -675,13 +675,13 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     else if (jet_wind .eq. "wind") then  ! -SA 20230726
                         print*, "inject_direct.F90: injecting wind"
                         ang_dependence = 1.0
-                        rad_depandence = 1.0 
+                        rad_dependence = 1.0 
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
 
                     else ! -SA 20230726
                         print*, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
                         ang_dependence = 1.0
-                        rad_depandence = 1.0
+                        rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
                     
                     endif  !end of jets vs winds determination
