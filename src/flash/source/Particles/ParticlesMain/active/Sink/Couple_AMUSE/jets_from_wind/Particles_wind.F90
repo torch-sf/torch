@@ -54,7 +54,7 @@ integer, allocatable   :: p_ind(:)
 
 ! Handling jet versus wind option -SA 20230726
 logical :: jet_switch
-character(len=4), allocatable :: jet_wind(:)
+character(len=4), allocatable :: jet_wind(:), jw_switch
 
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
@@ -117,7 +117,7 @@ do p = p_begin, p_end
 #endif 
 
   ! Test if jets should be on - added 20230726 -SA
-  if ( (particles(MASS_PART_PROP, p) .gt. min_jet_mass) .and. &
+  if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
        (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
        ( (time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
     ! if in the mass range and less than the age of the jet
@@ -130,7 +130,7 @@ do p = p_begin, p_end
   end if
 
   ! Now test for wind condition:  - Added comment and jet_switch 20230726 -SA
-  if ( (particles(MASS_PART_PROP, p) .gt. min_wind_mass) .and. &
+  if ( (particles(MASS_PART_PROP, p) .ge. min_wind_mass) .and. & !changed .gt. to .ge. -SA 20230728
      (jet_switch .eq. .false. ) .and.  &
      (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
     
@@ -253,8 +253,8 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
-call MPI_AllGatherv(jet_switch, w_numloc, FLASH_LOGICAL, jw_switch, num_array, &
-           disp, FLASH_CHAR, dr_globalComm, ierr)  ! Not sure this is a real variable type -SA 20230726
+call MPI_AllGatherv(jet_wind, w_numloc, FLASH_STRING, jw_switch, num_array, &
+           disp, FLASH_STRING, dr_globalComm, ierr)  ! Not sure this is a real variable type -SA 20230726
 
 
 ! Now all procs have an array of each value in the same order, so we can
