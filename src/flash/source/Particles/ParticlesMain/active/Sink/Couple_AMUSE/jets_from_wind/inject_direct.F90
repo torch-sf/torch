@@ -623,12 +623,18 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ! dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
                             ! (cos(theta_y)*cos(theta_x))*dz
 
-                        rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
-                        rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
+                        ! rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
+                        ! rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
 
-                        theta = acos(dz_jet/rad_jet)
-                        phi = atan(dy_jet/dx_jet)
+                        ! theta = acos(dz_jet/rad_jet)
+                        ! phi = atan(dy_jet/dx_jet)
 
+                        ! Switch to just using the angular momentum vector to set theta and phi - SA 20230728
+                        ! NEED TO DOUBLE CHECK THIS CALCULATION
+                        theta = acos(j_z / rad)
+                        phi = atan2(j_y , j_x ) 
+                        rad_jet = rad !placeholder - need to update following code to use rad instead of rad_jet
+                        
                         ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                         !!! This is just to test the overall set up.  We'll need to change this later to get the
                         !!! Cunningham model set up. -SA 1/23/2022
@@ -677,6 +683,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ang_dependence = 1.0
                         rad_depandence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
+                    
+                    endif  !end of jets vs winds determination
 
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
