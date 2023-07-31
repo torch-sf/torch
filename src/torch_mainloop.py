@@ -252,7 +252,9 @@ def evolve(state, hydro, grav, mult, se):
                     jet_lifetime      = USER['jet_lifetime'],
                     jet_vel_frac      = USER['jet_vel_frac'],
                     massloss_method   = USER['massloss_method'],
-                    min_feedback_mass = USER['min_feedback_mass']
+                    min_feedback_mass = USER['min_feedback_mass'],
+                    minimum_jet_mass  = USER['minimum_jet_mass'],
+                    maximum_jet_mass  = USER['maximum_jet_mass'] # Add jet masses -SA 20230728
                 )
                 tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
@@ -349,7 +351,9 @@ def evolve(state, hydro, grav, mult, se):
             sample_imf_mass=USER['sample_imf_mass'],
             sample_imf_bins=USER['sample_imf_bins'],
             sum_small=USER['sum_small'],
-            jet_fraction=USER['jet_fraction']
+            jet_fraction=USER['jet_fraction'],
+            minimum_jet_mass=USER['minimum_jet_mass'],
+            maximum_jet_mass=USER['maximum_jet_mass']
         )
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
