@@ -11,7 +11,8 @@ from scipy.integrate import quad
 
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False, jet_fraction=0.0):  #Add jet_fraction parameter -SA 20220819
+                              max_samp_mass=150.0, sum_small=False, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
+                              minumum_jet_mass=None, maximum_jet_mass=None): #Added jet mass range -SA 20230728
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
@@ -40,7 +41,21 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
     np.random.shuffle(masses)
     
     # Define starjet_masses value - SA 20220819
-    starjet_masses = (1.0 + jet_fraction) * masses
+    # Updated 20230728 -SA
+    # If the stellar mass is outside of the jet mass range, then the jet mass is zero
+    # and the starjet_mass should be equal to the mass:
+    starjet_masses = masses 
+    # initialize starjet list with masses matching the stellar mass list
+
+    # Now set value for each entry of starjet_masses
+    for i, star in enumerate(masses):
+        if (star >= minumum_jet_mass) and (star < maximum_jet_mass):
+            print("Forming a star with a jet and final mass:", star)
+            starjet_masses[i] = (1.0 + jet_fraction) * masses
+        else:
+            print("Forming a star with no jet and final mass:", star)
+            #starjet_masses value is already correct
+
     print("TEST: this is the star mass: ", masses)
     print("And this is the total mass and of the star and jet: ", starjet_masses)
 
