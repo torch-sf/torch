@@ -39,7 +39,8 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
-    massloss_method=None, min_feedback_mass=None):
+    massloss_method=None, min_feedback_mass=None,
+    minimum_jet_mass=None, maximum_jet_mass=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -119,7 +120,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
                     _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol[i], s.initial_mass,
-                                              jet_fraction, jet_lifetime, jet_vel_frac,
+                                              jet_fraction, jet_lifetime, jet_vel_frac, minimum_jet_mass, maximum_jet_mass,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
@@ -159,6 +160,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
 def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, 
                         init_mass, jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
+                        minimum_jet_mass=None, maximum_jet_mass=None,
                         massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
@@ -205,22 +207,20 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
 
     ##  Now set some constants (eventually these should all be user defined parameters or defined at the start of the funcion)
     #eject_fraction = 3  # No longer using this.  Use the user defined jet_fraction instead. - SA 20221108
-    max_jet_mass = 9.0 | units.MSun
-    #jet_lifetime = 1e5 | units.yr  # inject jets over 100 kyr
-    #jet_vel_frac = 1  #This needs to be a user defined parameter.  This correpsonds to f_v in Cunningham+2011
+    #max_jet_mass = 9.0 | units.MSun
+    print("Jet mass range: ", minimum_jet_mass, maximum_jet_mass)
 
     ##  Now to calculate the keplerian velocity to set the 
     v_kepler_cgs = np.sqrt( G_cgs * se_mass.value_in(units.g) / (se_radius.value_in(units.cm))) | (units.cm/units.s)
     v_kepler = v_kepler_cgs.as_quantity_in(units.km/units.s)
     print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
 
-    #print("jet lifetime: ", jet_lifetime, "t_evol: ", t_evol.value_in(units.yr), " yr")
-    #print("Check se_mass shape: ", se_mass.value_in(units.MSun))
-    #print("Check max_jet_mass: ", max_jet_mass.value_in(units.MSun))
     print("Check t_evol: ", t_evol.value_in(units.yr))
-    #print("Check jet_lifetime: ", jet_lifetime.value_in(units.yr))
+    print("Check jet_lifetime: ", jet_lifetime.value_in(units.yr))
     
-    if ((se_mass.value_in(units.MSun) < max_jet_mass.value_in(units.MSun)) and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
+    if ((se_mass.value_in(units.MSun) < maximum_jet_mass.value_in(units.MSun)) 
+        and (se_mass.value_in(units.MSun) >= minimum_jet_mass.value_in(units.MSun)) 
+        and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
         print("We are injecting jets.")
         dm_tot = init_mass * jet_fraction #/ eject_fraction
         print("total mass lost to outflows: ", dm_tot)
