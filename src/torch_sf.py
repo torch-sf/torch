@@ -211,7 +211,8 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, sum_small=False,
-                sample_imf_bins=10, jet_fraction=0.0):  #Add default value of jet_fraction -SA 20220819
+                sample_imf_bins=10, jet_fraction=0.0,  #Add default value of jet_fraction -SA 20220819
+                minimum_jet_mass=None, maximum_jet_mass=None): #Add jet mass range -SA 20230728
     """Check hydro for new sinks, queue stars for spawning"""
 
     hydro.set_particle_pointers('sink')
@@ -238,7 +239,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             num_bins=sample_imf_bins,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
-                            sum_small=sum_small, jet_fraction=jet_fraction  # Added jet_fraction -SA 20220819
+                            sum_small=sum_small, jet_fraction=jet_fraction,  # Added jet_fraction -SA 20220819
+                            minumum_jet_mass=None, maximum_jet_mass=None  #Added jet mass range -SA 20230728
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')
