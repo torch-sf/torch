@@ -240,7 +240,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
                             sum_small=sum_small, jet_fraction=jet_fraction,  # Added jet_fraction -SA 20220819
-                            minumum_jet_mass=None, maximum_jet_mass=None  #Added jet mass range -SA 20230728
+                            minumum_jet_mass=minimum_jet_mass, 
+                            maximum_jet_mass=maximum_jet_mass  #Added jet mass range -SA 20230728
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')
