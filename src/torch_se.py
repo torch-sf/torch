@@ -124,9 +124,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
+                    reduce_mass = _tmp[2] #Added 20230802 -SA
 
         # Evolutionary things besides winds could have reduced the stars mass.
-        if dm_dt[i]*dt > 0.0|units.MSun:
+        if dm_dt[i]*dt > 0.0|units.MSun and reduce_mass == True:  #Added reduce_mass 20230801 -SA
             new_mass[i] = min(se_mass, s.mass - dm_dt[i]*dt)
         else:
             new_mass[i] = se_mass
@@ -166,6 +167,10 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
 	init_mass  = s.initial_mass
     """
+    # Default assumption is that star mass should reduce when feedback is injected.  May not be the case for jets.
+    # Added 202030802 -SA
+    reduce_star_mass = True
+
     if massloss_method == 'seba':
 
         dm_dt = (prev_mass - se_mass)/dt
@@ -221,7 +226,8 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     if ((se_mass.value_in(units.MSun) < maximum_jet_mass.value_in(units.MSun)) 
         and (se_mass.value_in(units.MSun) >= minimum_jet_mass.value_in(units.MSun)) 
         and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
-        print("We are injecting jets.")
+        print("We are injecting jets - and not reducing the mass of the star.")
+        reduce_star_mass = False  # added -SA 20230801
         dm_tot = init_mass * jet_fraction #/ eject_fraction
         print("total mass lost to outflows: ", dm_tot)
         dm = dm_tot *(dt/jet_lifetime)
@@ -232,7 +238,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
         print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
     print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
 
-    return dm_dt, vterm
+    return dm_dt, vterm, reduce_star_mass # Add reduce_star_mass -SA 20230801
 
 
 def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
