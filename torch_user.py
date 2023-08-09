@@ -279,19 +279,36 @@ def user_parameters():
 
     p['min_feedback_mass'] = 7.0 | units.MSun #Minumum mass for calling stelar evolution? Check this. -SA 20230719
     p['minimum_wind_mass'] = flashp['min_wind_mass'] | units.g #Read this in to make it easy to compare with min_feedback_mass
-    p['minimum_jet_mass'] = flashp['min_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
-    p['maximum_jet_mass'] = flashp['max_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
+    
+    
+    # <set Jets parameters >  - SA 20230808
+    # If jets params are in flash.par, we use those values. If not, we assume jets are off and set defaults accordingly.
+
+    if 'min_jet_mass' in flashp:
+        p['minimum_jet_mass'] = flashp['min_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
+    else: 
+        p['minimum_jet_mass'] = 100 | units.Msun   #set defaults to no jets
+    if 'max_jet_mass' in flashp:
+        p['maximum_jet_mass'] = flashp['max_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
+    else:
+        p['maximum_jet_mass'] = 0.01 | units.Msun #set defaults to no jets (without using 0 in case that causes issues)
     # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.
     # However, if a stars mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
     # of the 'jet_lifetime' set below) and then will produce winds.
     # To produce winds but never produce jets, set 'min_jet_mass' to be greater than 'max_jet_mass'. - SA 20230718
-    # Modify to get jet thresholds and parameters from the flash.par.  Goal to have all jets params set in flash.par.  -SA 20230721
 
-    # Set jet parameters - SA 20221108
-    p['jet_fraction'] = flashp['jet_mass_fraction']  #0.33  # Set default to 0.0 if no jets
-    p['jet_lifetime'] = flashp['jet_time'] | units.s  #1e5 | units.yr
-    p['jet_vel_frac'] = flashp['jet_vel_fraction'] #1
-
+    if 'jet_mass_fraction' in flashp:
+        p['jet_fraction'] = flashp['jet_mass_fraction']  #0.33  # Set default to 0.0 if no jets
+    else:
+        p['jet_fraction'] = 0.0  #set default to no jets
+    if 'jet_time' in flashp:
+        p['jet_lifetime'] = flashp['jet_time'] | units.s  #1e5 | units.yr
+    else:
+        p['jet_lifetime'] = 0 | units.yr  #set default to no jets
+    if 'jet_vel_fraction' in flashp:
+        p['jet_vel_frac'] = flashp['jet_vel_fraction'] #1
+    else:
+         p['jet_vel_frac'] = 1 
 
     # <star particle creation>
 
