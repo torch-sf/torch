@@ -55,7 +55,8 @@ integer, allocatable   :: p_ind(:)
 ! Handling jet versus wind option -SA 20230726
 logical :: jet_switch
 integer, allocatable :: jet_wind(:), jw_switch(:)
-integer :: jet_flag, wind_flag
+integer, parameter :: jet_flag = 1 ! update -SA 20230802
+integer, parameter :: wind_flag = 2
 
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
@@ -120,13 +121,10 @@ do p = p_begin, p_end
   print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
 #endif 
 
-  ! Now testing for jet and wind condition. SA 20230728 
-  ! When setting the jet vs wind flags (jet_wind and jw_switch) use the following:
-  ! If jets should be on, set to:
-  jet_flag = 1
-  ! If winds should be on, set to:
-  wind_flag = 2
-  ! Default to setting flags (jet_wind and jw_switch) to 0 if neither
+  ! Now testing for jet and wind conditions. SA 20230728 
+  ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
+  ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
+  ! Default to setting flags to 0 if neither
 
   ! Test if jets should be on - added 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
@@ -147,27 +145,18 @@ do p = p_begin, p_end
      (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
     
     print*, "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
-
-    w_numloc = w_numloc + 1
-  
-    locx(w_numloc)      = particles(POSX_PART_PROP, p)
-    locy(w_numloc)      = particles(POSY_PART_PROP, p)
-    locz(w_numloc)      = particles(POSZ_PART_PROP, p)
-    angmom_x(w_numloc)  = particles(X_ANG_PART_PROP, p)
-    angmom_y(w_numloc)  = particles(Y_ANG_PART_PROP, p)
-    angmom_z(w_numloc)  = particles(Z_ANG_PART_PROP, p) ! Added angular momentum -SA 20230718
-    locdmdt(w_numloc)   = particles(DMDT_PART_PROP, p)
-    locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
-    locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
-    locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
     jet_wind(w_numloc)  = wind_flag  ! Added jet/wind switch -SA 20230726
-    p_ind(w_numloc)     = p
 
   ! Now check for jet condition: - Added 20230726 -SA
   else if ( (jet_switch .eqv. .true. ) .and. &
             (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
 
     print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
+    jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
+
+  end if
+
+  if jet_wind(w_numloc) .gt. 0 then
 
     w_numloc = w_numloc + 1 
   
@@ -181,7 +170,6 @@ do p = p_begin, p_end
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
-    jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
     p_ind(w_numloc)     = p 
 
   end if
@@ -268,6 +256,7 @@ call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 call MPI_AllGatherv(jet_wind, w_numloc, MPI_INTEGER, jw_switch, num_array, &
            disp, MPI_INTEGER, dr_globalComm, ierr)  ! Fixed var type - SA 20230728
 
+!!!!! TODO: Consider combining all of these into a single MPI_AllGatherv with a large 2D array containing all properties
 
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
@@ -283,15 +272,16 @@ do p=1, w_num
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
 #ifdef debug2
-  if (dr_globalMe .eq. 0) &
+  if (dr_globalMe .eq. 0) then
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
-    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch, " -SA 202307"
+    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p), " -SA 202307"
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
+  endif
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p), jw_switch) 
+  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), mass, twind, dt, bgdy(p)) 
   !Added j_i -SA 20230718
-  !Added jw_switch -SA 20230726
+  !Added jw_switch -SA 20230726  Fix order 20230802 SA
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
   if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
