@@ -12,7 +12,7 @@ from scipy.integrate import quad
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
                               max_samp_mass=150.0, sum_small=False, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
-                              minumum_jet_mass=None, maximum_jet_mass=None): #Added jet mass range -SA 20230728
+                              minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Added jet mass range -SA 20230728
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 

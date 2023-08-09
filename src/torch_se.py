@@ -40,7 +40,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
     massloss_method=None, min_feedback_mass=None,
-    minimum_jet_mass=None, maximum_jet_mass=None):
+    minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -161,7 +161,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
 def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol, 
                         init_mass, jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
-                        minimum_jet_mass=None, maximum_jet_mass=None,
+                        minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun,
                         massloss_method=None):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass

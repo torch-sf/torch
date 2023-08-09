@@ -212,7 +212,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, sum_small=False,
                 sample_imf_bins=10, jet_fraction=0.0,  #Add default value of jet_fraction -SA 20220819
-                minimum_jet_mass=None, maximum_jet_mass=None): #Add jet mass range -SA 20230728
+                minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Add jet mass range -SA 20230728
     """Check hydro for new sinks, queue stars for spawning"""
 
     hydro.set_particle_pointers('sink')
