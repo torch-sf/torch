@@ -76,7 +76,7 @@ integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
 real(dp), intent(in)    :: angmom_in(3)
-character(len = 4)      :: jet_wind !Added -SA 20230726
+integer, intent(in)     :: jet_wind !Added -SA 20230726
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
 
@@ -172,6 +172,8 @@ real(dp) :: theta, ang_dependence, phi
 real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
+integer, parameter :: jet_flag = 1 ! update -SA 20230808
+integer, parameter :: wind_flag = 2 
 
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
 integer :: procID, myProc
@@ -595,17 +597,19 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
-                    if (jet_wind .eq. "jet") then
-                        print*, "inject_direct.F90: injecting jet"
+                    print *, "inject_direct.F90: now testing for jets vs winds"
+
+                    if (jet_wind .eq. jet_flag) then
+                        print *, "inject_direct.F90: injecting jet"
 
                         !!!  Test accessing new angular momentum property:
                         j_x = angmom_in(1)
                         j_y = angmom_in(2)
                         j_z = angmom_in(3)
-                        print*, "Test accessing angular momentum: ", angmom_in, [j_x, j_y, j_z]
+                        print *, "Test accessing angular momentum: ", [j_x, j_y, j_z]
 
                         ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
-                        print*, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
+                        print *, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
 
                         !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
                         !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
@@ -630,12 +634,12 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ! phi = atan(dy_jet/dx_jet)
 
                         ! Switch to just using the angular momentum vector to set theta and phi - SA 20230728
-                        ! NEED TO DOUBLE CHECK THIS CALCULATION
+                        ! See Appendix F of Marion & Thornton (e.g., Fifth Edition)
                         theta = acos(j_z / rad)
                         phi = atan2(j_y , j_x ) 
                         rad_jet = rad !placeholder - need to update following code to use rad instead of rad_jet
                         
-                        ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
+                        !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                         !!! This is just to test the overall set up.  We'll need to change this later to get the
                         !!! Cunningham model set up. -SA 1/23/2022
 
@@ -645,7 +649,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         norm_factor = 1.0
 
                         ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
-                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE! Use atan2?
 
                         theta_zero = 0.01
                     
@@ -672,14 +676,14 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !print*, "But Cunningham ang dependence is: ", ang_dependence
                         !print*, "Also, the radial dependence is:", rad_dependence
 
-                    else if (jet_wind .eq. "wind") then  ! -SA 20230726
-                        print*, "inject_direct.F90: injecting wind"
+                    else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
+                        print *, "inject_direct.F90: injecting wind"
                         ang_dependence = 1.0
                         rad_dependence = 1.0 
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
 
                     else ! -SA 20230726
-                        print*, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
+                        print *, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
                         ang_dependence = 1.0
                         rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
