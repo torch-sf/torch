@@ -294,6 +294,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
         # Add quick print statement to double check sink accretion method for jets -SA 20221012
         tprint("Sink mass before forming stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))  
+        tprint("Sink angular momentum before forming stars for sink tag {}".format(sink_tag), "ang momentum is {}".format(sink_angMom))
 
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
@@ -340,6 +341,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
             sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) 
             sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            tprint("Sink ang momentum x component before updating: ", sink_angMom_x)
             hydro.set_particle_ang_mom(sink_tag, sink_angMom_x, sink_angMom_y, sink_angMom_z, 1 ) #Assign new sink ang mom
 
 
@@ -357,12 +359,14 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             ## Add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
             size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation, currently chosen arbitrarily
             star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = (nnew,3))
-            star_angMom = (sink_angMom * star_angMom_vary)
+            star_angMom = (sink_angMom * star_angMom_vary) #3d array of momentum vector for each star - does it have units?
+            tprint("Star ang momentum after vary, before norm: ", star_angMom)
             ## We only need the unit vector of the sink's ang_mom since we want to set the direction of the star's ang. mom. without
             ## handling the full ang_mom conservation. -SA 20230405
             star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
-            ## Now set the star angular momentum
+            ## Now set the star angular momentum - probably need to remove units from the following
             star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i].value_in(units.cm**2.0 * units.g / units.s)) for i in range(nnew)]
+            tprint("Star ang momentum after norm, with units? : ", star.ang_mom)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
