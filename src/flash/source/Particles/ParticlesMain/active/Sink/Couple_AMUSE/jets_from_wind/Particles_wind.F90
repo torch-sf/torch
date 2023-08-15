@@ -100,7 +100,9 @@ allocate(p_ind(pt_numLocal))
 p_ind = 0
 
 call Particles_getGlobalNum(p_globalnum)
-
+! Why are we getting the global number of particles here????
+! The do loop that assigns values to these arrays uses the number on the processor....? -SA
+print*, "Global number of particles: ", p_globalnum
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
@@ -114,18 +116,22 @@ locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 jet_wind = 0 ! Added 20230726 -SA
+print*, "Before do loop - check arrays:", locx, angmom_x, jet_wind
+print*, "Particles on this proces: ", p_num, "Proces: ", dr_globalMe
+call flush()
 
 do p = p_begin, p_end
 #ifdef debug
   print*, "Particle mass =", particles(MASS_PART_PROP, p)
   print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
 #endif 
+  w_numloc = w_numloc + 1  !Moved to start of loop -SA 20230811
 
   ! Now testing for jet and wind conditions. SA 20230728 
   ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
   ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
   ! Default to setting flags to 0 if neither
-
+  print*, "Particles_wind.F90: Now testing for jets... (w_numloc)", w_numloc
   ! Test if jets should be on - added 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
        (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
@@ -153,12 +159,19 @@ do p = p_begin, p_end
 
     print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
     jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
-
+  
+  else
+    print*, "Particles_wind.F90: Neither jets nor winds turned on..."
+  
   end if
+  
+  print*, "Particles_wind.F90: check jet_wind value: ", jet_wind(w_numloc), jet_flag, wind_flag
+  print*, "Particles_wind.F90: check particle mass: ", particles(MASS_PART_PROP, p)
+  call flush()
 
-  if jet_wind(w_numloc) .gt. 0 then
+  if (jet_wind(w_numloc) .gt. 0) then
 
-    w_numloc = w_numloc + 1 
+   ! w_numloc = w_numloc + 1 
   
     locx(w_numloc)      = particles(POSX_PART_PROP, p)
     locy(w_numloc)      = particles(POSY_PART_PROP, p)
@@ -174,6 +187,11 @@ do p = p_begin, p_end
 
   end if
 end do
+
+print*, "Particles_wind.F90: test angmom arrays x: ", angmom_x
+print*, "Particles_wind.F90: test angmom arrays y: ", angmom_y
+print*, "Particles_wind.F90: test angmom arrays z: ", angmom_z
+print*, "Particles_wind.F90: test jet wind switch: ", jet_wind
 
 ! Now use MPI to vector gather all the information for how to inject
 ! the winds on each processor.
@@ -265,6 +283,7 @@ print*, "Done gathering.", dr_globalMe
 #endif
 
 print*, "Starting loop with inject_direct call (w_num): ", w_num , " -SA 202212"
+print*, "Before inject_direct - ang_mom:", [j_x, j_y, j_z], [angmom_x, angmom_y, angmom_z]
 
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
@@ -274,7 +293,7 @@ do p=1, w_num
 #ifdef debug2
   if (dr_globalMe .eq. 0) then
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
-    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p), " -SA 202307"
+    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p) !-SA 202307
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
   endif
 #endif
@@ -295,6 +314,12 @@ do p=1, w_num
   end if
 
 end do
+
+print*, "Particles_wind.F90: check deallocations: ", jet_wind, jw_switch
+
+! Add a flush call before deallocation so we can check what's going on
+print*, "Particles_wind.F90: Implementing flush call now."
+call flush()
 
 deallocate(p_ind)
 
