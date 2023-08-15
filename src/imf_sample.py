@@ -8,7 +8,7 @@ from __future__ import division, print_function
 
 import numpy as np
 from scipy.integrate import quad
-
+from amuse.units import units #Added 20230808 SA
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
                               max_samp_mass=150.0, sum_small=False, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
