@@ -287,11 +287,11 @@ def user_parameters():
     if 'min_jet_mass' in flashp:
         p['minimum_jet_mass'] = flashp['min_jet_mass'] | units.g #1.0 | units.MSun  #Minimum mass for producing protostellar jets -SA 20230718
     else: 
-        p['minimum_jet_mass'] = 100 | units.Msun   #set defaults to no jets
+        p['minimum_jet_mass'] = 100 | units.MSun   #set defaults to no jets
     if 'max_jet_mass' in flashp:
         p['maximum_jet_mass'] = flashp['max_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
     else:
-        p['maximum_jet_mass'] = 0.01 | units.Msun #set defaults to no jets (without using 0 in case that causes issues)
+        p['maximum_jet_mass'] = 0.01 | units.MSun #set defaults to no jets (without using 0 in case that causes issues)
     # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.
     # However, if a stars mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
     # of the 'jet_lifetime' set below) and then will produce winds.
