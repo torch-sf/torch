@@ -648,7 +648,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         theta = acos(j_z / rad)
                         phi = atan2(j_y , j_x ) 
                         rad_jet = rad !placeholder - need to update following code to use rad instead of rad_jet
-                        print *, "inject_direct.F90: theta, phi, rad_jet: ", theta, phi, rad_jet, atan(jy/jx)
+                        print *, "inject_direct.F90: theta, phi, rad_jet: ", theta, phi, rad_jet, atan(j_y/j_x)
                         print *, "Check theta values: ", theta, acos(j_z / (sqrt(j_x*j_x + j_y*j_y + j_z*j_z)))
                         !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                         !!! This is just to test the overall set up.  We'll need to change this later to get the
