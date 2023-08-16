@@ -154,7 +154,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
-    print("Double check dmdt at end of stellar_evolution: ", dm_dt, " SA 202212")
+    print("Double check dmdt at end of stellar_evolution: ", dm_dt.as_quantity_in(units.g/units.s), " SA 202212")
 
     return se_dt
 
