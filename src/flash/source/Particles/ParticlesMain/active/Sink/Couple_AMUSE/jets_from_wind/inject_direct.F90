@@ -38,8 +38,9 @@
 subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
-!#define DEBUG
+#define DEBUG
 #define DEBUG_ENERGY
+#define DEBUG_MPI
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
@@ -182,6 +183,9 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
+
+
+if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -411,6 +415,8 @@ if (gr_meshMe == 0) then
 end if
 #endif
 
+call flush()
+
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
 injBlkNum = 0
@@ -503,6 +509,9 @@ if (gr_meshMe == 0) then
             0.5 * injectMassIn * injectVelocityIn**2/dt, " ergs/s"
 end if
 #endif
+
+print *, "inject_direct.F90: About to start main loop. Calling flush now."
+call flush()
 
 
 ! build array of block IDs for all blocks to be injected. Get their center
@@ -597,7 +606,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
-                    print *, "inject_direct.F90: now testing for jets vs winds"
+                    print *, "inject_direct.F90: now testing for jets vs winds [flush]"
+                    call flush()
 
                     if (jet_wind .eq. jet_flag) then
                         print *, "inject_direct.F90: injecting jet"
