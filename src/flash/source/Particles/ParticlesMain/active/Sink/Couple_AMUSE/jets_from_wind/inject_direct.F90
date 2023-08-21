@@ -621,6 +621,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
                         print *, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
 
+                        
                         !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
                         !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
                         !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
@@ -653,6 +654,26 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                         !!! This is just to test the overall set up.  We'll need to change this later to get the
                         !!! Cunningham model set up. -SA 1/23/2022
+
+
+                        !!!  Test new approach for calculating theta with a dot product. -SA 20230821
+                        ! j_x, j_y, j_z are the angular momentum vector with origin at the star location
+                        ! loc(:) is the vector to the position of the star
+                        ! x, y, z are the vector to the cell we are currently calculating the injection for
+                        ! dx, dy, dz are the vector between the current cell and the origin of the star
+                        !! Then dx dotted into j should be proportional to cos(theta) where
+                        !! theta is the angle between the angular momentum vector and dx and should be
+                        !! the theta needed in Cunningham et al below.
+
+                        !dx_dot_j = (dx * j_x) + (dy * j_y) + (dz * j_z) !dot product b/w ang mom vector and dx
+                        !Use dot product directly in theta calc.
+                        !rad is the magnitude of the dx vector
+                        !ang_mom_mag is the magnitude of j (should always be 1)
+                        theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+                        phi = 0
+                        rad_jet = rad
+                        
 
                         !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
                         c_one = 1.0
