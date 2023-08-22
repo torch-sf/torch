@@ -673,7 +673,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
                         !phi = 0
                         !rad_jet = rad
-                        print *, "rotation theta, phi: ", theta, phi, "ang mom theta: ", acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        print *, "rotation theta, phi: ", theta, phi 
+                        print *, "ang mom theta: ", acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
 
                         !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
                         c_one = 1.0
@@ -705,8 +706,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     
                     
                         !print*, "cos^2 is:", (cos(theta))**2.0 
-                        !print*, "But Cunningham ang dependence is: ", ang_dependence
-                        !print*, "Also, the radial dependence is:", rad_dependence
+                        print*, "Cunningham ang dependence is: ", ang_dependence
+                        print*, "Also, the radial dependence is:", rad_dependence
 
                     else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
                         print *, "inject_direct.F90: injecting wind"
