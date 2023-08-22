@@ -626,7 +626,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
                         !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
                         theta_x = 0.0  !0.78  !!is roughly pi/4
-                        theta_y = 1.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
+                        theta_y = 0.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
                         theta_z = 0.0  !1.57
 
                         dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
@@ -669,11 +669,11 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !Use dot product directly in theta calc.
                         !rad is the magnitude of the dx vector
                         !ang_mom_mag is the magnitude of j (should always be 1)
-                        theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
-                        print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
-                        phi = 0
-                        rad_jet = rad
-                        
+                        !theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        !print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+                        !phi = 0
+                        !rad_jet = rad
+                        print *, "rotation theta, phi: ", theta, phi, "ang mom theta: ", acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
 
                         !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
                         c_one = 1.0
