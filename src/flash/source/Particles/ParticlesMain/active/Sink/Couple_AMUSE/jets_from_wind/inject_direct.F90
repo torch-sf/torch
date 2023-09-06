@@ -625,32 +625,32 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
                         !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
                         !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
-                        theta_x = 0.0  !0.78  !!is roughly pi/4
-                        theta_y = 0.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
-                        theta_z = 0.0  !1.57
+                        !theta_x = 0.0  !0.78  !!is roughly pi/4
+                        !theta_y = 0.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
+                        !theta_z = 0.0  !1.57
 
-                        dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
-                            (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
-                            (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
-                        dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
-                            (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
-                            (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
-                        dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
-                            (cos(theta_y)*cos(theta_x))*dz
+                        !dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
+                        !    (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
+                        !    (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
+                        !dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
+                        !    (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
+                        !    (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
+                        !dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
+                        !    (cos(theta_y)*cos(theta_x))*dz
 
-                        rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
-                        rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
+                        !rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
+                        !rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
 
-                        theta = acos(dz_jet/rad_jet)
-                        phi = atan(dy_jet/dx_jet)
+                        !theta = acos(dz_jet/rad_jet)
+                        !phi = atan(dy_jet/dx_jet)
 
                         ! Switch to just using the angular momentum vector to set theta and phi - SA 20230728
                         ! See Appendix F of Marion & Thornton (e.g., Fifth Edition)
                         !theta = acos(j_z / rad)
                         !phi = atan2(j_y , j_x ) 
                         !rad_jet = rad !placeholder - need to update following code to use rad instead of rad_jet
-                        print *, "inject_direct.F90: theta, phi, rad_jet, phi_angMom: ", theta, phi, rad_jet, atan2(j_y, j_x)
-                        print *, "Check theta values (rotation, ang_mom): ", theta, acos(j_z / (sqrt(j_x*j_x + j_y*j_y + j_z*j_z)))
+                        !print *, "inject_direct.F90: theta, phi, rad_jet, phi_angMom: ", theta, phi, rad_jet, atan2(j_y, j_x)
+                        !print *, "Check theta values (rotation, ang_mom): ", theta, acos(j_z / (sqrt(j_x*j_x + j_y*j_y + j_z*j_z)))
                         !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
                         !!! This is just to test the overall set up.  We'll need to change this later to get the
                         !!! Cunningham model set up. -SA 1/23/2022
@@ -669,12 +669,12 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !Use dot product directly in theta calc.
                         !rad is the magnitude of the dx vector
                         !ang_mom_mag is the magnitude of j (should always be 1)
-                        !theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
-                        !print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
-                        !phi = 0
-                        !rad_jet = rad
-                        print *, "rotation theta, phi: ", theta, phi 
-                        print *, "ang mom theta: ", acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+                        phi = 0
+                        rad_jet = rad
+                        !print *, "rotation theta, phi: ", theta, phi 
+                        !print *, "ang mom theta: ", acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
 
                         !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
                         c_one = 1.0
