@@ -38,8 +38,9 @@
 subroutine inject_direct(loc_in, angmom_in, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
-!#define DEBUG
+#define DEBUG
 #define DEBUG_ENERGY
+#define DEBUG_MPI
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
@@ -439,6 +440,7 @@ do blockID = 1, lnblocks
                 refine(blockID) = .true.
                 derefine(blockID) = .false.
                 stay(blockID) = .true.
+                print*, "Checking refineLevel: ", refine(blockID), blockID
 #ifdef DEBUG_MPI
                 print *, "Block ", blockID, " on proc ", gr_meshMe, " is &
                     refined to level ", refineLevel, ", should be ", maxref
