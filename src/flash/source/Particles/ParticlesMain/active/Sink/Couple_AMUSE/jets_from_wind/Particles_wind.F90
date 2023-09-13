@@ -52,6 +52,12 @@ integer                :: p_begin, p_end, p_num, p_globalnum, w_numloc
 ! Storage of the local indices that are actual wind stars.
 integer, allocatable   :: p_ind(:)
 
+! Handling jet versus wind option -SA 20230913
+logical :: jet_switch
+integer, allocatable :: jet_wind(:), jw_switch(:)
+integer, parameter :: jet_flag = 1 ! update -SA 20230802
+integer, parameter :: wind_flag = 2
+
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
                           disp(dr_globalNumProcs), ierr, i, p, &
@@ -71,6 +77,9 @@ logical, save          :: first_call = .true.
 
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+  call RuntimeParameters_get("min_jet_mass", min_jet_mass)
+  call RuntimeParameters_get("max_jet_mass", max_jet_mass)
+  call RuntimeParameters_get("jet_time", jet_time) !Added 20230913 - SA
   first_call = .false.
 end if
 
@@ -92,6 +101,7 @@ call Particles_getGlobalNum(p_globalnum)
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
+allocate(jet_wind(p_globalnum)) ! Added 20230913 -SA
 
 w_numloc  = 0
 w_num     = 0
@@ -100,30 +110,80 @@ num_array = 0
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
+jet_wind = 0 ! Added 20230913 -SA
+print*, "Before do loop - check arrays:", locx, angmom_x, jet_wind
+print*, "Particles on this proces: ", p_num, "Proces: ", dr_globalMe
+call flush()
+
 
 do p = p_begin, p_end
 #ifdef debug
-  print*, "Particle mass =", particles(MASS_PART_PROP, p)
-  print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
+    print*, "Particle mass =", particles(MASS_PART_PROP, p)
+    print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
 #endif
-  if ( (particles(MASS_PART_PROP, p) .gt. min_wind_mass) .and. &
-     (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
      
     w_numloc = w_numloc + 1
+ 
+    ! Now testing for jet and wind conditions. SA 20230728 
+    ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
+    ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
+    ! Default to setting flags to 0 if neither
+    print*, "Particles_wind.F90: Now testing for jets... (w_numloc)", w_numloc
+    
+    ! Test if jets should be on - added 20230726 -SA
+    if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
+         (particles(MASS_PART_PROP, p) .lt. max_jet_mass) ) then !.and. &
+         !((time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
+         ! Wait to implement time range check - SA 20230913
+        ! if in the mass range and less than the age of the jet
+        jet_switch = .true.
   
-    locx(w_numloc)      = particles(POSX_PART_PROP, p)
-    locy(w_numloc)      = particles(POSY_PART_PROP, p)
-    locz(w_numloc)      = particles(POSZ_PART_PROP, p)
-    angmom_x(w_numloc)  = particles(X_ANG_PART_PROP, p)
-    angmom_y(w_numloc)  = particles(Y_ANG_PART_PROP, p)
-    angmom_z(w_numloc)  = particles(Z_ANG_PART_PROP, p) ! Added angular momentum -SA 20230718
-    locdmdt(w_numloc)   = particles(DMDT_PART_PROP, p)
-    locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
-    locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
-    locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
-    p_ind(w_numloc)     = p
+    else 
+        ! This could be because there is no feedback or because we want spherical winds
+        jet_switch = .false.
+  
+    end if
 
-  end if
+    ! Now test for wind condition:  - Added comment and jet_switch 20230726 -SA
+    if ( (particles(MASS_PART_PROP, p) .ge. min_wind_mass) .and. & !changed .gt. to .ge. -SA 20230728
+         (jet_switch .eqv. .false. ) .and.  &
+         (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
+
+        print*, "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
+        jet_wind(w_numloc)  = wind_flag  ! Added jet/wind switch -SA 20230726
+
+    ! Now check for jet condition: - Added 20230726 -SA
+    else if ( (jet_switch .eqv. .true. ) .and. &
+              (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
+
+        print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
+        jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
+
+    else
+        print*, "Particles_wind.F90: Neither jets nor winds turned on..."
+
+    end if
+
+    print*, "Particles_wind.F90: check jet_wind value: ", jet_wind(w_numloc), jet_flag, wind_flag
+    print*, "Particles_wind.F90: check particle mass: ", particles(MASS_PART_PROP, p)
+    call flush()
+
+    if (jet_wind(w_numloc) .gt. 0) then
+
+
+        locx(w_numloc)      = particles(POSX_PART_PROP, p)
+        locy(w_numloc)      = particles(POSY_PART_PROP, p)
+        locz(w_numloc)      = particles(POSZ_PART_PROP, p)
+        angmom_x(w_numloc)  = particles(X_ANG_PART_PROP, p)
+        angmom_y(w_numloc)  = particles(Y_ANG_PART_PROP, p)
+        angmom_z(w_numloc)  = particles(Z_ANG_PART_PROP, p) ! Added angular momentum -SA 20230718
+        locdmdt(w_numloc)   = particles(DMDT_PART_PROP, p)
+        locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
+        locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
+        locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
+        p_ind(w_numloc)     = p
+
+    end if
 end do
 
 ! Now use MPI to vector gather all the information for how to inject
@@ -154,14 +214,19 @@ if (allocated(j_x)) &
     deallocate(j_x, j_y, j_z) ! Added angular momentum -SA 20230718
 if (allocated(dmdt)) &
     deallocate(dmdt, v_wind, bgdy, c_time)
+if (allocated(jw_switch)) &
+    deallocate(jw_switch) ! Added 20230726 -SA
+
 
 allocate(x(w_num), y(w_num), z(w_num))
 allocate(j_x(w_num), j_y(w_num), j_z(w_num)) ! Added angular momentum -SA 20230718
 allocate(dmdt(w_num), v_wind(w_num), c_time(w_num), bgdy(w_num))
+allocate(jw_switch(w_num)) ! Added 20230726 -SA 
 
 x=0.0d0; y=0.0d0; z=0.0d0
 j_x=0.0d0; j_y=0.0d0; j_z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
+jw_switch = 0
 
 ! Set the displacement for the incoming data based on how many
 ! particles are coming in from each processor. Note the displacement
@@ -200,7 +265,12 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
-		   
+call MPI_AllGatherv(jet_wind, w_numloc, MPI_INTEGER, jw_switch, num_array, &
+           disp, MPI_INTEGER, dr_globalComm, ierr)  ! Fixed var type - SA 20230913
+
+!!!!! TODO: Consider combining all of these into a single MPI_AllGatherv with a large 2D array containing all properties
+
+
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
 #ifdef debug
@@ -217,7 +287,7 @@ do p=1, w_num
 #ifdef debug2
   if (dr_globalMe .eq. 0) &
     print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
-    print*, "Calling inject direct with angular momentum vector: ", [j_x(p), j_y(p), j_z(p)], " -SA 202307"
+    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p) !-SA 202307
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
 #endif
   
@@ -244,6 +314,7 @@ deallocate(locdmdt, locv_wind, locbgdy, locc_time)
 deallocate(dmdt, v_wind, c_time, bgdy)
 deallocate(x, y, z)
 deallocate(j_x, j_y, j_z)  ! Added ang momentum -SA 20230720 
+deallocate(jet_wind, jw_switch) !Added 20230913 -SA
 ! Let the Grid unit know we updated these variables to properly fill guard cells.
 
 call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VELY_VAR, VELZ_VAR, DENS_VAR /)
