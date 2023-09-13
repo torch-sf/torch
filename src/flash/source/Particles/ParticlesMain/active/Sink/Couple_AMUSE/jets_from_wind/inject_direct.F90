@@ -77,9 +77,9 @@ integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
 real(dp), intent(in)    :: angmom_in(3)
-integer, intent(in)     :: jet_wind !Added -SA 20230912
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
+integer     :: jet_wind !Added -SA 20230912
 
 logical, save :: first_call = .true.
 logical :: iHaveInjectBlk
@@ -604,7 +604,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad  = sqrt(rad2)
 
                     if (jet_wind .eq. jet_flag) then
-                        print,* "inject_direct.F90: injecting jet"
+                        print*, "inject_direct.F90: injecting jet"
 
                         !!!  Test accessing new angular momentum property:
                         j_x = angmom_in(1)
