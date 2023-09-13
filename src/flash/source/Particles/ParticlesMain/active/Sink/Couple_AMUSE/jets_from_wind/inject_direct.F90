@@ -77,6 +77,7 @@ integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
 real(dp), intent(in)    :: angmom_in(3)
+integer, intent(in)     :: jet_wind !Added -SA 20230912
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
 
@@ -173,6 +174,9 @@ real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
+integer, parameter :: jet_flag = 1 ! update -SA 20230912
+integer, parameter :: wind_flag = 2 
+
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
 integer :: procID, myProc
 real(dp) ::  deltaInverse, xp, indexP, cellCenter 
@@ -180,6 +184,9 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
+
+jet_wind = jet_flag  !placeholder for now - SA 20230912
+if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -596,93 +603,111 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
-                    !!!  Test accessing new angular momentum property:
-                    j_x = angmom_in(1)
-                    j_y = angmom_in(2)
-                    j_z = angmom_in(3)
-                    print*, "Test accessing angular momentum: ", angmom_in, [j_x, j_y, j_z]
+                    if (jet_wind .eq. jet_flag) then
+                        print,* "inject_direct.F90: injecting jet"
 
-                    ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
-                    print*, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
+                        !!!  Test accessing new angular momentum property:
+                        j_x = angmom_in(1)
+                        j_y = angmom_in(2)
+                        j_z = angmom_in(3)
+                        print*, "Test accessing angular momentum: ", angmom_in, [j_x, j_y, j_z]
 
-
-                    !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
-                    !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
-                    !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
-                    !theta_x = 0.0  !0.78  !!is roughly pi/4
-                    !theta_y = 1.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
-                    !theta_z = 0.0  !1.57
-
-                    !dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
-                    !     (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
-                    !     (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
-                    !dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
-                    !     (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
-                    !     (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
-                    !dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
-                    !     (cos(theta_y)*cos(theta_x))*dz
-
-                    !rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
-                    !rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
-
-                    !theta = acos(dz_jet/rad_jet)
-                    !phi = atan(dy_jet/dx_jet)
-
-                    !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
-                    !!! This is just to test the overall set up.  We'll need to change this later to get the
-                    !!! Cunningham model set up. -SA 1/23/2022
-
-                    !!!  Test new approach for calculating theta with a dot product. -SA 20230821
-                    ! j_x, j_y, j_z are the angular momentum vector with origin at the star location
-                    ! loc(:) is the vector to the position of the star
-                    ! x, y, z are the vector to the cell we are currently calculating the injection for
-                    ! dx, dy, dz are the vector between the current cell and the origin of the star
-                    !! Then dx dotted into j should be proportional to cos(theta) where
-                    !! theta is the angle between the angular momentum vector and dx and should be
-                    !! the theta needed in Cunningham et al below.
-
-                    !dx_dot_j = (dx * j_x) + (dy * j_y) + (dz * j_z) !dot product b/w ang mom vector and dx
-                    !Use dot product directly in theta calc.
-                    !rad is the magnitude of the dx vector
-                    !ang_mom_mag is the magnitude of j (should always be 1)
-                    theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
-                    print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
-                    phi = 0
-                    rad_jet = rad
+                        ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
+                        print*, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
 
 
-                    !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
-                    c_one = 1.0
-                    c_two = 1.0
-                    norm_factor = 1.0
+                        !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
+                        !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
+                        !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
+                        !theta_x = 0.0  !0.78  !!is roughly pi/4
+                        !theta_y = 1.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
+                        !theta_z = 0.0  !1.57
 
-                    ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
-                    delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+                        !dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
+                        !     (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
+                        !     (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
+                        !dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
+                        !     (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
+                        !     (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
+                        !dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
+                        !     (cos(theta_y)*cos(theta_x))*dz
 
-                    theta_zero = 0.01
+                        !rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
+                        !rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
+
+                        !theta = acos(dz_jet/rad_jet)
+                        !phi = atan(dy_jet/dx_jet)
+
+                        !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
+                        !!! This is just to test the overall set up.  We'll need to change this later to get the
+                        !!! Cunningham model set up. -SA 1/23/2022
+
+                        !!!  Test new approach for calculating theta with a dot product. -SA 20230821
+                        ! j_x, j_y, j_z are the angular momentum vector with origin at the star location
+                        ! loc(:) is the vector to the position of the star
+                        ! x, y, z are the vector to the cell we are currently calculating the injection for
+                        ! dx, dy, dz are the vector between the current cell and the origin of the star
+                        !! Then dx dotted into j should be proportional to cos(theta) where
+                        !! theta is the angle between the angular momentum vector and dx and should be
+                        !! the theta needed in Cunningham et al below.
+
+                        !dx_dot_j = (dx * j_x) + (dy * j_y) + (dz * j_z) !dot product b/w ang mom vector and dx
+                        !Use dot product directly in theta calc.
+                        !rad is the magnitude of the dx vector
+                        !ang_mom_mag is the magnitude of j (should always be 1)
+                        theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+                        print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+                        phi = 0
+                        rad_jet = rad
+
+
+                        !!!  Let's start building the pieces for the Cunningham model. -SA 2/7/22
+                        c_one = 1.0
+                        c_two = 1.0
+                        norm_factor = 1.0
+
+                        ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
+                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+
+                        theta_zero = 0.01
                     
-                    if (abs(sin(3.14159265359/2.0 - theta)) .ge. ave_delta/rad_jet) then  ! Eq. 21 from Cunningham - if statement added 20220825
-                        ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
-                            ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
-                            atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
-                    else
-                        ang_dependence = 0.0  !!  This sets the gap at the equator
-                    endif
+                        if (abs(sin(3.14159265359/2.0 - theta)) .ge. ave_delta/rad_jet) then  ! Eq. 21 from Cunningham - if statement added 20220825
+                             ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
+                                ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
+                                 atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
+                        else
+                             ang_dependence = 0.0  !!  This sets the gap at the equator
+                        endif
 
-                    if (4*ave_delta .lt. rad_jet .AND. rad_jet .lt. 8*ave_delta) then   !!  This assumes delta=delta_x from Cunningham.
-                       !!!  I am pretty sure that delta is the min cell size - and I think this is what we want here.
-                       rad_dependence = (1/c_one) * rad_jet**(-2.0)
-                    else
-                       rad_dependence = 0.0  !!  This both introduces the gap right next to the star particles and
+                        if (4*ave_delta .lt. rad_jet .AND. rad_jet .lt. 8*ave_delta) then   !!  This assumes delta=delta_x from Cunningham.
+                            !!!  I am pretty sure that delta is the min cell size - and I think this is what we want here.
+                            rad_dependence = (1/c_one) * rad_jet**(-2.0)
+                        else
+                            rad_dependence = 0.0  !!  This both introduces the gap right next to the star particles and
                                              !!  sets the outer limit of the injection region. 
-                    endif
+                        endif
 
-                    !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
+                        !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
                     
                     
-                    !print*, "cos^2 is:", (cos(theta))**2.0 
-                    !print*, "But Cunningham ang dependence is: ", ang_dependence
-                    !print*, "Also, the radial dependence is:", rad_dependence
+                        !print*, "cos^2 is:", (cos(theta))**2.0 
+                        !print*, "But Cunningham ang dependence is: ", ang_dependence
+                        !print*, "Also, the radial dependence is:", rad_dependence
+                    
+                    else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
+                        print *, "inject_direct.F90: injecting wind"
+                        ang_dependence = 1.0
+                        rad_dependence = 1.0 
+                        !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
+
+                    else ! -SA 20230726
+                        print *, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
+                        ang_dependence = 1.0
+                        rad_dependence = 1.0
+                        !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
+
+                    endif  !end of jets vs winds determination
+
 
                     ! normalized components of the star --> cell center vector 
                     if (rad .ne. 0.0_dp) then
