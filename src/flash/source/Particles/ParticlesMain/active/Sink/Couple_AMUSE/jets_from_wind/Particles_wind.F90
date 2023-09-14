@@ -291,7 +291,8 @@ do p=1, w_num
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p)) !Added j_i -SA 20230718
+  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), mass, twind, dt, bgdy(p)) !Added j_i -SA 20230718
+  !Added jw_switch - SA 20230914
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
   if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
