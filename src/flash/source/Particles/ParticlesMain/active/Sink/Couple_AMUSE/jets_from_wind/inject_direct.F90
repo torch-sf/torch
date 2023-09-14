@@ -35,7 +35,7 @@
 
 
 
-subroutine inject_direct(loc_in, angmom_in, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
 #define DEBUG
@@ -77,9 +77,9 @@ integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
 real(dp), intent(in)    :: angmom_in(3)
+integer, intent(in)     :: jet_wind !Added -SA 20230914
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
-integer     :: jet_wind !Added -SA 20230912
 
 logical, save :: first_call = .true.
 logical :: iHaveInjectBlk
@@ -185,7 +185,6 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
-jet_wind = jet_flag  !placeholder for now - SA 20230912
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 
 if (first_call) then
