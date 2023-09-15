@@ -34,8 +34,8 @@
 
 
 
-
-subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+subroutine inject_direct(loc_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+!subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
 #define DEBUG
@@ -76,10 +76,12 @@ implicit none
 integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
-real(dp), intent(in)    :: angmom_in(3)
+!real(dp), intent(in)    :: angmom_in(3)
 integer, intent(in)     :: jet_wind !Added -SA 20230914
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
+
+real(dp)   :: angmom_in(3)
 
 logical, save :: first_call = .true.
 logical :: iHaveInjectBlk
@@ -188,6 +190,8 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 !jet_wind = jet_flag
 !if (gr_meshMe == 0) print*, "Start of inject_direct.F90: reset jet/wind flag is: ", jet_wind
+angmom_in = [0.0, 0.0, 1.0]
+if (gr_meshMe == 0) print*, "Start of inject_direct.F90: angmom_in is: ", angmom_in
 call flush()
 
 if (first_call) then
