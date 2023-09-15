@@ -186,6 +186,9 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !logical  :: hostCell
 
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
+jet_wind = jet_flag
+if (gr_meshMe == 0) print*, "Start of inject_direct.F90: reset jet/wind flag is: ", jet_wind
+call flush()
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
