@@ -174,7 +174,7 @@ real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
-integer, parameter :: jet_flag = 1 ! update -SA 20230912
+integer, parameter :: jet_flag = 4 ! update -SA 20230912
 integer, parameter :: wind_flag = 2 
 
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
@@ -186,8 +186,8 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !logical  :: hostCell
 
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
-jet_wind = jet_flag
-if (gr_meshMe == 0) print*, "Start of inject_direct.F90: reset jet/wind flag is: ", jet_wind
+!jet_wind = jet_flag
+!if (gr_meshMe == 0) print*, "Start of inject_direct.F90: reset jet/wind flag is: ", jet_wind
 call flush()
 
 if (first_call) then

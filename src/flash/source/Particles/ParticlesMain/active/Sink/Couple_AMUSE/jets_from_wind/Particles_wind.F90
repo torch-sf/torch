@@ -55,7 +55,7 @@ integer, allocatable   :: p_ind(:)
 ! Handling jet versus wind option -SA 20230913
 logical :: jet_switch
 integer, allocatable :: jet_wind(:), jw_switch(:)
-integer, parameter :: jet_flag = 1 ! update -SA 20230802
+integer, parameter :: jet_flag = 4 ! update -SA 20230802
 integer, parameter :: wind_flag = 2
 
 ! For MPI comm
