@@ -41,7 +41,8 @@ subroutine Particles_MarkRefineDerefine()
     use RuntimeParameters_interface, only: RuntimeParameters_get
     use Particles_data, only : particles, pt_numLocal, pt_typeInfo
 #ifdef WIND_INJ
-    use Particles_windData, only : ref_radius, min_wind_mass
+    use Particles_windData, only : ref_radius, min_wind_mass, min_jet_mass, max_jet_mass 
+    !Added jet params -SA 20230918
 #endif
 
     use Particles_interface, only : Particles_getGlobalNum
@@ -76,6 +77,9 @@ subroutine Particles_MarkRefineDerefine()
     real, dimension(MDIM) :: blockSize
     real          :: rad, distx, disty, distz, delta
 
+! Local variable for the minimum wind/jet mass -SA 20230918
+    real*8   :: loc_feedback_mass
+
 ! Global vars for particle locations.
     real*8, allocatable :: x(:), y(:), z(:), &
                        dmdt(:), v_wind(:), c_time(:), bgdy(:)
@@ -98,6 +102,7 @@ character(len=80), save    :: grav_boundary_type
 
 
 ! If neither feedback method is in, just return.
+! If in jets branch WIND_INJ includes both winds and jets -SA 202309118
 #if !defined(FERVENT) && !defined(WIND_INJ)
 return
 #endif
@@ -110,8 +115,14 @@ if (first_call) then
       ref_radius = 3.5d0*sqrt(3.0d0)*delta
   call RuntimeParameters_get("grav_boundary_type", grav_boundary_type)
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+  call RuntimeParameters_get("min_jet_mass", min_jet_mass) ! -SA 20230918
+  call RuntimeParameters_get("max_jet_mass", max_jet_mass)
   first_call = .false.
 end if
+
+! Also need to account for jet mass: -SA 20230918
+! DEfine a local min feedback mass
+loc_feedback_mass = MIN(min_wind_mass, min_jet_mass)
 #endif
 
 ! Local number of massive/active particles.
@@ -134,7 +145,7 @@ locx = 0.0d0; locy=0.0d0; locz=0.0d0
 
 do p = p_begin, p_end
   
-  if (particles(MASS_PART_PROP, p) .gt. min_wind_mass) then   
+  if (particles(MASS_PART_PROP, p) .gt. loc_feedback_mass) then   
      
      w_numloc = w_numloc + 1
      locx(w_numloc)      = particles(POSX_PART_PROP, p)
