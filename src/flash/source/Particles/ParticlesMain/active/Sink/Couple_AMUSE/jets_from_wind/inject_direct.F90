@@ -34,8 +34,7 @@
 
 
 
-subroutine inject_direct(loc_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
-!subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
 #define DEBUG
@@ -76,12 +75,10 @@ implicit none
 integer, parameter :: dp = kind(1.d0)
 
 real(dp), intent(in)    :: loc_in(3)
-!real(dp), intent(in)    :: angmom_in(3)
+real(dp), intent(in)    :: angmom_in(3)
 integer, intent(in)     :: jet_wind !Added -SA 20230914
 real(dp), intent(in)    :: injectMassIn, injectVelocityIn, twind, dt
 real(dp), intent(inout) :: bgDens
-
-real(dp)   :: angmom_in(3)
 
 logical, save :: first_call = .true.
 logical :: iHaveInjectBlk
@@ -176,7 +173,7 @@ real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
 real(dp) :: rad2_jet, rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 
-integer, parameter :: jet_flag = 4 ! update -SA 20230912
+integer, parameter :: jet_flag = 1 ! update -SA 20230912
 integer, parameter :: wind_flag = 2 
 
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
@@ -188,10 +185,6 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !logical  :: hostCell
 
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
-!jet_wind = jet_flag
-!if (gr_meshMe == 0) print*, "Start of inject_direct.F90: reset jet/wind flag is: ", jet_wind
-angmom_in = [0.0, 0.0, 1.0]
-if (gr_meshMe == 0) print*, "Start of inject_direct.F90: angmom_in is: ", angmom_in
 call flush()
 
 if (first_call) then
