@@ -70,6 +70,7 @@ PARAMETER wind_target_temp  REAL    1e6
 
 # Value of -1.0 is default and then uses
 # 3.5*sqrt(3)*dx. - JW
+# Default value is now 10.0*delta for the sake of jets -SA 20230918
 #PARAMETER ref_radius 	REAL	-1.0		# 3.5*sqrt(3)*dx is a good start. -JW
 
 # Minimum wind injection radius

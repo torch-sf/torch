@@ -112,7 +112,8 @@ if (first_call) then
   call RuntimeParameters_get("ref_radius", ref_radius)
   call Grid_getMinCellSize(delta)
   if (ref_radius < 0.0) &
-      ref_radius = 3.5d0*sqrt(3.0d0)*delta
+      ref_radius = 10.0*delta !3.5d0*sqrt(3.0d0)*delta
+      !Update to larger value needed for jets -SA 20230918
   call RuntimeParameters_get("grav_boundary_type", grav_boundary_type)
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
   call RuntimeParameters_get("min_jet_mass", min_jet_mass) ! -SA 20230918

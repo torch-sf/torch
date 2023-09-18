@@ -24,6 +24,8 @@ module Particles_windData
 
   real*8, save :: min_wind_dt      = 1d99
 ! Wind injection radius max. Negative means use 3.5*sqrt(3.0)*min_dx
+! Updated default ref_radius in Particles_markeRefineDerefine to be 10*delta 
+! This accounts for the jet injection radius -SA 20230918
   real*8, save :: ref_radius       = -1.0  
   real*8, save :: min_radius       = 0.0d0 ! Wind injection radius min.
   real*8, save :: min_wind_mass    = 0.0d0 ! smallest star that makes a wind (in grams).
