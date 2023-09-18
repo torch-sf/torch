@@ -29,6 +29,11 @@ module Particles_windData
   real*8, save :: min_wind_mass    = 0.0d0 ! smallest star that makes a wind (in grams).
   real*8, save :: wind_target_temp = 1d6 ! Target temperature from wind shock.
 
+! Jet parameters - Added 20230728 SA
+  real*8, save :: min_jet_mass     = 1.988d35 ! smallest star that makes a jet (value matches Config)
+  real*8, save :: max_jet_mass     = 1.988d31 ! largest star that makes a jet (value matches Config)
+  real*8, save :: jet_time         = 0.0d0 ! length of time over which to inject jet (in seconds)
+
   logical, save    :: use_wind_compute_dt =.true.
   logical, save    :: mass_load           =.false. ! Mass load winds?
   logical, save    :: var_radius          =.false.
