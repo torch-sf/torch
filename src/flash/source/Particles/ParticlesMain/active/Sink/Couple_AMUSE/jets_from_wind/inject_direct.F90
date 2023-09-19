@@ -175,9 +175,6 @@ real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 integer, parameter :: jet_flag = 1 ! update -SA 20230808
 integer, parameter :: wind_flag = 2 
 
-integer, parameter :: jet_flag = 1 ! update -SA 20230912
-integer, parameter :: wind_flag = 2 
-
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
 integer :: procID, myProc
 real(dp) ::  deltaInverse, xp, indexP, cellCenter 
