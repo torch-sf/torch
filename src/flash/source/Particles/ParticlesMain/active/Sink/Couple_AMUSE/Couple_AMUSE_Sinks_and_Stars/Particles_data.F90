@@ -134,6 +134,10 @@ module Particles_data
   real*8, save :: wind_target_temp ! Target temperature from wind shock.
   real*8, allocatable :: x(:), y(:), z(:), & ! Save wind locations for refinement checks.
                        dmdt(:), v_wind(:), c_time(:), bgdy(:)
+  ! Add jet parameters -SA 20230918
+  real*8, save :: min_jet_mass ! smallest star that makes a jet
+  real*8, save :: max_jet_mass ! largest star that makes a jet
+  real*8, save :: jet_time     ! length of time over which to inject jet
 
   integer    :: w_num
   logical    :: mass_load ! Mass load winds?

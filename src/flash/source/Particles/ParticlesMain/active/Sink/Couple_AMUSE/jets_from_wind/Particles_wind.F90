@@ -132,6 +132,7 @@ do p = p_begin, p_end
   ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
   ! Default to setting flags to 0 if neither
   print*, "Particles_wind.F90: Now testing for jets... (w_numloc)", w_numloc
+  
   ! Test if jets should be on - added 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
        (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &

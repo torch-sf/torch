@@ -34,7 +34,6 @@
 
 
 
-
 subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
@@ -176,6 +175,9 @@ real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 integer, parameter :: jet_flag = 1 ! update -SA 20230808
 integer, parameter :: wind_flag = 2 
 
+integer, parameter :: jet_flag = 1 ! update -SA 20230912
+integer, parameter :: wind_flag = 2 
+
 ! Add new variables for snap_to_grid update. - SA 1/25/2023
 integer :: procID, myProc
 real(dp) ::  deltaInverse, xp, indexP, cellCenter 
@@ -184,8 +186,8 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
-
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
+call flush()
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -448,6 +450,7 @@ do blockID = 1, lnblocks
                 refine(blockID) = .true.
                 derefine(blockID) = .false.
                 stay(blockID) = .true.
+                print*, "Checking refineLevel: ", refine(blockID), blockID
 #ifdef DEBUG_MPI
                 print *, "Block ", blockID, " on proc ", gr_meshMe, " is &
                     refined to level ", refineLevel, ", should be ", maxref
@@ -682,16 +685,17 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         norm_factor = 1.0
 
                         ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
-                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE! Use atan2?
+                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
 
                         theta_zero = 0.01
                     
                         if (abs(sin(3.14159265359/2.0 - theta)) .ge. ave_delta/rad_jet) then  ! Eq. 21 from Cunningham - if statement added 20220825
-                            ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
+                             ang_dependence = (1.0/c_two) * (1.0/delta_theta) * (1.0/(theta_zero*sqrt(1.0+theta_zero**2.0) )) * &
                                 ( atan( (sqrt(1.0+theta_zero**2.0)*tan(theta + delta_theta/2.0) )/theta_zero)  -  &
-                                atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
+                                 atan( (sqrt(1.0+theta_zero**2.0)*tan(theta - delta_theta/2.0) )/theta_zero) )
                         else
-                            ang_dependence = 0.0  !!  This sets the gap at the equator
+                             ang_dependence = 0.0  !!  This sets the gap at the equator
+
                         endif
 
                         if (4*ave_delta .lt. rad_jet .AND. rad_jet .lt. 8*ave_delta) then   !!  This assumes delta=delta_x from Cunningham.
@@ -720,7 +724,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ang_dependence = 1.0
                         rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
-                    
+
                     endif  !end of jets vs winds determination
 
                     ! normalized components of the star --> cell center vector 
