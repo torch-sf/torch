@@ -40,7 +40,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   use Driver_data, only : dr_globalMe, dr_nstep, dr_globalComm
 
 #ifdef WIND_INJ
-  use Particles_windData, only : min_wind_mass, min_wind_dt, wind_target_temp
+  use Particles_windData, only : min_wind_mass, min_wind_dt, wind_target_temp, &
+                                 min_jet_mass, max_jet_mass ! -SA 20230920
   use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 #endif
   use Particles_rayData, only : ph_radPressure, cfl_radPressure
@@ -78,6 +79,9 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real :: refVel
   real, save :: sink_density
 
+  ! Local variable for the minimum wind/jet mass -SA 20230920
+  real*8   :: loc_feedback_mass
+
   ! Here we estimate the timestep for feedback in radiation and winds
   ! from a star we have introduced to the simulation in between loop steps.
   ! Note this is necessary (and also to have the global dt calculated 
@@ -92,6 +96,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   if (first_call) then
     call RuntimeParameters_get("cons_quant", conserved_quant)
     call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+    call RuntimeParameters_get("min_jet_mass", min_jet_mass) ! -SA 20230920
+    call RuntimeParameters_get("max_jet_mass", max_jet_mass)
     call RuntimeParameters_get("wind_target_temp", wind_target_temp)
     call RuntimeParameters_get("rt_useRadTransDt", rt_useRadTransDt)
     call RuntimeParameters_get("rt_useNumstepsRadTransDtOnStart", rt_useNumstepsRadTransDtOnStart)
@@ -101,6 +107,10 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
     call RuntimeParameters_get("sink_density_thresh", sink_density)
     first_call = .false.
   end if
+
+  ! Also need to account for jet mass: -SA 20230920
+  ! Define a local min feedback mass
+  loc_feedback_mass = MIN(min_wind_mass, min_jet_mass)
 #endif
 
   if (.not. rt_useRadTransDt) then
@@ -137,6 +147,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   print*, "currnum_radTransDt_loops=", currnum_radTransDt_loops, dr_globalMe
   print*, "stillUseRadDt=", stillUseRadDt, dr_globalMe
   print*, "min_wind_mass=", min_wind_mass, dr_globalMe
+  print*, "min_jet_mass=",  min_jet_mass, dr_globalMe ! -SA 20230920
+  print*, "Local min feedback mass:", loc_feedback_mass, dr_gllobalMe 
 #ifdef ONLY_FB_PROC
   endif
 #endif
@@ -144,8 +156,10 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   
   do p=type_begin, type_end
 #if defined(WIND_INJ)
-    if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then
+    ! Update to account for jet mass with loc_feedback_mass -SA 20230920
+    if (particles(MASS_PART_PROP, p) .ge. loc_feedback_mass) then
 #else
+    ! We should eventually update this to not hardcode a mass value -SA 20230920
     if (particles(MASS_PART_PROP, p) .ge. eightMSun) then
 #endif
       mass_count = mass_count + 1
