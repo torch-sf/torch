@@ -49,7 +49,7 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
 
     # Now set value for each entry of starjet_masses
     for i, star in enumerate(masses):
-        if (star >= minumum_jet_mass) and (star < maximum_jet_mass):
+        if (star >= minimum_jet_mass) and (star < maximum_jet_mass):
             print("Forming a star with a jet and final mass:", star)
             starjet_masses[i] = (1.0 + jet_fraction) * masses
         else:
