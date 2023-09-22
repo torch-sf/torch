@@ -47,17 +47,21 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
     starjet_masses = masses 
     # initialize starjet list with masses matching the stellar mass list
 
+    #print("minimum_jet_mass: ", minimum_jet_mass)
+    #print("minimum_jet_mass in msun:", minimum_jet_mass.value_in(units.MSun))
+
     # Now set value for each entry of starjet_masses
     for i, star in enumerate(masses):
-        if (star >= minimum_jet_mass) and (star < maximum_jet_mass):
+        #print("Check star: ", i, star, minimum_jet_mass, maximum_jet_mass)
+        if (star >= minimum_jet_mass.value_in(units.MSun)) and (star < maximum_jet_mass.value_in(units.MSun)):
             print("Forming a star with a jet and final mass:", star)
-            starjet_masses[i] = (1.0 + jet_fraction) * masses
+            starjet_masses[i] = (1.0 + jet_fraction) * masses[i]
         else:
             print("Forming a star with no jet and final mass:", star)
             #starjet_masses value is already correct
 
-    print("TEST: this is the star mass: ", masses)
-    print("And this is the total mass and of the star and jet: ", starjet_masses)
+        #print("TEST: this is the star mass: ", masses[i])
+        #print("And this is the total mass and of the star and jet: ", starjet_masses[i])
 
     return masses, starjet_masses
 
