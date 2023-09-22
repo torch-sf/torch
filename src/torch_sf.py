@@ -338,10 +338,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             
             hydro.set_particle_mass(sink_tag, sink_mass)
             #Remove ang_mom from sink, based on mass of stars formed, for each direction -SA 20230405
-            sink_angMom_x = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
-            sink_angMom_y = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) 
-            sink_angMom_z = (sink_angMom*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            sink_angMom_x = (sink_angMom[0]*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
+            sink_angMom_y = (sink_angMom[1]*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s) 
+            sink_angMom_z = (sink_angMom[2]*remaining_mass_frac).as_quantity_in(units.cm**2.0 * units.g / units.s)
             tprint("Sink ang momentum x component before updating: ", sink_angMom_x)
+            tprint("Sink ang momentum all before updating: ", sink_angMom)
             hydro.set_particle_ang_mom(sink_tag, sink_angMom_x, sink_angMom_y, sink_angMom_z, 1 ) #Assign new sink ang mom
 
 
@@ -364,8 +365,9 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             ## We only need the unit vector of the sink's ang_mom since we want to set the direction of the star's ang. mom. without
             ## handling the full ang_mom conservation. -SA 20230405
             star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
+            tprint("Star ang momentum magnitude for normalizing: ", star_angMom_mag)
             ## Now set the star angular momentum - probably need to remove units from the following
-            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i].value_in(units.cm**2.0 * units.g / units.s)) for i in range(nnew)]
+            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i])) for i in range(nnew)]
             tprint("Star ang momentum after norm, with units? : ", star.ang_mom)
 
             # Create new stars in FLASH
