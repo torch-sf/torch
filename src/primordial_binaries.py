@@ -92,9 +92,9 @@ def get_period(mass, pdist='field'):
         return a * p + b
     
     
-    def m_dwarfs(m):
+    def m_dwarfs(m, pdist):
         
-        def probability(m):
+        def probability(m, pdist):
             
             if pdist == 'inner':
                 if m < 0.15:
@@ -122,28 +122,28 @@ def get_period(mass, pdist='field'):
             
             while prob < h:
                 low = np.max([0.1, 0.08 / m])
-                q = rng.uniform(low, 1)
+                q = np.random.uniform(low, 1)
                 if m < 0.3:
                     prob = q**0.7
                 else:
                     prob = q**0.1
-                h = rng.uniform(0, 1)
+                h = np.random.uniform(0, 1)
             
             return q
         
-        def period(m):
+        def period(m, pdist):
             
             q = mass_ratio(m)
             m2 = q*m
             p = 0
             while (p < 0.5) or (p > 7.5):
-                a = probability(m) | units.AU
+                a = probability(m, pdist) | units.AU
                 M = (m+m2) | units.MSun
                 p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constants.G*M)).value_in(units.yr)*(365.25))
             
             return p, q
         
-        period_m_dwarf, q_m_dwarf = period(m)
+        period_m_dwarf, q_m_dwarf = period(m, pdist)
         
         return period_m_dwarf, q_m_dwarf
     
