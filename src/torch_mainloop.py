@@ -352,7 +352,7 @@ def evolve(state, hydro, grav, mult, se):
                         pool.wait()
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
-                            if USER['with_petar'] == True:
+                            if USER['check_for_stall'] == True:
                                 # Write chk from state_ if stall, CCC 09/03/2023
                                 state_.force_output(overwrite=USER['overwrite'])
                                 # Force crash if hydro advanced before grav,

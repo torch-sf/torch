@@ -266,6 +266,7 @@ def user_parameters():
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
+    p['check_for_stall'] = False # use to save and exit if gravity takes long than hydro
     p['restart_from_stall'] = False # did PeTar stall and exit? Sets r_out = r_bin for first Torch loop
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
