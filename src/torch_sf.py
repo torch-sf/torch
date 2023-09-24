@@ -366,8 +366,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             ## handling the full ang_mom conservation. -SA 20230405
             star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
             tprint("Star ang momentum magnitude for normalizing: ", star_angMom_mag)
-            ## Now set the star angular momentum - probably need to remove units from the following
-            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i]) for i in range(nnew)]
+            ## Now set the star angular momentum
+            # NOTE the star angular momentum is normalized to a magnitude of 1 and therefore a dimensionless quantity
+            # however, the set_particle_ang_mom expects units so the star.ang_mom currently keeps the units. -SA
+            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i].value_in(units.cm**2.0 * units.g / units.s)) for i in range(nnew)]
             tprint("Star ang momentum after norm, with units? : ", star.ang_mom)
 
             # Create new stars in FLASH
