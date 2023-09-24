@@ -367,7 +367,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
             tprint("Star ang momentum magnitude for normalizing: ", star_angMom_mag)
             ## Now set the star angular momentum - probably need to remove units from the following
-            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i])) for i in range(nnew)]
+            star.ang_mom = [ (star_angMom[i]/star_angMom_mag[i]) for i in range(nnew)]
             tprint("Star ang momentum after norm, with units? : ", star.ang_mom)
 
             # Create new stars in FLASH
