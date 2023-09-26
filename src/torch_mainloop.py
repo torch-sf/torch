@@ -105,6 +105,7 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
+        grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
         grav.parameters.stopping_conditions_timeout = USER['set_timeout'] 
         if USER['restart_from_stall']:
             grav.parameters.r_out = grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
@@ -192,11 +193,12 @@ def evolve(state, hydro, grav, mult, se):
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
-        # Debug for stars in same location, CCC 08/05/2023                                                                                                                           
-        print('r_out=', grav.parameters.r_out)
-        r_out_auto = grav.parameters.r_out
-        grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
-        print('r_out=', grav.parameters.r_out)
+        grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
+        # Debug for stars in same location, CCC 08/05/2023
+        #print('r_out=', grav.parameters.r_out)
+        #r_out_auto = grav.parameters.r_out
+        #grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
+        #print('r_out=', grav.parameters.r_out)
         ###
         grav.parameters.begin_time = hy_time
         grav.parameters.stopping_conditions_timeout = USER['set_timeout']
@@ -360,7 +362,9 @@ def evolve(state, hydro, grav, mult, se):
                                 tprint("... PeTar has stalled, exit the simulation")
                                 hydro.stop() 
                                 grav.stop()  
-                                se.stop()    
+                                se.stop()
+                            else:
+                                pass
                         elif pool_table_grav and pool_table_grav[-1] == it:
                             tprint("... grav advanced")
                             
@@ -398,9 +402,9 @@ def evolve(state, hydro, grav, mult, se):
 
 
                 #DEBUG CCC 09/05/2023 - Print tags, positions, velocities
-                print('Tags', state.stars.tag)
-                print('Positions', state.stars.x, state.stars.y, state.stars.z)
-                print('Velocities', state.stars.vx, state.stars.vy, state.stars.vz)
+                #print('Tags', state.stars.tag)
+                #print('Positions', state.stars.x, state.stars.y, state.stars.z)
+                #print('Velocities', state.stars.vx, state.stars.vy, state.stars.vz)
                 
                 
             else: # num_stars=1
@@ -522,11 +526,12 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.set_defaults()
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
             grav.parameters.r_bin = USER['r_bin']
-            # Debug for stars in same location, CCC 08/05/2023                                                                                                                           
-            print('r_out=', grav.parameters.r_out)
-            r_out_auto = grav.parameters.r_out
-            grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
-            print('r_out=', grav.parameters.r_out)
+            grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
+            # Debug for stars in same location, CCC 08/05/2023                                                                                                                   
+            #print('r_out=', grav.parameters.r_out)
+            #r_out_auto = grav.parameters.r_out
+            #grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
+            #print('r_out=', grav.parameters.r_out)
             ###
             grav.parameters.begin_time = hy_time
             grav.parameters.stopping_conditions_timeout = USER['set_timeout']
