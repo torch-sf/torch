@@ -485,6 +485,10 @@ sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine
 dust_gas_ratio  = 0.01  # 1% dust
 ph_EUVonDust    = T     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
 
+rt_useRadTransDt = .true.
+# Use the feedback safety timestep on start or restart?
+rt_useNumstepsRadTransDtOnStart = .false.  # actually has no effect in code -AT,2019oct23
+rt_numStepsRadTransDt = 10  # how many safe steps to take
 
 # ======================================================================================
 # wind options
