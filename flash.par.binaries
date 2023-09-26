@@ -240,9 +240,8 @@ pt_maxPerProc   = 100000
 # Particles/ParticlesMain/active/SinkNoAdvance
 # --------------------------------------------
 
-# Should I go back to 12.0 from Federrath 2010?
-jeans_ncells_ref    = 6.0 #12.0  #20.0 #32.0
-jeans_ncells_deref  = 12.0 #24.0  #40.0 #64.0
+jeans_ncells_ref    = 12.0  #20.0 #32.0
+jeans_ncells_deref  = 24.0  #40.0 #64.0
 
 # For -+7pc box with lrefine=2, demonstration problem
 #sink_density_thresh       = 8.52171362932e-22
