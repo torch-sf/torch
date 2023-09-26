@@ -192,7 +192,7 @@ cvisc		    = 0.1     # coefficient for artificial viscosity
 use_flattening	= .false. # use flattening (dissipative) (originally for PPM)
 use_steepening	= .false. # use contact steepening (originally for PPM)
 use_upwindTVD	= .true.  #use upwind biased TVD slope for PPM (need nguard=6)
-use_gravhalfupdate = .false. # This would violate the bridge stuff, no?
+use_gravhalfupdate = .true. # Matched to value in main, CCC 26/09/2023
 
 hy_fallbackLowerCFL = .true.
 hy_cflFallbackFactor = 0.9
