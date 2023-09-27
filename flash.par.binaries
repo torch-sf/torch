@@ -468,7 +468,7 @@ rt_maxHchange = 0.1
 rt_dt_temp     = 1.0e5
 
 ph_sampling     = 2.0
-ph_initHPlevel  = 2
+ph_initHPlevel  = 1 #2 # 1 --> 12 pixels, 2 --> 48 pixels, CCC 27/09/2023
 ph_inBlockSplit = T
 ph_rotRays      = T
 ph_maxNRays     = 1000000 #300000
