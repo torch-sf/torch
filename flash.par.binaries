@@ -203,7 +203,7 @@ E_modification	= .true.           # High order algorithm for E-field constructio
 E_upwind        = .true.           # Better E field reconstruction (Lee and Deane 2009)
 energyFix	    = .true.           # Update magnetic energy using staggered B-fields
 ForceHydroLimit	= .false.          # Pure Hydro Limit (B=0)
-prolMethod      = "balsara_prol" #"injection_prol" # Prolongation method (injecton_prol, balsara_prol)
+prolMethod      = "injection_prol" # Prolongation method (injecton_prol, balsara_prol)
 #useMagneticResistivity = .true.
 #resistivity = 7.3e-14 # Spitzer resistivity for T = 10^4 K #1.0E-0
 
