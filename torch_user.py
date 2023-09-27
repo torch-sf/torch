@@ -41,7 +41,6 @@ def get_ntasks_from_run_script(name="run.sh"):
     assert n is None
     n = nodes*cores
     assert n is not None
-    return int(os.getenv("SLURM_NTASKS"))
     return n
 
 def user_initial_conditions(state, hydro):
