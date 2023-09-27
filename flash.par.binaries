@@ -23,7 +23,7 @@ sim_A_i                   =  0.6698 #-1.0
 #initial magnetic field
 bx0 = 0.0e0
 by0 = 0.0e0
-bz0 = 0.0e0
+bz0 = 3.0e-6
 
 
 # ===================
