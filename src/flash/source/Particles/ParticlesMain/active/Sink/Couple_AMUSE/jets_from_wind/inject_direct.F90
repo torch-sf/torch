@@ -40,6 +40,7 @@ subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVeloci
 #define DEBUG
 #define DEBUG_ENERGY
 #define DEBUG_MPI
+#define DEBUG_JETS
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
@@ -183,8 +184,10 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
+#ifdef DEBUG_JETS
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 call flush()
+#endif
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -372,8 +375,10 @@ if (snap_to_grid) then
     call Grid_getBlkIDFromPos(loc_in, blockID ,procID, gr_meshComm)
     
     call Driver_getMype(GLOBAL_COMM, myProc) ! Check the current processor  - SA 20230214
+#ifdef DEBUG_JETS
     print*, "Check procID and myProc: ", procID, myProc  ! compare current processor and proc of loc_in - SA 20230214
     !! CAN WE REPLACE GETMYPE WITH GR_MESHME???
+#endif
 
     if (myProc == procID) then  ! Only snap_to_grid if the current processor matches the proc of loc_in - SA 20230214
         do i=1,3  ! The following calculation is based on the pt_mapFromMeshInZone.F90 routine
@@ -385,8 +390,10 @@ if (snap_to_grid) then
         end do
         
         ! Check how far the location of the star moved:  !SA 20230222
+#ifdef DEBUG_JETS
         print*, "loc after snap_to_grid:", loc  !SA 20221221
         print*, "Total change in location, delta: ", (loc_in - loc), delta  ! SA 20230125
+#endif
         if (max(abs(loc_in(1) - loc(1)), abs(loc_in(2) - loc(2)), abs(loc_in(3) - loc(3)) ) &
             > min(delta(1), delta(2),delta(3)) ) then  !added abs() SA 20230222 
            print*, "CHECK SNAP_TO_GRID! Change in location is greater than cell size!!"
@@ -510,8 +517,10 @@ if (gr_meshMe == 0) then
 end if
 #endif
 
+#ifdef DEBUG_JETS
 print *, "inject_direct.F90: About to start main loop. Calling flush now."
 call flush()
+#endif
 
 
 ! build array of block IDs for all blocks to be injected. Get their center
@@ -606,20 +615,24 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     rad2 = dx**2 + dy**2 + dz**2
                     rad  = sqrt(rad2)
 
+#ifdef DEBUG_JETS
                     print *, "inject_direct.F90: now testing for jets vs winds [flush]"
                     call flush()
+#endif
 
                     if (jet_wind .eq. jet_flag) then
+#ifdef DEBUG_JETS
                         print *, "inject_direct.F90: injecting jet"
+#endif
 
                         !!!  Test accessing new angular momentum property:
                         j_x = angmom_in(1)
                         j_y = angmom_in(2)
                         j_z = angmom_in(3)
-                        print *, "Test accessing angular momentum: ", [j_x, j_y, j_z]
+                        !print *, "Test accessing angular momentum: ", [j_x, j_y, j_z]
 
                         ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
-                        print *, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
+                        !print *, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
 
                         
                         !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
@@ -711,7 +724,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         print*, "Also, the radial dependence is:", rad_dependence
 
                     else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
+#ifdef DEBUG_JETS
                         print *, "inject_direct.F90: injecting wind"
+#endif
                         ang_dependence = 1.0
                         rad_dependence = 1.0 
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
