@@ -11,6 +11,8 @@
 
 #define debug
 #define debug2
+#define debug_jets
+
 subroutine Particles_wind(dt)
 
 use Particles_data, only : particles, pt_typeInfo, pt_numLocal
@@ -94,7 +96,7 @@ min_wind_dt = 1d99
   p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
   p_end   = p_num + p_begin - 1
 
-print*, "Number of particles (begin, num, end): ", p_begin, p_num, p_end, " -SA 202212"
+! print*, "Number of particles (begin, num, end): ", p_begin, p_num, p_end, " -SA 202212"
 
 allocate(p_ind(pt_numLocal))
 p_ind = 0
@@ -102,7 +104,7 @@ p_ind = 0
 call Particles_getGlobalNum(p_globalnum)
 ! Why are we getting the global number of particles here????
 ! The do loop that assigns values to these arrays uses the number on the processor....? -SA
-print*, "Global number of particles: ", p_globalnum
+! print*, "Global number of particles: ", p_globalnum
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
@@ -116,9 +118,12 @@ locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 jet_wind = 0 ! Added 20230726 -SA
+
+#ifdef debug_jets
 print*, "Before do loop - check arrays:", locx, angmom_x, jet_wind
 print*, "Particles on this proces: ", p_num, "Proces: ", dr_globalMe
 call flush()
+#endif
 
 do p = p_begin, p_end
 #ifdef debug
@@ -131,8 +136,10 @@ do p = p_begin, p_end
   ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
   ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
   ! Default to setting flags to 0 if neither
+#ifdef debug_jets
   print*, "Particles_wind.F90: Now testing for jets... (w_numloc)", w_numloc
-  
+#endif
+
   ! Test if jets should be on - added 20230726 -SA
   if ( (particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
        (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
@@ -150,25 +157,30 @@ do p = p_begin, p_end
   if ( (particles(MASS_PART_PROP, p) .ge. min_wind_mass) .and. & !changed .gt. to .ge. -SA 20230728
      (jet_switch .eqv. .false. ) .and.  &
      (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
-    
+#ifdef debug_jets
     print*, "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
+#endif
     jet_wind(w_numloc)  = wind_flag  ! Added jet/wind switch -SA 20230726
 
   ! Now check for jet condition: - Added 20230726 -SA
   else if ( (jet_switch .eqv. .true. ) .and. &
             (particles(DMDT_PART_PROP, p) .gt. 0.0d0)) then
-
+#ifdef debug_jets
     print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
+#endif
     jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
-  
+
+#ifdef debug_jets
   else
     print*, "Particles_wind.F90: Neither jets nor winds turned on..."
-  
+#endif 
+
   end if
-  
-  print*, "Particles_wind.F90: check jet_wind value: ", jet_wind(w_numloc), jet_flag, wind_flag
-  print*, "Particles_wind.F90: check particle mass: ", particles(MASS_PART_PROP, p)
-  call flush()
+
+  ! print*, "Particles_wind.F90: check jet_wind value: ", jet_wind(w_numloc), jet_flag, wind_flag
+  ! print*, "Particles_wind.F90: check particle mass: ", particles(MASS_PART_PROP, p)
+  ! call flush()
+
 
   if (jet_wind(w_numloc) .gt. 0) then
 
@@ -189,10 +201,10 @@ do p = p_begin, p_end
   end if
 end do
 
-print*, "Particles_wind.F90: test angmom arrays x: ", angmom_x
-print*, "Particles_wind.F90: test angmom arrays y: ", angmom_y
-print*, "Particles_wind.F90: test angmom arrays z: ", angmom_z
-print*, "Particles_wind.F90: test jet wind switch: ", jet_wind
+! print*, "Particles_wind.F90: test angmom arrays x: ", angmom_x
+! print*, "Particles_wind.F90: test angmom arrays y: ", angmom_y
+! print*, "Particles_wind.F90: test angmom arrays z: ", angmom_z
+! print*, "Particles_wind.F90: test jet wind switch: ", jet_wind
 
 ! Now use MPI to vector gather all the information for how to inject
 ! the winds on each processor.
@@ -283,8 +295,8 @@ call MPI_AllGatherv(jet_wind, w_numloc, MPI_INTEGER, jw_switch, num_array, &
 print*, "Done gathering.", dr_globalMe
 #endif
 
-print*, "Starting loop with inject_direct call (w_num): ", w_num , " -SA 202212"
-print*, "Before inject_direct - ang_mom:", [j_x, j_y, j_z], [angmom_x, angmom_y, angmom_z]
+! print*, "Starting loop with inject_direct call (w_num): ", w_num , " -SA 202212"
+! print*, "Before inject_direct - ang_mom:", [j_x, j_y, j_z], [angmom_x, angmom_y, angmom_z]
 
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
@@ -316,11 +328,11 @@ do p=1, w_num
 
 end do
 
-print*, "Particles_wind.F90: check deallocations: ", jet_wind, jw_switch
+! print*, "Particles_wind.F90: check deallocations: ", jet_wind, jw_switch
 
 ! Add a flush call before deallocation so we can check what's going on
-print*, "Particles_wind.F90: Implementing flush call now."
-call flush()
+! print*, "Particles_wind.F90: Implementing flush call now."
+! call flush()
 
 deallocate(p_ind)
 
