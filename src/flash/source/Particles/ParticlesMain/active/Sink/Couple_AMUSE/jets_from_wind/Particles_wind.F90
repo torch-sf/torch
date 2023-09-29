@@ -9,9 +9,9 @@
 !!! J. Wall Drexel University 2017
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define debug
-#define debug2
-#define debug_jets
+!! #define debug
+!! #define debug2
+!! #define debug_jets
 
 subroutine Particles_wind(dt)
 

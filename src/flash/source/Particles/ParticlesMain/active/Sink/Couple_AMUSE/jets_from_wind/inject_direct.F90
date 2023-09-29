@@ -37,10 +37,10 @@
 subroutine inject_direct(loc_in, angmom_in, jet_wind, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
 ! Add angular momentum as input param -SA 20230718
 
-#define DEBUG
-#define DEBUG_ENERGY
-#define DEBUG_MPI
-#define DEBUG_JETS
+!! #define DEBUG
+!! #define DEBUG_ENERGY
+!! #define DEBUG_MPI
+!! #define DEBUG_JETS
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
