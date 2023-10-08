@@ -46,11 +46,13 @@ def stellar_evolution(time, dt, state, hydro, worker,
     Chosen to follow AMUSE worker convention.
     """
     
-    # Check the minimum mass that produces any form of feedback -SA 20231007
-    min_fb_mass_loc = np.nanmin(minimum_wind_mass, min_sn_mass, min_rad_mass, minimum_jet_mass)
-    
     assert massloss_method is not None
-    assert min_fb_mass_loc is not None
+    assert min_wind_mass is not None
+    assert min_sn_mass is not None
+    assert min_rad_mass is not None
+
+    # Check the minimum mass that produces any form of feedback -SA 20231007
+    min_fb_mass_loc = np.nanmin([minimum_wind_mass, min_sn_mass, min_rad_mass, minimum_jet_mass])
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
 
@@ -124,7 +126,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds and (s.mass >= np.nanmin(minimum_wind_mass, minimum_jet_mass)):
+                if with_winds and (s.mass >= np.nanmin([minimum_wind_mass, minimum_jet_mass])):
                     _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol[i], s.initial_mass,
                                               jet_fraction, jet_lifetime, jet_vel_frac, minimum_jet_mass, maximum_jet_mass,
                                               massloss_method=massloss_method)
