@@ -39,14 +39,18 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
-    massloss_method=None, min_feedback_mass=None,
+    massloss_method=None, minimum_wind_mass=None, min_sn_mass=None, min_rad_mass=None,
     minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
     """
+    
+    # Check the minimum mass that produces any form of feedback -SA 20231007
+    min_fb_mass_loc = np.nanmin(minimum_wind_mass, min_sn_mass, min_rad_mass, minimum_jet_mass)
+    
     assert massloss_method is not None
-    assert min_feedback_mass is not None
+    assert min_fb_mass_loc is not None
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
 
@@ -88,9 +92,11 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
         new_type[i] = se_type
 
-        if s.mass >= min_feedback_mass:
+        # Check that at least one form of feedback is enabled, and then 
+        # below, we will check each feedback mass separately - SA 20231007
+        if s.mass >= min_fb_mass_loc: 
 
-            if with_sn and went_supernova(se_type):
+            if with_sn and went_supernova(se_type) and (s.mass >= min_sn_mass):
 
                 inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                 if inj_mass > 15.0|units.MSun:
@@ -108,17 +114,17 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
             else:
 
-                if with_lyc:
+                if with_lyc and (s.mass >= min_rad_mass):
                     _tmp = compute_eion_nion_sigh(se_mass, se_temp, se_radius)
                     eion[i] = _tmp[0]
                     nion[i] = _tmp[1]
                     sigh[i] = _tmp[2]
-                if with_pe_heat:
+                if with_pe_heat and (s.mass >= min_rad_mass):
                     _tmp = compute_epe_npe(se_temp, se_radius)
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds:
+                if with_winds and (s.mass >= np.nanmin(minimum_wind_mass, minimum_jet_mass)):
                     _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt, t_evol[i], s.initial_mass,
                                               jet_fraction, jet_lifetime, jet_vel_frac, minimum_jet_mass, maximum_jet_mass,
                                               massloss_method=massloss_method)
