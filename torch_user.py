@@ -277,8 +277,9 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'seba' #'puls' 
 
-    p['min_feedback_mass'] = 7.0 | units.MSun #Minumum mass for calling stelar evolution? Check this. -SA 20230719
-    p['minimum_wind_mass'] = flashp['min_wind_mass'] | units.g #Read this in to make it easy to compare with min_feedback_mass
+    p['min_sn_mass'] = 7.0 | units.MSun #Minumum mass for injecting supernovae  -SA 20231007
+    p['min_rad_mass'] = 7.0 | units.MSun #Minimum mass for radiation feedback (ionizing and heating) -SA 20231007
+    p['minimum_wind_mass'] = flashp['min_wind_mass'] | units.g #Minimum mass for injecting winds -SA 20231007
     
     
     # <set Jets parameters >  - SA 20230808
@@ -292,7 +293,7 @@ def user_parameters():
         p['maximum_jet_mass'] = flashp['max_jet_mass'] | units.g  #7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets -SA 20230718
     else:
         p['maximum_jet_mass'] = 0.01 | units.MSun #set defaults to no jets (without using 0 in case that causes issues)
-    # To ensure a single star only produces either jets OR winds, make sure 'min_feedback_mass' and 'max_jet_mass' are equal.
+    # To ensure a single star only produces either jets OR winds, make sure 'min_wind_mass' and 'max_jet_mass' are equal.
     # However, if a stars mass allows both jets and winds, the jets will be produced at the beginning of the stars life (for the length
     # of the 'jet_lifetime' set below) and then will produce winds.
     # To produce winds but never produce jets, set 'min_jet_mass' to be greater than 'max_jet_mass'. - SA 20230718
