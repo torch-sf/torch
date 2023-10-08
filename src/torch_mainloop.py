@@ -252,7 +252,9 @@ def evolve(state, hydro, grav, mult, se):
                     jet_lifetime      = USER['jet_lifetime'],
                     jet_vel_frac      = USER['jet_vel_frac'],
                     massloss_method   = USER['massloss_method'],
-                    min_feedback_mass = USER['min_feedback_mass'],
+                    minimum_wind_mass = USER['minimum_wind_mass'],
+                    min_sn_mass       = USER['min_sn_mass'],
+                    min_rad_mass      = USER['min_rad_mass'], #replaced min_feedback_mass -SA 20231007
                     minimum_jet_mass  = USER['minimum_jet_mass'],
                     maximum_jet_mass  = USER['maximum_jet_mass'] # Add jet masses -SA 20230728
                 )
