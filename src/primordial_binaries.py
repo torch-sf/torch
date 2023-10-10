@@ -1,11 +1,10 @@
 """
 Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017), Winters et al. (2019) and Offner et al. (2022)
 Claude Cournoyer-Cloutier, McMaster University, 2020, 2021, 2023
-Version used in CCC+21 took the log twice in the period distribution, resulting in an absence of close massive binaries --> Fixed, 11/2021, CCC
+If used, please cite Cournoyer-Cloutier et al. (2021), MNRAS 501, 4464.
 """
 
 import numpy as np
-#import random
 from amuse.lab import units
 from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
 
@@ -24,7 +23,7 @@ def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
             """
             For masses below 0.6 MSun, we use the primary mass dependent binary fraction from Winters et al. (2019)
             as reported and corrected in Offner et al. (2022). Above 0.8 MSun, we use the multiple star fraction
-            (binary + triple/quad fraction). Between mass bins, we interpolate.
+            (binary + triple/quad fraction) from Moe & di Stefano (2017). Between mass bins, we interpolate.
             """
             
             if m < 0.15:
@@ -81,7 +80,8 @@ def get_period(mass, pdist='field'):
     """
     For masses below 0.6 MSun, we use the lognormal period distributions from Winters et al. (2019).
     The means are those reported in Offner et al. (2022) and the standard deviations are obtained
-    from the FWHM = 2.355 sigma, from the figures shown in Winters et al. (2019).
+    from table 2 in Offer et al. (2022), with the one from 0.15 MSun to 0.30 MSun taken as the
+    midpoint in logpsace between the other two standard deviations.
     For masses above 0.6 MSun, we use the period distributions from Moe & Di Stefano. We extend the
     period distrbutions up and down to 1.6 MSun from 1.2 and 2 MSun.
     """
@@ -92,39 +92,58 @@ def get_period(mass, pdist='field'):
         return a * p + b
     
     
-    def m_dwarfs(m):
+    def m_dwarfs(m, pdist):
         
-        def probability(m):
+        def probability(m, pdist):
             
-            if m < 0.15:
-                a = 10**(np.random.normal(np.log10(3.9), 0.6)) #limit to 0.01 and 1e4
-            elif 0.15 <= m < 0.30:
-                a = 10**(np.random.normal(np.log10(10), 1.1))
-            elif 0.30 <= m:
-                a = 10**(np.random.normal(np.log10(26), 1.2))
+            if pdist == 'inner':
+                if m < 0.15:
+                    a = 10**(np.random.normal(np.log10(3.1), 0.7))
+                elif 0.15 <= m < 0.30:
+                    a = 10**(np.random.normal(np.log10(6), 1.1))
+                elif 0.30 <= m:
+                    a = 10**(np.random.normal(np.log10(14), 1.3))
+            
+            elif pdist == 'field':
+                if m < 0.15:
+                    a = 10**(np.random.normal(np.log10(3.9), 0.7))
+                elif 0.15 <= m < 0.30:
+                    a = 10**(np.random.normal(np.log10(10), 1.1))
+                elif 0.30 <= m:
+                    a = 10**(np.random.normal(np.log10(26), 1.3))
+
             return a
         
         def mass_ratio(m):
             
             q = 0
-            while q*m < 0.08:
-                q = np.random.uniform(0, 1)
+            h = 10
+            prob = 0
+            
+            while prob < h:
+                low = np.max([0.1, 0.08 / m])
+                q = np.random.uniform(low, 1)
+                if m < 0.3:
+                    prob = q**0.7
+                else:
+                    prob = q**0.1
+                h = np.random.uniform(0, 1)
             
             return q
         
-        def period(m):
+        def period(m, pdist):
             
             q = mass_ratio(m)
             m2 = q*m
             p = 0
             while (p < 0.5) or (p > 7.5):
-                a = probability(m) | units.AU
+                a = probability(m, pdist) | units.AU
                 M = (m+m2) | units.MSun
                 p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constants.G*M)).value_in(units.yr)*(365.25))
             
             return p, q
         
-        period_m_dwarf, q_m_dwarf = period(m)
+        period_m_dwarf, q_m_dwarf = period(m, pdist)
         
         return period_m_dwarf, q_m_dwarf
     
@@ -356,20 +375,18 @@ def get_period(mass, pdist='field'):
 
     if pdist == 'field':
         if mass < 0.6:
-            p = m_dwarfs(mass)[0]
-            q = m_dwarfs(mass)[1]
+            p, q = m_dwarfs(mass, pdist)
         else:
             p = solar_and_above(mass)
             q = -1
     elif pdist == 'inner':
         if mass < 0.6:
-            p = m_dwarfs(mass)[0]
-            q = m_dwarfs(mass)[1]
+            p, q = m_dwarfs(mass, pdist)
         else:
             p = inner_solar_and_above(mass)
             q = -1
     else:
-        print('Please select a valid argument for the period distribution. Options are \'field\' and TBD.')
+        print('Please select a valid argument for the period distribution. Options are \'field\' and \'inner\'.')
 
     return p, q
 
