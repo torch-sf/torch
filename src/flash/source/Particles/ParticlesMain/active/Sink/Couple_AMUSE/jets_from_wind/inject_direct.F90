@@ -240,9 +240,12 @@ end if
 !!!  or perturb_velocity set.  So, we directly set both to false here
 !!!  in case they get set to true elsewhere.  -SA 1/23/2022
 !!!  Adding var_radius and setting it to false for the same reason. -SA 20220825
-mass_load = .false.
-perturb_velocity = .false.
-var_radius = .false.
+!! Update to only set mass_load to false for jets case.  -SA 20231012
+if (jet_wind .eq. jet_flag) then
+    mass_load = .false.
+    perturb_velocity = .false.
+    var_radius = .false.
+endif
 
 ! Mechanical Energy injected by the wind. - JW
 injE = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
