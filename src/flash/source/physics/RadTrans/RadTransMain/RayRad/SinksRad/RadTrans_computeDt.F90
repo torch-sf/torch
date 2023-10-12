@@ -228,7 +228,9 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
         csRad        = sqrt(rt_gamma1 * kB * wind_target_temp / rt_protonMass / mu)
 
 ! The velocity used for wind timestep should account for mass loading!!
-if (mass_load) then 
+! update to skip this if considering a jets case - SA 20231012
+!!!!  TODO: How does this handle a star that sequentially does jets then winds???
+if (mass_load .and. (max_mass > min_wind_mass)) then 
     refVel = sqrt(wind_target_temp/1.38d7)*1e8
     if (conserved_quant .eq. "momentum") then
         mass_load_factor = wind_vel/refVel - 1.0d0
