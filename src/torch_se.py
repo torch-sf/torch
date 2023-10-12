@@ -47,7 +47,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     """
     
     assert massloss_method is not None
-    assert min_wind_mass is not None
+    assert minimum_wind_mass is not None
     assert min_sn_mass is not None
     assert min_rad_mass is not None
 
