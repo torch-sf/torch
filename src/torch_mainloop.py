@@ -181,26 +181,13 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        #tprint("nbody time = ",nbody.time)
-        #dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        #dt = dt_nbody
-        # DEBUG CCC 10/05/2023 for binaries
-        #dt = 7.8125 | units.yr # Try smaller timestep to see if better (or if at least the direction of the velocity changes)
-        #print('Forced dt =', dt)
         # Test for timestep, CCC 11/05/2023
         # Recalculate PeTar parameters on the fly, CCC 28/02/23
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
-        # Debug for stars in same location, CCC 08/05/2023
-        #print('r_out=', grav.parameters.r_out)
-        #r_out_auto = grav.parameters.r_out
-        #grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
-        #print('r_out=', grav.parameters.r_out)
-        ###
         grav.parameters.begin_time = hy_time
-        ###
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = dt_nbody
         tprint('dt_nbody =', dt_nbody)
@@ -408,13 +395,7 @@ def evolve(state, hydro, grav, mult, se):
                 hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
                 hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
-
-                #DEBUG CCC 09/05/2023 - Print tags, positions, velocities
-                #print('Tags', state.stars.tag)
-                #print('Positions', state.stars.x, state.stars.y, state.stars.z)
-                #print('Velocities', state.stars.vx, state.stars.vy, state.stars.vz)
-                
-                
+                                
             else: # num_stars=1
 
                 tprint("Evolving hydro without grav to reach t =", hy_time+dt)
@@ -535,20 +516,11 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
             grav.parameters.r_bin = USER['r_bin']
             grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
-            # Debug for stars in same location, CCC 08/05/2023                                                                                                                   
-            #print('r_out=', grav.parameters.r_out)
-            #r_out_auto = grav.parameters.r_out
-            #grav.parameters.r_out = np.max([r_out_auto, 12.5*grav.parameters.r_bin])
-            #print('r_out=', grav.parameters.r_out)
-            ###
             grav.parameters.begin_time = hy_time
-            ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
             tprint('dt_nbody =', dt_nbody)
-            # DEBUG CCC 10/05/2023 for binaries
-            #dt = 7.8125 | units.yr # Try smaller timestep to see if better (or if at least the direction of the velocity changes)
-            #print('Forced dt =', dt)
+
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         if USER['with_petar']:
