@@ -106,7 +106,6 @@ def initialize_workers():
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
-        grav.parameters.stopping_conditions_timeout = USER['set_timeout'] 
         if USER['restart_from_stall']:
             grav.parameters.r_out = 100*grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
     else:
@@ -201,7 +200,6 @@ def evolve(state, hydro, grav, mult, se):
         #print('r_out=', grav.parameters.r_out)
         ###
         grav.parameters.begin_time = hy_time
-        grav.parameters.stopping_conditions_timeout = USER['set_timeout']
         ###
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = dt_nbody
@@ -354,22 +352,32 @@ def evolve(state, hydro, grav, mult, se):
                         pool.wait()
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
-                            if USER['check_for_stall'] == True:
-                                # Write chk from state_ if stall, CCC 09/03/2023
-                                state_.force_output(overwrite=USER['overwrite'])
-                                # Force crash if hydro advanced before grav,
-                                # i.e. PeTar stalled, CCC 07/03/2023
-                                tprint("... PeTar has stalled, exit the simulation")
-                                hydro.stop() 
-                                grav.stop()  
-                                se.stop()
+                            # Timeout condition for PeTar, CCC 17/10/2023
+                            # Wait here, then check if grav is done
+                            timeout = USER['set_timeout']
+                            start = time.time()
+                            while time.time() - start <= timeout:
+                                if pool_table_grav and pool_table_grav[-1] == it:
+                                    break
+                                time.sleep(10) #Check every 10 seconds
                             else:
-                                pass
+                                if USER['check_for_stall'] == True:
+                                    # Write chk from state_ if stall, CCC 09/03/2023
+                                    state_.force_output(overwrite=USER['overwrite'])
+                                    # Force crash if PeTar stalled, CCC 07/03/2023 & 17/10/2023
+                                    tprint("... PeTar has stalled, exit the simulation")
+                                    hydro.stop() 
+                                    grav.stop()  
+                                    se.stop()
+                                else:
+                                    pass
+
                         elif pool_table_grav and pool_table_grav[-1] == it:
-                            tprint("... grav advanced")
+                                tprint("... grav advanced")
                             
                         pool.wait()
                         tprint("... both grav and hydro advanced")
+
 
                 else:  # evolve models sequentially
 
@@ -534,7 +542,6 @@ def evolve(state, hydro, grav, mult, se):
             #print('r_out=', grav.parameters.r_out)
             ###
             grav.parameters.begin_time = hy_time
-            grav.parameters.stopping_conditions_timeout = USER['set_timeout']
             ###
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody

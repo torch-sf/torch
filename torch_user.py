@@ -286,7 +286,7 @@ def user_parameters():
 
     p['with_petar'] = True
     p['r_bin'] = 1.496e15 | units.cm # 100AU
-    p['set_timeout'] = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
+    p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023
     
     # <stellar evolution>
 
