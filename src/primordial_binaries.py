@@ -667,7 +667,7 @@ def get_eccentricity(mass, period, edist = 'field'):
 
 
 
-def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='field', edist='field'):
+def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='field', edist='field', min_mass=0.1):
 
     def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
         """
@@ -682,7 +682,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='f
         return semi_major_axis.as_quantity_in(units.AU)
 
 
-    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult_frac = mult_frac, pdist = pdist, qdist = qdist, edist = edist):
+    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult_frac = mult_frac, pdist = pdist, qdist = qdist, edist = edist, min_mass = min_mass):
         """
         Generates binaries from arrays of masses
         The input array has no units
@@ -700,32 +700,42 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='f
                 primary_mass      = mass_array[i]
                 log_period, q_tmp = get_period(primary_mass, pdist)
                 companion_mass    = get_companion_mass(primary_mass, log_period, q_tmp, qdist) | units.MSun
-                eccentricity      = get_eccentricity(primary_mass, log_period, edist)
-                primary_mass      = primary_mass | units.MSun
-                semi_major_axis   = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
-                E = np.random.uniform(-1 * np.pi, np.pi)
-                true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
-                inclination                     = np.random.uniform(-np.pi / 2, np.pi / 2) | units.rad
-                longitude_of_the_ascending_node = np.random.vonmises(np.pi, 0) | units.rad
-                argument_of_periapsis           = np.random.vonmises(np.pi, 0) | units.rad
+                # Check if companion mass is above the minimum mass, CCC 27/10/2023
+                if companion_mass.value_in(units.MSun) >= min_mass:
+                
+                    eccentricity      = get_eccentricity(primary_mass, log_period, edist)
+                    primary_mass      = primary_mass | units.MSun
+                    semi_major_axis   = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
 
-                binary = generate_binaries(primary_mass, companion_mass, semi_major_axis, eccentricity, true_anomaly, inclination, longitude_of_the_ascending_node, argument_of_periapsis, G = units.constants.G)
+                    E = np.random.uniform(-1 * np.pi, np.pi)
+                    true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
+                    inclination                     = np.random.uniform(-np.pi / 2, np.pi / 2) | units.rad
+                    longitude_of_the_ascending_node = np.random.vonmises(np.pi, 0) | units.rad
+                    argument_of_periapsis           = np.random.vonmises(np.pi, 0) | units.rad
 
-                primary_set = binary[0]
-                primary = primary_set[0]
-                companion_set = binary[1]
-                companion = companion_set[0]
+                    binary = generate_binaries(primary_mass, companion_mass, semi_major_axis, eccentricity, true_anomaly, inclination, longitude_of_the_ascending_node, argument_of_periapsis, G = units.constants.G)
 
-                masses.append(primary.mass.value_in(units.MSun))
-                masses.append(companion.mass.value_in(units.MSun))
-                system_masses.append(primary.mass.value_in(units.MSun) + companion.mass.value_in(units.MSun))
-                system_masses.append(0)
-                positions.append(primary.position.value_in(units.cm))
-                positions.append(companion.position.value_in(units.cm))
-                velocities.append(primary.velocity.value_in(units.cm / units.s))
-                velocities.append(companion.velocity.value_in(units.cm / units.s))
+                    primary_set = binary[0]
+                    primary = primary_set[0]
+                    companion_set = binary[1]
+                    companion = companion_set[0]
 
+                    masses.append(primary.mass.value_in(units.MSun))
+                    masses.append(companion.mass.value_in(units.MSun))
+                    system_masses.append(primary.mass.value_in(units.MSun) + companion.mass.value_in(units.MSun))
+                    system_masses.append(0)
+                    positions.append(primary.position.value_in(units.cm))
+                    positions.append(companion.position.value_in(units.cm))
+                    velocities.append(primary.velocity.value_in(units.cm / units.s))
+                    velocities.append(companion.velocity.value_in(units.cm / units.s))
+
+                else:
+                    masses.append(primary_mass)
+                    system_masses.append(primary_mass)
+                    positions.append([0, 0, 0])
+                    velocities.append([0, 0 ,0])
+                    
             else:
                 mass = mass_array[i]
                 masses.append(mass)
