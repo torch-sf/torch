@@ -518,7 +518,7 @@ min_wind_mass = 1.5912e34 # 8 solar masses # 1.3923e34 # 7 solar masses
 # shock temperature in the hot wind.
 mass_load  = .true.
 var_radius = .false. 
-wind_target_temp = 3e6
+wind_target_temp = 3e5
 
 # Perturb the wind velocity by a normal distribution?
 perturb_velocity = .false. #.true. #
