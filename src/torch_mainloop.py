@@ -105,7 +105,7 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
+        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
         if USER['restart_from_stall']:
             grav.parameters.r_out = 100*grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
     else:
@@ -181,15 +181,16 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        # Test for timestep, CCC 11/05/2023
+        # Get minimum dt from torch_user.py
+        dt_min = USER['dt_soft_min']
         # Recalculate PeTar parameters on the fly, CCC 28/02/23
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
+        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
         grav.parameters.begin_time = hy_time
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        dt = dt_nbody
+        dt = np.min([dt_nbody.value_in(units.kyr), dt_min.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
         tprint('dt_nbody =', dt_nbody)
 
     num_stars = hydro.get_number_of_particles()
@@ -515,10 +516,11 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.set_defaults()
             grav.parameters.epsilon_squared = USER['epsilon']**2.0
             grav.parameters.r_bin = USER['r_bin']
-            grav.parameters.r_out = USER['sink_rad'] #CCC 25/09/2023
+            grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
             grav.parameters.begin_time = hy_time
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_min.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023 
             tprint('dt_nbody =', dt_nbody)
 
         num_stars = hydro.get_number_of_particles()  # loop variable
