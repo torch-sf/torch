@@ -44,6 +44,12 @@ class TorchState(object):
         # Stellar evolution to stars, CCC 04/11/2023
         self.stars_to_se = self.stars.new_channel_to(se.particles)
         self.se_to_stars = se.particles.new_channel_to(self.stars)
+        # Binary evolution, CCC 05/11/2023
+        self.binaries_to_se = self.binaries.new_channel_to(se.binaries)
+        # No channel to grav yet
+        self.se_to_binaries = se.binaries.new_channel_to(self.binaries)
+        self.stars_to_binaries = self.stars.new_channel_to(self.binaries)
+        self.binaries_to_stars = self.binaries.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
