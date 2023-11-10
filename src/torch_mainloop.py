@@ -107,7 +107,7 @@ def initialize_workers():
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
         if USER['restart_from_stall']:
-            grav.parameters.r_out = 100*grav.parameters.r_bin # Force this value to restart from a stall, CCC 09/03/2023
+            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
