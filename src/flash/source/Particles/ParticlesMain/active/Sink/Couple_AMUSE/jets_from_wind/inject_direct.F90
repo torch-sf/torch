@@ -421,7 +421,9 @@ if (gr_meshMe == 0) then
 end if
 #endif
 
+#ifdef DEBUG
 call flush()
+#endif
 
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
@@ -683,7 +685,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !rad is the magnitude of the dx vector
                         !ang_mom_mag is the magnitude of j (should always be 1)
                         theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+#ifdef DEBUG_JETS
                         print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+#endif
                         phi = 0
                         rad_jet = rad
                         !print *, "rotation theta, phi: ", theta, phi 
@@ -720,8 +724,10 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     
                     
                         !print*, "cos^2 is:", (cos(theta))**2.0 
+#ifdef DEBUG_JETS
                         print*, "Cunningham ang dependence is: ", ang_dependence
                         print*, "Also, the radial dependence is:", rad_dependence
+#endif
 
                     else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
 #ifdef DEBUG_JETS
@@ -732,7 +738,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
 
                     else ! -SA 20230726
-                        print *, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
+                        print *, "inject_direct.F90: Unclear what to inject", jet_wind, starMass
                         ang_dependence = 1.0
                         rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
@@ -806,8 +812,10 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
+#ifdef DEBUG_JETS
 if (gr_meshMe == 0) &   ! Added 20220825 -SA
     print*, "sumOverlap is", sumOverlap
+#endif
 
 if (perturb_velocity) then
 
