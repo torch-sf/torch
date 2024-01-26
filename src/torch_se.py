@@ -36,6 +36,9 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
+##  Add a debug flag for jets print statements - SA 20240125
+jets_debug = False
+
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
@@ -80,7 +83,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     for i, s in enumerate(state.stars):
 
-        print("Looping through stars. Init Mass: ", s.initial_mass, " position: ", s.x, s.y, s.x)
+        if jets_debug: print("Looping through stars. Init Mass: ", s.initial_mass, " position: ", s.x, s.y, s.x)
         
         if went_supernova(s.stellar_type):
             continue
@@ -162,8 +165,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
-    print("Double check mass at end of stellar_evolution: ", state.stars.mass, " SA 202309")
-    print("Double check dmdt at end of stellar_evolution: ", dm_dt.as_quantity_in(units.g/units.s), " SA 202212")
+    if jets_debug: print("Double check mass at end of stellar_evolution: ", state.stars.mass, " SA 202309")
+    if jets_debug: print("Double check dmdt at end of stellar_evolution: ", dm_dt.as_quantity_in(units.g/units.s), " SA 202212")
 
     return se_dt
 
@@ -188,7 +191,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
                 + 0.55*np.log10(se_mass.value_in(units.MSun))
                 + 0.64*np.log10(se_temp.value_in(units.K))) | units.km/units.s
         
-        print("Current jet velocity - using wind equation: ", vterm) # Add to check current velocities - SA 20220927
+        if jets_debug: print("Current jet velocity - using wind equation: ", vterm) # Add to check current velocities - SA 20220927
 
     # Note that Leitherer and Puls calculations use the old mass
 
@@ -215,37 +218,39 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, t_evo
     ##  Add a chunk of code to make a non-zero dm_dt in the case of low mass stars so that we 
     ##  can do jets.  Will need to be significantly improved. -SA July 7, 2022
     ##  First print some things to check
-    print("In torch_se.py; computing dmdt.")
+    if jets_debug: print("In torch_se.py; computing dmdt.")
     #print("Current dmdt value: ", dm_dt)
     #print("stellar age: ", t_evol)  #check that this is working
 
     ##  Now set some constants (eventually these should all be user defined parameters or defined at the start of the funcion)
     #eject_fraction = 3  # No longer using this.  Use the user defined jet_fraction instead. - SA 20221108
     #max_jet_mass = 9.0 | units.MSun
-    print("Jet mass range: ", minimum_jet_mass, maximum_jet_mass)
+    if jets_debug: print("Jet mass range: ", minimum_jet_mass, maximum_jet_mass)
 
     ##  Now to calculate the keplerian velocity to set the 
     v_kepler_cgs = np.sqrt( G_cgs * se_mass.value_in(units.g) / (se_radius.value_in(units.cm))) | (units.cm/units.s)
     v_kepler = v_kepler_cgs.as_quantity_in(units.km/units.s)
-    print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
+    if jets_debug: print("Keplerian velocity: ", v_kepler, "jet_vel_frac: ", jet_vel_frac)
 
-    print("Check t_evol: ", t_evol.value_in(units.yr))
-    print("Check jet_lifetime: ", jet_lifetime.value_in(units.yr))
+    if jets_debug: print("Check t_evol: ", t_evol.value_in(units.yr))
+    if jets_debug: print("Check jet_lifetime: ", jet_lifetime.value_in(units.yr))
     
     if ((se_mass.value_in(units.MSun) < maximum_jet_mass.value_in(units.MSun)) 
         and (se_mass.value_in(units.MSun) >= minimum_jet_mass.value_in(units.MSun)) 
         and (t_evol.value_in(units.yr) < jet_lifetime.value_in(units.yr))) : 
-        print("We are injecting jets - and not reducing the mass of the star.")
+        if jets_debug: print("We are injecting jets - and not reducing the mass of the star.")
         reduce_star_mass = False  # added -SA 20230801
         dm_tot = init_mass * jet_fraction #/ eject_fraction
-        print("total mass lost to outflows: ", dm_tot)
+        if jets_debug: print("total mass lost to outflows: ", dm_tot)
         dm = dm_tot *(dt/jet_lifetime)
-        print("mass injected in this time step: ", dm)
+        if jets_debug: print("mass injected in this time step: ", dm)
         dm_dt = dm/dt
         vterm = jet_vel_frac * v_kepler
+        tprint("Injecting a jet with dmdt and velocity:", dm_dt, vterm)
     else:
-        print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
-    print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
+        if jets_debug: print("No jets - either the wrong time or the wrong mass. ", se_mass.value_in(units.MSun), t_evol.value_in(units.yr))
+    
+    if jets_debug: print("New dmdt value: ", dm_dt, "New jet vel: ", vterm)
 
     return dm_dt, vterm, reduce_star_mass # Add reduce_star_mass -SA 20230801
 
