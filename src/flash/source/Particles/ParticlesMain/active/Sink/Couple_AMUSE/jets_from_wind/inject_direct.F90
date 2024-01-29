@@ -201,6 +201,7 @@ call flush()
 !!  -SA 20240129
 if ((jet_wind == 0) .or. (injectMassIn == 0)) then
     return
+end if
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
