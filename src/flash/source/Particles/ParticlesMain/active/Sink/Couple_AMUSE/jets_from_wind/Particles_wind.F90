@@ -7,6 +7,10 @@
 !!! particle's dM/dt and wind terminal velocity v_wind.
 !!!
 !!! J. Wall Drexel University 2017
+!!!
+!!! Modified by Sabrina Appel 2019-2024
+!!! This subroutine now also checks whether a star should be injecting
+!!! a jet and sets the a jet/wind switch accordingly.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !! #define debug

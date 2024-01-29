@@ -7,8 +7,13 @@
 !!!          Drexel University
 !!!          Summer and Fall 2016
 !!!
+!!! Modified 2019-2024 by Sabrina Appel
+!!!
 !!! A routine for injection of stellar winds (radiative type for massive
 !!! stars).
+!!!
+!!! Modified 2019-2024 to alternatively inject protostellar jets for
+!!! for certain stars as determined by Particles_wind.F90. -SA
 !!!
 !!! This routine injects both mass and energy in a 
 !!! momentum conserving fashion. Note that we require
@@ -21,6 +26,9 @@
 !!! injection radius is smaller than R_1, we make the injection radius larger
 !!! up to injectionRadiusMax, which is a runtime parameter. The default is
 !!! 5 cells at the diagional in 3d (3.5*sqrt(3.0)*dx).
+!!!
+!!! This default has been updated in the new version with jets to 10.0*dx to
+!!! account for the larger injection regions of jets. -SA
 !!!
 !!! Note that both this and the further requirement that energy be
 !!! conserved by inelasitc collision of the wind mass and the cell mass
