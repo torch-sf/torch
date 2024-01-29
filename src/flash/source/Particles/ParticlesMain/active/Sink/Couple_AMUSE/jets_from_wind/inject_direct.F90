@@ -197,6 +197,11 @@ if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", je
 call flush()
 #endif
 
+!!  First check that we're actually injecting anything, otherwise, exit the subroutine
+!!  -SA 20240129
+if ((jet_wind == 0) .or. (injectMassIn == 0)) then
+    return
+
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
     call RuntimeParameters_get("lrefine_max", maxref)
