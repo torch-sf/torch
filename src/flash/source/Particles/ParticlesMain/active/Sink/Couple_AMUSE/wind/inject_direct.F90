@@ -165,6 +165,13 @@ logical  :: calcBgDens
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
+
+! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
+if ((injectMassIn == 0) .or. (injectVelocityIn == 0)) then
+    return
+end if
+
+
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
     call RuntimeParameters_get("lrefine_max", maxref)
