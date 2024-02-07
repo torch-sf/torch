@@ -26,6 +26,9 @@ use Grid_interface, only : Grid_fillGuardCells
 
 use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
+use Timers_interface, ONLY : Timers_start, Timers_stop  !SA 20240207
+
+
 implicit none
 
 real, intent(in)       :: dt
@@ -72,6 +75,7 @@ end if
 
 min_wind_dt = 1d99
 
+call Timers_start("Particles_wind")
 
 ! Local number of massive/active particles.
   p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
@@ -163,6 +167,7 @@ print*, "About to gather.", dr_globalMe
 print*, "num_array =", num_array, dr_globalMe
 print*, "disp =", disp, dr_globalMe
 #endif
+call Timers_start("MPI_AllGather_winds")
 ! Now actually gather the info on each proc using the variable length array
 ! gather command in MPI.
 call MPI_AllGatherv(locx, w_numloc, FLASH_REAL, x, num_array, &
@@ -180,6 +185,7 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 		   
+call Timers_stop("MPI_AllGather_winds")
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
 #ifdef debug
@@ -196,7 +202,11 @@ do p=1, w_num
       print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
   
+    call Timers_start("inject_direct_call")
+
     call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p))
+
+    call Timers_stop("inject_direct_call")
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
     if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
@@ -223,5 +233,7 @@ deallocate(x, y, z)
 call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VELY_VAR, VELZ_VAR, DENS_VAR /)
 
 call Grid_fillGuardCells(CENTER, ALLDIR) !, doEos=.true., eosMode=MODE_DENS_EI, selectBlockType=ACTIVE_BLKS)
+
+call Timers_stop("Particles_wind")
 
 end subroutine Particles_wind
