@@ -96,9 +96,9 @@ min_wind_dt = 1d99
 
 
 ! Local number of massive/active particles.
-  p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
-  p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
-  p_end   = p_num + p_begin - 1
+p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
+p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
+p_end   = p_num + p_begin - 1
 
 ! print*, "Number of particles (begin, num, end): ", p_begin, p_num, p_end, " -SA 202212"
 
