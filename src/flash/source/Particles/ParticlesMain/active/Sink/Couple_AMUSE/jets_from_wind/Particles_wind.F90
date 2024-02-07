@@ -14,7 +14,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !! #define debug
-!! #define debug2
+#define debug2
 !! #define debug_jets
 
 subroutine Particles_wind(dt)
