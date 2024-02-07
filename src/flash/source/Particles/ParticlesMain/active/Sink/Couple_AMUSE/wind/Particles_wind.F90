@@ -199,12 +199,12 @@ do p=1, w_num
   if (dmdt(p) .gt. 0) then !Check that there's even anything to inject - SA 20240207
 #ifdef debug2
     if (dr_globalMe .eq. 0) &
-      print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
+      print*, "Calling inject direct with injection mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
   
     call Timers_start("inject_direct_call")
 
-    call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), mass, twind, dt, bgdy(p))
+    call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
 
     call Timers_stop("inject_direct_call")
 
