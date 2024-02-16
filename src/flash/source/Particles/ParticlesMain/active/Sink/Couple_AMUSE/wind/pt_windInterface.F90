@@ -8,7 +8,7 @@ Module pt_windInterface
       real, intent(in) :: loc_in(3)
       real, intent(in) :: injectMassIn, injectVelocityIn, twind
       real, intent(inout) :: dt
-      real(dp), intent(inout) :: bgDens
+      real, intent(inout) :: bgDens
     end subroutine inject_direct
   end interface
 
