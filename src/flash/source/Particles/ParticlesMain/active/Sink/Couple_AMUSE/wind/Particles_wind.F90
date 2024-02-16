@@ -87,14 +87,17 @@ call Timers_start("Particles_wind")
 #endif
 
 ! Local number of massive/active particles.
-  p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
-  p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
-  p_end   = p_num + p_begin - 1
+p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
+p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
+p_end   = p_num + p_begin - 1
 
 allocate(p_ind(pt_numLocal))
 p_ind = 0
 
 call Particles_getGlobalNum(p_globalnum)
+
+! First, we allocate the length of each array to be the total number of star particles.
+! Each array is then initialized to be all 0. -SA 20240216
 
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
@@ -105,6 +108,14 @@ num_array = 0
 
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
+
+! This do loop then loops over each particle and checks if winds are on for that star.
+! If winds are on, then a separate index w_numloc (which starts at 0) is incremented and
+! the entry of each of the above arrays which corresponds to the new w_numloc index is
+! set to the corresponding non-zero value for the star. At the end of the loop the first
+! entries (a number matching the number of wind stars) will be non-zero and all subsequent
+! entries will be zero.  The final value of the w_numloc index will also track the
+! total number of wind stars. (This is my current understanding.) -SA 20240216
 
 do p = p_begin, p_end
 #ifdef debug
@@ -127,6 +138,13 @@ do p = p_begin, p_end
 
   end if
 end do
+
+! Now that the above arrays have identified all the wind stars for a
+! given processor, the following code collects that info from all
+! processors using MPI_AllGather. Only the first w_numloc entries
+! from each processor are gathered, meaning all the zero valued
+! entries should be dropped during the MPI_AllGather stage. The
+! final arrays should only have wind stars with non-zero values. -SA 20240216
 
 ! Now use MPI to vector gather all the information for how to inject
 ! the winds on each processor.
@@ -207,6 +225,13 @@ call Timers_stop("MPI_AllGather_winds")
 #ifdef debug
 print*, "Done gathering.", dr_globalMe
 #endif
+
+! The following do loop goes over all the entries of the gathered arrays and injects
+! winds with inject-direct. At this point every entry of these arrays should be
+! a wind star with non-zero dmdt. Thus, w_num is the number of wind stars. But
+! an extra if statement in the do loop will also double check for zero dmdt
+! values. -SA 20240216
+
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
