@@ -11,6 +11,13 @@
 
 !#define debug
 #define debug2
+
+! debug flags for timers - timerall is the whole file, timersub times
+! specific subsection including the AllGather calls and inject_direct
+! -SA 20240216
+#define debug_timerall
+#define debug_timersub
+
 subroutine Particles_wind(dt)
 
 use Particles_data, only : particles, pt_typeInfo, pt_numLocal
@@ -75,7 +82,9 @@ end if
 
 min_wind_dt = 1d99
 
+#ifdef debug_timerall
 call Timers_start("Particles_wind")
+#endif
 
 ! Local number of massive/active particles.
   p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
@@ -167,7 +176,11 @@ print*, "About to gather.", dr_globalMe
 print*, "num_array =", num_array, dr_globalMe
 print*, "disp =", disp, dr_globalMe
 #endif
+
+#ifdef debug_timersub
 call Timers_start("MPI_AllGather_winds")
+#endif
+
 ! Now actually gather the info on each proc using the variable length array
 ! gather command in MPI.
 call MPI_AllGatherv(locx, w_numloc, FLASH_REAL, x, num_array, &
@@ -184,8 +197,11 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
-		   
+
+#ifdef debug_timersub
 call Timers_stop("MPI_AllGather_winds")
+#endif
+
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
 #ifdef debug
@@ -201,12 +217,16 @@ do p=1, w_num
     if (dr_globalMe .eq. 0) &
       print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
-  
+
+#ifdef debug_timersub
     call Timers_start("inject_direct_call")
+#endif
 
     call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
 
+#ifdef debug_timersub
     call Timers_stop("inject_direct_call")
+#endif
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
     if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
@@ -234,6 +254,8 @@ call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VEL
 
 call Grid_fillGuardCells(CENTER, ALLDIR) !, doEos=.true., eosMode=MODE_DENS_EI, selectBlockType=ACTIVE_BLKS)
 
+#ifdef debug_timerall
 call Timers_stop("Particles_wind")
+#endif
 
 end subroutine Particles_wind
