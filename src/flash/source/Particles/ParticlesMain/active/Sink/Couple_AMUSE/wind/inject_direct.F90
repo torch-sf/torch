@@ -168,7 +168,7 @@ logical  :: calcBgDens
 
 
 ! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
-if ((injectMassIn == 0) .or. (injectVelocityIn == 0)) then
+if ((injectMassIn .le. tiny(0.0_dp)) .or. (injectVelocityIn .le. tiny(0.0_dp))) then
     return
 end if
 
