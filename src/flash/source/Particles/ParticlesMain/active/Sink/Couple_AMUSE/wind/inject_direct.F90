@@ -35,7 +35,8 @@
 
 
 
-subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, starMass, twind, dt, bgDens)
+subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
+! Remove starMass since it's uneeded - SA 20240207
 
 !#define DEBUG
 #define DEBUG_ENERGY
@@ -136,7 +137,7 @@ real(dp) :: blkCtr(3), blkSize(3)  ! code requires MDIM=3
 real(dp), parameter :: yr = (60.0_dp**2.0)*24.0_dp*365.25_dp
 real(dp), parameter :: solarMass = 1.989d33
 
-real(dp) :: starMass, ThermE, KinE, injE, oldThermE
+real(dp) :: ThermE, KinE, injE, oldThermE
 real(dp) :: globalTE, globalKE, largestTE, largestKE
 real(dp) :: deltaKinE, deltaThermE, finalThermE, deltaE, addThermE, addKinE
 real(dp) :: initialKE, initialTE
@@ -164,6 +165,13 @@ logical  :: calcBgDens
 
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
+
+
+! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
+if ((injectMassIn .le. tiny(0.0_dp)) .or. (injectVelocityIn .le. tiny(0.0_dp))) then
+    return
+end if
+
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -429,7 +437,6 @@ if (gr_meshMe == 0) then
     write(*,'(A,ES10.3,A,ES10.3,A)') "Injecting", injectMassIn/dt/solarMass*yr, &
                                  " solar masses/yr at ", injectVelocityIn, " cm/s"
     !write(*,'(A,ES10.3,A,ES10.3,A)') "(", injectMass, " g over ", dt, " seconds)"
-    write(*,'(A,ES10.3)') "Star mass =", starMass
     write(*,'(A,3ES10.3)') "Star loc  =", loc
     write(*,'(A,ES10.3,A)') "For a total of ", &
             0.5 * injectMassIn * injectVelocityIn**2/dt, " ergs/s"
