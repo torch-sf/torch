@@ -37,13 +37,18 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #include "Flash.h"
 #include "Particles.h"
 
-  use Driver_data, only : dr_globalMe, dr_nstep, dr_globalComm
+  use Driver_data, only : dr_globalMe, dr_nstep, dr_globalComm, dr_simTime
 
 #ifdef WIND_INJ
-  use Particles_windData, only : min_wind_mass, min_wind_dt, wind_target_temp, &
-                                 min_jet_mass, max_jet_mass ! -SA 20230920
+  use Particles_windData, only : min_wind_mass, min_wind_dt, &
+#ifdef JETS
+                                 min_jet_mass, max_jet_mass, jet_time, & ! -SA 20230920
+#endif
+                                 wind_target_temp
+
   use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 #endif
+
   use Particles_rayData, only : ph_radPressure, cfl_radPressure
   use rt_data, only: rt_dt, rt_dt_pos, rt_protonMass, rt_gamma1, &
                      rt_rayTrace, rt_useNumstepsRadTransDtOnStart, &
@@ -79,9 +84,6 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real :: refVel
   real, save :: sink_density
 
-  ! Local variable for the minimum wind/jet mass -SA 20230920
-  real*8   :: loc_feedback_mass
-
   ! Here we estimate the timestep for feedback in radiation and winds
   ! from a star we have introduced to the simulation in between loop steps.
   ! Note this is necessary (and also to have the global dt calculated 
@@ -96,8 +98,11 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   if (first_call) then
     call RuntimeParameters_get("cons_quant", conserved_quant)
     call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+#ifdef JETS
     call RuntimeParameters_get("min_jet_mass", min_jet_mass) ! -SA 20230920
     call RuntimeParameters_get("max_jet_mass", max_jet_mass)
+    call RuntimeParameters_get("jet_time", jet_time)
+#endif
     call RuntimeParameters_get("wind_target_temp", wind_target_temp)
     call RuntimeParameters_get("rt_useRadTransDt", rt_useRadTransDt)
     call RuntimeParameters_get("rt_useNumstepsRadTransDtOnStart", rt_useNumstepsRadTransDtOnStart)
@@ -108,9 +113,11 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
     first_call = .false.
   end if
 
-  ! Also need to account for jet mass: -SA 20230920
-  ! Define a local min feedback mass
-  loc_feedback_mass = MIN(min_wind_mass, min_jet_mass)
+#ifdef JETS
+  !!! Note JETS options assume WIND_INJ also is on -SA 20240223
+  ! If checking for jets, we need the current simulation time -SA 20240223
+  time = dr_simTime !no modification by dt
+#endif
 #endif
 
   if (.not. rt_useRadTransDt) then
@@ -147,8 +154,9 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   print*, "currnum_radTransDt_loops=", currnum_radTransDt_loops, dr_globalMe
   print*, "stillUseRadDt=", stillUseRadDt, dr_globalMe
   print*, "min_wind_mass=", min_wind_mass, dr_globalMe
+#ifdef JETS
   print*, "min_jet_mass=",  min_jet_mass, dr_globalMe ! -SA 20230920
-  print*, "Local min feedback mass:", loc_feedback_mass, dr_gllobalMe 
+#endif
 #ifdef ONLY_FB_PROC
   endif
 #endif
@@ -156,10 +164,10 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   
   do p=type_begin, type_end
 #if defined(WIND_INJ)
-    ! Update to account for jet mass with loc_feedback_mass -SA 20230920
-    if (particles(MASS_PART_PROP, p) .ge. loc_feedback_mass) then
+    ! For wind dt, just use most massive star and wind parameters -SA 20240223
+    if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then
 #else
-    ! We should eventually update this to not hardcode a mass value -SA 20230920
+    ! TODO: We should eventually update this to not hardcode a mass value -SA 20230920
     if (particles(MASS_PART_PROP, p) .ge. eightMSun) then
 #endif
       mass_count = mass_count + 1
@@ -228,9 +236,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
         csRad        = sqrt(rt_gamma1 * kB * wind_target_temp / rt_protonMass / mu)
 
 ! The velocity used for wind timestep should account for mass loading!!
-! update to skip this if considering a jets case - SA 20231012
-!!!!  TODO: How does this handle a star that sequentially does jets then winds???
-if (mass_load .and. (max_mass > min_wind_mass)) then 
+if (mass_load) then
     refVel = sqrt(wind_target_temp/1.38d7)*1e8
     if (conserved_quant .eq. "momentum") then
         mass_load_factor = wind_vel/refVel - 1.0d0
