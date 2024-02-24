@@ -67,10 +67,10 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real, intent(INOUT) :: dt_radtrans
   integer, intent(INOUT)  :: dt_minloc(5)
   integer, save       :: num_fb_stars=0 ! number of feedback producing stars.
-  integer             :: p, mass_count, type_begin, type_count, type_end, ierr
+  integer             :: p, mass_count, jet_mass_count, type_begin, type_count, type_end, ierr
   real, parameter     :: eightMSun = 8.0d0*1.989d33, kB = 1.381d-16, mu = 0.61
-  real                :: deltaX, csRad, photon_flux, max_mass, ener_per_ph, cross_sec
-  real                :: dt_mom, dt_wind, wind_vel, dt_min_local
+  real                :: deltaX, csRad, photon_flux, max_mass, max_jet_mass, ener_per_ph, cross_sec
+  real                :: dt_mom, dt_wind, dt_jet, wind_vel, jet_vel, dt_min_local
   ! This makes the code use the RadTransDt for a set number of loops after
   ! a new feedback star appears.
   !integer, parameter  :: maxnum_radTransDt_loops = 100
@@ -127,11 +127,15 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 
 
   mass_count = 0
+  jet_mass_count = 0
   max_mass   = 0.0d0
+  max_jet_mass = 0.0d0
   csRad      = 0.0d0
   dt_mom     = 1d99
   dt_wind    = 1d99
+  dt_jet     = 1d99
   wind_vel   = 0.0d0
+  jet_vel    = 0.0d0
   dt_min_local = 1d99
 
   if (curr_step_num /= dr_nstep) then ! We have a new dt calc loop starting
@@ -163,7 +167,13 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #endif
   
   do p=type_begin, type_end
-#if defined(WIND_INJ)
+#if defined(JETS)
+    ! If JETS is on, we need to make sure we have a wind and NOT a jet star
+    if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then !if producing winds
+       if ((particles(MASS_PART_PROP, p) .lt. min_jet_mass) .or. & !less massive than jet range
+           (particles(MASS_PART_PROP, p) .ge. max_jet_mass) .or. & !more massive than jet range
+           ( (time - particles(CREATION_TIME_PART_PROP, p)) .ge. jet_time )) then !older than jets
+#else if defined(WIND_INJ)
     ! For wind dt, just use most massive star and wind parameters -SA 20240223
     if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then
 #else
@@ -181,8 +191,31 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #endif
         photon_flux = photon_flux ! # Assume worst case, star dumps all into one cell.
       end if
+#ifdef
+      end if
+#endif
     end if
+
+#ifdef JETS
+    !!  Now look for most massive jet star to calculate det_jet -SA 20240223
+    if ((particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
+        (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
+        ( (time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
+       jet_mass_count = jet_mass_count + 1
+       if (particles(MASS_PART_PROP, p) .gt. max_jet_mass) then ! We want the most massive jet star.
+           max_jet_mass    = particles(MASS_PART_PROP, p)
+           jet_vel    = particles(VELW_PART_PROP, p) ! Jet velocity - same param. as wind_vel but for jet star
+       end if
+    end if
+#endif
   end do
+
+#ifdef JETS
+  !! Note: This will double count any stars that currently are producing jets but
+  !! will eventually produce winds. There might be a better way to do this. -SA 20240223
+  mass_count = mass_count + jets_mass_count
+#endif
+
   ! Get the total mass count.
   call MPI_ALLREDUCE(mass_count, global_mass_count, 1, MPI_INT, MPI_SUM, &
                      dr_globalComm, ierr)
@@ -204,6 +237,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   ! If both 1) We have a new FB star that hasn't been on the grid before and
   !         2) Your the proc that currently has it.
   ! Then compute an estimate of the timestep.
+  !! I am concerned that since mass_count can go down if stars leave the grid (or a jet reaches the end
+  !! its life) this check isn't very meaningful. TODO is there a better way to do this? -SA 20240223
   if ((global_mass_count .gt. global_fb_stars) .and. (mass_count .gt. num_fb_stars)) then ! We have a new feedback star.
     currnum_radTransDt_loops = 0
   end if
@@ -245,9 +280,16 @@ if (mass_load) then
         mass_load_factor = wind_vel**2.0d0/refVel**2.0d0 - 1.0d0
         injectVelocity   = wind_vel / dsqrt(1.0d0+mass_load_factor)
     endif
+    ! Move this within if statement -SA 20240223
+    dt_wind      = 0.3 * deltaX / sqrt(csRad**2.0 + injectVelocity**2.0)
+
 end if
 
-        dt_wind      = 0.3 * deltaX / sqrt(csRad**2.0 + injectVelocity**2.0)
+#ifdef JETS
+        !!! Add new jets dt - based on winds dt but without mass loading
+        !!! and using most massive jet star (not most massive star). -SA 20240223
+        dt_jet = 0.3 * deltaX / sqrt(csRad**2.0 + jet_vel**2.0)
+#endif
 
 #ifdef DEBUG_RADDT
 #ifdef ONLY_FB_PROC
@@ -303,7 +345,8 @@ end if
 #endif
 #endif    
       end if
-      dt_min_local  = min(dt_min_local, dt_wind, dt_mom)
+!!! Add jets dt to determination of min dt value -SA 20240223
+      dt_min_local  = min(dt_min_local, dt_wind, dt_mom, dt_jet)
       old_dt_radtrans = dt_min_local
 #ifdef DEBUG_RADDT
 #ifdef ONLY_FB_PROC
