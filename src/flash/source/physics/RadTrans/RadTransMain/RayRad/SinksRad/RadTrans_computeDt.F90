@@ -69,7 +69,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   integer, save       :: num_fb_stars=0 ! number of feedback producing stars.
   integer             :: p, mass_count, jet_mass_count, type_begin, type_count, type_end, ierr
   real, parameter     :: eightMSun = 8.0d0*1.989d33, kB = 1.381d-16, mu = 0.61
-  real                :: deltaX, csRad, photon_flux, max_mass, max_jet_mass, ener_per_ph, cross_sec
+  real                :: deltaX, csRad, photon_flux, max_mass, max_mass_jet, ener_per_ph, cross_sec
   real                :: dt_mom, dt_wind, dt_jet, wind_vel, jet_vel, dt_min_local
   ! This makes the code use the RadTransDt for a set number of loops after
   ! a new feedback star appears.
@@ -80,6 +80,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real, save          :: old_dt_radtrans = 1d99
   real :: mass_load_factor
   real :: injectVelocity
+  real :: time ! Current simulation time for determining star particle age -SA 20240226
   character(len=10), save :: conserved_quant
   real :: refVel
   real, save :: sink_density
@@ -129,7 +130,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   mass_count = 0
   jet_mass_count = 0
   max_mass   = 0.0d0
-  max_jet_mass = 0.0d0
+  max_mass_jet = 0.0d0
   csRad      = 0.0d0
   dt_mom     = 1d99
   dt_wind    = 1d99
@@ -173,7 +174,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
        if ((particles(MASS_PART_PROP, p) .lt. min_jet_mass) .or. & !less massive than jet range
            (particles(MASS_PART_PROP, p) .ge. max_jet_mass) .or. & !more massive than jet range
            ( (time - particles(CREATION_TIME_PART_PROP, p)) .ge. jet_time )) then !older than jets
-#else if defined(WIND_INJ)
+#elif defined(WIND_INJ)
     ! For wind dt, just use most massive star and wind parameters -SA 20240223
     if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then
 #else
@@ -191,7 +192,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #endif
         photon_flux = photon_flux ! # Assume worst case, star dumps all into one cell.
       end if
-#ifdef
+#ifdef JETS
       end if
 #endif
     end if
@@ -202,8 +203,8 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
         (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
         ( (time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
        jet_mass_count = jet_mass_count + 1
-       if (particles(MASS_PART_PROP, p) .gt. max_jet_mass) then ! We want the most massive jet star.
-           max_jet_mass    = particles(MASS_PART_PROP, p)
+       if (particles(MASS_PART_PROP, p) .gt. max_mass_jet) then ! We want the most massive jet star actually spawned.
+           max_mass_jet    = particles(MASS_PART_PROP, p)
            jet_vel    = particles(VELW_PART_PROP, p) ! Jet velocity - same param. as wind_vel but for jet star
        end if
     end if
@@ -213,7 +214,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 #ifdef JETS
   !! Note: This will double count any stars that currently are producing jets but
   !! will eventually produce winds. There might be a better way to do this. -SA 20240223
-  mass_count = mass_count + jets_mass_count
+  mass_count = mass_count + jet_mass_count
 #endif
 
   ! Get the total mass count.
