@@ -2,6 +2,7 @@
 ## that other units can know if its here.
 
 PPDEFINE WIND_INJ
+PPDEFINE JETS
 
 # For any energy injection, these particle props
 # should be defined.
