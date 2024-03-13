@@ -99,7 +99,10 @@ class TorchState(object):
                 tprint("Random state set from "+rstatefile)
 
                 with open(massesfile, 'rb') as f:
-                    self.all_masses = pickle.load(f)
+                    #Read in the full list of both mass types and then split the list - SA 20231226
+                    both_masses = pickle.load(f)
+                    self.all_masses = both_masses[0]
+                    self.starjet_masses = both_masses[1]
                 tprint("Loaded all_masses dictionary from "+massesfile)
 
             else:
@@ -146,7 +149,9 @@ class TorchState(object):
         fname = path.join(self.output_dir,
                           "all_masses{:04d}.pickle".format(self.chknum))
         with open(fname, 'wb') as f:
-            pickle.dump(self.all_masses, f)
+            #Package together both all_masses and starjet_masses to facilitate saving in one file - SA 20231226
+            both_masses = (self.all_masses, self.starjet_masses)
+            pickle.dump(both_masses, f) #save both mass lists
 
     def out_rnd(self):
         """Write current random number state to pickle"""

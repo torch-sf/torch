@@ -7,8 +7,13 @@
 !!!          Drexel University
 !!!          Summer and Fall 2016
 !!!
+!!! Modified 2019-2024 by Sabrina Appel
+!!!
 !!! A routine for injection of stellar winds (radiative type for massive
 !!! stars).
+!!!
+!!! Modified 2019-2024 to alternatively inject protostellar jets for
+!!! for certain stars as determined by Particles_wind.F90. -SA
 !!!
 !!! This routine injects both mass and energy in a 
 !!! momentum conserving fashion. Note that we require
@@ -21,6 +26,9 @@
 !!! injection radius is smaller than R_1, we make the injection radius larger
 !!! up to injectionRadiusMax, which is a runtime parameter. The default is
 !!! 5 cells at the diagional in 3d (3.5*sqrt(3.0)*dx).
+!!!
+!!! This default has been updated in the new version with jets to 10.0*dx to
+!!! account for the larger injection regions of jets. -SA
 !!!
 !!! Note that both this and the further requirement that energy be
 !!! conserved by inelasitc collision of the wind mass and the cell mass
@@ -188,6 +196,12 @@ real(dp) ::  deltaInverse, xp, indexP, cellCenter
 if (gr_meshMe == 0) print*, "Start of inject_direct.F90: jet/wind flag is: ", jet_wind
 call flush()
 #endif
+
+!!  First check that we're actually injecting anything, otherwise, exit the subroutine
+!!  -SA 20240129
+if ((jet_wind == 0) .or. (injectMassIn == 0)) then
+    return
+end if
 
 if (first_call) then
     call RuntimeParameters_get("gamma", gamma_)
@@ -424,7 +438,9 @@ if (gr_meshMe == 0) then
 end if
 #endif
 
+#ifdef DEBUG
 call flush()
+#endif
 
 ! count # of blocks which are at least partially within injectRadius, check that
 ! they are maximally refined
@@ -686,7 +702,9 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !rad is the magnitude of the dx vector
                         !ang_mom_mag is the magnitude of j (should always be 1)
                         theta = acos( ((dx * j_x) + (dy * j_y) + (dz * j_z)) /(rad * ang_mom_mag))
+#ifdef DEBUG_JETS
                         print *, "New theta value: ", theta, "Set phi to 0 and rad_jet to rad: ", rad
+#endif
                         phi = 0
                         rad_jet = rad
                         !print *, "rotation theta, phi: ", theta, phi 
@@ -723,8 +741,10 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     
                     
                         !print*, "cos^2 is:", (cos(theta))**2.0 
+#ifdef DEBUG_JETS
                         print*, "Cunningham ang dependence is: ", ang_dependence
                         print*, "Also, the radial dependence is:", rad_dependence
+#endif
 
                     else if (jet_wind .eq. wind_flag) then  ! -SA 20230726
 #ifdef DEBUG_JETS
@@ -735,7 +755,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
 
                     else ! -SA 20230726
-                        print *, "inject_direct.F90: Don't know what to inject!!!  Help! (Assuming wind...)"
+                        print *, "inject_direct.F90: Unclear what to inject", jet_wind, starMass
                         ang_dependence = 1.0
                         rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
@@ -809,8 +829,10 @@ print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
 #endif
 call MPI_ALLREDUCE(MPI_IN_PLACE, sumOverlap, 1, MPI_DOUBLE_PRECISION, &
                                             MPI_SUM, gr_meshComm, ierr)
+#ifdef DEBUG_JETS
 if (gr_meshMe == 0) &   ! Added 20220825 -SA
     print*, "sumOverlap is", sumOverlap
+#endif
 
 if (perturb_velocity) then
 

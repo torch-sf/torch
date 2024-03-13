@@ -4868,8 +4868,8 @@ if (type_count .ge. 1) then
 
     if (j .ne. -1) then
         particles_pointer(DMDT_PART_PROP, QSindex(j)) = dmdt(i)
-        print*, "Set a local particle attrib on proc ", dr_globalMe, "Set dmdt as: ", dmdt(i) !SA 20221221
-        print*, "Which star: ", tags(i) 
+        !print*, "Set a local particle attrib on proc ", dr_globalMe, "Set dmdt as: ", dmdt(i) !SA 20221221
+        !print*, "Which star: ", tags(i) 
     else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
     end if

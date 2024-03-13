@@ -117,7 +117,7 @@ def initialize_workers():
         kep.initialize_code()
 
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
-        mult.global_debug                = 1
+        mult.global_debug                = 2
         mult.neighbor_veto               = True
         mult.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
@@ -279,6 +279,11 @@ def evolve(state, hydro, grav, mult, se):
                     req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
                     pool.add_request(req_hydro, handle_result, ["hydro", it])
                     tprint("... hydro submitted")
+
+
+                    # Debugging print statements - SA 20240122
+                    print("Checking particle lists before calling mult.evolve_model (grave, state, hydro)")
+                    print(len(grav.particles), len(state.stars), hydro.get_number_of_particles())
 
                     # Multiples is not a worker code, so we can't send it to
                     # the AsyncRequestsPool.

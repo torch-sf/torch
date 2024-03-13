@@ -401,9 +401,11 @@ cp $TORCH_DIR/flash.par.turbsph_standard   flash.par
 mkdir data
 \end{lstlisting}
 
-The file \texttt{bridge\_multiples.py} is the heart of the simulation.  It
+The file \texttt{torch\_mainloop.py} is the heart of the simulation.  It
 performs the split time-evolution with both FLASH and the n-body integrator
-ph4, handles stellar evolution, and lots more.
+ph4, handles stellar evolution, and lots more. \texttt{torch\_user.py} is the main
+source of control for users of Torch, where parameters can be set and initial stellar
+conditions defined. 
 
 The simulation should take 1--10 minutes to reach
 $t_\mt{max} = 2 \unit{Myr} = 6.31 \times 10^{13} \unit{s}$.
@@ -1064,7 +1066,7 @@ to. I check this periodically to see what simulation time my run has achieved,
 how many stars I've made, if it is hung up on a process, etc.
 
 \subsection{Cartesius - Refactor}
-The refactored version of Torch (on git branch \texttt{refactor}) uses the latest AMUSE commit on branch \texttt{master} which requires Python 3.X as well as FLASH version 4.6.2. The setup for the refactored version of Torch on Cartesius is largely the same as the \texttt{master} branch as described in this document but with a dew caveats.
+\textbf{CARTESIUS IS NOW DISCONTINUED AND THE REFACTOR BRANCH HAS SINCE BEEN MERGED INTO MAIN} - The refactored version of Torch (on git branch \texttt{refactor}) uses the latest AMUSE commit on branch \texttt{master} which requires Python 3.X as well as FLASH version 4.6.2. The setup for the refactored version of Torch on Cartesius is largely the same as the \texttt{master} \textbf{(now called \texttt{main})} branch as described in this document but with a dew caveats.
 
 Firstly, make sure you download and unzip FLASH4.6.2. This can be done from the same FLASH distribution webpage from which FLASH4.5 or earlier versions can be accessed.
 
