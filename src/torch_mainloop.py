@@ -108,6 +108,7 @@ def initialize_workers():
         grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
         if USER['restart_from_stall']:
             grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
+            remove_merged = True # Use Brooke's routine to remove merged stars then write an output, CCC 06/03/2024
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -188,6 +189,8 @@ def evolve(state, hydro, grav, mult, se):
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
+        if USER['restart_from_stall']:
+            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
         grav.parameters.begin_time = hy_time
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         dt = np.min([dt_nbody.value_in(units.kyr), dt_min.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
@@ -247,7 +250,65 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PETAR.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-                    
+
+                    # Merge stars at same location
+                    # Based on fix by BP - 06/03/2024
+                    remove_merged = False
+                    if USER['restart_from_stall']:
+                        remove_merged = True
+                    if remove_merged:
+                        #### TEST TO REMOVE PARTICLES WITH IDENTICAL POSITIONS ####
+                        print("initial Nstars = ",len(state.stars))
+                        pp = np.array([state.stars.x.value_in(units.cm),
+                                       state.stars.y.value_in(units.cm),
+                                       state.stars.z.value_in(units.cm)]).T
+                        unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
+                        cnt_mask = unq_cnt > 1
+                        cnt_idx, = np.nonzero(cnt_mask)
+                        idx_mask = np.in1d(unq_idx, cnt_idx)
+                        idx_idx, = np.nonzero(idx_mask)
+                        srt_idx = np.argsort(unq_idx[idx_mask])
+                        dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
+
+                        # add particles to seba
+                        se.particles.add_particles(state.stars)
+                        seba_to_stars = se.particles.new_channel_to(state.stars)
+
+                        # loop over pairs of stars with identical positions
+                        stars_rem = Particles()
+                        for i in range(len(dup_idx)):
+                            star1_idx = dup_idx[i][0]
+                            star2_idx = dup_idx[i][1]
+                            print("Before merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+                            print("Before merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+                            se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                            print("After merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+                            print("After merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+                            stars_rem.add_particle(state.stars[star2_idx])
+                            print(stars_rem)
+
+                        grav_rem = stars_rem.copy()
+                        se_rem = stars_rem.copy()
+
+                        # hydro requires sorted tags for removal
+                        # only the stars particle set has a tag attribute.
+                        t = stars_rem.tag
+                        t = np.sort(np.array(t).flatten())
+                        print("remove tags",t)
+                        hydro.remove_particles(t)
+                        state.stars.remove_particles(stars_rem)
+                        grav.particles.remove_particles(grav_rem)
+                        grav.particles.synchronize_to(state.stars)
+                        se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
+                        se.particles.synchronize_to(state.stars)
+
+                        print("final Nstars = ",len(state.stars),hydro.get_number_of_particles())
+                        state.force_output(overwrite=USER['overwrite'])
+                        # Exit the simulation
+                        hydro.stop()
+                        grav.stop()
+                        se.stop()
+                        
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
             ### ------------------
