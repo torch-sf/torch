@@ -391,6 +391,7 @@ def evolve(state, hydro, grav, mult, se):
                 if num_stars > 1:
                     state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
                     state.stars_to_grav.copy_attributes(["radius"])
+                    state.stars_to_grav.copy_attributes(["x", "y", "z", "vx", "vy", "vz"]) # Copy position and velocity post-SE
                     if USER['with_multiples']:
                         mult.channel_from_code_to_memory.copy() # grav  -> multiples
                         state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
