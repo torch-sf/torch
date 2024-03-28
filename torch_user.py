@@ -368,7 +368,8 @@ def user_parameters():
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = True  # meant for testing
-    p['restart_from_stall'] = False # did PeTar stall and exit? Sets r_out = r_bin for first Torch loop
+    p['check_for_stall'] = True # use to save and exit if gravity takes longer than hydro
+    p['restart_from_stall'] = False # did PeTar stall and exit? Check for merged stars
     p['test_binary'] = True # meant for testing
     p['test_interacting_binary'] = True
     
@@ -389,7 +390,10 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-    p['r_bin'] = 1.496e15 | units.cm # 100AU
+    p['r_bin'] = 100 | units.au # 100AU
+    p['r_out'] = 0.00709 | units.pc
+    p['r_stall'] = 1e-10 | units.pc
+    p['dt_soft_min'] = 125.001 | units.yr
     p['set_timeout'] = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
     
     # <stellar evolution>
