@@ -64,6 +64,7 @@ from torch_sf import (
     remove_merged_stars,
     make_stars_from_sinks,
     queue_stars,
+    random_three_vector,
 )
 from torch_state import TorchState
 from torch_stdout import tprint
@@ -105,7 +106,13 @@ def initialize_workers():
     elif USER['with_petar']:
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = USER['petar_rbin']
+        grav.parameters.r_out = 0.001 | units.pc #1.496e15 | units.cm # 100AU
+        #aveStarMass = 1.234e33 | units.g
+        #velDisp = 1.7e5 | units.cm/units.s
+        #G = 6.67e-8 | units.cm**3 / units.g / units.s**2
+        #grav.parameters.r_out = 4*grav.parameters.r_bin
+        #grav.parameters.dt_soft = (np.pi/8.0)*np.sqrt(((grav.parameters.r_out/2.0)**3)/(2*G*aveStarMass))
+        #grav.parameters.r_search_min = grav.parameters.r_out + 3.0*grav.parameters.dt_soft*velDisp
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -126,7 +133,7 @@ def initialize_workers():
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
-        mult.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
+        mult.check_tidal_perturbation    = True
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
 
@@ -231,6 +238,7 @@ def evolve(state, hydro, grav, mult, se):
 
         if num_stars > 0:
 
+            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
             # initialize PeTar once more than 1!!! star forms
             if num_stars > 1 and first_star == 0:
                 first_star = 1
@@ -240,7 +248,57 @@ def evolve(state, hydro, grav, mult, se):
                     grav.evolve_model(hy_time)
                     print(grav.parameters)
 
-            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
+                    remove_merged = True
+                    if remove_merged:
+    		        #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
+                        print("initial Nstars = ",len(state.stars))
+
+    		        #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
+                        pp = np.array([state.stars.x.value_in(units.cm),
+				state.stars.y.value_in(units.cm),
+				state.stars.z.value_in(units.cm)]).T
+
+                        unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
+                        cnt_mask = unq_cnt > 1
+                        cnt_idx, = np.nonzero(cnt_mask)
+                        idx_mask = np.in1d(unq_idx, cnt_idx)
+                        idx_idx, = np.nonzero(idx_mask)
+                        srt_idx = np.argsort(unq_idx[idx_mask])
+                        dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
+
+                        # add particles to seba
+                        se.particles.add_particles(state.stars)
+                        seba_to_stars = se.particles.new_channel_to(state.stars)
+
+                        # loop over pairs of stars with identical positions
+                        stars_rem = Particles()
+                        for i in range(len(dup_idx)):
+                            star1_idx = dup_idx[i][0]
+                            star2_idx = dup_idx[i][1]
+                            print("Before merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+                            print("Before merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+                            se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                            print("After merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+                            print("After merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+                            stars_rem.add_particle(state.stars[star2_idx])
+                            print(stars_rem)
+
+                        grav_rem = stars_rem.copy()
+                        se_rem = stars_rem.copy()
+
+                        # hydro requires sorted tags for removal
+                        # only the stars particle set has a tag attribute.
+                        t = stars_rem.tag
+                        t = np.sort(np.array(t).flatten())
+                        print("remove tags",t)
+                        hydro.remove_particles(t)
+                        state.stars.remove_particles(stars_rem)
+                        grav.particles.remove_particles(grav_rem)
+                        grav.particles.synchronize_to(state.stars)
+                        se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
+                        se.particles.synchronize_to(state.stars)
+
+                        print("final Nstars = ",len(state.stars),hydro.get_number_of_particles())
 
             ### ------------------
             ### First bridge kick.
@@ -271,6 +329,11 @@ def evolve(state, hydro, grav, mult, se):
                 remove_particles_outside_bndbox(state, hydro, grav, mult)
                 hydro.particles_sort()  # also checks for stars outside domain
 
+            test_nan =  np.array([state.stars.x.value_in(units.cm),
+                                state.stars.y.value_in(units.cm),
+                                state.stars.z.value_in(units.cm)]).T
+            bool_nan = np.isnan(np.sum(test_nan))
+            print("NAN ? ",bool_nan)
             ### ------------------
             ### Stellar evolution.
             ### ------------------
@@ -325,10 +388,10 @@ def evolve(state, hydro, grav, mult, se):
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
                         grav.parameters.dt_soft = dt
-                        if USER['with_petar'] and dt != dt_old:
-                            grav.parameters.r_out = 0.0 | units.cm
-                            grav.parameters.r_search_min = 0.0 | units.cm
-                            grav.parameters.r_bin = USER['petar_rbin']
+                        #if USER['with_petar'] and dt != dt_old:
+                        #    grav.parameters.r_out = 0.0 | units.pc
+                        #    grav.parameters.r_search_min = 0.001 | units.pc
+                        #    grav.parameters.r_bin = 0.0 | units.AU
                         dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
@@ -351,12 +414,6 @@ def evolve(state, hydro, grav, mult, se):
                     else:
                         if USER['with_petar']:
                             grav.parameters.dt_soft = dt
-                            if USER['with_petar'] and dt != dt_old:
-                                grav.parameters.r_out = 0.0 | units.cm
-                                grav.parameters.r_search_min = 0.0 | units.cm
-                                grav.parameters.r_bin = USER['petar_rbin']
-                            dt_old = dt
-
                         start_t = time.time()
                         grav.evolve_model(hy_time+dt)
                         gr_evolve_time = time.time()-start_t
@@ -369,6 +426,10 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("Evolving hydro further to sync with PeTar")
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
+
+
+                #if USER['with_petar']:
+                    #remove_merged_stars(state, hydro, grav)
 
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
@@ -497,6 +558,7 @@ def evolve(state, hydro, grav, mult, se):
                 print("hydro-grav time = ",hy_time - gr_time)
         else:
             assert abs(hy_time - gr_time) <= (1e4|units.s)
+        print("n stars, hydro, state = ",num_stars,len(state.stars))
         assert num_stars == len(state.stars)
         if USER['with_multiples']:
             assert num_stars == len(mult.stars)
