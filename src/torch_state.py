@@ -193,13 +193,16 @@ class TorchState(object):
         if hy_chknum != self.chknum:
             self.out_loop()
             self.out_mass()
-        # Adding the three below to include primordial binaries -CCC, May 3, 2020
+            # Adding the three below to include primordial binaries -CCC, May 3, 2020
             self.out_system()
             self.out_position()
             self.out_velocity()
             self.out_rnd()
+            # Write stars at checkpoint
+            self.out_chk_stars(overwrite)
             self.chknum = hy_chknum
-
+            
+            
         hy_pltnum = self.hydro.IO_out('pltpart')
 
         # If a plt file was written, dump star properties
@@ -268,6 +271,13 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
+        tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
+
+    def out_chk_stars(self, overwrite):
+        """Write star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "chk_stars{:04d}.amuse".format(self.chknum))
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks                                                  
         tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
         
     def out_binaries(self, overwrite):
