@@ -117,9 +117,8 @@ allocate(p_ind(pt_numLocal))
 p_ind = 0
 
 call Particles_getGlobalNum(p_globalnum)
-! Why are we getting the global number of particles here????
-! The do loop that assigns values to these arrays uses the number on the processor....? -SA
-! print*, "Global number of particles: ", p_globalnum
+! First, we allocate the length of each array to be the total number (locally) of star particles.
+! Each array is then initialized to be all 0. -SA 20240408
 allocate(locx(p_globalnum), locy(p_globalnum), locz(p_globalnum), locc_time(p_globalnum))
 allocate(angmom_x(p_globalnum), angmom_y(p_globalnum), angmom_z(p_globalnum))  !Added ang momentum -SA 20230720
 allocate(locdmdt(p_globalnum), locv_wind(p_globalnum), locbgdy(p_globalnum))
@@ -140,12 +139,20 @@ print*, "Particles on this proces: ", p_num, "Proces: ", dr_globalMe
 call flush()
 #endif
 
+! This do loop then loops over each particle and checks if winds or jets are 
+! on for that star. If either winds or jets are on, then a separate index 
+! w_numloc (which starts at 0) is incremented and the entry of each of the 
+! above arrays which corresponds to the new w_numloc index is set to the corresponding 
+! non-zero value for the star. At the end of the loop the first entries (a number 
+! matching the number of wind/jet stars) will be non-zero and all subsequent
+! entries will be zero.  The final value of the w_numloc index will also track the
+! total number of feedback stars.  -SA 20240408
+
 do p = p_begin, p_end
 #ifdef debug
   print*, "Particle mass =", particles(MASS_PART_PROP, p)
   print*, "Particle dmdt =", particles(DMDT_PART_PROP, p)
 #endif 
-  w_numloc = w_numloc + 1  !Moved to start of loop -SA 20230811
 
   ! Now testing for jet and wind conditions. SA 20230728 
   ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
@@ -199,7 +206,8 @@ do p = p_begin, p_end
 
   if (jet_wind(w_numloc) .gt. 0) then
 
-   ! w_numloc = w_numloc + 1 
+    w_numloc = w_numloc + 1 
+    !Move w_numloc back to this if statement so it only increments for feedback stars - SA 20240408
   
     locx(w_numloc)      = particles(POSX_PART_PROP, p)
     locy(w_numloc)      = particles(POSY_PART_PROP, p)
@@ -220,6 +228,13 @@ end do
 ! print*, "Particles_wind.F90: test angmom arrays y: ", angmom_y
 ! print*, "Particles_wind.F90: test angmom arrays z: ", angmom_z
 ! print*, "Particles_wind.F90: test jet wind switch: ", jet_wind
+
+! Now that the above arrays have identified all the wind/jet stars for a
+! given processor, the following code collects that info from all
+! processors using MPI_AllGather. Only the first w_numloc entries
+! from each processor are gathered, meaning all the zero valued
+! entries should be dropped during the MPI_AllGather stage. The
+! final arrays should only have wind/jet stars with non-zero values. -SA 20240408
 
 ! Now use MPI to vector gather all the information for how to inject
 ! the winds on each processor.
@@ -318,6 +333,12 @@ call Timers_stop("MPI_AllGather_winds")
 #ifdef debug
 print*, "Done gathering.", dr_globalMe
 #endif
+
+! The following do loop goes over all the entries of the gathered arrays and injects
+! winds or jets with inject-direct. At this point every entry of these arrays should be
+! a wind/jet star with non-zero dmdt. Thus, w_num is the number of wind/jet stars. But
+! an extra if statement in the do loop will also double check for zero dmdt
+! values. -SA 20240408
 
 ! print*, "Starting loop with inject_direct call (w_num): ", w_num , " -SA 202212"
 ! print*, "Before inject_direct - ang_mom:", [j_x, j_y, j_z], [angmom_x, angmom_y, angmom_z]
