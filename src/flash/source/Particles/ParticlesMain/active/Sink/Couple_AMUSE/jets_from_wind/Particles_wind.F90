@@ -309,15 +309,16 @@ do p=1, w_num
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
 #ifdef debug2
   if (dr_globalMe .eq. 0) then
-    print*, "Calling inject direct with mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
+    print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
     print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p) !-SA 202307
     print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
   endif
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), mass, twind, dt, bgdy(p)) 
+  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), twind, dt, bgdy(p)) 
   !Added j_i -SA 20230718
   !Added jw_switch -SA 20230726  Fix order 20230802 SA
+  !Remove duplicate mass -SA 20240408
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
   if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
