@@ -307,30 +307,31 @@ do p=1, w_num
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
+  if (dmdt(p) .gt. 0) then !Check that there's anything to inject - SA 20240408
 #ifdef debug2
-  if (dr_globalMe .eq. 0) then
-    print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
-    print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p) !-SA 202307
-    print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
-  endif
+    if (dr_globalMe .eq. 0) then
+      print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
+      print*, "Calling inject direct with angular momentum vector and jet/wind: ", [j_x(p), j_y(p), j_z(p)], jw_switch(p) !-SA 202307
+      print*, "index of loop: ", p, "and position: ", x(p), y(p), z(p), " -SA 202212"
+    endif
 #endif
   
-  call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), twind, dt, bgdy(p)) 
-  !Added j_i -SA 20230718
-  !Added jw_switch -SA 20230726  Fix order 20230802 SA
-  !Remove duplicate mass -SA 20240408
+    call inject_direct([x(p), y(p), z(p)], [j_x(p), j_y(p), j_z(p)], jw_switch(p), mass, v_wind(p), twind, dt, bgdy(p)) 
+    !Added j_i -SA 20230718
+    !Added jw_switch -SA 20230726  Fix order 20230802 SA
+    !Remove duplicate mass -SA 20240408
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
-  if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
-    if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
-      if (dr_globalMe .eq. dr_globalNumProcs - 1) then
-        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
-      else if (disp(dr_globalMe+2) - p >= 0) then
-        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
+    if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
+      if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
+        if (dr_globalMe .eq. dr_globalNumProcs - 1) then
+          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
+        else if (disp(dr_globalMe+2) - p >= 0) then
+          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
+        end if
       end if
     end if
   end if
-
 end do
 
 ! print*, "Particles_wind.F90: check deallocations: ", jet_wind, jw_switch
