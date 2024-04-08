@@ -755,7 +755,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
 
                     else ! -SA 20230726
-                        print *, "inject_direct.F90: Unclear what to inject", jet_wind, starMass
+                        print *, "inject_direct.F90: Unclear what to inject", jet_wind
                         ang_dependence = 1.0
                         rad_dependence = 1.0
                         !Multiplying by 1 changes nothing so this should return inject_direct.F90 to the default spherical wind.
