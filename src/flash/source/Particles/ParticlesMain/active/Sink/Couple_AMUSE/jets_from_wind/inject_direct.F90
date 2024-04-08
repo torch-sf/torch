@@ -200,7 +200,7 @@ call flush()
 
 !!  First check that we're actually injecting anything, otherwise, exit the subroutine
 !!  -SA 20240129
-if ((jet_wind == 0) .or. (injectMassIn == 0)) then
+if ((jet_wind == 0) .or. (injectMassIn .le. tiny(0.0_dp)) .or. (injectVelocityIn .le. tiny(0.0_dp)) ) then
     return
 end if
 
