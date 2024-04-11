@@ -262,8 +262,8 @@ end if
 !! Update to only set mass_load to false for jets case.  -SA 20231012
 if (jet_wind .eq. jet_flag) then
     !mass_load = .false.
-    perturb_velocity = .false.
-    var_radius = .false.
+    !perturb_velocity = .false.
+    !var_radius = .false.
 endif
 
 ! Mechanical Energy injected by the wind. - JW
@@ -304,7 +304,8 @@ dVol = product(delta)
 ! too large, the gas is denser and the injected amount will be more
 ! spread out, so the effect should be minor.
 
-if (bgDens == 0.0 .and. var_radius) then 
+! Skip var_radius option if jet star -SA 20240411
+if (bgDens == 0.0 .and. (var_radius .and. (jet_wind .ne. jet_flag))) then 
     calcBgDens = .true.
 #ifdef DEBUG_ENERGY
     if (gr_meshMe == 0) print*, "Calculating background density for this star for the first time."
@@ -313,7 +314,8 @@ end if
 
 injectRadius = injectRadiusMax
 
-if (var_radius) then
+! Skip var_radius option if jet star -SA 20240411
+if (var_radius .and. (jet_wind .ne. jet_flag)) then
 
     if (calcBgDens) then
         ! If this is the first loop for this wind ever, calculate the
@@ -493,7 +495,7 @@ end do
 call MPI_ALLREDUCE(MPI_IN_PLACE, iHaveUnrefined, 1, MPI_LOGICAL, MPI_LOR, &
 gr_meshComm, ierr)
 
-if (iHaveUnrefined) then !  .and. ((.not. calcBgDens) .and. var_radius)
+if (iHaveUnrefined) then !  .and. ((.not. calcBgDens) .and. (var_radius .and. (jet_wind .ne. jet_flag)))
     if (gr_meshMe == 0) then
         print *, "Not all wind injection blocks refined. Holding off until &
                     they are"
@@ -839,7 +841,8 @@ if (gr_meshMe == 0) &   ! Added 20220825 -SA
     print*, "sumOverlap is", sumOverlap
 #endif
 
-if (perturb_velocity) then
+!Skip perturb_velocity if jet star - SA 20240411
+if (perturb_velocity .and. (jet_wind .ne. jet_flag)) then
 
   ! calculate perturbed velocities on ALL procs (including procs that don't
   ! overlap inject sphere) in order to keep random number stream synchronized.
@@ -908,7 +911,7 @@ if (perturb_velocity) then
 
 end if
 
-if (var_radius .and. calcBgDens) then
+if ((var_radius .and. (jet_wind .ne. jet_flag)) .and. calcBgDens) then
 
 #ifdef DEBUG_MPI
     print*, "Before MPI background density is", bgDens
