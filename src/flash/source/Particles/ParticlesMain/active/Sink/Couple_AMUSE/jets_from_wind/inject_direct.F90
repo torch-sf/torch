@@ -224,11 +224,15 @@ if (first_call) then
     ! If we are setting ref_radius to -1, this means we want to
     ! vary the injection radius up to 
     if (ref_radius == -1.0) then
-      !!  Update to account for larger injection region of jets - SA 20220825
-      !!  The new value is based on the injection region of the Cunningham model.
-      !!  The upper limit of the radial dependence for the Cunningham model is 8*delta_x
-      !!  so we set the default value of ref_radius to be definitely larger than that. -SA
-      ref_radius = 10.0_dp*delta(1) !3.5_dp*sqrt(3.0_dp)*delta(1)  ! This is the old winds value
+      if (jet_wind .eq. jet_flag) then
+        !!  Only update ref_radius if on a jet star - otherwise, keep winds value. -SA 20240411
+        !!  The new value is based on the injection region of the Cunningham model.
+        !!  The upper limit of the radial dependence for the Cunningham model is 8*delta_x
+        !!  so we set the default value of ref_radius to be definitely larger than that. -SA
+        ref_radius = 10.0_dp*delta(1) 
+      else if (jet_wind .eq. wind_flag) then
+        ref_radius = 3.5_dp*sqrt(3.0_dp)*delta(1)  ! This is the old winds value
+      end if !If using neither jet_flag nor wind_flag then this will likely produce an error.
     end if
     
     injectRadius = ref_radius
