@@ -243,7 +243,7 @@ if (first_call) then
         print *, "inject_direct.F90 is conserving ", conserved_quant
     end if
     
-    if (mass_load) then
+    if ((mass_load) .and. (jet_wind .ne. jet_flag)) then
         ! Draine 2011 eqn 36.28. Note this gas is always ionized by
         ! radiation first. - JW
         refVel = sqrt(wind_target_temp/1.38d7)*1e8
@@ -261,7 +261,7 @@ end if
 !!!  Adding var_radius and setting it to false for the same reason. -SA 20220825
 !! Update to only set mass_load to false for jets case.  -SA 20231012
 if (jet_wind .eq. jet_flag) then
-    mass_load = .false.
+    !mass_load = .false.
     perturb_velocity = .false.
     var_radius = .false.
 endif
@@ -279,7 +279,7 @@ sumOverlap = 0.0_dp
 sumMass = 0.0_dp
 
 calcBgDens   = .false.  !  Keep false unless we really know what we're doing. -SA 20220825
-mass_load_factor = 0.0d0
+mass_load_factor = 0.0d0 ! I think this is no longer needed? -SA 20240411
 
 snap_to_grid = .true. !.false. !! Set to true for jets -SA 20220825
 globalDeltaE = 0.0
@@ -513,8 +513,9 @@ end if
 ! is the ratio between the input velocity and the velocity to get 10^6 K
 ! shocked gas, and use it to set the mass and velocity to get the same
 ! input energy. - JW
+! No mass_loading if jets -SA 20240411
 
-if (mass_load) then  
+if (mass_load .and. (jet_wind .ne. jet_flag)) then  
     if (conserved_quant .eq. "momentum") then
         mass_load_factor = injectVelocityIn/refVel - 1.0d0
         injectVelocity   = injectVelocityIn / (1.0d0+mass_load_factor)
@@ -796,7 +797,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     !!!!!!  Since we have the radial dependence from the Cunningham model, we don't need the 
                     !!!!!!  additional radial dependence from the decreasing solidAngle value with radius.
                     !!!!!!  Add back in for winds.     -SA 20220825
-                    ! if (.not. mass_load) then
+                    ! if ((.not. mass_load) .and. (jet_wind .ne. jet_flag)) then
                     !     ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
                     !     ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
                     !     solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
