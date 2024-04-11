@@ -254,17 +254,6 @@ if (first_call) then
     
 end if
 
-!!!  Turn off mass loading and perturb velocity.
-!!!  Since this is the JETS code, we don't want either mass loading
-!!!  or perturb_velocity set.  So, we directly set both to false here
-!!!  in case they get set to true elsewhere.  -SA 1/23/2022
-!!!  Adding var_radius and setting it to false for the same reason. -SA 20220825
-!! Update to only set mass_load to false for jets case.  -SA 20231012
-if (jet_wind .eq. jet_flag) then
-    !mass_load = .false.
-    !perturb_velocity = .false.
-    !var_radius = .false.
-endif
 
 ! Mechanical Energy injected by the wind. - JW
 injE = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
@@ -281,7 +270,13 @@ sumMass = 0.0_dp
 calcBgDens   = .false.  !  Keep false unless we really know what we're doing. -SA 20220825
 mass_load_factor = 0.0d0 ! I think this is no longer needed? -SA 20240411
 
-snap_to_grid = .true. !.false. !! Set to true for jets -SA 20220825
+
+! snap_to_grid is set to true for both winds and jets.
+! The old winds set up has snap_to_grid false, but also
+! no working code for snap_to_grid. This could be updated
+! to have snap_to_grid false for winds. 
+! NOTE: snap_to_grid MUST be on for jets. -SA 20240422
+snap_to_grid = .true. 
 globalDeltaE = 0.0
 globalDeltaP = 0.0
 globalTE     = 0.0
@@ -795,16 +790,16 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         bgDens = bgDens + overlap_frac*solndata(DENS_VAR, i, j, k)
 
 
-                    !!!!!!  Removing the solidAngle lines for the jets module.
-                    !!!!!!  Since we have the radial dependence from the Cunningham model, we don't need the 
-                    !!!!!!  additional radial dependence from the decreasing solidAngle value with radius.
-                    !!!!!!  Add back in for winds.     -SA 20220825
-                    ! if ((.not. mass_load) .and. (jet_wind .ne. jet_flag)) then
-                    !     ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
-                    !     ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
-                    !     solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
-                    !     overlap_frac = overlap_frac*solidAngle
-                    ! end if
+                    !!!  Ensure that the solidAngle lines are off for jets stars and on for wind stars.
+                    !!!  Since we have the radial dependence from the Cunningham model, we don't need the 
+                    !!!  additional radial dependence from the decreasing solidAngle value with radius.
+                    !!!  Updated -SA 20240411
+                    if ((.not. mass_load) .and. (jet_wind .ne. jet_flag)) then
+                        ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
+                        ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
+                        solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
+                        overlap_frac = overlap_frac*solidAngle
+                    end if
                     
                     ! apply the Cunningham angular and radial dependence to
                     ! overlap frac  - SA  March 21, 2022
