@@ -70,6 +70,7 @@ logical :: jet_switch
 integer, allocatable :: jet_wind(:), jw_switch(:)
 integer, parameter :: jet_flag = 1 ! update -SA 20230802
 integer, parameter :: wind_flag = 2
+integer :: jw_flag !Added -SA 20240410
 
 ! For MPI comm
 integer                :: num_array(dr_globalNumProcs), &
@@ -132,6 +133,8 @@ locx = 0.0d0; locy=0.0d0; locz=0.0d0
 angmom_x = 0.0d0; angmom_y = 0.0d0; angmom_z = 0.0d0 !Added ang momentum -SA 20230720
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 jet_wind = 0 ! Added 20230726 -SA
+jet_switch = .false.
+jw_flag = 0 !Add defaults for jet_switch, jw_flag -SA 20240410
 
 #ifdef debug_jets
 print*, "Before do loop - check arrays:", locx, angmom_x, jet_wind
@@ -155,7 +158,7 @@ do p = p_begin, p_end
 #endif 
 
   ! Now testing for jet and wind conditions. SA 20230728 
-  ! When setting the jet vs wind flags (jet_wind and jw_switch) use the jet_flag 
+  ! When setting the jet vs wind flags (jw_flag and jet_switch) use the jet_flag 
   ! and wind_flag parameter values set in the declaration (1 for jets, 2 for winds).
   ! Default to setting flags to 0 if neither
 #ifdef debug_jets
@@ -182,7 +185,7 @@ do p = p_begin, p_end
 #ifdef debug_jets
     print*, "Injecting winds for star mass: ", particles(MASS_PART_PROP, p)
 #endif
-    jet_wind(w_numloc)  = wind_flag  ! Added jet/wind switch -SA 20230726
+    jw_flag  = wind_flag  ! Updated -SA 20240410
 
   ! Now check for jet condition: - Added 20230726 -SA
   else if ( (jet_switch .eqv. .true. ) .and. &
@@ -190,7 +193,7 @@ do p = p_begin, p_end
 #ifdef debug_jets
     print*, "Injecting jets for star mass: ", particles(MASS_PART_PROP, p)
 #endif
-    jet_wind(w_numloc)  = jet_flag  ! Added jet/wind switch -SA 20230726
+    jw_flag  = jet_flag  ! Updated -SA 20240410
 
 #ifdef debug_jets
   else
@@ -199,12 +202,12 @@ do p = p_begin, p_end
 
   end if
 
-  ! print*, "Particles_wind.F90: check jet_wind value: ", jet_wind(w_numloc), jet_flag, wind_flag
+  ! print*, "Particles_wind.F90: check jw_flag value: ", jw_flag, jet_flag, wind_flag
   ! print*, "Particles_wind.F90: check particle mass: ", particles(MASS_PART_PROP, p)
   ! call flush()
 
 
-  if (jet_wind(w_numloc) .gt. 0) then
+  if (jw_flag .gt. 0) then
 
     w_numloc = w_numloc + 1 
     !Move w_numloc back to this if statement so it only increments for feedback stars - SA 20240408
@@ -219,6 +222,7 @@ do p = p_begin, p_end
     locv_wind(w_numloc) = particles(VELW_PART_PROP, p)
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
+    jet_wind(w_numloc)  = jw_flag
     p_ind(w_numloc)     = p 
 
   end if
