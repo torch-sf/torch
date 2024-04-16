@@ -168,14 +168,16 @@ def binary_evolution(time, dt, state, hydro, worker,
 
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None):
+                      massloss_method=None, min_feedback_mass=None,
+                      select_fb_stars=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-
+    assert select_fb_stars is not None
+    
     # We call SeBa on all stars at once but loop through stars for feedback
     # TO DO: Edit to loop only through feedback stars (see bitbucket) - CCC 04/11/2023
 
@@ -231,7 +233,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
         if went_supernova(s.stellar_type):
             continue
 
-        if s.mass >= min_feedback_mass:
+        # Select feeedback stars by mass or flag
+        if ((select_fb_stars == 'mass') and (s.mass >= min_feedback_mass)) or ((select_fb_stars == 'tag') and (s.fb == True)):
 
             if with_sn and went_supernova(s.stellar_type):
 

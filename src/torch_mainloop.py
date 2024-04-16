@@ -375,6 +375,7 @@ def evolve(state, hydro, grav, mult, se):
                         with_sn           = USER['with_sn'],
                         massloss_method   = USER['massloss_method'],
                         min_feedback_mass = USER['min_feedback_mass'],
+                        select_fb_stars   = USER['select_fb_stars'],
                     )
 #                se_dt = stellar_evolution(
 #                    hy_time+dt, dt, state, hydro, se,
