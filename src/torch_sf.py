@@ -37,6 +37,9 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     se (SeBa or other stellar evolution worker) is only used to get
     correct stellar type for restarts; newborn stars are assumed to be on ZAMS
     
+    CCC 11/04/2024 : DO NOT use this for restarts, use amuse file instead
+    Comment out section for restarts
+
     postcondition:
         stars updated
         grav updated
@@ -50,11 +53,13 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     else:
 
-        tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
-        tprint("add_particles_to_grav: sync all stars from Flash to grav.")
-        add_parts_restart = True
-        num_new_parts = hydro.get_number_of_particles()
-        newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
+        return # Do not use this function for restarts
+        
+        #tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
+        #tprint("add_particles_to_grav: sync all stars from Flash to grav.")
+        #add_parts_restart = True
+        #num_new_parts = hydro.get_number_of_particles()
+        #newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
 
     newtags.sort()
 
