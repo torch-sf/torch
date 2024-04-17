@@ -243,7 +243,7 @@ if (first_call) then
         print *, "inject_direct.F90 is conserving ", conserved_quant
     end if
     
-    if ((mass_load) .and. (jet_wind .ne. jet_flag)) then
+    if (mass_load) then
         ! Draine 2011 eqn 36.28. Note this gas is always ionized by
         ! radiation first. - JW
         refVel = sqrt(wind_target_temp/1.38d7)*1e8
@@ -512,7 +512,7 @@ end if
 ! input energy. - JW
 ! No mass_loading if jets -SA 20240411
 
-if (mass_load .and. (jet_wind .ne. jet_flag)) then  
+if (mass_load .and. (jet_wind .ne. jet_flag)) then
     if (conserved_quant .eq. "momentum") then
         mass_load_factor = injectVelocityIn/refVel - 1.0d0
         injectVelocity   = injectVelocityIn / (1.0d0+mass_load_factor)
