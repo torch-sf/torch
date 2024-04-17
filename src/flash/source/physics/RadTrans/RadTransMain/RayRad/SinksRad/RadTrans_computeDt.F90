@@ -287,9 +287,9 @@ if (mass_load) then
 end if
 
 #ifdef JETS
-        !!! Add new jets dt - based on winds dt but without mass loading
-        !!! and using most massive jet star (not most massive star). -SA 20240223
-        dt_jet = 0.3 * deltaX / sqrt(csRad**2.0 + jet_vel**2.0)
+        !!! Add new jets dt - just uses Courant condition. The 0.3 factor is empirical
+        !!! (matching dt_wind, above) and could be improved on in the future. -SA 20240417
+        dt_jet = 0.3 * deltaX / jet_vel
 #endif
 
 #ifdef DEBUG_RADDT
