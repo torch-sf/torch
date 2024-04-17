@@ -67,7 +67,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   real, intent(INOUT) :: dt_radtrans
   integer, intent(INOUT)  :: dt_minloc(5)
   integer, save       :: num_fb_stars=0 ! number of feedback producing stars.
-  integer             :: p, mass_count, jet_mass_count, type_begin, type_count, type_end, ierr
+  integer             :: p, mass_count, type_begin, type_count, type_end, ierr
   real, parameter     :: eightMSun = 8.0d0*1.989d33, kB = 1.381d-16, mu = 0.61
   real                :: deltaX, csRad, photon_flux, max_mass, max_mass_jet, ener_per_ph, cross_sec
   real                :: dt_mom, dt_wind, dt_jet, wind_vel, jet_vel, dt_min_local
@@ -84,6 +84,7 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   character(len=10), save :: conserved_quant
   real :: refVel
   real, save :: sink_density
+  real :: min_feedback_mass_loc !local minimum mass of feedback stars -SA 20240417
 
   ! Here we estimate the timestep for feedback in radiation and winds
   ! from a star we have introduced to the simulation in between loop steps.
@@ -128,7 +129,6 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
 
 
   mass_count = 0
-  jet_mass_count = 0
   max_mass   = 0.0d0
   max_mass_jet = 0.0d0
   csRad      = 0.0d0
@@ -166,8 +166,22 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   endif
 #endif
 #endif
-  
+
+! Set local minimum feedback mass for the sake of counting all feedback stars - SA 20240417
+#if defined(JETS)
+min_feedback_mass_loc = min(min_wind_mass, min_jet_mass)
+#elif defined(WIND_INJ)
+min_feedback_mass_loc = min_wind_mass
+#else
+min_feedback_mass_loc = eightMSun
+#endif
+
   do p=type_begin, type_end
+    ! First, count all feedback stars
+    if (particles(MASS_PART_PROP, p) .ge. min_feedback_mass_loc) then
+        mass_count = mass_count + 1
+    end if
+
 #if defined(JETS)
     ! If JETS is on, we need to make sure we have a wind and NOT a jet star
     if (particles(MASS_PART_PROP, p) .ge. min_wind_mass) then !if producing winds
@@ -181,7 +195,6 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
     ! TODO: We should eventually update this to not hardcode a mass value -SA 20230920
     if (particles(MASS_PART_PROP, p) .ge. eightMSun) then
 #endif
-      mass_count = mass_count + 1
       if (particles(MASS_PART_PROP, p) .gt. max_mass) then ! We want the most massive star flux.
         max_mass    = particles(MASS_PART_PROP, p)
         photon_flux = particles(NION_PART_PROP, p) ! # of photons per sec from the star.
@@ -202,7 +215,6 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
     if ((particles(MASS_PART_PROP, p) .ge. min_jet_mass) .and. &
         (particles(MASS_PART_PROP, p) .lt. max_jet_mass) .and. &
         ( (time - particles(CREATION_TIME_PART_PROP, p)) .lt. jet_time )) then
-       jet_mass_count = jet_mass_count + 1
        if (particles(MASS_PART_PROP, p) .gt. max_mass_jet) then ! We want the most massive jet star actually spawned.
            max_mass_jet    = particles(MASS_PART_PROP, p)
            jet_vel    = particles(VELW_PART_PROP, p) ! Jet velocity - same param. as wind_vel but for jet star
@@ -212,9 +224,6 @@ subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &
   end do
 
 #ifdef JETS
-  !! Note: This will double count any stars that currently are producing jets but
-  !! will eventually produce winds. There might be a better way to do this. -SA 20240223
-  mass_count = mass_count + jet_mass_count
 #endif
 
   ! Get the total mass count.
