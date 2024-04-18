@@ -179,8 +179,7 @@ logical  :: calcBgDens
 ! Add new variables for the additional code needed to make jets, including the 
 ! set up for the Cunningham model.  -SA 1/23/2022
 real(dp) :: theta, ang_dependence, phi
-real(dp) :: theta_x, theta_y, theta_z, dx_jet, dy_jet, dz_jet
-real(dp) :: rad2_jet, rad_jet, ave_delta
+real(dp) :: rad_jet, ave_delta
 real(dp) :: rad_dependence, delta_theta, theta_zero, c_one, c_two, norm_factor
 integer, parameter :: jet_flag = 1 ! update -SA 20230808
 integer, parameter :: wind_flag = 2 
@@ -378,8 +377,10 @@ if (gr_meshMe == 0) &
     write(*, '(A,ES13.3e3)') " injection radius / dx = ", injectRadius/delta(1)
 #endif
 
+#ifdef DEBUG
 if (gr_meshMe == 0) &
     print*, "loc before snap_to_grid:", loc_in  !SA 20221221
+#endif
 
 !!!!  Snap to Grid !!!
 
@@ -655,42 +656,7 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         ang_mom_mag = sqrt( j_x**2 + j_y**2 + j_z**2)
                         !print *, "inject_direct.F90: angular momentum magnitude: ", ang_mom_mag
 
-                        
-                        !!!  Set up a new set of x,y,z coord axes for the jet - the box axes with an offset.
-                        !!!  Then we can define a new r and theta for the jet to calculate ang_dependence. -SA 1/23/2022
-                        !!!  theta_z is the rotation about the x-axis to get the position of the jet, etc.
-                        !theta_x = 0.0  !0.78  !!is roughly pi/4
-                        !theta_y = 0.0  !1 radian ~ 60 degrees; angle previously was: ! 0.4
-                        !theta_z = 0.0  !1.57
-
-                        !dx_jet = (cos(theta_z)*cos(theta_y))*dx + &
-                        !    (cos(theta_z)*sin(theta_y)*sin(theta_x) - sin(theta_z)*cos(theta_x))*dy + &
-                        !    (sin(theta_z)*sin(theta_x) + cos(theta_z)*sin(theta_y)*cos(theta_x))*dz
-                        !dy_jet = (sin(theta_z)*cos(theta_y))*dx + &
-                        !    (sin(theta_z)*sin(theta_y)*sin(theta_x) + cos(theta_z)*cos(theta_x))*dy + &
-                        !    (sin(theta_z)*sin(theta_y)*cos(theta_x) - cos(theta_z)*sin(theta_x))*dz
-                        !dz_jet = -sin(theta_y)*dx + (cos(theta_y)*sin(theta_x))*dy + &
-                        !    (cos(theta_y)*cos(theta_x))*dz
-
-                        !rad2_jet = dx_jet**2.0 + dy_jet**2.0 + dz_jet**2.0
-                        !rad_jet = sqrt(rad2_jet)  !! This should be the same as rad (defined above).  Test this.
-
-                        !theta = acos(dz_jet/rad_jet)
-                        !phi = atan(dy_jet/dx_jet)
-
-                        ! Switch to just using the angular momentum vector to set theta and phi - SA 20230728
-                        ! See Appendix F of Marion & Thornton (e.g., Fifth Edition)
-                        !theta = acos(j_z / rad)
-                        !phi = atan2(j_y , j_x ) 
-                        !rad_jet = rad !placeholder - need to update following code to use rad instead of rad_jet
-                        !print *, "inject_direct.F90: theta, phi, rad_jet, phi_angMom: ", theta, phi, rad_jet, atan2(j_y, j_x)
-                        !print *, "Check theta values (rotation, ang_mom): ", theta, acos(j_z / (sqrt(j_x*j_x + j_y*j_y + j_z*j_z)))
-                        !ang_dependence = (cos(theta))**2.0  !! A cos^2 dependence
-                        !!! This is just to test the overall set up.  We'll need to change this later to get the
-                        !!! Cunningham model set up. -SA 1/23/2022
-
-
-                        !!!  Test new approach for calculating theta with a dot product. -SA 20230821
+                        !!!  Calculate theta with a dot product. -SA 20230821
                         ! j_x, j_y, j_z are the angular momentum vector with origin at the star location
                         ! loc(:) is the vector to the position of the star
                         ! x, y, z are the vector to the cell we are currently calculating the injection for
@@ -739,10 +705,6 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                                              !!  sets the outer limit of the injection region. 
                         endif
 
-                        !! ang_dependence = (cos(theta))**2.0  !!  Keep the cos^2 for now
-                    
-                    
-                        !print*, "cos^2 is:", (cos(theta))**2.0 
 #ifdef DEBUG_JETS
                         print*, "Cunningham ang dependence is: ", ang_dependence
                         print*, "Also, the radial dependence is:", rad_dependence

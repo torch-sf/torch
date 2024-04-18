@@ -14,7 +14,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !! #define debug
-#define debug2
+!! #define debug2
 !! #define debug_jets
 ! debug flags for timers - timerall is the whole file, timersub times
 ! specific subsections including the AllGather calls and inject_direct
