@@ -36,7 +36,6 @@
 
 
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
-! Remove starMass since it's uneeded - SA 20240207
 
 !#define DEBUG
 #define DEBUG_ENERGY
