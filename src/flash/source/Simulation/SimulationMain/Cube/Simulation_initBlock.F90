@@ -43,9 +43,9 @@ subroutine Simulation_initBlock (blockId)
 
   
   integer  :: i, j, k, istat, n
-  integer  :: ii, jj, kk, ix, iy, iz, ixp1, iyp1, izp1, iz0, izp10
-  real     :: vx, vy, vz, pres, rho, e, ek, gpot, rho0
-  real     :: xx, yy, zz, dx, dy, dz, p, q, r, r0
+  integer  :: ii, jj, kk, ix, iy, iz, ixp1, iyp1, izp1
+  real     :: vx, vy, vz, pres, rho, e, ek, gpot
+  real     :: xx, yy, zz, dx, dy, dz, p, q, r
 
   real,allocatable,dimension(:) :: xCoord,yCoord,zCoord
   integer,dimension(2,MDIM) :: blkLimits,blkLimitsGC
@@ -97,24 +97,6 @@ subroutine Simulation_initBlock (blockId)
   dx = (sim_xMax - sim_xMin) / sim_nCD(IAXIS)
   dy = (sim_yMax - sim_yMin) / sim_nCD(JAXIS)
   dz = (sim_zMax - sim_zMin) / sim_nCD(KAXIS)
-
-  ! find z=0 index
-  iz0 = (0.0 - (sim_zMin + 0.5*dz)) / dz
-    if (iz0 < 1) then
-      iz0 = 1
-      izp10 = 1
-      r0 = 1.0
-    else if (iz0 >= sim_nCD(KAXIS)) then
-      iz0 = sim_nCD(KAXIS)
-      izp10 = sim_nCD(KAXIS)
-      r0 = 1.0
-    else
-      izp10 = iz0 + 1
-      r0 = (0.0 - (sim_zMin+dz*(iz0+0.5))) / dz
-    endif
-
-
-
   do k = blkLimitsGC(LOW,KAXIS), blkLimitsGC(HIGH,KAXIS)
     zz = zCoord(k)
     iz = (zz - (sim_zMin + 0.5*dz)) / dz
@@ -213,16 +195,6 @@ subroutine Simulation_initBlock (blockId)
         rho  = max(rho, smlrho)
         pres = max(pres, smallp)
 
-        rho0  = (1.-p)*(1.-q)*(1.-r0)*sim_densArr(ix  , iy  , iz0  ) &
-        &    + (1.-p)*(1.-q)*    r0 *sim_densArr(ix  , iy  , izp10) &
-        &    + (1.-p)*    q *(1.-r0)*sim_densArr(ix  , iyp1, iz0  ) &
-        &    + (1.-p)*    q *    r0 *sim_densArr(ix  , iyp1, izp10) &
-        &    +     p *(1.-q)*(1.-r0)*sim_densArr(ixp1, iy  , iz0  ) &
-        &    +     p *(1.-q)*    r0 *sim_densArr(ixp1, iy  , izp10) &
-        &    +     p *    q *(1.-r0)*sim_densArr(ixp1, iyp1, iz0  ) &
-        &    +     p *    q *    r0 *sim_densArr(ixp1, iyp1, izp10)
-
-        rho0 = max(rho0,smlrho)
         !if ((rho < 1e-25) .or. (rho > 1e-17)) then
         !    print *, xx, yy, zz, ix, iy, iz, p, q, r, rho, sim_densArr(ix,iy,iz)
         !endif
@@ -251,7 +223,7 @@ subroutine Simulation_initBlock (blockId)
         ! Adding Bfield data to block centers
         solnData(MAGX_VAR,i,j,k)= sim_magx
         solnData(MAGY_VAR,i,j,k)= sim_magy
-        solnData(MAGZ_VAR,i,j,k)= rho0*dz/980.0
+        solnData(MAGZ_VAR,i,j,k)= sim_magz
 #endif
 
 #if NFACE_VARS > 0
@@ -259,7 +231,7 @@ subroutine Simulation_initBlock (blockId)
   if (sim_killdivb) then      
      facexData(:,:,:,:)=sim_magx
      faceyData(:,:,:,:)=sim_magy
-     if (NDIM == 3) facezData(:,:,:,:)=rho0*dz/980.0
+     if (NDIM == 3) facezData(:,:,:,:)=sim_magz
   endif
 #endif
 
