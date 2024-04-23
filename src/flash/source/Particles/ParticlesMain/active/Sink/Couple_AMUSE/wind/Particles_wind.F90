@@ -28,7 +28,7 @@ use Grid_interface, only : Grid_fillGuardCells
 
 use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
-! Timers used to time MPI AllGather calls and inject direct routine.
+! Timers used to time entire Particle_winds, MPI AllGather calls and inject direct routine.
 use Timers_interface, ONLY : Timers_start, Timers_stop  !SA 20240207
 
 
