@@ -227,26 +227,24 @@ do p=1, w_num
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
-  if (dmdt(p) .gt. 0) then !Check that there's even anything to inject - SA 20240207
 #ifdef debug2
     if (dr_globalMe .eq. 0) &
       print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
 
-    call Timers_start("inject_direct_call")
+  call Timers_start("inject_direct_call")
 
-    call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
 
-    call Timers_stop("inject_direct_call")
+  call Timers_stop("inject_direct_call")
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
-    if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
-      if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
-        if (dr_globalMe .eq. dr_globalNumProcs - 1) then
-          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
-        else if (disp(dr_globalMe+2) - p >= 0) then
-          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
-        end if
+  if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
+    if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
+      if (dr_globalMe .eq. dr_globalNumProcs - 1) then
+        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
+      else if (disp(dr_globalMe+2) - p >= 0) then
+        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
       end if
     end if
   end if
