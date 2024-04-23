@@ -109,7 +109,7 @@ locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 ! set to the corresponding non-zero value for the star. At the end of the loop the first
 ! entries (a number matching the number of wind stars) will be non-zero and all subsequent
 ! entries will be zero.  The final value of the w_numloc index will also track the
-! total number of wind stars. (This is my current understanding.) -SA 20240216
+! total number of wind stars. -SA 20240216
 
 do p = p_begin, p_end
 #ifdef debug
@@ -218,9 +218,7 @@ print*, "Done gathering.", dr_globalMe
 
 ! The following do loop goes over all the entries of the gathered arrays and injects
 ! winds with inject-direct. At this point every entry of these arrays should be
-! a wind star with non-zero dmdt. Thus, w_num is the number of wind stars. But
-! an extra if statement in the do loop will also double check for zero dmdt
-! values. -SA 20240216
+! a wind star with non-zero dmdt. Thus, w_num is the number of wind stars. -SA 20240216
 
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
