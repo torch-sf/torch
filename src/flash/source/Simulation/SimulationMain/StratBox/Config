@@ -27,8 +27,6 @@ REQUESTS physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat  # for abundM, meta
 #    VARIABLE GACZ
 #ENDIF
 
-GUARDCELLS 6
-
 D sim_bx0           Initial mag field, x component
 D sim_by0           Initial mag field, y component
 D sim_bz0           Initial mag field, z component
@@ -141,4 +139,15 @@ LINKIF Particles_sinkAccelGasOnSinksAndSinksOnGas.F90       Particles/ParticlesM
 # ---------------------------
 # Stirred (driven) turbulence
 # ---------------------------
-REQUIRES physics/sourceTerms/Stir/StirMain/Generate
+#REQUIRES physics/sourceTerms/Stir/StirMain/Generate
+LINKIF st_calcAccel.F90                                     physics/sourceTerms/Stir/StirMain/FromFile
+
+D sim_stirLayer         Focus the stirring to thin layer in z,
+D &                     defined by +/-sim_stirH
+PARAMETER sim_stirLayer BOOLEAN     True
+
+D sim_stirH             Scale height for turbulent stirring
+D &                     z-profile scaling is 1 + tanh((h-|z|)/(0.5*h))
+D &                     so that energy input is about the same
+D &                     as constant forcing over +/-2h
+PARAMETER sim_stirH     REAL        3.09E20 # 100 pc

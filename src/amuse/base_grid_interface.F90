@@ -399,7 +399,6 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
     end if
   end do
 
-
   if (myProc == 0) then
 
     !call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
@@ -536,7 +535,6 @@ FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
     !  jmin = 1 !(blkLimitsGC(HIGH,JAXIS) - blkLimits(HIGH,JAXIS))/2
     !  kmin = 1 !(blkLimitsGC(HIGH,KAXIS) - blkLimits(HIGH,KAXIS))/2
   end if
-
 
   if (myProc == 0) then
       call MPI_Reduce(MPI_IN_PLACE, nx, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)

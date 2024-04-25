@@ -10,6 +10,9 @@ PARAMETER ph_initHPlevel INTEGER 1
 PARAMETER ph_radPressure BOOLEAN FALSE
 PARAMETER ph_EUVonDust BOOLEAN FALSE
 
+# CFL factor to limit radiation pressure velocity
+# of timestep with newly formed feedback stars -BP19Jan23
+PARAMETER cfl_radPressure REAL 0.3
 
 PARAMETER ph_xPeriodic BOOLEAN FALSE
 PARAMETER ph_yPeriodic BOOLEAN FALSE
