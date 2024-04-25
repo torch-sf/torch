@@ -55,6 +55,7 @@ tar -cz -C ${FLASH_DIR} --checkpoint=100 --totals \
 # ----------------
 
 ln -sf ${TORCH_DIR}/cool.dat
+ln -sf ${TORCH_DIR}/cube128
 cp -nv ${TORCH_DIR}/torch_user.py .
 cp -nv ${TORCH_DIR}/flash.par.turbsph_standard flash.par
 cp -nv ${TORCH_DIR}/run.sh .
@@ -70,3 +71,5 @@ if [[ $devflag -eq 1 ]]; then
   rsync -a "${TORCH_DIR}/src/torch_state.py"    .
   rsync -a "${TORCH_DIR}/src/torch_stdout.py"   .
 fi
+
+mkdir data
