@@ -280,7 +280,7 @@ def user_parameters():
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
-    p['min_feedback_mass'] = 20.0 | units.MSun
+    p['min_feedback_mass'] = 7.0 | units.MSun
 
     # <star particle creation>
 
@@ -298,9 +298,9 @@ def user_parameters():
 
     # <job>
 
-    ntasks = get_ntasks_from_run_script()
+    ntasks = get_ntasks_from_run_script("run.sh")
 
-    p['num_grav_workers'] = 16 # must be power of 2 for PeTar 
+    p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
