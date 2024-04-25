@@ -35,7 +35,8 @@ module Particles_rayData
   logical,save :: ph_inBlockSplit
   logical,save :: ph_rotRays
   logical,save :: ph_radPressure
-  real, save :: speedoflight
+  real,save    :: cfl_radPressure
+  real,save    :: speedoflight
 
 ! for mpi and sorting
   integer,save :: ph_maxNRays, ph_localRays, ph_radOutput
