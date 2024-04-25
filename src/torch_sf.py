@@ -61,6 +61,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
 
+    # Get SeBa properties from checkpoint - CCC 25/04/2024
+    relMass  = hydro.get_particle_rel_mass(newtags)
+    relAge   = hydro.get_particle_rel_age(newtags)
+    COcoreM  = hydro.get_particle_co_corem(newtags)
+    coreM    = hydro.get_particle_corem(newtags)
+
+    print(relMass)
+    
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
@@ -70,6 +78,12 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vx   = velocity[:,0]
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
+
+    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024
+    add_star.relative_mass = relMass
+    add_star.relative_age  = relAge
+    add_star.COcore_mass   = COcoreM
+    add_star.core_mass     = coreM
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
@@ -97,7 +111,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
         _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
         se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
         add_star.stellar_type = se_type
-
+        # Temporary - Set new properties here - CCC, 25/04/2024
+        add_star.relative_mass = relMass
+        add_star.relative_age  = relAge
+        add_star.COcore_mass   = COcoreM
+        add_star.core_mass     = coreM
+        print(add_star.relative_mass)
+        print(add_star.relative_age)
+        
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
