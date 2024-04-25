@@ -3473,6 +3473,542 @@ end if
 get_particle_sigh=0
 END FUNCTION
 
+FUNCTION get_particle_rel_mass(tags,rel_mass,nparts)
+! Get the SeBa relative mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_rel_mass, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rel_mass, tags
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            rel_mass(i) = particles_pointer(REL_MASS_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            rel_mass(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    rel_mass = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, rel_mass, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p))
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      rel_mass(i) = particles_global(REL_MASS_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          rel_mass(j) = particles_global(REL_MASS_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_rel_mass=0
+END FUNCTION
+
+
+
+
+
+
+
+FUNCTION get_particle_rel_age(tags,rel_age,nparts)
+! Get the SeBa relative age from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_rel_age, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rel_age, tags
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            rel_age(i) = particles_pointer(REL_AGE_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            rel_age(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    rel_age = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, rel_age, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p))
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      rel_age(i) = particles_global(REL_AGE_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          rel_age(j) = particles_global(REL_AGE_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_rel_age=0
+END FUNCTION
+
+
+
+FUNCTION get_particle_corem(tags,corem,nparts)
+! Get the SeBa core mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_corem, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: corem, tags
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            corem(i) = particles_pointer(COREM_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            corem(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    corem = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, corem, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p))
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      corem(i) = particles_global(COREM_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          corem(j) = particles_global(COREM_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_corem=0
+END FUNCTION
+
+
+
+FUNCTION get_particle_co_corem(tags,co_corem,nparts)
+! Get the SeBa core mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_co_corem, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: co_corem, tags
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            co_corem(i) = particles_pointer(CO_COREM_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            co_corem(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    co_corem = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, co_corem, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p))
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      co_corem(i) = particles_global(CO_COREM_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          co_corem(j) = particles_global(CO_COREM_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_co_corem=0
+END FUNCTION
+
+
+
 FUNCTION set_particle_position(tags,x,y,z,nparts)
 
   integer :: nparts, MyPe
@@ -4822,6 +5358,548 @@ deallocate(id_sorted)
 set_particle_sigd=0
 
 END FUNCTION
+
+FUNCTION set_particle_rel_mass(tags, rel_mass, nparts)
+! Set the SeBa relative mass of a particle by tag number.
+  integer :: nparts
+  double precision :: rel_mass(nparts), tags(nparts)
+  integer :: set_particle_rel_mass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(REL_MASS_PART_PROP, QSindex(j)) = rel_mass(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p))
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(REL_MASS_PART_PROP, QSindex(i)) = rel_mass(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(REL_MASS_PART_PROP, i) = rel_mass(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(REL_MASS_PART_PROP,i) = particles_global(REL_MASS_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_rel_mass=0
+END FUNCTION
+
+
+
+FUNCTION set_particle_rel_age(tags, rel_age, nparts)
+! Set the SeBa relative age of a particle by tag number.
+  integer :: nparts
+  double precision :: rel_age(nparts), tags(nparts)
+  integer :: set_particle_rel_age, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(REL_AGE_PART_PROP, QSindex(j)) = rel_age(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p))
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(REL_AGE_PART_PROP, QSindex(i)) = rel_age(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(REL_AGE_PART_PROP, i) = rel_age(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(REL_AGE_PART_PROP,i) = particles_global(REL_AGE_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_rel_age=0
+END FUNCTION
+
+
+
+FUNCTION set_particle_corem(tags, corem, nparts)
+! Set the SeBa core mass of a particle by tag number.
+  integer :: nparts
+  double precision :: corem(nparts), tags(nparts)
+  integer :: set_particle_corem, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(COREM_PART_PROP, QSindex(j)) = corem(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p))
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(COREM_PART_PROP, QSindex(i)) = corem(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(COREM_PART_PROP, i) = corem(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(COREM_PART_PROP,i) = particles_global(COREM_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_corem=0
+END FUNCTION
+
+
+FUNCTION set_particle_co_corem(tags, co_corem, nparts)
+! Set the SeBa CO core mass of a particle by tag number.
+  integer :: nparts
+  double precision :: co_corem(nparts), tags(nparts)
+  integer :: set_particle_co_corem, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p))
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(CO_COREM_PART_PROP, QSindex(j)) = co_corem(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p))
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(CO_COREM_PART_PROP, QSindex(i)) = co_corem(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(CO_COREM_PART_PROP, i) = co_corem(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(CO_COREM_PART_PROP,i) = particles_global(CO_COREM_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_co_corem=0
+END FUNCTION
+
 
 FUNCTION set_particle_wind_mass(tags, dmdt, nparts)
 ! Set the particle's wind dM/dt by tag number.

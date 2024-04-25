@@ -710,6 +710,46 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_particle_rel_mass():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_mass', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_rel_age():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_age', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('corem', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_co_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('co_corem', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -795,6 +835,46 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('eion', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_rel_mass():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_mass', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_rel_age():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_age', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('corem', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_co_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('co_corem', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
