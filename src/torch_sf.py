@@ -66,8 +66,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     relAge   = hydro.get_particle_rel_age(newtags)
     COcoreM  = hydro.get_particle_co_corem(newtags)
     coreM    = hydro.get_particle_corem(newtags)
-
-    print(relMass)
     
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -116,8 +114,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
         add_star.relative_age  = relAge
         add_star.COcore_mass   = COcoreM
         add_star.core_mass     = coreM
-        print(add_star.relative_mass)
-        print(add_star.relative_age)
         
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
@@ -127,6 +123,9 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     state.stars = state.stars.sorted_by_attribute('tag')
 
     grav.particles.add_particles(add_star)
+    
+    #Add particles to stellar evolution, CCC 10/05/2024
+    se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
