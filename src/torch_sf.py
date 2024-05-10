@@ -103,17 +103,18 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     # fast-forward stellar evolution to get current stellar type, because
     # torch_sf looks for change in stellar type to decide when to deposit SN
-    if add_parts_restart:
-        t_evol = hydro.get_time() - hydro.get_particle_creation_time(newtags)
-        # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        add_star.stellar_type = se_type
-        # Temporary - Set new properties here - CCC, 25/04/2024
-        add_star.relative_mass = relMass
-        add_star.relative_age  = relAge
-        add_star.COcore_mass   = COcoreM
-        add_star.core_mass     = coreM
+    # Commented out, should not be necesasry if we're restarting with SeBa properties, CCC 10/05/2024
+    #if add_parts_restart:
+    #    t_evol = hydro.get_time() - hydro.get_particle_creation_time(newtags)
+    #    # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
+    #    _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
+    #    se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
+    #    add_star.stellar_type = se_type
+    #    # Temporary - Set new properties here - CCC, 25/04/2024
+    #    add_star.relative_mass = relMass
+    #    add_star.relative_age  = relAge
+    #    add_star.COcore_mass   = COcoreM
+    #    add_star.core_mass     = coreM
         
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
