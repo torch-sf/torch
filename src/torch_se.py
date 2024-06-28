@@ -446,8 +446,16 @@ def remove_merged_stars(remove, state, hydro, grav, se):
         grav.particles.synchronize_to(state.stars)
         se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
         se.particles.synchronize_to(state.stars)
+        # Copy attributes - CCC 25/06/2024
+        seba_to_stars.copy()
 
         print("[remove_merged_stars]: final Nstars = ",len(state.stars),hydro.get_number_of_particles())
-    
+
+        state.force_output(overwrite=USER['overwrite'])
+        # Exit the simulation                                                                                                                                                                                                                                      
+        hydro.stop()
+        grav.stop()
+        se.stop()
+        
 if __name__ == '__main__':
     pass
