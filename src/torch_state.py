@@ -7,7 +7,7 @@ from os import path
 import pickle
 
 from amuse.datamodel import Particles
-from amuse.io import write_set_to_file
+from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
 # Import for binaries, CCC 19/07/2023
 from amuse.ext.orbital_elements import get_orbital_elements_from_arrays
@@ -21,12 +21,13 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult):
+    def __init__(self, hydro, grav, mult, se): #Add se, CCC 04/11/2023
 
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
-
+        self.se    = se     #CCC 04/04/2024 to match above
+        
         # "Global" AMUSE-level data structures
         self.all_masses = {}
         self.loop = {}
@@ -41,6 +42,15 @@ class TorchState(object):
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
+        # Stellar evolution to stars, CCC 04/11/2023
+        self.stars_to_se = self.stars.new_channel_to(se.particles)
+        self.se_to_stars = se.particles.new_channel_to(self.stars)
+        # Binary evolution, CCC 05/11/2023
+        self.binaries_to_se = self.binaries.new_channel_to(se.binaries)
+        # No channel to grav yet
+        self.se_to_binaries = se.binaries.new_channel_to(self.binaries)
+        self.stars_to_binaries = self.stars.new_channel_to(self.binaries)
+        self.binaries_to_stars = self.binaries.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -88,6 +98,16 @@ class TorchState(object):
 
         if self.restart:
 
+            # Read stars from amuse file at restart, CCC 04/04/2024
+            starsfile = path.join(self.output_dir,
+                                  'chk_stars{:04d}.amuse'.format(self.chknum))
+            self.stars = read_set_from_file(starsfile)
+            tprint("Loaded evolved stars from"+starsfile)
+            print(self.stars[0])
+
+            # Add stars to grav, CCC 11/04/2024
+            self.grav.particles.add_particles(self.stars)
+            
             loopfile = path.join(self.output_dir,
                 'torch_loop{:04d}.pickle'.format(self.chknum))
 
@@ -170,6 +190,8 @@ class TorchState(object):
         self.out_position()
         self.out_velocity()
         self.out_rnd()
+        # Write stars at checkpoint
+        self.out_chk_stars(overwrite)
         self.chknum = hy_chknum
 
                 
@@ -184,13 +206,16 @@ class TorchState(object):
         if hy_chknum != self.chknum:
             self.out_loop()
             self.out_mass()
-        # Adding the three below to include primordial binaries -CCC, May 3, 2020
+            # Adding the three below to include primordial binaries -CCC, May 3, 2020
             self.out_system()
             self.out_position()
             self.out_velocity()
             self.out_rnd()
+            # Write stars at checkpoint
+            self.out_chk_stars(overwrite)
             self.chknum = hy_chknum
-
+            
+            
         hy_pltnum = self.hydro.IO_out('pltpart')
 
         # If a plt file was written, dump star properties
@@ -259,6 +284,13 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
+        tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
+
+    def out_chk_stars(self, overwrite):
+        """Write star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "chk_stars{:04d}.amuse".format(self.chknum))
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks                                                  
         tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
         
     def out_binaries(self, overwrite):

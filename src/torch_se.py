@@ -39,68 +39,7 @@ E_lyc = 13.6*E_ev  # 13.6 eV
 sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
-#CCC 05/05/2023, temporary
-# Remove worker as argument, use a fresh worker each time
-def evolve_binary_test(dt, mass_of_star1, mass_of_star2, semi_major_axis, eccentricity, age_max, code):
-    
-    #code = SeBa()
-    #code.initialize_code()
-    
-    # Force SE code to stop and restart, CCC 20/07/2023
-    #code.stop()
-    #code = SeBa()
-    #code.initialize_code()
-    
-    print('Starting evolve binary...')
-    #code = worker
-    
-    # Create stars but do not add to grav
-    _stars = Particles(2)
-    _stars[0].mass = mass_of_star1
-    _stars[1].mass = mass_of_star2
 
-    _binaries = Particles(1)
-
-    binary = _binaries[0]
-    binary.semi_major_axis = semi_major_axis
-    binary.eccentricity = eccentricity
-    binary.child1 = _stars[0]
-    binary.child2 = _stars[1]
-
-    # we add the single stars first, as the binaries will refer to these
-    code.particles.add_particles(_stars)
-    code.binaries.add_particles(_binaries)
-    
-    from_seba_to_model = code.particles.new_channel_to(_stars)
-    from_seba_to_model.copy()
-
-    from_seba_to_model_binaries = code.binaries.new_channel_to(_binaries)
-    from_seba_to_model_binaries.copy()
-
-    previous_type_child1 = binary.child1.stellar_type
-    previous_type_child2 = binary.child2.stellar_type
-
-    results = []
-    current_time = 0 | units.Myr
-    while current_time < (age_max):
-        code.update_time_steps()
-        if code.binaries[0].time_step + current_time <= age_max:
-            deltat = code.binaries[0].time_step
-            current_time = current_time + deltat
-        else:
-            current_time = age_max
-        code.evolve_model(current_time)
-          
-    results = [binary.age, binary.child1.mass, binary.child2.mass, binary.child1.radius, binary.child2.radius, binary.child1.temperature, binary.child2.temperature, binary.child1.luminosity, binary.child2.luminosity, binary.child1.stellar_type, binary.child2.stellar_type, binary.semi_major_axis, binary.eccentricity]
-
-    #print('Stopping code...')
-    #code.stop()
-    #print('Code stopped')
-    print('End evolve binary')
-    
-    return results
-
-# CCC 28/04/2023, temporary
 def binary_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
@@ -117,7 +56,7 @@ def binary_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age  = time - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -139,12 +78,8 @@ def binary_evolution(time, dt, state, hydro, worker,
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
     # Update ALL the star properties in bulk for consistency.
-    # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    new_radius = state.stars.radius        # Same structure as type & mass - CCC 12/05/2023
-    new_temp   = state.stars.temperature   
-    new_lum    = state.stars.luminosity
+    # Copy the old mass for the mass loss rates (calculated outside of amuse) - CCC 04/11/2023
+    old_mass = np.copy(state.stars.mass)
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
@@ -158,136 +93,61 @@ def binary_evolution(time, dt, state, hydro, worker,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
     
-    # Try to initialize the worker here instead, CCC 20/07/2023
-    #code = SeBa()
-    #code.initialize_code()
+    worker.evolve_model(time)
+    state.se_to_stars.copy()
+    state.se_to_binaries.copy()
 
-    for i, s in enumerate(state.binaries):
-        
-        # Do not do anything for the second star on its own
-        #if i==1:
-        #    continue
+    for i, s in enumerate(state.stars):
 
-        # Comment out for test binary with primary as BH
-        #if went_supernova(s.stellar_type):
-        #    continue
-        
-        # Try to initialize the worker here instead, CCC 20/07/2023
-        code = SeBa()
-        code.initialize_code()
+        if went_supernova(s.stellar_type):
+            continue
 
-        # SE code accepts initial mass, not the current mass
-        # the "se_" prefix denotes quantities after +dt evolve
-        tprint('Try binary evolution...')
-        # Test with data structure, CCC 19/07/2023
-        binary = state.binaries[i]
-        print(binary)
-        # Try adding worker as an argument
-        _tmp = evolve_binary_test(dt, binary.child1.initial_mass, binary.child2.initial_mass, binary.initial_semi_major_axis, binary.initial_eccentricity, t_evol[i], code)
-        #_tmp = evolve_binary_test(dt, 80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, t_evol[i]) #Masses and binary orbit hardcoded
+        if s.initial_mass >= min_feedback_mass:
 
-        # Try to stop the worker here instead, CCC 20/07/2023
-        code.stop()
-        
-        se_time    = _tmp[0]
-        se_mass1   = _tmp[1]
-        se_mass2   = _tmp[2]
-        se_radius1 = _tmp[3]
-        se_radius2 = _tmp[4]
-        se_temp1   = _tmp[5]
-        se_temp2   = _tmp[6]
-        se_lum1    = _tmp[7]
-        se_lum2    = _tmp[8]
-        se_type1   = _tmp[9]
-        se_type2   = _tmp[10]
-        se_sma     = _tmp[11]
-        se_ecc     = _tmp[12]
-        tprint('New semi-major axis is', se_sma)
-        
-        # Update binary, CCC 19/07/2023
-        binary.child1.mass = se_mass1
-        binary.child2.mass = se_mass2
-        binary.semi_major_axis = se_sma
-        binary.eccentricity    = se_ecc
-        
-        print(binary)
-        
-        assert se_time - t_evol[i] < 1e3 | units.s
-        del se_time  # not needed
+            if with_sn and went_supernova(s.stellar_type):
 
-        if binary.child1.initial_mass >= min_feedback_mass:
+                inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
+                
+                if inj_mass > 15.0|units.MSun:
+                    # expected upper limit for SeBa tracks; see
+                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                    inj_mass = 15.0|units.MSun
 
-            if with_lyc:
-                _tmp = compute_eion_nion_sigh(se_mass1, se_temp1, se_radius1)
-                eion[0] = _tmp[0]
-                nion[0] = _tmp[1]
-                sigh[0] = _tmp[2]
-                _tmp = compute_eion_nion_sigh(se_mass2, se_temp2, se_radius2)
-                eion[1] = _tmp[0]
-                nion[1] = _tmp[1]
-                sigh[1] = _tmp[2]
-            if with_pe_heat:
-                _tmp = compute_epe_npe(se_temp1, se_radius1)
-                epe[0] = _tmp[0]
-                npe[0] = _tmp[1]
-                sigpe[0] = sigDust
-                _tmp = compute_epe_npe(se_temp2, se_radius2)
-                epe[1] = _tmp[0]
-                npe[1] = _tmp[1]
-                sigpe[1] = sigDust
-            # Test winds, CCC 26/05/2023
-            if with_winds:
-                _tmp = compute_dmdt_vterm(binary.child1.mass, se_temp1, se_radius1, se_mass1, se_lum1, dt,
-                                            massloss_method=massloss_method)
-                dm_dt[0] = _tmp[0]
-                vterm[0] = _tmp[1]
-                _tmp = compute_dmdt_vterm(binary.child2.mass, se_temp2, se_radius2, se_mass2, se_lum2, dt,
-                                            massloss_method=massloss_method)
-                dm_dt[1] = _tmp[0]
-                vterm[1] = _tmp[1]
+                # inject energy and mass onto grid
+                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                se_dt = min(se_dt, _tmp)
+                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
-        # Update stars, CCC 20/07/2023
-        arg1 = np.where(state.stars.tag == binary.child1.tag)[0]
-        arg2 = np.where(state.stars.tag == binary.child2.tag)[0]
-        new_mass[arg1] = se_mass1
-        new_mass[arg2] = se_mass2
-        tprint('New masses set to', new_mass[0], new_mass[1])
-        tprint('Masses from winds', binary.child1.mass-dt*dm_dt[0], binary.child2.mass-dt*dm_dt[1])
-        # First order check for CE ejection, CCC 20/06/2023
-        if (new_mass[1]/(binary.child2.mass-dt*dm_dt[1]) < 0.9) or (new_mass[0]/(binary.child1.mass-dt*dm_dt[0]) < 0.9):
-            tprint('Ejection of common envelope!')
-            E_bind = 4*(units.constants.G * new_mass[0]/(2*se_sma)) * abs((binary.child2.mass)-(new_mass[1]))
-            tprint('Inject', E_bind.in_(units.erg), 'on the grid')
-            _tmp = hydro.energy_injection(E_bind, 1.0, abs((binary.child2.mass)-(new_mass[1])), s.x, s.y, s.z)
-            
-        new_type[arg1] = se_type1
-        new_type[arg2] = se_type2
-        new_radius[arg1] = se_radius1
-        new_radius[arg2] = se_radius2
-        new_temp[arg1] = se_temp1
-        new_temp[arg2] = se_temp2
-        new_lum[arg1] = se_lum1
-        new_lum[arg2] = se_lum2
+                # implicitly zeros out feedback properties by not setting
+
+            else:
+
+                if with_lyc:
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                    eion[i] = _tmp[0]
+                    nion[i] = _tmp[1]
+                    sigh[i] = _tmp[2]
+                if with_pe_heat:
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
+                    epe[i] = _tmp[0]
+                    npe[i] = _tmp[1]
+                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                if with_winds:
+                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                              massloss_method=massloss_method)
+                    dm_dt[i] = _tmp[0]
+                    vterm[i] = _tmp[1]
+
+        # Evolutionary things besides winds could have reduced the stars mass.
+        if dm_dt[i]*dt > 0.0|units.MSun:
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
-    
-    # Try to stop the worker here instead, CCC 20/07/2023
-    #code.stop()
-    
-    # Update stars properties in bulk, CCC 20/07/2023
-    state.stars.mass = new_mass
-    state.stars.stellar_type = new_type
 
-    # Update star radii for N-body collisions in petar -BP 08.19.22
-    #state.stars.radius = np.array([se_radius1, se_radius2])
-    state.stars.radius = new_radius
-    # Also update temperature and luminosity -CCC 12/05/2023
-    state.stars.temperature = new_temp
-    state.stars.luminosity = new_lum
-    
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
@@ -308,21 +168,24 @@ def binary_evolution(time, dt, state, hydro, worker,
 
 def stellar_evolution(time, dt, state, hydro, worker,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None):
+                      massloss_method=None, min_feedback_mass=None,
+                      select_fb_stars=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-
-    # We call SeBa on indiv stars, but get/set hydro star props in bulk.
+    assert select_fb_stars is not None
+    
+    # We call SeBa on all stars at once but loop through stars for feedback
+    # TO DO: Edit to loop only through feedback stars (see bitbucket) - CCC 04/11/2023
 
     # Always recompute star's age from hydro time and particle creation time.
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -344,12 +207,8 @@ def stellar_evolution(time, dt, state, hydro, worker,
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
     # Update ALL the star properties in bulk for consistency.
-    # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    new_radius = state.stars.radius        # Same structure as type & mass - CCC 12/05/2023
-    new_temp   = state.stars.temperature   
-    new_lum    = state.stars.luminosity 
+    # Copy the old mass for the mass loss rates (calculated outside of amuse) - CCC 04/11/2023
+    old_mass = np.copy(state.stars.mass)
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
@@ -362,29 +221,25 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
+    
+    # Structure changed to use evolve_model to evolve all stars at the same time
+    # This allows us to restart from evolved stars and use the same structure for
+    # binary evolution - CCC 04/11/2023
+    worker.evolve_model(time)
+    state.se_to_stars.copy()
 
     for i, s in enumerate(state.stars):
 
         if went_supernova(s.stellar_type):
             continue
 
-        # SE code accepts initial mass, not the current mass
-        # the "se_" prefix denotes quantities after +dt evolve
-        _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        assert se_time - t_evol[i] < 1e3 | units.s
-        del se_time, se_evol_time  # not needed
+        # Select feeedback stars by mass or flag
+        if ((select_fb_stars == 'mass') and (s.mass >= min_feedback_mass)) or ((select_fb_stars == 'tag') and (s.fb == True)):
 
-        new_type[i]   = se_type
-        new_radius[i] = se_radius #Maybe temporary structure, CCC 09/05/2023
-        new_temp[i]   = se_temp
-        new_lum[i]    = se_lum
+            if with_sn and went_supernova(s.stellar_type):
 
-        if s.mass >= min_feedback_mass:
-
-            if with_sn and went_supernova(se_type):
-
-                inj_mass = s.mass - se_mass  # minus stellar remnant's mass
+                inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
+                
                 if inj_mass > 15.0|units.MSun:
                     # expected upper limit for SeBa tracks; see
                     # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
@@ -401,40 +256,29 @@ def stellar_evolution(time, dt, state, hydro, worker,
             else:
 
                 if with_lyc:
-                    _tmp = compute_eion_nion_sigh(se_mass, se_temp, se_radius)
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
                     eion[i] = _tmp[0]
                     nion[i] = _tmp[1]
                     sigh[i] = _tmp[2]
                 if with_pe_heat:
-                    _tmp = compute_epe_npe(se_temp, se_radius)
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt,
+                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
         if dm_dt[i]*dt > 0.0|units.MSun:
-            new_mass[i] = min(se_mass, s.mass - dm_dt[i]*dt)
-        else:
-            new_mass[i] = se_mass
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
-    state.stars.mass = new_mass
-    state.stars.stellar_type = new_type
-
-    # Update star radii for N-body collisions in petar -BP 08.19.22
-    # Edited CCC 04/05/2023 to give different radius for the stars
-    state.stars.radius = new_radius
-    # Also update temperature and luminosity -CCC 12/05/2023
-    state.stars.temperature = new_temp
-    state.stars.luminosity = new_lum
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
