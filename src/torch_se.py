@@ -52,7 +52,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    #t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
 
     # CCC 26/04/2024
     # Note that time denotes the time to evolve to
@@ -61,7 +60,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
     _attributes = state.stars.get_attribute_names_defined_in_store()
-    print(_attributes)
     if 'radius' not in _attributes:
         # Initial guess for the radius if running with user ICs - CCC 12/05/2023
         # It must be somewhat realistic in case there is a contact system
@@ -80,9 +78,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
     
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
-    #new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    #new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-
     # CCC 26/04/2024
     old_mass = np.copy(state.stars.mass)
 
@@ -110,15 +105,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
 
         if went_supernova(s.stellar_type):
             continue
-
-        # SE code accepts initial mass, not the current mass
-        # the "se_" prefix denotes quantities after +dt evolve
-        #_tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        #se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        #assert se_time - t_evol[i] < 1e3 | units.s
-        #del se_time, se_evol_time  # not needed
-
-        #new_type[i] = se_type
 
         if s.mass >= min_feedback_mass:
 
@@ -160,14 +146,6 @@ def stellar_evolution(time, dt, state, hydro, worker,
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
-
-    # This assumes steps are relatively small in the mass loss rate of stars,
-    # so that gravity can use the mass after all the wind mass loss has
-    # occcured. Otherwise we'd have to average mass loss and keep up with old
-    # and new masses and it just gets ugly.
-    # Can be commented out, CCC 26/04/2024
-    #state.stars.mass = new_mass
-    #state.stars.stellar_type = new_type
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -238,10 +216,9 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
 
     # First integrate the power from the BB curve at this stars temp.
     [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
-    print('Power:', power)
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_cs_per_ph, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
-    print('per photon:', per_ph)
+    
     avg_E = power/per_ph / E_ev
     # Calculate the average frequency of an ionizing photon for this star
     avg_nu = avg_E*E_ev/h
