@@ -1,12 +1,14 @@
 Module pt_windInterface
 
   interface
-    subroutine inject_direct(loc, injectMass, injectVelocity, twind, dt)
+    subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
+    ! Updated 20240215 to accurately reflect inject_direct call -SA
 
       implicit none
-      real, intent(in) :: loc(3)
-      real, intent(in) :: injectMass, injectVelocity, twind
+      real, intent(in) :: loc_in(3)
+      real, intent(in) :: injectMassIn, injectVelocityIn, twind
       real, intent(inout) :: dt
+      real, intent(inout) :: bgDens
     end subroutine inject_direct
   end interface
 

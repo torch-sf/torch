@@ -28,9 +28,9 @@ h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
-sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4
-sig0  = 6.304e-18 # Photoionization cross section at threshold for hydrogen
-E_ev  = 1.60222497096e-12 # energy of 1 eV in erg
+sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4, CCC 26/04/2024
+sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
+E_ev = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
 # Cross section for dust per hydrogen atom.
 # Value = tau / N_H where tau = gamma * Av (Draine and Bertoli 96)
@@ -56,7 +56,8 @@ def binary_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    state.stars.age  = time - hydro.get_particle_creation_time(state.stars.tag)
+
+    state.stars.age  = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -77,6 +78,7 @@ def binary_evolution(time, dt, state, hydro, worker,
         # Use BB luminosity and radius, luminosity
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
+    
     # Update ALL the star properties in bulk for consistency.
     # Copy the old mass for the mass loss rates (calculated outside of amuse) - CCC 04/11/2023
     old_mass = np.copy(state.stars.mass)
@@ -96,6 +98,14 @@ def binary_evolution(time, dt, state, hydro, worker,
     worker.evolve_model(time)
     state.se_to_stars.copy()
     state.se_to_binaries.copy()
+
+    # CCC 26/04/2024
+    # Structure changed to use evolve_model to evolve all stars at the same time
+    # This allows us to restart from evolved stars and use the same structure for
+    # binary evolution - CCC 04/11/2023
+    state.stars_to_se.copy()
+    worker.evolve_model(time)
+    state.se_to_stars.copy()
 
     for i, s in enumerate(state.stars):
 
@@ -140,6 +150,7 @@ def binary_evolution(time, dt, state, hydro, worker,
                     vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
+        # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
@@ -185,7 +196,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -295,6 +306,12 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
+    # Set SeBa properties for checkpoint - CCC 26/04/2024
+    hydro.get_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.get_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.get_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.get_particle_corem(state.stars.tag, state.stars.core_mass)
+    
     return se_dt
 
 
@@ -345,6 +362,7 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
     [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_cs_per_ph, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
+    
     avg_E = power/per_ph / E_ev
     # Calculate the average frequency of an ionizing photon for this star
     avg_nu = avg_E*E_ev/h
