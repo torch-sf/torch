@@ -98,7 +98,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
     # Use linear MRR for upper mass range
     # Note that radius now denotes a physical radius and not a collisional radius
-    add_star.radius = (1.01 * (add_stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    add_star.radius = (1.01 * (add_star.mass / (1 | units.MSun)) ** 0.57) | units.RSun
     add_star.initial_mass = initMass # for SE/SN uses
         
     # only used by ph4... without this, ph4 complains about reused user IDs
