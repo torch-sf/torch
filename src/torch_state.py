@@ -11,6 +11,8 @@ from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
 # Import for binaries, CCC 19/07/2023
 from amuse.ext.orbital_elements import get_orbital_elements_from_arrays
+# Import for binary identification, CCC 23/07/2024
+from binary_identification import get_binaries_from_stars
 
 from torch_param import FlashPar
 from torch_stdout import tprint
@@ -321,136 +323,8 @@ class TorchState(object):
         binaries with semi-major axis and eccentricity, as well as
         the particle information.
         """
-        
-        def relative_v2(vx1, vy1, vz1, vx2, vy2, vz2):
-            v2 = (vx1-vx2)**2 + (vy1-vy2)**2 + (vz1-vz2)**2
-            return v2
-
-        def relative_r(px1, py1, pz1, px2, py2, pz2):
-            r2 = (px1-px2)**2 + (py1-py2)**2 + (pz1-pz2)**2
-            r = np.zeros(len(r2)) | units.cm
-            for i in range(len(r)):
-                r[i] = np.sqrt(r2[i])
-            return r
-
-        def relative_r_scalar(px1, py1, pz1, px2, py2, pz2):
-            r2 = (px1-px2)**2 + (py1-py2)**2 + (pz1-pz2)**2
-            r = np.sqrt(r2)
-            return r
-
-        def rel_v(vx1, vy1, vz1, vx2, vy2, vz2):
-            v = np.array([vx1-vx2, vy1-vy2, vz1-vz2])
-            return v
-
-        def rel_r(px1, py1, pz1, px2, py2, pz2):
-            r = np.array([px1-px2, py1-py2, pz1-pz2])
-            return r
-
-        def binding_energy(m1, m2, r, v2):
-            E = m1 * m2 * v2 / (2 * (m1 + m2)) - ((units.constants.G * m1 * m2) / r)
-            return E
-
-        def semi_major(m1, m2, r, v2):
-            a = abs(1 / (2/r - v2/(units.constants.G*(m1+m2))))
-            return a
-
-        def perturbation(m1, m2, m3, a, d):
-            gamma = abs((m1*m3/(d-a)**2) - (m2*m3/(d+a)**2)) * 4 * a**2/(m1*m2)
-            return gamma
-
-        def E_bind(m1, m2, a):
-            E = 0.5 * units.constants.G * m1 * m2 / a
-            return E
-        
-        stars = self.stars[np.argsort(self.stars.mass.value_in(units.MSun))][::-1]
-    
-        arg1 = 0
-    
-        tags_primaries  = []
-        tags_companions = []
-        singles    = []
-        primaries  = []
-        companions = []
-        rel_pos    = []
-        rel_vel    = []
-        E_bind     = []
-    
-        for star1 in stars:
-
-            arg1 += 1
-            stars_ = stars[arg1:]
-            if len(stars_) == 0:
-                break
-            arg2 = 0
-        
-            v2 = relative_v2(star1.vx, star1.vy, star1.vz, stars_.vx, stars_.vy, stars_.vz)
-            r  = relative_r(star1.x, star1.y, star1.z, stars_.x, stars_.y, stars_.z)
-            E  = binding_energy(star1.mass, stars_.mass, r, v2)
-            a  = semi_major(star1.mass, stars_.mass, r, v2)
-            # Keep checking for stars in the same location
-            if len(r) > len(np.nonzero(r)[0]):
-                print('Same loc') 
-            # Save all bound companions, then order
-            bound = np.where(E < 0 | units.erg)[0]
-            for b in bound:
-                tags_primaries.append(star1.tag)
-                tags_companions.append(stars_[b].tag)
-                primaries.append(star1.mass.value_in(units.MSun))
-                companions.append(stars_[b].mass.value_in(units.MSun))
-                rel_pos.append(rel_r(star1.x.value_in(units.cm), star1.y.value_in(units.cm), star1.z.value_in(units.cm),
-                                stars_[b].x.value_in(units.cm), stars_[b].y.value_in(units.cm), stars_[b].z.value_in(units.cm)))
-                rel_vel.append(rel_v(star1.vx.value_in(units.cm/units.s), star1.vy.value_in(units.cm/units.s), star1.vz.value_in(units.cm/units.s),
-                                stars_[b].vx.value_in(units.cm/units.s), stars_[b].vy.value_in(units.cm/units.s), 
-                                stars_[b].vz.value_in(units.cm/units.s)))
-                E_bind.append(abs(E[b].value_in(units.erg)))
-        
-    
-        sort = np.argsort(E_bind)[::-1]
-        # Keep the most bound for each star
-        args = []
-        tags_p = []
-        tags_c = []
-        for s in sort:
-            # Skip pair if primary already saved
-            if (tags_primaries[s] in tags_p) or (tags_primaries[s] in tags_c):
-                pass
-            # Skip pair if companion already saved
-            elif (tags_companions[s] in tags_p) or (tags_companions[s] in tags_c):
-                pass
-            # Save if most bound combination
-            else:
-                args.append(s)
-                tags_p.append(tags_primaries[s])
-                tags_c.append(tags_companions[s])
-    
-        args = np.array(args)
-    
-        tags_primaries  = np.array(tags_primaries)[args]
-        tags_companions = np.array(tags_companions)[args]
-        primaries  = np.array(primaries)[args] | units.MSun
-        companions = np.array(companions)[args] | units.MSun
-        rel_pos = np.array(rel_pos)[args] | units.cm
-        rel_vel = np.array(rel_vel)[args] | units.cm / units.s
-        #E_bind  = np.array(E_bind)[args] | units.erg
-    
-        semi_major_axes, eccentricities, _, _, _, _ = get_orbital_elements_from_arrays(rel_pos, rel_vel, primaries+companions, G=units.constants.G)
-        
-        # Data structure
-        binaries = Particles(len(tags_primaries))
-        binaries.semi_major_axis = semi_major_axes
-        binaries.eccentricity = eccentricities
-        binaries.initial_semi_major_axis = semi_major_axes
-        binaries.initial_eccentricity = eccentricities
-        for i in range(len(binaries)):
-            binaries[i].child1, binaries[i].child2 = Particles(2)
-            j = np.where(stars.tag == tags_primaries[i])[0]
-            binaries[i].child1.initial_mass = stars[j].initial_mass
-            binaries[i].child1.mass = stars[j].mass
-            binaries[i].child1.tag  = stars[j].tag
-            k = np.where(stars.tag == tags_companions[i])[0]
-            binaries[i].child2.initial_mass = stars[k].initial_mass
-            binaries[i].child2.mass = stars[k].mass
-            binaries[i].child2.tag  = stars[k].tag
+        stars = self.stars
+        binaries = get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4)
 
         return binaries
 
