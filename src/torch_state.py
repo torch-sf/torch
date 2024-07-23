@@ -102,16 +102,6 @@ class TorchState(object):
 
         if self.restart:
 
-            # Read stars from amuse file at restart, CCC 04/04/2024
-            starsfile = path.join(self.output_dir,
-                                  'chk_stars{:04d}.amuse'.format(self.chknum))
-            self.stars = read_set_from_file(starsfile)
-            tprint("Loaded evolved stars from"+starsfile)
-            print(self.stars[0])
-
-            # Add stars to grav, CCC 11/04/2024
-            self.grav.particles.add_particles(self.stars)
-            
             loopfile = path.join(self.output_dir,
                 'torch_loop{:04d}.pickle'.format(self.chknum))
 
@@ -194,8 +184,7 @@ class TorchState(object):
         self.out_position()
         self.out_velocity()
         self.out_rnd()
-        # Write stars at checkpoint
-        self.out_chk_stars(overwrite)
+        
         self.chknum = hy_chknum
 
                 
@@ -215,8 +204,7 @@ class TorchState(object):
             self.out_position()
             self.out_velocity()
             self.out_rnd()
-            # Write stars at checkpoint
-            self.out_chk_stars(overwrite)
+        
             self.chknum = hy_chknum
             
             
@@ -290,13 +278,6 @@ class TorchState(object):
         #write_set_to_file(multstars, mult_file)
         tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
 
-    def out_chk_stars(self, overwrite):
-        """Write star particles to AMUSE file"""
-        stars_fname = path.join(self.output_dir,
-                               "chk_stars{:04d}.amuse".format(self.chknum))
-        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks                                                  
-        tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
-        
     def out_binaries(self, overwrite):
         """Write binary particles to AMUSE file"""
         binaries_fname = path.join(self.output_dir,
