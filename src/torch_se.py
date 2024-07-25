@@ -94,18 +94,15 @@ def binary_evolution(time, dt, state, hydro, worker,
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
-    
+
+    # Pass information to SE
+    state.stars_to_se.copy()
+    state.binaries_to_se.copy()
+    # Evolve model
     worker.evolve_model(time)
+    # Pass information back
     state.se_to_stars.copy()
     state.se_to_binaries.copy()
-
-    # CCC 26/04/2024
-    # Structure changed to use evolve_model to evolve all stars at the same time
-    # This allows us to restart from evolved stars and use the same structure for
-    # binary evolution - CCC 04/11/2023
-    state.stars_to_se.copy()
-    worker.evolve_model(time)
-    state.se_to_stars.copy()
 
     for i, s in enumerate(state.stars):
 
@@ -236,6 +233,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
+    state.stars_to_se.copy() # CCC 25/07/2024
     worker.evolve_model(time)
     state.se_to_stars.copy()
 

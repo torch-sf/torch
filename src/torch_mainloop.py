@@ -209,8 +209,6 @@ def evolve(state, hydro, grav, mult, se):
         # particles mis-sorted in the particles array. -JW
         hydro.particles_sort()
         add_particles_to_grav(state, hydro, grav, mult, se)
-        # Get binaries, CCC 19/07/2023
-        state.binaries = state.binaries_from_stars()
 
     if USER['evolve_async']:
         from amuse.rfi.async_request import AsyncRequestsPool
@@ -353,6 +351,8 @@ def evolve(state, hydro, grav, mult, se):
                 # CCC 28/04/2023
                 if USER['test_interacting_binary']:
                     tprint("Interacting binary")
+                    # Check for binaries, CCC 25/07/2024
+                    state.binaries = state.binaries_from_stars()
                     se_dt = binary_evolution(
                         hy_time+dt, dt, state, hydro, se,
                         with_lyc          = USER['with_lyc'],
