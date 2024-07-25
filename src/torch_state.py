@@ -323,8 +323,7 @@ class TorchState(object):
         binaries with semi-major axis and eccentricity, as well as
         the particle information.
         """
-        stars = self.stars
-        binaries = get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4)
+        binaries = get_binaries_from_stars(self.stars, num_stars_for_tree = 10, a_max = 1e4)
 
         return binaries
 

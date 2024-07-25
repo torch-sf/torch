@@ -53,13 +53,13 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     else:
 
-        return # Do not use this function for restarts
+        #return # Do not use this function for restarts
         
-        #tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
-        #tprint("add_particles_to_grav: sync all stars from Flash to grav.")
-        #add_parts_restart = True
-        #num_new_parts = hydro.get_number_of_particles()
-        #newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
+        tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
+        tprint("add_particles_to_grav: sync all stars from Flash to grav.")
+        add_parts_restart = True
+        num_new_parts = hydro.get_number_of_particles()
+        newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
 
     newtags.sort()
 
