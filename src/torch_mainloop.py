@@ -373,7 +373,6 @@ def evolve(state, hydro, grav, mult, se):
                         with_sn           = USER['with_sn'],
                         massloss_method   = USER['massloss_method'],
                         min_feedback_mass = USER['min_feedback_mass'],
-                        select_fb_stars   = USER['select_fb_stars'],
                     )
 
                 # sync mass to gravity code(s) from stars
