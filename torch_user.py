@@ -20,8 +20,11 @@ from amuse.ext.orbital_elements import generate_binaries, new_binary_from_orbita
 from torch_param import FlashPar
 from torch_mainloop import run_torch
 
-# Temporary, CCC 19/07/2023
-from amuse.io import write_set_to_file
+# CCC 19/07/2023, 25/07/2024
+from amuse.io import write_set_to_file, read_set_from_file
+
+#tmp
+import numpy as np
 
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
@@ -97,100 +100,21 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
-#    # SeBa test: close, massive binary
+    # SeBa test: get binaries from stars.amuse
 
-    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
-
-    binary.initial_mass = binary.mass
-    #print(binary.initial_mass, binary.mass)
-    binary[0].mass = 72.9613855 | units.MSun
-    binary[1].mass = 36.2885208 | units.MSun
-    #binary[0].mass = 2.70798 | units.MSun
-    #binary[1].mass = 67.4538 | units.MSun
-    #print(binary.initial_mass, binary.mass)
-    
-    # Write a file of binaries, test
-    # CCC 19/07/2023
-    #write_set_to_file(binary, 'binaries0000.amuse', format='hdf5', append_to_file=False, overwrite_file=True)
-
-#    #Also set initial radius, CCC 28/04/2023
-#    binary[0].radius = 36.2885208442 | units.RSun
-#    binary[1].radius = 14.6288783968 | units.RSun
-    
-    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
-    #creation_time = hydro.get_time() - (1.84402e+14 | units.s) # 5.84735 Myr old, before common envelope
-    tag = hydro.add_particles(binary.x, binary.y, binary.z)
-    hydro.set_particle_mass(tag, binary.mass)
-    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
-    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
+    # Stars
+    add_stars = read_set_from_file('stars_ICs.amuse')[:100]
+    #_mask = np.argsort(_stars.initial_mass.value_in(units.MSun))[::-1][:20]
+    #add_stars = _stars[_mask]
+    print(add_stars.get_attribute_names_defined_in_store())
+    print(add_stars.mass.value_in(units.MSun))
+    # FLASH
+    creation_time = hydro.get_time() - (3 | units.Myr)
+    tag = hydro.add_particles(add_stars.x, add_stars.y, add_stars.z)
+    hydro.set_particle_mass(tag, add_stars.mass)
+    hydro.set_particle_velocity(tag, add_stars.vx, add_stars.vy, add_stars.vz)                                                                                                                 
+    hydro.set_particle_oldmass(tag, add_stars.initial_mass) # for SE code
     hydro.set_particle_creation_time(tag, creation_time)
-    
-    # ------------------------------------------------------------------------
-    # SeBa test: add two more times the same close massive binary, and the two stars as single
-
-    # 2nd system
-    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
-
-    binary.initial_mass = binary.mass
-    binary[0].mass = 72.9613855 | units.MSun
-    binary[1].mass = 36.2885208 | units.MSun
-    
-    # Adjust positions
-    binary.x = binary.x - (1 | units.pc)
-    binary.y = binary.y + (1 | units.pc)
-    
-    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
-    #creation_time = hydro.get_time()
-    tag = hydro.add_particles(binary.x, binary.y, binary.z)
-    hydro.set_particle_mass(tag, binary.mass)
-    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
-    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
-    hydro.set_particle_creation_time(tag, creation_time)
-    
-    # 3rd system
-    binary = new_binary_from_orbital_elements(80. | units.MSun, 40. | units.MSun, 0.5 | units.AU, 0.5, 0, 0, 0, 0, G=units.constants.G)
-
-    binary.initial_mass = binary.mass
-    binary[0].mass = 72.9613855 | units.MSun
-    binary[1].mass = 36.2885208 | units.MSun
-    
-    # Adjust positions
-    binary.x = binary.x + (1 | units.pc)
-    binary.y = binary.y - (1 | units.pc)
-    
-    creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
-    #creation_time = hydro.get_time()
-    tag = hydro.add_particles(binary.x, binary.y, binary.z)
-    hydro.set_particle_mass(tag, binary.mass)
-    hydro.set_particle_velocity(tag, binary.vx, binary.vy, binary.vz)                                                                                                                      
-    hydro.set_particle_oldmass(tag, binary.initial_mass) # for SE code
-    hydro.set_particle_creation_time(tag, creation_time)
-    
-    # Singles
-    #singles = Particles(2)
-    #singles[0].initial_mass = 80. | units.MSun
-    #singles[0].mass         = 72.9613855 | units.MSun
-    #singles[0].x            = -1 | units.pc
-    #singles[0].y            = -1 | units.pc
-    #singles[0].z            = 0 | units.pc
-    #singles[0].vx           = 0 | units.cm/units.s
-    #singles[0].vy           = 0 | units.cm/units.s
-    #singles[0].vz           = 0 | units.cm/units.s
-    #singles[1].initial_mass = 40. | units.MSun
-    #singles[1].mass         = 36.2885208 | units.MSun
-    #singles[1].x            = 1 | units.pc
-    #singles[1].y            = 1 | units.pc
-    #singles[1].z            = 0 | units.pc
-    #singles[1].vx           = 0 | units.cm/units.s
-    #singles[1].vy           = 0 | units.cm/units.s
-    #singles[1].vz           = 0 | units.cm/units.s
-    
-    #creation_time = hydro.get_time() - (8.9914714368e+13 | units.s) # 2.8511769 Myr old
-    #tag = hydro.add_particles(singles.x, singles.y, singles.z)
-    #hydro.set_particle_mass(tag, singles.mass)
-    #hydro.set_particle_velocity(tag, singles.vx, singles.vy, singles.vz)                                                                                                                 
-    #hydro.set_particle_oldmass(tag, singles.initial_mass) # for SE code
-    #hydro.set_particle_creation_time(tag, creation_time)
     
     
     # ------------------------------------------------------------------------  
@@ -367,16 +291,15 @@ def user_parameters():
 
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
-    p['restart_with_user_ics'] = True  # meant for testing
+    p['restart_with_user_ics'] = False  # meant for testing
     p['check_for_stall'] = True # use to save and exit if gravity takes longer than hydro
     p['restart_from_stall'] = False # did PeTar stall and exit? Check for merged stars
-    p['test_binary'] = True # meant for testing
-    p['test_interacting_binary'] = True
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
+    p['with_be'] = True  # do binary evolution?
 
     # <timestepping>
 

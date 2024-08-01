@@ -346,11 +346,11 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------------
 
             if USER['with_se']:
-                tprint("Do stellar evolution")
-                # update both stars set and hydro properties
-                # CCC 28/04/2023
-                if USER['test_interacting_binary']:
-                    tprint("Interacting binary")
+                
+                if USER['with_be']:
+                    # update both stars set and hydro properties
+                    # CCC 28/04/2023
+                    tprint("Do stellar and binary evolution")
                     # Check for binaries, CCC 25/07/2024
                     state.binaries = state.binaries_from_stars()
                     se_dt = binary_evolution(
@@ -363,7 +363,7 @@ def evolve(state, hydro, grav, mult, se):
                         min_feedback_mass = USER['min_feedback_mass'],
                     )
                 else:
-                    tprint("Stars treated as single")
+                    tprint("Do stellar evolution")
                     # update both stars set and hydro properties
                     se_dt = stellar_evolution(
                         hy_time+dt, dt, state, hydro, se,
@@ -375,16 +375,6 @@ def evolve(state, hydro, grav, mult, se):
                         min_feedback_mass = USER['min_feedback_mass'],
                         select_fb_stars   = USER['select_fb_stars'],
                     )
-#                se_dt = stellar_evolution(
-#                    hy_time+dt, dt, state, hydro, se,
-#                    with_lyc          = USER['with_lyc'],
-#                    with_pe_heat      = USER['with_pe_heat'],
-#                    with_winds        = USER['with_winds'],
-#                    with_sn           = USER['with_sn'],
-#                    massloss_method   = USER['massloss_method'],
-#                    min_feedback_mass = USER['min_feedback_mass'],
-#                )
-                #tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
