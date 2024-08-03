@@ -40,7 +40,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def binary_evolution(time, dt, state, hydro, worker,
+def binary_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
     """
@@ -49,6 +49,15 @@ def binary_evolution(time, dt, state, hydro, worker,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
+    
+    # Check for changes in SeBa.data - CCC 01/08/2024
+    _log = 0
+    try:
+        with open('SeBa.data', 'r') as f:
+            _log = f.read().count('\n')
+            f.close()
+    except FileNotFoundError:
+        pass
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
 
@@ -57,6 +66,7 @@ def binary_evolution(time, dt, state, hydro, worker,
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
 
+    # Age not used explicitly for SE - CCC 02/08/2024
     state.stars.age  = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
@@ -96,13 +106,36 @@ def binary_evolution(time, dt, state, hydro, worker,
     se_dt = 1e99 | units.s
 
     # Pass information to SE
-    state.stars_to_se.copy()
-    state.binaries_to_se.copy()
+    # Check for new systems, important for binaries - CCC 02/08/2024
+    state.binaries.synchronize_to(se.binaries)
+    # Now pass attributes to binaries - CCC 03/08/2024
+    tprint(se.particles.core_mass)
+    for _attribute in state.binaries.get_attribute_names_defined_in_store():
+        if _attribute in se.binaries.get_attribute_names_defined_in_store():
+            state.binaries_to_se.copy_attributes([_attribute])
     # Evolve model
-    worker.evolve_model(time)
-    # Pass information back
-    state.se_to_stars.copy()
-    state.se_to_binaries.copy()
+    se.evolve_model(time) #Time attached to se.particles.age, which is the "simulation" time
+    
+    # Pass information back to stars after end of SE loop - CCC 02/08/2024
+    for _attribute in se.particles.get_attribute_names_defined_in_store():
+        if _attribute in state.stars.get_attribute_names_defined_in_store():
+            state.se_to_stars.copy_attributes([_attribute])
+    
+    # Check for changes in SeBa.data - tmp, CCC 01/08/2024
+    log = 0 # Before we have the first output
+    try:
+        with open('SeBa.data', 'r') as f:
+            log = f.read().count('\n')
+            f.close()
+    except FileNotFoundError:
+        pass
+    
+    if log != _log:
+        changed = log - _log
+        data = np.genfromtxt('SeBa.data', delimiter=None, dtype='float', usecols=(0, 1, 2, 3))
+        print(data)
+        _btype = np.where(data[:,1] > 2)
+        print(data[_btype])
 
     for i, s in enumerate(state.stars):
 
@@ -170,11 +203,17 @@ def binary_evolution(time, dt, state, hydro, worker,
 
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+    
+    # Set SeBa properties for checkpoint - CCC 26/04/2024
+    hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
 
     return se_dt
 
 
-def stellar_evolution(time, dt, state, hydro, worker,
+def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
                       massloss_method=None, min_feedback_mass=None):
     """
@@ -232,7 +271,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
     state.stars_to_se.copy() # CCC 25/07/2024
-    worker.evolve_model(time)
+    se.evolve_model(time)
     state.se_to_stars.copy()
 
     for i, s in enumerate(state.stars):
@@ -302,10 +341,10 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     # Set SeBa properties for checkpoint - CCC 26/04/2024
-    hydro.get_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
-    hydro.get_particle_rel_age(state.stars.tag, state.stars.relative_age)
-    hydro.get_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
-    hydro.get_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
     
     return se_dt
 
