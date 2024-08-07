@@ -36,9 +36,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     se (SeBa or other stellar evolution worker) is only used to get
     correct stellar type for restarts; newborn stars are assumed to be on ZAMS
-    
-    CCC 11/04/2024 : DO NOT use this for restarts, use amuse file instead
-    Comment out section for restarts
 
     postcondition:
         stars updated
@@ -52,8 +49,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
         newtags = hydro.get_new_tags(list(range(1,num_new_parts+1)))
 
     else:
-
-        #return # Do not use this function for restarts
         
         tprint("add_particles_to_grav: assuming restart because Flash reports no new particles!")
         tprint("add_particles_to_grav: sync all stars from Flash to grav.")
@@ -68,11 +63,13 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
 
-    # Get SeBa properties from checkpoint - CCC 25/04/2024
+    # Get SeBa properties from checkpoint - CCC 25/04/2024 & 07/08/2024
     relMass  = hydro.get_particle_rel_mass(newtags)
     relAge   = hydro.get_particle_rel_age(newtags)
     COcoreM  = hydro.get_particle_co_corem(newtags)
     coreM    = hydro.get_particle_corem(newtags)
+    sType    = hydro.get_particle_stype(newtags)
+    radius   = hydro.get_particle_radius(newtags)
     
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -89,17 +86,24 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.relative_age  = relAge
     add_star.COcore_mass   = COcoreM
     add_star.core_mass     = coreM
+    add_star.age           = relAge
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
-    add_star.stellar_type = 1 | units.stellar_type # ZAMS star
-
+    add_star.initial_mass = initMass # for SE/SN uses
+    # Set stellar type and radius - CCC 07/08/2024
+    # If restart or user ICs, take values from FLASH, otherwise use sensible guess
+    add_star.stellar_type = sType | units.stellar_type
+    add_star.radius       = radius
+    # For new stars
+    _new_stars = np.where(sType == 0)[0]
+    add_star[_new_stars].stellar_type = 1 | units.stellar_type # ZAMS star
     # Initial guess for the radius if running with user ICs - CCC 12/05/2023
     # It must be somewhat realistic in case there is a contact system
     # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
     # Use linear MRR for upper mass range
     # Note that radius now denotes a physical radius and not a collisional radius
-    add_star.radius = (1.01 * (add_star.mass / (1 | units.MSun)) ** 0.57) | units.RSun
-    add_star.initial_mass = initMass # for SE/SN uses
+    add_star[_new_stars].radius = (1.01 * (add_star[_new_stars].mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    
         
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)

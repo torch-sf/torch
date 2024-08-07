@@ -209,6 +209,8 @@ def binary_evolution(time, dt, state, hydro, se,
     hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
     hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
 
     return se_dt
 
@@ -345,6 +347,8 @@ def stellar_evolution(time, dt, state, hydro, se,
     hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
     hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
     
     return se_dt
 
