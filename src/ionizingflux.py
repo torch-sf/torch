@@ -81,11 +81,11 @@ def interpolate_ionizing_flux( logg, t):
         return photon_flux( t | units.K, lowfreq=(c*Ry))
 
     ilogg_=(logg-loggmin)/dlogg
-    ilogg=numpy.long( numpy.floor(ilogg_) )
+    ilogg=numpy.longlong( numpy.floor(ilogg_) )
     dl=ilogg_-ilogg
 
     itemp_=(t-tempmin)/dtemp
-    itemp=numpy.long( numpy.floor(itemp_) )
+    itemp=numpy.longlong( numpy.floor(itemp_) )
     dt=itemp_-itemp
 
     itemp1=itemp+1
