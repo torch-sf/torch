@@ -49,15 +49,6 @@ def binary_evolution(time, dt, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-    
-    # Check for changes in SeBa.data - CCC 01/08/2024
-    _log = 0
-    try:
-        with open('SeBa.data', 'r') as f:
-            _log = f.read().count('\n')
-            f.close()
-    except FileNotFoundError:
-        pass
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
 
@@ -67,7 +58,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # query star age may not agree exactly.
 
     # Age not used explicitly for SE - CCC 02/08/2024
-    state.stars.age  = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    #state.stars.age  = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -109,7 +100,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # Check for new systems, important for binaries - CCC 02/08/2024
     state.binaries.synchronize_to(se.binaries)
     # Now pass attributes to binaries - CCC 03/08/2024
-    tprint(se.particles.core_mass)
+    tprint(se.particles.relative_age)
     for _attribute in state.binaries.get_attribute_names_defined_in_store():
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
@@ -120,24 +111,12 @@ def binary_evolution(time, dt, state, hydro, se,
     for _attribute in se.particles.get_attribute_names_defined_in_store():
         if _attribute in state.stars.get_attribute_names_defined_in_store():
             state.se_to_stars.copy_attributes([_attribute])
-    
-    # Check for changes in SeBa.data - tmp, CCC 01/08/2024
-    log = 0 # Before we have the first output
-    try:
-        with open('SeBa.data', 'r') as f:
-            log = f.read().count('\n')
-            f.close()
-    except FileNotFoundError:
-        pass
-    
-    if log != _log:
-        changed = log - _log
-        data = np.genfromtxt('SeBa.data', delimiter=None, dtype='float', usecols=(0, 1, 2, 3))
-        print(data)
-        _btype = np.where(data[:,1] > 2)
-        print(data[_btype])
+
+    # Turn off wind if mass increased - CCC 11/09/2024
+    # For others, compare to dM/dt in SeBa? - No compare to puls winds, if dM/dt > 10* then inject 
 
     for i, s in enumerate(state.stars):
+        print('Mass loss:', (old_mass[i] - s.mass)/old_mass[i])
 
         if went_supernova(s.stellar_type):
             continue
@@ -161,6 +140,71 @@ def binary_evolution(time, dt, state, hydro, se,
 
                 # implicitly zeros out feedback properties by not setting
 
+            elif accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
+                
+                tprint('A star has accreted mass')
+                
+                if with_lyc:
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                    eion[i] = _tmp[0]
+                    nion[i] = _tmp[1]
+                    sigh[i] = _tmp[2]
+                if with_pe_heat:
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
+                    epe[i] = _tmp[0]
+                    npe[i] = _tmp[1]
+                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                    
+                # Do not set wind properties for stars that have accreted mass at this step
+            
+            elif lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
+                
+                tprint('A star has lost its envelope')
+                
+                j = np.where(state.binaries.child1 == s)[0]
+                if len(j) > 0:
+                    _binary = state.binaries[j[0]]
+                    k = np.where(state.stars.tag == _binary.child2.tag)[0]
+                    _star = state.stars[k[0]]
+                else:
+                    j = np.where(state.binaries.child2 == s)[0]
+                    _binary = state.binaries[j[0]]
+                    k = np.where(state.stars.tag == _binary.child1.tag)[0]
+                    _star = state.stars[k[0]]
+                    
+                #print(s.mass, _star.mass, _binary.child1.mass, _binary.child2.mass)
+                
+                inj_mass = old_mass[i] - s.mass 
+                
+                # Identify the binary
+                #tprint('Star')
+                #print(s)
+                #tprint('Binary from state.binaries')
+                #print(_binary)
+                #tprint('Binary from se.binaries')
+                #print(se.binaries[j[0]])
+                
+                # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
+                # CCC 12/09/2024, 20/06/2023
+                alpha = 1
+                E_bind = (alpha * units.constants.G * _star.mass / 2) * ((s.mass / se.binaries[j[0]].semi_major_axis) - (old_mass[i] / _binary.semi_major_axis))
+                print('Binding energy:', E_bind)
+                
+                _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                tprint("... CE x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                
+                if with_lyc:
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                    eion[i] = _tmp[0]
+                    nion[i] = _tmp[1]
+                    sigh[i] = _tmp[2]
+                if with_pe_heat:
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
+                    epe[i] = _tmp[0]
+                    npe[i] = _tmp[1]
+                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                # Do not set wind properties for stars that have lost mass due to CE
+                
             else:
 
                 if with_lyc:
@@ -183,11 +227,19 @@ def binary_evolution(time, dt, state, hydro, se,
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+            
+    # Binaries sync'ed to stars later, do not sync here - CCC 12/09/2024
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
+    
+    print('Stars at end of evolution step')
+    print(se.particles)
+    print(state.stars)
+    print(se.binaries)
+    print(state.binaries)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -442,6 +494,19 @@ def compute_epe_npe(se_temp, se_radius):
 
 def went_supernova(stellar_type):
     return 13 <= stellar_type.value_in(units.stellar_type) <= 15
+
+# Used to check for common envelope or unstable mass transfer
+# This type of mass loss is triggered if >1% of the stars' mass was lost
+# in one step - CCC 12/09/2024
+def lost_envelope(new_mass, old_mass):
+    dm = (old_mass - new_mass)/old_mass
+    return dm >= 0.01
+
+# Used to check for stable mass transfer
+# If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
+def accreted_mass(new_mass, old_mass):
+    dm = (old_mass - new_mass)/old_mass
+    return dm < 0
 
 
 def lum_wl_cs(l, l_max, T):
