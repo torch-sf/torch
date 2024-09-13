@@ -327,13 +327,14 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 8.0 | units.MSun
+    p['CE_alpha'] = 1 # efficiency for CE ejection; default is 1 but we also test 0.1 and 10 - CCC 13/09/2024
     
     # <star particle creation>
 
     p['binaries'] = True
-    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                                              
-    p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                                        
-    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                              
+    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.                                                                                             
+    p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                       
+    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                     
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100.0 | units.MSun

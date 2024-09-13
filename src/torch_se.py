@@ -42,7 +42,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def binary_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None):
+    massloss_method=None, min_feedback_mass=None, CE_alpha=1):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -116,7 +116,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # For others, compare to dM/dt in SeBa? - No compare to puls winds, if dM/dt > 10* then inject 
 
     for i, s in enumerate(state.stars):
-        print('Mass loss:', (old_mass[i] - s.mass)/old_mass[i])
+        #print('Mass loss:', (old_mass[i] - s.mass)/old_mass[i])
 
         if went_supernova(s.stellar_type):
             continue
@@ -186,9 +186,9 @@ def binary_evolution(time, dt, state, hydro, se,
                 
                 # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                 # CCC 12/09/2024, 20/06/2023
-                alpha = 1
+                alpha = CE_alpha
                 E_bind = (alpha * units.constants.G * _star.mass / 2) * ((s.mass / se.binaries[j[0]].semi_major_axis) - (old_mass[i] / _binary.semi_major_axis))
-                print('Binding energy:', E_bind)
+                tprint('Binding energy:', E_bind)
                 
                 _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 tprint("... CE x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
@@ -235,11 +235,11 @@ def binary_evolution(time, dt, state, hydro, se,
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
     
-    print('Stars at end of evolution step')
-    print(se.particles)
-    print(state.stars)
-    print(se.binaries)
-    print(state.binaries)
+    #print('Stars at end of evolution step')
+    #print(se.particles)
+    #print(state.stars)
+    #print(se.binaries)
+    #print(state.binaries)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
