@@ -103,19 +103,25 @@ def user_initial_conditions(state, hydro):
     # SeBa test: get binaries from stars.amuse
 
     # Stars
-    add_stars = read_set_from_file('stars_ICs.amuse')[:100]
+    add_stars = read_set_from_file('BE_SN.amuse')
     #_mask = np.argsort(_stars.initial_mass.value_in(units.MSun))[::-1][:20]
     #add_stars = _stars[_mask]
     print(add_stars.get_attribute_names_defined_in_store())
     print(add_stars.mass.value_in(units.MSun))
     # FLASH
-    creation_time = hydro.get_time() - (3 | units.Myr)
+    creation_time = hydro.get_time() - add_stars.age
     tag = hydro.add_particles(add_stars.x, add_stars.y, add_stars.z)
     hydro.set_particle_mass(tag, add_stars.mass)
     hydro.set_particle_velocity(tag, add_stars.vx, add_stars.vy, add_stars.vz)                                                                                                                 
     hydro.set_particle_oldmass(tag, add_stars.initial_mass) # for SE code
     hydro.set_particle_creation_time(tag, creation_time)
-    
+    # Evolved stars - CCC 01/08/2024
+    hydro.set_particle_rel_age(tag, add_stars.relative_age)
+    hydro.set_particle_rel_mass(tag, add_stars.relative_mass)
+    hydro.set_particle_corem(tag, add_stars.core_mass)
+    hydro.set_particle_co_corem(tag, add_stars.COcore_mass)
+    hydro.set_particle_stype(tag, add_stars.stellar_type.value_in(units.stellar_type))
+    hydro.set_particle_radius(tag, add_stars.radius)
     
     # ------------------------------------------------------------------------  
 #    # Multiples test: plop a binary system 
@@ -291,7 +297,7 @@ def user_parameters():
 
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
-    p['restart_with_user_ics'] = False  # meant for testing
+    p['restart_with_user_ics'] = True  # meant for testing
     p['check_for_stall'] = True # use to save and exit if gravity takes longer than hydro
     p['restart_from_stall'] = False # did PeTar stall and exit? Check for merged stars
     
@@ -313,10 +319,10 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-    p['r_bin'] = 100 | units.au # 100AU
-    p['r_out'] = 0.00709 | units.pc
+    p['r_bin'] = 50 | units.au 
+    p['r_out'] = 625 | units.au
     p['r_stall'] = 1e-10 | units.pc
-    p['dt_soft_min'] = 125.001 | units.yr
+    p['dt_soft_min'] = 31.25 | units.yr #7.8125 | units.yr
     p['set_timeout'] = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
     
     # <stellar evolution>
@@ -325,8 +331,8 @@ def user_parameters():
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
-    p['massloss_method'] = 'puls'
-    p['min_feedback_mass'] = 8.0 | units.MSun
+    p['massloss_method'] = 'seba'
+    p['min_feedback_mass'] = 10 | units.MSun
     p['CE_alpha'] = 1 # efficiency for CE ejection; default is 1 but we also test 0.1 and 10 - CCC 13/09/2024
     
     # <star particle creation>
@@ -336,10 +342,10 @@ def user_parameters():
     p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                                                                                       
     p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                                                                                     
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
-    p['min_imf_mass'] = 0.08 | units.MSun
-    p['max_imf_mass'] = 100.0 | units.MSun
+    p['min_imf_mass'] = 0.5 | units.MSun
+    p['max_imf_mass'] = 0.5 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
+    p['sample_imf_bins'] = 1 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
     p['m_small'] = 1.0 # agglomerate mass in Msun
@@ -352,8 +358,8 @@ def user_parameters():
     ntasks = get_ntasks_from_run_script()
 
 
-    p['num_grav_workers'] = 2 # must be power of 2 for PeTar 
-    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 4  # amuse + binary evolution (two systems)
+    p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
+    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # amuse + binary evolution (two systems)
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_petar']:
