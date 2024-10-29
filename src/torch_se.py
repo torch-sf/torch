@@ -131,22 +131,32 @@ def binary_evolution(time, dt, state, hydro, se,
             
         if (s in primaries): # CCC 25/10/24
             in_binary = True
-            binary = state.binaries[np.where(primaries.tag == s.tag)]
-            print('The star is in a binary')
-            print(binary)
+            # Find the binary
+            j = np.where(primaries.tag == s.tag)[0]
+            b = state.binaries[j]
+            # and the other star
+            k = np.where(state.stars.tag == companions[j].tag)
+            t = state.stars[k]
+            print('The star is the primary in a binary')
+            print(b, t)
         
         if (s in companions): # CCC 25/10/24
             in_binary = True
-            binary = state.binaries[np.where(companions.tag == s.tag)]
-            print('The star is in a binary')
-            print(binary)
+            # Find the binary
+            j = np.where(companions.tag == s.tag)[0]
+            b = state.binaries[j]
+            # and the other star
+            k = np.where(state.stars.tag == primaries[j].tag)
+            t = state.stars[k]
+            print('The star is the companion in a binary')
+            print(b, t)
 
         if went_supernova(s.stellar_type):
             continue
 
         if s.initial_mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(s.stellar_type):
+            if with_sn and went_supernova(s.stellar_type): # Do not check if in binary for SN - CCC 29/10/2024
 
                 inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
                 
@@ -162,8 +172,37 @@ def binary_evolution(time, dt, state, hydro, se,
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
                 # implicitly zeros out feedback properties by not setting
-
-            elif accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
+                
+                # Set star to evolved after SN - CCC 29/10/2024
+                evolved_stars.add_particle(s)
+                
+            else: # Check if in binary to determine the feedback mechanisms - CCC 29/10/2024
+                
+                if in_binary:
+                    print('In binary')
+                    
+                else: # Normal feedback if the star is not in a binary
+                    
+                    if with_lyc:
+                        _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                        eion[i] = _tmp[0]
+                        nion[i] = _tmp[1]
+                        sigh[i] = _tmp[2]
+                    if with_pe_heat:
+                        _tmp = compute_epe_npe(s.temperature, s.radius)
+                        epe[i] = _tmp[0]
+                        npe[i] = _tmp[1]
+                        sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                    if with_winds:
+                        _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                                  massloss_method=massloss_method)
+                        dm_dt[i] = _tmp[0]
+                        vterm[i] = _tmp[1]
+                    
+                    # Set star to evolved after feedback - CCC 29/10/2024
+                    evolved_stars.add_particle(s)
+                    
+            if accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
                 
                 tprint('A star has accreted mass')
                 
@@ -180,7 +219,7 @@ def binary_evolution(time, dt, state, hydro, se,
                     
                 # Do not set wind properties for stars that have accreted mass at this step
             
-            elif lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
+            if lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
                 
                 tprint('A star has lost its envelope')
                 
@@ -226,25 +265,7 @@ def binary_evolution(time, dt, state, hydro, se,
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                # Do not set wind properties for stars that have lost mass due to CE
-                
-            else:
-
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds:
-                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                              massloss_method=massloss_method)
-                    dm_dt[i] = _tmp[0]
-                    vterm[i] = _tmp[1]
+                # Do not set wind properties for stars that have lost mass due to CE           
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
