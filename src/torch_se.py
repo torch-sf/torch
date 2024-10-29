@@ -137,8 +137,8 @@ def binary_evolution(time, dt, state, hydro, se,
             # and the other star
             k = np.where(state.stars.tag == companions[j].tag)
             t = state.stars[k]
-            print('The star is the primary in a binary')
-            print(b, t)
+            #print('The star is the primary in a binary')
+            #print(b, t)
         
         if (s in companions): # CCC 25/10/24
             in_binary = True
@@ -148,8 +148,8 @@ def binary_evolution(time, dt, state, hydro, se,
             # and the other star
             k = np.where(state.stars.tag == primaries[j].tag)
             t = state.stars[k]
-            print('The star is the companion in a binary')
-            print(b, t)
+            #print('The star is the companion in a binary')
+            #print(b, t)
 
         if went_supernova(s.stellar_type):
             continue
@@ -181,6 +181,71 @@ def binary_evolution(time, dt, state, hydro, se,
                 if in_binary:
                     print('In binary')
                     
+                    if accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
+                
+                        tprint('A star has accreted mass')
+                
+                        if with_lyc:
+                            _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                            eion[i] = _tmp[0]
+                            nion[i] = _tmp[1]
+                            sigh[i] = _tmp[2]
+                        if with_pe_heat:
+                            _tmp = compute_epe_npe(s.temperature, s.radius)
+                            epe[i] = _tmp[0]
+                            npe[i] = _tmp[1]
+                            sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                    
+                        # Do not set wind properties for stars that have accreted mass at this step
+            
+                    if lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
+                
+                        tprint('A star has lost its envelope')
+                
+                        j = np.where(state.binaries.child1 == s)[0]
+                        if len(j) > 0:
+                            _binary = state.binaries[j[0]]
+                            k = np.where(state.stars.tag == _binary.child2.tag)[0]
+                            _star = state.stars[k[0]]
+                        else:
+                            j = np.where(state.binaries.child2 == s)[0]
+                            _binary = state.binaries[j[0]]
+                            k = np.where(state.stars.tag == _binary.child1.tag)[0]
+                            _star = state.stars[k[0]]
+                    
+                        #print(s.mass, _star.mass, _binary.child1.mass, _binary.child2.mass)
+                
+                        inj_mass = old_mass[i] - s.mass 
+                
+                        # Identify the binary
+                        #tprint('Star')
+                        #print(s)
+                        #tprint('Binary from state.binaries')
+                        #print(_binary)
+                        #tprint('Binary from se.binaries')
+                        #print(se.binaries[j[0]])
+                
+                        # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
+                        # CCC 12/09/2024, 20/06/2023
+                        alpha = CE_alpha
+                        E_bind = (alpha * units.constants.G * _star.mass / 2) * ((s.mass / se.binaries[j[0]].semi_major_axis) - (old_mass[i] / _binary.semi_major_axis))
+                        tprint('Binding energy:', E_bind)
+                
+                        _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                        tprint("... CE x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                
+                        if with_lyc:
+                            _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                            eion[i] = _tmp[0]
+                            nion[i] = _tmp[1]
+                            sigh[i] = _tmp[2]
+                        if with_pe_heat:
+                            _tmp = compute_epe_npe(s.temperature, s.radius)
+                            epe[i] = _tmp[0]
+                            npe[i] = _tmp[1]
+                            sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                        # Do not set wind properties for stars that have lost mass due to CE
+                    
                 else: # Normal feedback if the star is not in a binary
                     
                     if with_lyc:
@@ -200,72 +265,7 @@ def binary_evolution(time, dt, state, hydro, se,
                         vterm[i] = _tmp[1]
                     
                     # Set star to evolved after feedback - CCC 29/10/2024
-                    evolved_stars.add_particle(s)
-                    
-            if accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
-                
-                tprint('A star has accreted mass')
-                
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                    
-                # Do not set wind properties for stars that have accreted mass at this step
-            
-            if lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
-                
-                tprint('A star has lost its envelope')
-                
-                j = np.where(state.binaries.child1 == s)[0]
-                if len(j) > 0:
-                    _binary = state.binaries[j[0]]
-                    k = np.where(state.stars.tag == _binary.child2.tag)[0]
-                    _star = state.stars[k[0]]
-                else:
-                    j = np.where(state.binaries.child2 == s)[0]
-                    _binary = state.binaries[j[0]]
-                    k = np.where(state.stars.tag == _binary.child1.tag)[0]
-                    _star = state.stars[k[0]]
-                    
-                #print(s.mass, _star.mass, _binary.child1.mass, _binary.child2.mass)
-                
-                inj_mass = old_mass[i] - s.mass 
-                
-                # Identify the binary
-                #tprint('Star')
-                #print(s)
-                #tprint('Binary from state.binaries')
-                #print(_binary)
-                #tprint('Binary from se.binaries')
-                #print(se.binaries[j[0]])
-                
-                # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
-                # CCC 12/09/2024, 20/06/2023
-                alpha = CE_alpha
-                E_bind = (alpha * units.constants.G * _star.mass / 2) * ((s.mass / se.binaries[j[0]].semi_major_axis) - (old_mass[i] / _binary.semi_major_axis))
-                tprint('Binding energy:', E_bind)
-                
-                _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
-                tprint("... CE x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
-                
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                # Do not set wind properties for stars that have lost mass due to CE           
+                    evolved_stars.add_particle(s)           
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
