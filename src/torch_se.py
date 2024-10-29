@@ -112,11 +112,34 @@ def binary_evolution(time, dt, state, hydro, se,
         if _attribute in state.stars.get_attribute_names_defined_in_store():
             state.se_to_stars.copy_attributes([_attribute])
 
-    # Turn off wind if mass increased - CCC 11/09/2024
-    # For others, compare to dM/dt in SeBa? - No compare to puls winds, if dM/dt > 10* then inject 
-
+    # Turn off wind if mass increased - CCC 11/09/2024 
+    # Keep a list of stars for which feedback was calculated - CCC 25/10/2024
+    evolved_stars = Particles()
+    # List primaries and companions - CCC 25/10/2024
+    primaries = Particles()
+    companions = Particles()
+    for binary in state.binaries:
+        primaries.add_particle(binary.child1)
+        companions.add_particle(binary.child2)
+    
     for i, s in enumerate(state.stars):
-        #print('Mass loss:', (old_mass[i] - s.mass)/old_mass[i])
+        
+        in_binary = False # Set to true if in binary - CCC 25/10/2024
+        
+        if s in evolved_stars: # CCC 25/10/24
+            continue
+            
+        if (s in primaries): # CCC 25/10/24
+            in_binary = True
+            binary = state.binaries[np.where(primaries.tag == s.tag)]
+            print('The star is in a binary')
+            print(binary)
+        
+        if (s in companions): # CCC 25/10/24
+            in_binary = True
+            binary = state.binaries[np.where(companions.tag == s.tag)]
+            print('The star is in a binary')
+            print(binary)
 
         if went_supernova(s.stellar_type):
             continue
@@ -498,9 +521,14 @@ def went_supernova(stellar_type):
 # Used to check for common envelope or unstable mass transfer
 # This type of mass loss is triggered if >1% of the stars' mass was lost
 # in one step - CCC 12/09/2024
-def lost_envelope(new_mass, old_mass):
+def old_lost_envelope(new_mass, old_mass):
     dm = (old_mass - new_mass)/old_mass
     return dm >= 0.01
+
+# CCC 25/10/2024 - Temporarily disable, to check if it was the issue for stable mass transfer
+def lost_envelope(new_mass, old_mass):
+    dm = (old_mass - new_mass)/old_mass
+    return dm >= 0.99
 
 # Used to check for stable mass transfer
 # If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
