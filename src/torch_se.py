@@ -135,7 +135,7 @@ def binary_evolution(time, dt, state, hydro, se,
             j = np.where(primaries.tag == s.tag)[0]
             b = state.binaries[j]
             # and the other star
-            k = np.where(state.stars.tag == companions[j].tag)
+            k = np.where(state.stars.tag == companions[j].tag)[0][0]
             t = state.stars[k]
             #print('The star is the primary in a binary')
             #print(b, t)
@@ -146,7 +146,7 @@ def binary_evolution(time, dt, state, hydro, se,
             j = np.where(companions.tag == s.tag)[0]
             b = state.binaries[j]
             # and the other star
-            k = np.where(state.stars.tag == primaries[j].tag)
+            k = np.where(state.stars.tag == primaries[j].tag)[0][0]
             t = state.stars[k]
             #print('The star is the companion in a binary')
             #print(b, t)
@@ -181,22 +181,36 @@ def binary_evolution(time, dt, state, hydro, se,
                 if in_binary:
                     print('In binary')
                     
-                    if accreted_mass(s.mass, old_mass[i]): # CCC 12/09/2024
+                    if accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): # CCC 12/09/2024
                 
                         tprint('A star has accreted mass')
+                        tprint('Total mass loss:', (old_mass[i] + old_mass[k] - s.mass - t.mass).value_in(units.MSun), 'MSun')
                 
                         if with_lyc:
                             _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
                             eion[i] = _tmp[0]
                             nion[i] = _tmp[1]
                             sigh[i] = _tmp[2]
+                            _tmp = compute_eion_nion_sigh(t.mass, t.temperature, t.radius)
+                            eion[k] = _tmp[0]
+                            nion[k] = _tmp[1]
+                            sigh[k] = _tmp[2]
                         if with_pe_heat:
                             _tmp = compute_epe_npe(s.temperature, s.radius)
                             epe[i] = _tmp[0]
                             npe[i] = _tmp[1]
                             sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                            _tmp = compute_epe_npe(t.temperature, t.radius)
+                            epe[k] = _tmp[0]
+                            npe[k] = _tmp[1]
+                            sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
+                            
+                        # Set star to evolved after MT - CCC 29/10/2024
+                        evolved_stars.add_particle(s)
+                        evolved_stars.add_particle(t)
                     
                         # Do not set wind properties for stars that have accreted mass at this step
+                        # Eventually, decide what to do with the mass that has been lost; for now, just print
             
                     if lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
                 
@@ -542,14 +556,9 @@ def went_supernova(stellar_type):
 # Used to check for common envelope or unstable mass transfer
 # This type of mass loss is triggered if >1% of the stars' mass was lost
 # in one step - CCC 12/09/2024
-def old_lost_envelope(new_mass, old_mass):
-    dm = (old_mass - new_mass)/old_mass
-    return dm >= 0.01
-
-# CCC 25/10/2024 - Temporarily disable, to check if it was the issue for stable mass transfer
 def lost_envelope(new_mass, old_mass):
     dm = (old_mass - new_mass)/old_mass
-    return dm >= 0.99
+    return dm >= 0.01
 
 # Used to check for stable mass transfer
 # If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
