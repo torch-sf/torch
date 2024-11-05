@@ -212,37 +212,19 @@ def binary_evolution(time, dt, state, hydro, se,
                         # Do not set wind properties for stars that have accreted mass at this step
                         # Eventually, decide what to do with the mass that has been lost; for now, just print
             
-                    if lost_envelope(s.mass, old_mass[i]): # CCC 12/09/2024
+                    if lost_envelope(s.mass + t.mass, old_mass[i] + old_mass[k]): # CCC 12/09/2024
+                        
+                        # This will be used automatically alongside the above if more than 1% of the mass is lost - CCC 29/10/2024
                 
                         tprint('A star has lost its envelope')
                 
-                        j = np.where(state.binaries.child1 == s)[0]
-                        if len(j) > 0:
-                            _binary = state.binaries[j[0]]
-                            k = np.where(state.stars.tag == _binary.child2.tag)[0]
-                            _star = state.stars[k[0]]
-                        else:
-                            j = np.where(state.binaries.child2 == s)[0]
-                            _binary = state.binaries[j[0]]
-                            k = np.where(state.stars.tag == _binary.child1.tag)[0]
-                            _star = state.stars[k[0]]
-                    
-                        #print(s.mass, _star.mass, _binary.child1.mass, _binary.child2.mass)
-                
-                        inj_mass = old_mass[i] - s.mass 
-                
-                        # Identify the binary
-                        #tprint('Star')
-                        #print(s)
-                        #tprint('Binary from state.binaries')
-                        #print(_binary)
-                        #tprint('Binary from se.binaries')
-                        #print(se.binaries[j[0]])
+                        inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
+                        tprint('Injected mass:', inj_mass.value_in(units.MSun), 'MSun')
                 
                         # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                         # CCC 12/09/2024, 20/06/2023
                         alpha = CE_alpha
-                        E_bind = (alpha * units.constants.G * _star.mass / 2) * ((s.mass / se.binaries[j[0]].semi_major_axis) - (old_mass[i] / _binary.semi_major_axis))
+                        E_bind = (alpha * units.constants.G * t.mass / 2) * ((s.mass / se.binaries[j].semi_major_axis) - (old_mass[i] / b.semi_major_axis))
                         tprint('Binding energy:', E_bind)
                 
                         _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
