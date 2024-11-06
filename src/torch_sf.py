@@ -61,11 +61,13 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
 
-    # Get SeBa properties from checkpoint - CCC 25/04/2024
+    # Get SeBa properties from checkpoint - CCC 25/04/2024, 06/11/2024
     relMass  = hydro.get_particle_rel_mass(newtags)
     relAge   = hydro.get_particle_rel_age(newtags)
     COcoreM  = hydro.get_particle_co_corem(newtags)
     coreM    = hydro.get_particle_corem(newtags)
+    sType    = hydro.get_particle_stype(newtags)
+    radius   = hydro.get_particle_radius(newtags)
     
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -77,20 +79,27 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
 
-    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024
+    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024, 06/11/2024
     add_star.relative_mass = relMass
     add_star.relative_age  = relAge
     add_star.COcore_mass   = COcoreM
     add_star.core_mass     = coreM
+    add_star.age           = relAge
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
-    add_star.stellar_type = 1 | units.stellar_type # ZAMS star
+    # Set stellar type and radius - CCC 06/11/2024
+    # If restart or user ICs, take values from FLASH, otherwise use sensible guess
+    add_star.stellar_type = sType | units.stellar_type
+    add_star.radius       = radius
+    # For new stars
+    _new_stars = np.where(sType == 0)[0]
+    add_star[_new_stars].stellar_type = 1 | units.stellar_type # ZAMS star
     # Initial guess for the radius if running with user ICs - CCC 12/05/2023
     # It must be somewhat realistic in case there is a contact system
     # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
     # Use linear MRR for upper mass range
     # Note that radius now denotes a physical radius and not a collisional radius
-    add_star.radius = (1.01 * (add_star.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    add_star[_new_stars].radius = (1.01 * (add_star[_new_stars].mass / (1 | units.MSun)) ** 0.57) | units.RSun
     add_star.initial_mass = initMass # for SE/SN uses
         
     # only used by ph4... without this, ph4 complains about reused user IDs

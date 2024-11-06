@@ -162,11 +162,13 @@ def stellar_evolution(time, dt, state, hydro, se,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
-    # Set SeBa properties for checkpoint - CCC 26/04/2024
+    # Set SeBa properties for checkpoint - CCC 26/04/2024, 06/11/2024
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
     hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
     hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
     
     return se_dt
 
