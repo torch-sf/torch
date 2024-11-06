@@ -36,7 +36,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def stellar_evolution(time, dt, state, hydro, worker,
+def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
     """
@@ -98,7 +98,7 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
     state.stars_to_se.copy()
-    worker.evolve_model(time)
+    se.evolve_model(time)
     state.se_to_stars.copy()
 
     for i, s in enumerate(state.stars):
