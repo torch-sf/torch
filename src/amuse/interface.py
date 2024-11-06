@@ -748,6 +748,26 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
+    
+    @legacy_function
+    def set_particle_stype():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('stype', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    @legacy_function
+    def set_particle_radius():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('radius', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
 
     @legacy_function
     def set_particle_sigh():
@@ -875,6 +895,27 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('co_corem', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    
+    @legacy_function
+    def get_particle_stype():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('stype', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    @legacy_function
+    def get_particle_radius():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('radius', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
@@ -1631,6 +1672,42 @@ class Flash(CommonCode):
             (object.INDEX),
             (mass*length**2.0*(time**-2.0), object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'get_particle_rel_mass',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_rel_age',
+            (object.INDEX), 
+            (time, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_corem',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_co_corem',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_stype',
+            (object.INDEX), 
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_radius',
+            (object.INDEX), 
+            (length, object.ERROR_CODE)
+        )
 
         object.add_method(
             'get_particle_sigh',
@@ -1659,6 +1736,42 @@ class Flash(CommonCode):
         object.add_method(
             'set_particle_eion',
             (object.INDEX, mass*length**2.0*(time**-2.0)),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_rel_mass',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_rel_age',
+            (object.INDEX, time),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_corem',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_co_corem',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_stype',
+            (object.INDEX, object.NO_UNIT), 
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_radius',
+            (object.INDEX, length), 
             (object.ERROR_CODE)
         )
 
@@ -1978,6 +2091,18 @@ class Flash(CommonCode):
                     'set_particle_nion',
                     'get_particle_eion',
                     'set_particle_eion',
+                    'get_particle_rel_mass',
+                    'set_particle_rel_mass',
+                    'get_particle_rel_age',
+                    'set_particle_rel_age',
+                    'get_particle_corem',
+                    'set_particle_corem',
+                    'get_particle_co_corem',
+                    'set_particle_co_corem',
+                    'get_particle_stype',
+                    'set_particle_stype',
+                    'get_particle_radius',
+                    'set_particle_radius',
                     'get_particle_sigh',
                     'set_particle_sigh',
                     'set_particle_npep',

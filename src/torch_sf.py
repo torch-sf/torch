@@ -36,7 +36,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     se (SeBa or other stellar evolution worker) is only used to get
     correct stellar type for restarts; newborn stars are assumed to be on ZAMS
-    
+
     postcondition:
         stars updated
         grav updated
@@ -46,7 +46,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     if num_new_parts > 0:
 
-        newtags = hydro.get_new_tags(list(range(1,num_new_parts+1)))
+        newtags = hydro.get_new_tags(range(1,num_new_parts+1))
 
     else:
 
@@ -54,7 +54,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
         tprint("add_particles_to_grav: sync all stars from Flash to grav.")
         add_parts_restart = True
         num_new_parts = hydro.get_number_of_particles()
-        newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
+        newtags = hydro.get_particle_tags(range(1,num_new_parts+1))
 
     newtags.sort()
 
@@ -63,6 +63,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
 
+    # Get SeBa properties from checkpoint - CCC 25/04/2024, 06/11/2024
+    relMass  = hydro.get_particle_rel_mass(newtags)
+    relAge   = hydro.get_particle_rel_age(newtags)
+    COcoreM  = hydro.get_particle_co_corem(newtags)
+    coreM    = hydro.get_particle_corem(newtags)
+    sType    = hydro.get_particle_stype(newtags)
+    radius   = hydro.get_particle_radius(newtags)
+    
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
@@ -72,39 +80,30 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vx   = velocity[:,0]
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
-    # Initial guess for the radius, before the stellar evolution step - CCC 04/05/2023
-    # It must be somewhat realistic in case there is a contact system
-    # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
-    # Use linear MRR for entire mass range
-    add_star.radius = (0.85 * (mass / (1 | units.MSun)) ** 0.67) | units.RSun
+
+    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024, 06/11/2024
+    add_star.relative_mass = relMass
+    add_star.relative_age  = relAge
+    add_star.COcore_mass   = COcoreM
+    add_star.core_mass     = coreM
+    add_star.age           = relAge
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
-    add_star.stellar_type = 1 | units.stellar_type # ZAMS star
+    # Set stellar type and radius - CCC 06/11/2024
+    # If restart or user ICs, take values from FLASH, otherwise use sensible guess
+    add_star.stellar_type = sType | units.stellar_type
+    add_star.radius       = radius
+    # For new stars
+    _new_stars = np.where(sType == 0)[0]
+    add_star[_new_stars].stellar_type = 1 | units.stellar_type # ZAMS star
+    # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+    # It must be somewhat realistic in case there is a contact system
+    # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+    # Use linear MRR for upper mass range
+    # Note that radius now denotes a physical radius and not a collisional radius
+    add_star[_new_stars].radius = (1.01 * (add_star[_new_stars].mass / (1 | units.MSun)) ** 0.57) | units.RSun
     add_star.initial_mass = initMass # for SE/SN uses
-# don't need to carry this around because we don't need history
-# just update directly in hydro
-    #if with_lyc:
-#    add_star.nion = 0.0 | units.s**-1 # ionizing flux
-#    add_star.eion = 0.0 | units.erg # ionizing energy *OVER* 13.6 eV
-#    add_star.sigh = 0.0 | units.cm**2 # ionizing cross section.
-    #if with_pe_heat:
-#    add_star.npe   = 0.0 | units.s**-1 # PE photon flux
-#    add_star.epe   = 0.0 | units.erg # PE photon energy (should be around 8 eV)
-#    add_star.sigpe = 0.0 | units.cm**2 # dust cross section per hydrogen atom
-    #if with_wind:
-#    add_star.dm_dt = 0.0 | units.g/units.s
-#    add_star.vterm = 0.0 | units.cm/units.s
-
-    # fast-forward stellar evolution to get current stellar type, because
-    # torch_sf looks for change in stellar type to decide when to deposit SN
-    if add_parts_restart:
-        t_evol = hydro.get_time() - hydro.get_particle_creation_time(newtags)
-        # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        add_star.stellar_type = se_type
-        add_star.radius = se_radius
-
+        
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
@@ -113,6 +112,9 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     state.stars = state.stars.sorted_by_attribute('tag')
 
     grav.particles.add_particles(add_star)
+    
+    #Add particles to stellar evolution, CCC 10/05/2024
+    se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -128,7 +130,6 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     hydro.clear_new_tags()
 
     return
-
 
 def remove_particles_outside_bndbox(state, hydro, grav, mult):
     """

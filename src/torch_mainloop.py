@@ -582,7 +582,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     hydro, grav, mult, se = initialize_workers()
 
-    state = TorchState(hydro, grav, mult)
+    state = TorchState(hydro, grav, mult, se)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
 

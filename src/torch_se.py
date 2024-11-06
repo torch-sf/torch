@@ -25,6 +25,7 @@ h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
+sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4, CCC 26/04/2024
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
 E_ev = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
@@ -36,7 +37,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def stellar_evolution(time, dt, state, hydro, worker,
+def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
     """
@@ -52,13 +53,35 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
 
+    # CCC 26/04/2024
+    # Note that time denotes the time to evolve to
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+
+    # Set radius to physical radius for restart with user ICs
+    # This assumes the stars are ZAMS, which may be incorrect 
+    _attributes = state.stars.get_attribute_names_defined_in_store()
+    if 'radius' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # It must be somewhat realistic in case there is a contact system
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MRR for upper mass range
+        state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    if 'luminosity' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MLR for upper mass range
+        state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
+    if 'temperature' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Use BB luminosity and radius, luminosity
+        state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
+    
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type   = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass   = state.stars.mass          # but use intermediate variables to be consistent w/ other props
-    new_radius = state.stars.radius        # Change radius for each star, CCC 04/05/2023
+    # CCC 26/04/2024
+    old_mass = np.copy(state.stars.mass)
+
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -71,24 +94,22 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
+    # CCC 26/04/2024
+    # Structure changed to use evolve_model to evolve all stars at the same time
+    # This allows us to restart from evolved stars and use the same structure for
+    # binary evolution - CCC 04/11/2023
+    state.stars_to_se.copy()
+    se.evolve_model(time)
+    state.se_to_stars.copy()
+
     for i, s in enumerate(state.stars):
 
         if went_supernova(s.stellar_type):
             continue
 
-        # SE code accepts initial mass, not the current mass
-        # the "se_" prefix denotes quantities after +dt evolve
-        _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        assert se_time - t_evol[i] < 1e3 | units.s
-        del se_time, se_evol_time  # not needed
-
-        new_type[i] = se_type
-        new_radius[i] = se_radius
-
         if s.mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(se_type):
+            if with_sn and went_supernova(s.stellar_type):
 
                 inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                 if inj_mass > 15.0|units.MSun:
@@ -107,37 +128,25 @@ def stellar_evolution(time, dt, state, hydro, worker,
             else:
 
                 if with_lyc:
-                    _tmp = compute_eion_nion_sigh(se_mass, se_temp, se_radius)
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
                     eion[i] = _tmp[0]
                     nion[i] = _tmp[1]
                     sigh[i] = _tmp[2]
                 if with_pe_heat:
-                    _tmp = compute_epe_npe(se_temp, se_radius)
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt,
+                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
+        # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
-            new_mass[i] = min(se_mass, s.mass - dm_dt[i]*dt)
-        else:
-            new_mass[i] = se_mass
-
-    # This assumes steps are relatively small in the mass loss rate of stars,
-    # so that gravity can use the mass after all the wind mass loss has
-    # occcured. Otherwise we'd have to average mass loss and keep up with old
-    # and new masses and it just gets ugly.
-    state.stars.mass = new_mass
-    state.stars.stellar_type = new_type
-
-    # Update star radii for N-body collisions in petar -BP 08.19.22
-    # Edited CCC 04/05/2023 to give different radius for the stars
-    state.stars.radius = new_radius
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -154,6 +163,14 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
+    # Set SeBa properties for checkpoint - CCC 26/04/2024, 06/11/2024
+    hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
+    
     return se_dt
 
 
@@ -204,6 +221,7 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
     [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_cs_per_ph, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
+    
     avg_E = power/per_ph / E_ev
     # Calculate the average frequency of an ionizing photon for this star
     avg_nu = avg_E*E_ev/h
