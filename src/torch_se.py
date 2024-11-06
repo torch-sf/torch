@@ -398,7 +398,7 @@ class PulsStellarWind(object):
 
 # Merges stars with delta_x = 0, collisions not handled in current version of petar in amuse
 # Based on commit 366d5be on petar branch from BP, CCC 19/06/2024
-def remove_merged_stars(remove, state, hydro, grav, se):
+def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
     if remove:
         print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
 
@@ -451,7 +451,7 @@ def remove_merged_stars(remove, state, hydro, grav, se):
 
         print("[remove_merged_stars]: final Nstars = ",len(state.stars),hydro.get_number_of_particles())
 
-        state.force_output(overwrite=USER['overwrite'])
+        state.force_output(overwrite)
         # Exit the simulation                                                                                                                                                                                                                                      
         hydro.stop()
         grav.stop()

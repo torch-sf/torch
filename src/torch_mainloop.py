@@ -254,7 +254,7 @@ def evolve(state, hydro, grav, mult, se):
                     # Merge stars at same location
                     # Based on fix by BP - 06/03/2024
                     # Match to commit 366d5be on petar branch from BP, CCC 19/06/2024
-                    remove_merged_stars(USER['restart_from_stall'], state, hydro, grav, se)
+                    remove_merged_stars(USER['restart_from_stall'], USER['overwrite'], state, hydro, grav, se)
                         
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
