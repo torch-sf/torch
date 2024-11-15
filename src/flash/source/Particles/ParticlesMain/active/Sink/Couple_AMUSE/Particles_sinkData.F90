@@ -68,7 +68,7 @@ module Particles_sinkData
   ! Flash evolution step. - JW
   
   integer, save, target :: number_new_sinks
-  integer, save, allocatable, dimension(:), target :: new_sink_tags
+  integer*8, save, allocatable, dimension(:), target :: new_sink_tags
   logical, save, target :: new_evolution_step = .true.
 
 end module

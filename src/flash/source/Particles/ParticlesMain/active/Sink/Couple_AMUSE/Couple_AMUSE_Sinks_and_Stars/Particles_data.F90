@@ -123,7 +123,7 @@ module Particles_data
   
 !! AMUSE variables to pick up particle creation in FLASH.
   
-  integer, save, allocatable, dimension(:), target :: new_massive_tags
+  integer*8, save, allocatable, dimension(:), target :: new_massive_tags
   integer, save, target :: number_new_massive
   logical, save         :: new_source=.false.
 
