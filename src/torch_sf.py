@@ -129,8 +129,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     return
 
-
-def remove_particles_outside_bndbox(state, hydro, grav, mult):
+def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult):
     """
     Remove any particles that have left the simulation.
     WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
@@ -201,6 +200,9 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         # only the stars particle set has a tag attribute.
         t = stars_rem.tag
         t = np.sort(np.array(t).flatten())
+        
+        stars_rem.escape_time = hydro.get_time()
+        state.out_escaped_stars(stars_rem, overwrite)
 
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
@@ -210,7 +212,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         else:
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
-
+        
     return
 
 
