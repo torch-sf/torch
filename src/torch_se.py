@@ -418,14 +418,14 @@ class PulsStellarWind(object):
 # Based on commit 366d5be on petar branch from BP, CCC 19/06/2024
 def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
     if remove:
-        print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
+        tprint("... checking for merged stars")
 
-        #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
-        pp = np.array([state.stars.x.value_in(units.cm),
-                       state.stars.y.value_in(units.cm),
-                       state.stars.z.value_in(units.cm)]).T
+        pp = np.array([state.stars.x.value_in(0.1*units.RSun),
+                       state.stars.y.value_in(0.1*units.RSun),
+                       state.stars.z.value_in(0.1*units.RSun)]).T # Radius of a low-mass star - CCC 18/11/2024
 
-        unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
+        # Set a tolerance to 0.1 RSun and avoid flaoting point issues - CCC 18/11/2024
+        unq, unq_idx, unq_cnt = np.unique(pp.astype('int64'), axis=0, return_inverse=True, return_counts=True)
         cnt_mask = unq_cnt > 1
         cnt_idx, = np.nonzero(cnt_mask)
         idx_mask = np.in1d(unq_idx, cnt_idx)
@@ -433,47 +433,38 @@ def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
         srt_idx = np.argsort(unq_idx[idx_mask])
         dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
 
-        # add particles to seba
-        se.particles.add_particles(state.stars)
-        seba_to_stars = se.particles.new_channel_to(state.stars)
-
         # loop over pairs of stars with identical positions
-        stars_rem = Particles()
-        for i in range(len(dup_idx)):
-            star1_idx = dup_idx[i][0]
-            star2_idx = dup_idx[i][1]
-            print("[remove_merged_stars]: Before merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
-            print("[remove_merged_stars]: Before merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
-            se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
-            print("[remove_merged_stars]: After merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
-            print("[remove_merged_stars]: After merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
-            stars_rem.add_particle(state.stars[star2_idx])
-            print(stars_rem)
+        if np.any(dup_idx): # Check if array is empty
+            stars_rem = Particles()
+            for i in range(len(dup_idx)):
+                star1_idx = dup_idx[i][0]
+                star2_idx = dup_idx[i][1]
+                se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                # Save tag of star it merged with
+                state.stars[star2_idx].merged_with = state.stars[star1_idx].tag
+                # Save merged time
+                state.stars[star2_idx].merger_time = hydro.get_time()
+                stars_rem.add_particle(state.stars[star2_idx])
 
-        grav_rem = stars_rem.copy()
-        se_rem = stars_rem.copy()
+            grav_rem = stars_rem.copy()
+            se_rem = stars_rem.copy()
 
-        # hydro requires sorted tags for removal
-        # only the stars particle set has a tag attribute.
-        t = stars_rem.tag
-        t = np.sort(np.array(t).flatten())
-        print("[remove_merged_stars]: remove tags",t)
-        hydro.remove_particles(t)
-        state.stars.remove_particles(stars_rem)
-        grav.particles.remove_particles(grav_rem)
-        grav.particles.synchronize_to(state.stars)
-        se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
-        se.particles.synchronize_to(state.stars)
-        # Copy attributes - CCC 25/06/2024
-        seba_to_stars.copy()
+            # hydro requires sorted tags for removal
+            # only the stars particle set has a tag attribute.
+            t = stars_rem.tag
+            t = np.sort(np.array(t).flatten())
+            tprint("Removing ", len(t), "merged star(s)")
+            hydro.remove_particles(t)
+            state.stars.remove_particles(stars_rem)
+            grav.particles.remove_particles(grav_rem)
+            grav.particles.synchronize_to(state.stars)
+            se.particles.remove_particles(se_rem)
+            state.stars.synchronize_to(se.particles)
 
-        print("[remove_merged_stars]: final Nstars = ",len(state.stars),hydro.get_number_of_particles())
-
-        state.force_output(overwrite)
-        # Exit the simulation                                                                                                                                                                                                                                      
-        hydro.stop()
-        grav.stop()
-        se.stop()
+            state.out_merged_stars(stars_rem, overwrite)
+               
+        else:
+            pass
         
 if __name__ == '__main__':
     pass

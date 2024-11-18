@@ -250,11 +250,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PETAR.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-
-                    # Merge stars at same location
-                    # Based on fix by BP - 06/03/2024
-                    # Match to commit 366d5be on petar branch from BP, CCC 19/06/2024
-                    remove_merged_stars(USER['restart_from_stall'], USER['overwrite'], state, hydro, grav, se)
                         
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
@@ -262,6 +257,9 @@ def evolve(state, hydro, grav, mult, se):
             ### First bridge kick.
             ### ------------------
             state_ = state # save a copy of state in case we need to save then exit during the loop, CCC 09/03/2023
+            # Merge stars at same location, based on fix by BP, commit 366d5be on petar branch - 06/03/2024
+            # Repeat every timestep - CCC 18/11/2024
+            remove_merged_stars(USER['restart_from_stall'], USER['overwrite'], state, hydro, grav, se)
             remove_particles_outside_bndbox(state, hydro, grav, mult)
             hydro.particles_sort()  # also checks for stars outside domain
 
