@@ -272,6 +272,13 @@ class TorchState(object):
                                "merged_stars.amuse")
         write_set_to_file(removed_stars, stars_fname, format='hdf5', append_to_file=True, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
         tprint("*** Wrote merged stars to merged_stars.amuse")
+        
+    def out_escaped_stars(self, removed_stars, overwrite):
+        """Write merged star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "escaped_stars.amuse")
+        write_set_to_file(removed_stars, stars_fname, format='hdf5', append_to_file=True, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote escaped stars to escaped_stars.amuse")
 
     def stars_to_mult_grav_copy(self, attr):
         """
