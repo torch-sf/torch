@@ -267,6 +267,7 @@ def user_parameters():
     p['restart_with_user_ics'] = False  # meant for testing
     p['check_for_stall'] = False # use to save and exit if gravity takes longer than hydro
     p['restart_from_stall'] = False # did PeTar stall and exit? Sets r_out = 100 r_bin for first Torch loop
+    p['remove_merged'] = True # remove merged stars
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
