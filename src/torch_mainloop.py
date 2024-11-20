@@ -216,6 +216,9 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------------
             ### First bridge kick.
             ### ------------------
+            # Remove particles that have left the simulation domain -SA 20241120
+            remove_particles_outside_bndbox(state, hydro, grav, mult)
+            hydro.particles_sort()  # also checks for stars outside domain
 
             if USER['with_bridge']:
                 tprint("First bridge kick")
@@ -234,6 +237,10 @@ def evolve(state, hydro, grav, mult, se):
                 if USER['with_multiples']:
                     mult.channel_from_code_to_memory.copy()     # grav  -> multiples
                     state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+            
+                # Remove particles that have left the simulation domain -SA 20241120
+                remove_particles_outside_bndbox(state, hydro, grav, mult)
+                hydro.particles_sort()  # also checks for stars outside domain
 
             ### ------------------
             ### Stellar evolution.
@@ -350,6 +357,10 @@ def evolve(state, hydro, grav, mult, se):
         ### --------------------------------
         ### Queue and create star particles.
         ### --------------------------------
+        
+        # Remove particles that have left the simulation domain -SA 20241120
+        remove_particles_outside_bndbox(state, hydro, grav, mult)
+        hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
         queue_stars(state, hydro,
