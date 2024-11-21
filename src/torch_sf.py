@@ -357,11 +357,19 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
             # Calculate star angular momentum -SA 20230103
-            ## Add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
-            size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation, currently chosen arbitrarily
-            star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = (nnew,3))
-            star_angMom = (sink_angMom * star_angMom_vary) #3d array of momentum vector for each star - does it have units?
-            tprint("Star ang momentum after vary, before norm: ", star_angMom)
+            # First, we need to check whether the sink angular momentum is 0, which is rare but possible. -SA 20241121
+            if np.count_nonzero(sink_angMom)<1: #counts to see if any direction is nonzero
+                tprint("Sink angular momentum is zero: ", sink_angMom, "So stars ang_mom will be random")
+                star_angMom = np.random.uniform(low = 0.0, high = 1.0, size = (nnew,3)) #use uniform distribution 
+                tprint("Star ang momentum given sink_anMom=0, before norm: ", star_angMom)
+                # Normalization can proceed the same since it's based on the individual star's total ang. mom.
+            else: # Assume sink ang_mom is nonzero in at least one direction
+                ## Add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
+                size_dir_vary = 0.1 # standard deviation of random fluctuations to star ang_mom orientation, currently chosen arbitrarily
+                star_angMom_vary = np.random.normal(loc = 1.0, scale = size_dir_vary, size = (nnew,3))
+                star_angMom = (sink_angMom * star_angMom_vary) #3d array of momentum vector for each star - does it have units?
+                tprint("Star ang momentum after vary, before norm: ", star_angMom)
+            
             ## We only need the unit vector of the sink's ang_mom since we want to set the direction of the star's ang. mom. without
             ## handling the full ang_mom conservation. -SA 20230405
             star_angMom_mag = [(np.sqrt(star_angMom[i,0]**2 + star_angMom[i,1]**2 + star_angMom[i,2]**2)) for i in range(nnew)]
