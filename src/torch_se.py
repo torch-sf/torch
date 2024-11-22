@@ -55,10 +55,6 @@ def stellar_evolution(time, dt, state, hydro, se,
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
 
-    # CCC 26/04/2024
-    # Note that time denotes the time to evolve to
-    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
-
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
     _attributes = state.stars.get_attribute_names_defined_in_store()
@@ -103,6 +99,10 @@ def stellar_evolution(time, dt, state, hydro, se,
     se.evolve_model(time)
     state.se_to_stars.copy()
 
+    # Reset the stars' age after the SE step, as the SeBa age is reset to 0
+    # at each restart - CCC 22/11/2024
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    
     for i, s in enumerate(state.stars):
 
         if went_supernova(s.stellar_type):
