@@ -10,6 +10,8 @@ import numpy as np
 from scipy.integrate import quad
 from amuse.units import units #Added 20230808 SA
 
+from torch_stdout import tprint
+
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
                               max_samp_mass=150.0, sum_small=False, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
                               minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Added jet mass range -SA 20230728
