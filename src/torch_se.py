@@ -58,7 +58,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # query star age may not agree exactly.
 
     # Age not used explicitly for SE - CCC 02/08/2024
-    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    #state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -100,7 +100,6 @@ def binary_evolution(time, dt, state, hydro, se,
     # Check for new systems, important for binaries - CCC 02/08/2024
     state.binaries.synchronize_to(se.binaries)
     # Now pass attributes to binaries - CCC 03/08/2024
-    tprint(se.particles.age, se.particles.relative_age)
     for _attribute in state.binaries.get_attribute_names_defined_in_store():
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
@@ -121,17 +120,13 @@ def binary_evolution(time, dt, state, hydro, se,
     for binary in state.binaries:
         primaries.add_particle(binary.child1)
         companions.add_particle(binary.child2)
-        
-    tprint(se.particles.age, se.particles.mass)
+
     
     for i, s in enumerate(state.stars):
-        
-        tprint('Trying to set feedback for star', i)
         
         in_binary = False # Set to true if in binary - CCC 25/10/2024
         
         if s in evolved_stars: # CCC 25/10/24
-            tprint('Star already evolved!')
             continue
             
         if (s in primaries): # CCC 25/10/24
@@ -185,7 +180,7 @@ def binary_evolution(time, dt, state, hydro, se,
                     if accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): # CCC 12/09/2024
                 
                         tprint('A star has accreted mass')
-                        tprint('Total mass loss:', (old_mass[i] + old_mass[k] - s.mass - t.mass).value_in(units.MSun), 'MSun')
+                        tprint('Total mass loss:', "{0:.2f}".format((old_mass[i] + old_mass[k] - s.mass - t.mass).value_in(units.MSun)), 'MSun')
                 
                         if with_lyc:
                             _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
@@ -220,13 +215,14 @@ def binary_evolution(time, dt, state, hydro, se,
                         tprint('A star has lost its envelope')
                 
                         inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
-                        tprint('Injected mass:', inj_mass.value_in(units.MSun), 'MSun')
+                        tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
                 
                         # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                         # CCC 12/09/2024, 20/06/2023
                         alpha = CE_alpha
-                        E_bind = (alpha * units.constants.G * t.mass / 2) * ((s.mass / se.binaries[j].semi_major_axis) - (old_mass[i] / b.semi_major_axis))
-                        tprint('Binding energy:', E_bind)
+                        E_bind = (alpha * units.constants.G * t.mass / 2) * ((old_mass[i] / b.semi_major_axis) - (s.mass / se.binaries[j].semi_major_axis))[0]
+                        tprint(E_bind.value_in(units.erg))
+                        tprint('Binding energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
                 
                         _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                         tprint("... CE x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
