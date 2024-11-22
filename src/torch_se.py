@@ -58,7 +58,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # query star age may not agree exactly.
 
     # Age not used explicitly for SE - CCC 02/08/2024
-    #state.stars.age  = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -100,7 +100,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # Check for new systems, important for binaries - CCC 02/08/2024
     state.binaries.synchronize_to(se.binaries)
     # Now pass attributes to binaries - CCC 03/08/2024
-    tprint(se.particles.relative_age)
+    tprint(se.particles.age, se.particles.relative_age)
     for _attribute in state.binaries.get_attribute_names_defined_in_store():
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
@@ -121,12 +121,17 @@ def binary_evolution(time, dt, state, hydro, se,
     for binary in state.binaries:
         primaries.add_particle(binary.child1)
         companions.add_particle(binary.child2)
+        
+    tprint(se.particles.age, se.particles.mass)
     
     for i, s in enumerate(state.stars):
+        
+        tprint('Trying to set feedback for star', i)
         
         in_binary = False # Set to true if in binary - CCC 25/10/2024
         
         if s in evolved_stars: # CCC 25/10/24
+            tprint('Star already evolved!')
             continue
             
         if (s in primaries): # CCC 25/10/24
@@ -137,8 +142,6 @@ def binary_evolution(time, dt, state, hydro, se,
             # and the other star
             k = np.where(state.stars.tag == companions[j].tag)[0][0]
             t = state.stars[k]
-            #print('The star is the primary in a binary')
-            #print(b, t)
         
         if (s in companions): # CCC 25/10/24
             in_binary = True
@@ -148,8 +151,6 @@ def binary_evolution(time, dt, state, hydro, se,
             # and the other star
             k = np.where(state.stars.tag == primaries[j].tag)[0][0]
             t = state.stars[k]
-            #print('The star is the companion in a binary')
-            #print(b, t)
 
         if went_supernova(s.stellar_type):
             continue
@@ -235,12 +236,24 @@ def binary_evolution(time, dt, state, hydro, se,
                             eion[i] = _tmp[0]
                             nion[i] = _tmp[1]
                             sigh[i] = _tmp[2]
+                            _tmp = compute_eion_nion_sigh(t.mass, t.temperature, t.radius)
+                            eion[k] = _tmp[0]
+                            nion[k] = _tmp[1]
+                            sigh[k] = _tmp[2]
                         if with_pe_heat:
                             _tmp = compute_epe_npe(s.temperature, s.radius)
                             epe[i] = _tmp[0]
                             npe[i] = _tmp[1]
                             sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                            _tmp = compute_epe_npe(t.temperature, t.radius)
+                            epe[k] = _tmp[0]
+                            npe[k] = _tmp[1]
+                            sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
                         # Do not set wind properties for stars that have lost mass due to CE
+                        
+                        # Set star to evolved after uMT/CE - CCC 22/11/2024
+                        evolved_stars.add_particle(s)
+                        evolved_stars.add_particle(t)
                     
                 else: # Normal feedback if the star is not in a binary
                     
