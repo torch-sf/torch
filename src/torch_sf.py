@@ -131,7 +131,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     return
 
-def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult):
+def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
     """
     Remove any particles that have left the simulation.
     WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
@@ -164,7 +164,8 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult):
     ])
 
     stars_rem = p[outside]
-    grav_rem = stars_rem.copy()
+    grav_rem  = stars_rem.copy()
+    se_rem    = stars_rem.copy()
 
     if len(stars_rem) > 0:
 
@@ -207,6 +208,7 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
+        se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
         else:
