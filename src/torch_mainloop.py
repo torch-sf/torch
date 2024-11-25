@@ -249,7 +249,7 @@ def evolve(state, hydro, grav, mult, se):
             # Merge stars at same location, based on fix by BP, commit 366d5be on petar branch - 06/03/2024
             # Repeat every timestep - CCC 18/11/2024
             remove_merged_stars(USER['remove_merged'], USER['overwrite'], state, hydro, grav, se)
-            remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult)
+            remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
             hydro.particles_sort()  # also checks for stars outside domain
 
             if USER['with_bridge']:
@@ -272,7 +272,7 @@ def evolve(state, hydro, grav, mult, se):
                         mult.channel_from_code_to_memory.copy()     # grav  -> multiples
                         state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
 
-                remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult)
+                remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
                 hydro.particles_sort()  # also checks for stars outside domain
 
             ### ------------------
@@ -410,7 +410,7 @@ def evolve(state, hydro, grav, mult, se):
         ### Remove stars outside domain.
         ### ----------------------------
         # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult)
+        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
         hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
@@ -430,7 +430,7 @@ def evolve(state, hydro, grav, mult, se):
         ### Remove stars outside domain.
         ### ----------------------------
         # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult)
+        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
         hydro.particles_sort()  # also checks for stars outside domain
 
         ### -------------------
