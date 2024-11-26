@@ -358,9 +358,9 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             # Calculate star angular momentum -SA 20230103
             # First, we need to check whether the sink angular momentum is 0, which is rare but possible. -SA 20241121
-            if np.count_nonzero(sink_angMom)<1: #counts to see if any direction is nonzero
+            if all(j==0 for j in sink_angMom): #counts to see if all directions are zero
                 tprint("Sink angular momentum is zero: ", sink_angMom, "So stars ang_mom will be random")
-                star_angMom = np.random.uniform(low = 0.0, high = 1.0, size = (nnew,3)) #use uniform distribution 
+                star_angMom = np.random.uniform(low = 0.0, high = 1.0, size = (nnew,3)) | units.cm**2.0*units.g/units.s #use uniform distribution 
                 tprint("Star ang momentum given sink_anMom=0, before norm: ", star_angMom)
                 # Normalization can proceed the same since it's based on the individual star's total ang. mom.
             else: # Assume sink ang_mom is nonzero in at least one direction
