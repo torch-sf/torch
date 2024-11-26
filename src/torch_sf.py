@@ -104,6 +104,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
 
+    tprint("Check add_star before adding particles: ", add_star)
+    tprint("Number of new particles to be added: ", num_new_parts, len(add_star.id))
+    tprint("Double check ang_mom of new particles: ", add_star.ang_mom
+
     state.stars.add_particles(add_star)
     state.stars = state.stars.sorted_by_attribute('tag')
 

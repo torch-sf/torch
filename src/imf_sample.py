@@ -53,9 +53,9 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
     #print("minimum_jet_mass in msun:", minimum_jet_mass.value_in(units.MSun))
 
     # Now set value for each entry of starjet_masses
+    number_of_jet_stars = 0
+    number_of_nojet_stars = 0
     for i, star in enumerate(masses):
-        number_of_jet_stars = 0
-        number_of_nojet_stars = 0
         #print("Check star: ", i, star, minimum_jet_mass, maximum_jet_mass)
         if (star >= minimum_jet_mass.value_in(units.MSun)) and (star < maximum_jet_mass.value_in(units.MSun)):
             #print("...queuing a star with a jet and final mass:", star)
@@ -66,10 +66,9 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
             #starjet_masses value is already correct
             number_of_nojet_stars +=1
 
-        tprint("Queued ", number_of_nojet_stars, " without jets and ", number_of_jet_stars, "with jets")
-
         #print("TEST: this is the star mass: ", masses[i])
         #print("And this is the total mass and of the star and jet: ", starjet_masses[i])
+    tprint("Queued ", number_of_nojet_stars, " without jets and ", number_of_jet_stars, "with jets")
 
     return masses, starjet_masses
 
