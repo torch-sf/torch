@@ -303,11 +303,6 @@ def binary_evolution(time, dt, state, hydro, se,
                     
                     # Set star to evolved after feedback - CCC 29/10/2024
                     evolved_stars.add_particle(s)           
-
-        # Evolutionary things besides winds could have reduced the stars mass.
-        # CCC 26/04/2024
-        #if dm_dt[i]*dt > 0.0|units.MSun:
-        #    s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
             
     # Binaries sync'ed to stars later, do not sync here - CCC 12/09/2024
 
@@ -315,12 +310,6 @@ def binary_evolution(time, dt, state, hydro, se,
     # so that gravity can use the mass after all the wind mass loss has
     # occcured. Otherwise we'd have to average mass loss and keep up with old
     # and new masses and it just gets ugly.
-    
-    #print('Stars at end of evolution step')
-    #print(se.particles)
-    #print(state.stars)
-    #print(se.binaries)
-    #print(state.binaries)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -497,6 +486,13 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
         vterm = 10**(1.23 - 0.30 * np.log10(se_lum.value_in(units.LSun))
                 + 0.55*np.log10(se_mass.value_in(units.MSun))
                 + 0.64*np.log10(se_temp.value_in(units.K))) | units.km/units.s
+        
+    elif massloss_method == 'seba_puls':
+        # Mass loss rates from SeBa with velocities from Kudritzki & Puls winds
+        # Added by CCC, 27/11/2024
+        dm_dt = (prev_mass - se_mass)/dt
+        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
+        vterm = star_wind.vterm
 
     # Note that Leitherer and Puls calculations use the old mass
 
