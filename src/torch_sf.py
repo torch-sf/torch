@@ -104,9 +104,13 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
 
-    tprint("Check add_star before adding particles: ", add_star)
-    tprint("Number of new particles to be added: ", num_new_parts, len(add_star.id))
-    tprint("Double check ang_mom of new particles: ", add_star.ang_mom
+    tprint("Check add_star before adding particles: ")
+    print(add_star.id, add_star.mass, add_star.x)
+    tprint("Number of new particles to be added: ")
+    print(num_new_parts)
+    print(len(add_star.id))
+    tprint("Double check ang_mom of new particles: ")
+    print(add_star.ang_mom)
 
     state.stars.add_particles(add_star)
     state.stars = state.stars.sorted_by_attribute('tag')
@@ -362,10 +366,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             # Calculate star angular momentum -SA 20230103
             # First, we need to check whether the sink angular momentum is 0, which is rare but possible. -SA 20241121
-            if all(j==0 for j in sink_angMom): #counts to see if all directions are zero
+            if all(j==(0.0 | units.cm**2.0*units.g/units.s) for j in sink_angMom): #counts to see if all directions are zero
                 tprint("Sink angular momentum is zero: ", sink_angMom, "So stars ang_mom will be random")
-                star_angMom = np.random.uniform(low = 0.0, high = 1.0, size = (nnew,3)) | units.cm**2.0*units.g/units.s #use uniform distribution 
-                tprint("Star ang momentum given sink_anMom=0, before norm: ", star_angMom)
+                star_angMom = random_three_vector(nnew) | units.cm**2.0*units.g/units.s #use uniform distribution defined below
+                tprint("Star ang momentum given sink_angMom=0, before norm: ", star_angMom)
                 # Normalization can proceed the same since it's based on the individual star's total ang. mom.
             else: # Assume sink ang_mom is nonzero in at least one direction
                 ## Add a small, random variation to the direction of the ang_mom for each star. -SA 20230405
@@ -393,8 +397,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             #print("Setting star angular momentum now - e.g., ", star.ang_mom[0])
             hydro.set_particle_ang_mom(star_tag, star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2], nnew )  # Add angular momentum -SA 20230425
 
-    # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
-    tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))
+        # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
+        tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))
+
+    # Indicate we're done spawning stars
+    tprint("Finished checking whether to spawn stars from sink particles.")
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
