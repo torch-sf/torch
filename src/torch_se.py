@@ -13,6 +13,7 @@ Includes subroutines to
 from __future__ import division, print_function
 
 import numpy as np
+import math
 from scipy.integrate import quad
 
 from amuse.units import units
@@ -449,21 +450,26 @@ def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
                 state.stars[star2_idx].merger_time = hydro.get_time()
                 stars_rem.add_particle(state.stars[star2_idx])
 
-            grav_rem = stars_rem.copy()
-            se_rem = stars_rem.copy()
-
             # hydro requires sorted tags for removal
             # only the stars particle set has a tag attribute.
             t = stars_rem.tag
             t = np.sort(np.array(t).flatten())
             tprint("Removing ", len(t), "merged star(s)")
+            # Remove from hydro
             hydro.remove_particles(t)
-            state.stars.remove_particles(stars_rem)
-            grav.particles.remove_particles(grav_rem)
-            grav.particles.synchronize_to(state.stars)
-            se.particles.remove_particles(se_rem)
-            state.stars.synchronize_to(se.particles)
-
+            # Remove from SE
+            se.particles.remove_particles(stars_rem)
+            # Synchronize to state and copy mass
+            se.particles.synchronize_to(state.stars)
+            state.se_to_stars.copy_attributes(["mass"])
+            # Remove and re-add to grav
+            state.stars.synchronize_to(grav.particles)
+            state.stars_to_grav.copy_attributes(["mass"])
+            if len(grav.particles) != len(state.stars):
+                # See this issue: https://github.com/amusecode/amuse/issues/518
+                tprint('... forced to re-sync grav from stars')
+                grav.particles = Particles()
+                grav.particles.add_particles(state.stars)
             state.out_merged_stars(stars_rem, overwrite)
                
         else:
