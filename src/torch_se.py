@@ -415,31 +415,29 @@ class PulsStellarWind(object):
         return log_dm_dt
 
 
-# Merges stars with delta_x = 0, collisions not handled in current version of petar in amuse
-# Based on commit 366d5be on petar branch from BP, CCC 19/06/2024
+# Merges stars with delta_r < r_1 + r_2, collisions not handled in current version of petar in amuse
 def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
     if remove:
         tprint("... checking for merged stars")
-
-        pp = np.array([state.stars.x.value_in(0.1*units.RSun),
-                       state.stars.y.value_in(0.1*units.RSun),
-                       state.stars.z.value_in(0.1*units.RSun)]).T # Radius of a low-mass star - CCC 18/11/2024
-
-        # Set a tolerance to 0.1 RSun and avoid flaoting point issues - CCC 18/11/2024
-        unq, unq_idx, unq_cnt = np.unique(pp.astype('int64'), axis=0, return_inverse=True, return_counts=True)
-        cnt_mask = unq_cnt > 1
-        cnt_idx, = np.nonzero(cnt_mask)
-        idx_mask = np.in1d(unq_idx, cnt_idx)
-        idx_idx, = np.nonzero(idx_mask)
-        srt_idx = np.argsort(unq_idx[idx_mask])
-        dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
+        
+        x_mask = np.argsort(state.stars.x.value_in(units.pc))
+        x_dist = state.stars.x[x_mask][1:] - state.stars.x[x_mask][:-1]
+        r_both = state.stars.radius[x_mask][1:] + state.stars.radius[x_mask][:-1]
+        r_mask = np.where(x_dist <= r_both)
+        # Check 3D distance for those
+        r_dist = ((state.stars.x[x_mask][1:][r_mask] - state.stars.x[x_mask][:-1][r_mask])**2
+                 + (state.stars.y[x_mask][1:][r_mask] - state.stars.y[x_mask][:-1][r_mask])**2
+                 + (state.stars.z[x_mask][1:][r_mask] - state.stars.z[x_mask][:-1][r_mask])**2)**(1./2)
+        idx_w = np.where(r_dist <= r_both[r_mask])[0]
+        idx_1 = x_mask[1:][r_mask][idx_w]
+        idx_2 = x_mask[:-1][r_mask][idx_w]
 
         # loop over pairs of stars with identical positions
-        if np.any(dup_idx): # Check if array is empty
+        if len(idx_w) > 0: # Check if array is empty
             stars_rem = Particles()
-            for i in range(len(dup_idx)):
-                star1_idx = dup_idx[i][0]
-                star2_idx = dup_idx[i][1]
+            for i in range(len(idx_w)):
+                star1_idx = idx_1[i]
+                star2_idx = idx_2[i]
                 se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
                 # Save tag of star it merged with
                 state.stars[star2_idx].merged_with = state.stars[star1_idx].tag
