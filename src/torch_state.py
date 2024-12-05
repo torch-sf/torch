@@ -7,7 +7,7 @@ from os import path
 import pickle
 
 from amuse.datamodel import Particles
-from amuse.io import write_set_to_file
+from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
 
 from torch_param import FlashPar
@@ -172,14 +172,18 @@ class TorchState(object):
         """Write merged star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "merged_stars.amuse")
-        write_set_to_file(removed_stars, stars_fname, format='hdf5', append_to_file=True, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
+        all_removed_stars = read_set_from_file(stars_fname)
+        all_removed_stars.add_particles(removed_stars)
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
         tprint("*** Wrote merged stars to merged_stars.amuse")
         
     def out_escaped_stars(self, removed_stars, overwrite):
         """Write merged star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "escaped_stars.amuse")
-        write_set_to_file(removed_stars, stars_fname, format='hdf5', append_to_file=True, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
+        all_removed_stars = read_set_from_file(stars_fname)
+        all_removed_stars.add_particles(removed_stars)
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
         tprint("*** Wrote escaped stars to escaped_stars.amuse")
 
     def stars_to_mult_grav_copy(self, attr):
