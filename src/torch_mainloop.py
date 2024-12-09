@@ -361,6 +361,7 @@ def evolve(state, hydro, grav, mult, se):
                         with_sn           = USER['with_sn'],
                         massloss_method   = USER['massloss_method'],
                         min_feedback_mass = USER['min_feedback_mass'],
+                        CE_method         = USER['CE_method'],
                         CE_alpha          = USER['CE_alpha'],
                     )
                 else:

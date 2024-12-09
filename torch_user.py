@@ -332,6 +332,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'seba_puls'
     p['min_feedback_mass'] = 10 | units.MSun
+    p['CE_method'] = 'wind' # method for CE ejection; use the wind injection scheme ('wind') or SN injection scheme ('SN') -CCC 27/11/2024
     p['CE_alpha'] = 1 # efficiency for CE ejection; default is 1 but we also test 0.1 and 10 - CCC 13/09/2024
     
     # <star particle creation>
