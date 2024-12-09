@@ -10,6 +10,7 @@ Joshua Wall, Drexel University
 from __future__ import division, print_function
 
 import numpy as np
+import pprint
 
 from amuse.datamodel import Particles
 from amuse.units import units
@@ -104,18 +105,28 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
 
-    tprint("Check add_star before adding particles: ")
-    print(add_star.id, add_star.mass, add_star.x)
+    tprint("Check add_star before adding particles: id, tag, mass, stellar_type")
+    print(add_star.id, add_star.tag, add_star.mass, add_star.stellar_type)
+    tprint("Print x, y, z, vx, vy, vz")
+    print(add_star.x, add_star.y, add_star.z, add_star.vx, add_star.vy, add_star.vz)
+    tprint("Print radius, initMass, ang_mom")
+    print(add_star.radius, add_star.initial_mass, add_star.ang_mom)
     tprint("Number of new particles to be added: ")
     print(num_new_parts)
     print(len(add_star.id))
-    tprint("Double check ang_mom of new particles: ")
-    print(add_star.ang_mom)
+    tprint("Done printing properties. ")
+
+    tprint("Test pprint option.")
+    pprint.pp(add_star)
+    tprint("Finished pprint.")
 
     state.stars.add_particles(add_star)
+    tprint("Finished stars.add_particles()")
     state.stars = state.stars.sorted_by_attribute('tag')
+    tprint("Finished sorted_by_attribute")
 
     grav.particles.add_particles(add_star)
+    tprint("Finished grav.particles.add_particles()")
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -130,6 +141,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     # to the gravity code.
     hydro.clear_new_tags()
 
+    tprint("Completed add_particles_to_grav")
     return
 
 
@@ -148,6 +160,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         grav = N-body gravity code instance
         mult = Multiples worker code instance, OR None
     """
+    tprint("Entering remove_particles_outside_bndbox")
     p = state.stars
     if len(p) == 0:
         return
@@ -159,12 +172,14 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
     zmin = hydro.get_runtime_parameter('zmin') | units.cm
     zmax = hydro.get_runtime_parameter('zmax') | units.cm
 
+    tprint("Acquired runtime_parameters. Now looking for stars outside bndbox.")
     outside = np.logical_or.reduce([
         p.x >= xmax, p.x <= xmin,
         p.y >= ymax, p.y <= ymin,
         p.z >= zmax, p.z <= zmin,
     ])
 
+    tprint("Now removing stars.")
     stars_rem = p[outside]
     grav_rem = stars_rem.copy()
 
@@ -213,7 +228,7 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         else:
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
-
+    tprint("Completed remove_particles_outside_bndbox.")
     return
 
 
