@@ -111,6 +111,19 @@ subroutine Simulation_init()
           & "[Simulation_init]")
   endif
   
+   !! Derefinement outside rectangular region of interest
+  call RuntimeParameters_get('use_deref', use_deref)
+  call RuntimeParameters_get('deref_lref', deref_lref)
+  call RuntimeParameters_get('deref_xl', deref_xl)
+  call RuntimeParameters_get('deref_xr', deref_xr)
+  call RuntimeParameters_get('deref_yl', deref_yl)
+  call RuntimeParameters_get('deref_yr', deref_yr)
+  call RuntimeParameters_get('deref_zl', deref_zl)
+  call RuntimeParameters_get('deref_zr', deref_zr)
+  if (sim_myPE.EQ.MASTER_PE) then
+     if (use_deref) call Logfile_stamp('derefining outside region of interest', "[Simulation_init]")
+  endif
+
   sim_abar = 1.0 + sim_abundM*sim_metal
 
 

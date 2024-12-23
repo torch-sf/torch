@@ -62,6 +62,16 @@ PARAMETER localRef_y        REAL    0.0
 PARAMETER localRef_z        REAL    0.0
 PARAMETER localRef_r        REAL    0.0
 PARAMETER refine_on_particle_count BOOLEAN False
+# Derefinement outside rectangular region of interest
+PARAMETER use_deref         BOOLEAN False
+PARAMETER deref_lref        INTEGER 1
+PARAMETER deref_xl          REAL    0.0
+PARAMETER deref_xr          REAL    0.0
+PARAMETER deref_yl          REAL    0.0
+PARAMETER deref_yr          REAL    0.0
+PARAMETER deref_zl          REAL    0.0
+PARAMETER deref_zr          REAL    0.0
+
 
 # Static potential parameters
 PARAMETER sim_aParm1        REAL 0.0

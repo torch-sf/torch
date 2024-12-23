@@ -61,6 +61,10 @@ module Simulation_data
    logical, save :: use_voramr, use_localRef, refPartCount, center_localRef
    character(len=255),save :: voramr_source, voramr_input
    real, save :: localRef_x, localRef_y, localRef_z, localRef_r
+   !! Derefinement outside rectangular region of interest
+   logical, save :: use_deref
+   real, save :: deref_xl, deref_xr, deref_yl, deref_yr, deref_zl, deref_zr
+   integer, save :: deref_lref
    
    !! static grav field parameters
    logical, save :: sim_withStaticGrav

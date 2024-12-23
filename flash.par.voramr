@@ -131,6 +131,19 @@ refine_filter_1 = 1e-2
 refine_cutoff_1 = 0.98
 derefine_cutoff_1 = 0.6 # fairly aggressive
 
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .false.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
+
 #   maximum change of refinements per step
 #nrefs = 2
 #converttoconsvdformeshcalls = .true.
