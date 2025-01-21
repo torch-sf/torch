@@ -41,8 +41,8 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 
 def binary_evolution(time, dt, state, hydro, se,
-    with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None, CE_method='wind', CE_alpha=1):
+                     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
+                     massloss_method=None, min_feedback_mass=None, CE_method='wind', CE_alpha=1):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -58,7 +58,7 @@ def binary_evolution(time, dt, state, hydro, se,
     # query star age may not agree exactly.
 
     # Age not used explicitly for SE - CCC 02/08/2024
-    #state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -99,16 +99,16 @@ def binary_evolution(time, dt, state, hydro, se,
     # Pass information to SE
     # Check for new systems, important for binaries - CCC 02/08/2024
     state.binaries.synchronize_to(se.binaries)
-    tprint('SeBa binaries:', se.binaries.binary_type)
+    #tprint('SeBa binaries:', se.binaries.binary_type)
     # Now pass attributes to binaries - CCC 03/08/2024
     for _attribute in state.binaries.get_attribute_names_defined_in_store():
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
     # Print timesteps
-    tprint('Timesteps:', se.particles.time_step, se.binaries.time_step)
+    #tprint('Timesteps:', se.particles.time_step, se.binaries.time_step)
     # Evolve model
     se.evolve_model(time) #Time attached to se.particles.age, which is the "simulation" time
-    tprint('SeBa binaries:', se.binaries.binary_type)
+    #tprint('SeBa binaries:', se.binaries.binary_type)
     
     # Pass information back to stars after end of SE loop - CCC 02/08/2024
     for _attribute in se.particles.get_attribute_names_defined_in_store():
@@ -180,56 +180,24 @@ def binary_evolution(time, dt, state, hydro, se,
                 
                 if in_binary:
                     
-                    _dE = (units.constants.G / 2) * ((old_mass[i]*old_mass[k] / b.semi_major_axis) - (s.mass * t.mass / se.binaries[j].semi_major_axis))[0] # Try here - CCC 08/12/2024
+                    _dE = (units.constants.G / 2) * (((s.mass * t.mass / se.binaries[j].semi_major_axis) - old_mass[i]*old_mass[k] / b.semi_major_axis))[0] # Try here - CCC 08/12/2024
                     tprint('Change in binding energy:', "{0:.1e}".format(_dE.value_in(units.erg)), 'erg')
-                    
-                    #if accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): # CCC 12/09/2024
-                
-                        #tprint('A star has accreted mass')
-                        #tprint('Total mass loss:', "{0:.2f}".format((old_mass[i] + old_mass[k] - s.mass - t.mass).value_in(units.MSun)), 'MSun')
-                
-                        #if with_lyc:
-                        #    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                        #    eion[i] = _tmp[0]
-                        #    nion[i] = _tmp[1]
-                        #    sigh[i] = _tmp[2]
-                        #    _tmp = compute_eion_nion_sigh(t.mass, t.temperature, t.radius)
-                        #    eion[k] = _tmp[0]
-                        #    nion[k] = _tmp[1]
-                        #    sigh[k] = _tmp[2]
-                        #if with_pe_heat:
-                        #    _tmp = compute_epe_npe(s.temperature, s.radius)
-                        #    epe[i] = _tmp[0]
-                        #    npe[i] = _tmp[1]
-                        #    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                        #    _tmp = compute_epe_npe(t.temperature, t.radius)
-                        #    epe[k] = _tmp[0]
-                        #    npe[k] = _tmp[1]
-                        #    sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
-                            
-                        # Set star to evolved after MT - CCC 29/10/2024
-                        #evolved_stars.add_particle(s)
-                        #evolved_stars.add_particle(t)
-                    
-                        # Do not set wind properties for stars that have accreted mass at this step
-                        # Eventually, decide what to do with the mass that has been lost; for now, just print
+                    inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
+                    # If _dE > 0, mass transfer or CE; if _dE < 0, wind mass loss
             
-                    #if high_dm_dt(s.mass + t.mass, old_mass[i] + old_mass[k], dt) or accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]) or (E_bind > (0 | units.erg)): # CCC 12/09/2024, 27/11/2024, 08/12/2024
-                    if accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]) or (_dE < (0 | units.erg)): # CCC 09/12/2024
-                        
-                        # This will be used automatically alongside the above if more than 1% of the mass is lost - CCC 29/10/2024
-                        # Do all mass transfer together
+                    if _dE > (0 | units.erg): 
                 
                         tprint('... Do mass transfer')
-                
-                        inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
+                    
                         tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
                 
                         # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                         # CCC 12/09/2024, 20/06/2023
-                        E_bind = (units.constants.G * t.mass / 2) * ((old_mass[i] / b.semi_major_axis) - (s.mass / se.binaries[j].semi_major_axis))[0]
-                        E_bind *= CE_alpha
+                        E_bind = CE_alpha * _dE
                         tprint('Ejecta energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
+                        
+                        # If there is no energy from the envelope ejection, do wind mass loss
+                        # for the donor star instead
                         
                         if CE_method=='wind':
                             
@@ -273,7 +241,41 @@ def binary_evolution(time, dt, state, hydro, se,
                         evolved_stars.add_particle(s)
                         evolved_stars.add_particle(t)
                         
-                    else: # Normal feedback if the binary does not interact
+                    else:
+                    
+                        if accreted_mass(t.mass, old_mass[k]): #If accreted but still lost energy over dt
+                            
+                            _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                                  massloss_method=massloss_method)
+                            dm_dt[i] = inj_mass / dt
+                            vterm[i] = _tmp[1]
+                            tprint('Star 1 wind dm/dt:', dm_dt[i])
+                            tprint('Star 1 wind velocity:', vterm[i])
+                            
+                        elif accreted_mass(s.mass, old_mass[i]):
+                            
+                            _tmp = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
+                                                  massloss_method=massloss_method)
+                            dm_dt[k] = inj_mass / dt
+                            vterm[k] = _tmp[1]
+                            tprint('Star 2 wind dm/dt:', dm_dt[k])
+                            tprint('Star 2 wind velocity:', vterm[k])
+                            
+                        else: # Normal feedback if the binary does not interact
+                            
+                            if with_winds:
+                                _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                                      massloss_method=massloss_method)
+                                dm_dt[i] = _tmp[0]
+                                vterm[i] = _tmp[1]
+                                tprint('Star 1 wind dm/dt:', dm_dt[i])
+                                tprint('Star 1 wind velocity:', vterm[i])
+                                _tmp = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
+                                                      massloss_method=massloss_method)
+                                dm_dt[k] = _tmp[0]
+                                vterm[k] = _tmp[1]
+                                tprint('Star 2 wind dm/dt:', dm_dt[k])
+                                tprint('Star 2 wind velocity:', vterm[k])
                         
                         if with_lyc:
                             _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
@@ -293,19 +295,6 @@ def binary_evolution(time, dt, state, hydro, se,
                             epe[k] = _tmp[0]
                             npe[k] = _tmp[1]
                             sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
-                        if with_winds:
-                            _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                                  massloss_method=massloss_method)
-                            dm_dt[i] = _tmp[0]
-                            vterm[i] = _tmp[1]
-                            tprint('Star 1 wind dm/dt:', dm_dt[i])
-                            tprint('Star 1 wind velocity:', vterm[i])
-                            _tmp = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
-                                                  massloss_method=massloss_method)
-                            dm_dt[k] = _tmp[0]
-                            vterm[k] = _tmp[1]
-                            tprint('Star 2 wind dm/dt:', dm_dt[k])
-                            tprint('Star 2 wind velocity:', vterm[k])
                     
                         # Set star to evolved after feedback
                         evolved_stars.add_particle(s)
@@ -622,7 +611,7 @@ def lost_envelope(new_mass, old_mass):
 # for comparison to O stars and WR stars - CCC 08/12/2024
 def high_dm_dt(new_mass, old_mass, dt):
     dm_dt = (old_mass - new_mass)/dt
-    return dm_dt > (1.e-3 | units.MSun/units.yr)
+    return dm_dt > (1.e-2 | units.MSun/units.yr)
 
 # Used to check for stable mass transfer
 # If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
@@ -784,6 +773,6 @@ class PulsStellarWind(object):
                             + 1.07*np.log10(teff/2e4)
         return log_dm_dt
 
-
+    
 if __name__ == '__main__':
     pass
