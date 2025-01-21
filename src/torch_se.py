@@ -202,16 +202,22 @@ def binary_evolution(time, dt, state, hydro, se,
                         if CE_method=='wind':
                             
                             _vterm = compute_vterm_binary(inj_mass, E_bind)
-                            tprint('Ejecta velocity', "{0:.1e}".format(_vterm.value_in(units.km/units.s)), 'km/s')
+                            tprint('Ejecta velocity from change in energy', "{0:.1e}".format(_vterm.value_in(units.km/units.s)), 'km/s')
                             
                             if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
                                 # If donor is star s
+                                _, _vterm_wind = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity,
+                                                                    dt, massloss_method=massloss_method)
                                 dm_dt[i] = inj_mass/dt
-                                vterm[i] = _vterm
+                                vterm[i] = min([_vterm, _vterm_wind]) # Cap the ejecta velocity at the wind velocity
+                                tprint('Ejecta velocity', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
                             else:
                                 # If donor is star t
+                                _, _vterm_wind = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity,
+                                                                    dt, massloss_method=massloss_method)
                                 dm_dt[k] = inj_mass/dt
-                                vterm[k] = _vterm
+                                vterm[k] = min([_vterm, _vterm_wind]) # Cap the ejecta velocity at the wind velocity
+                                tprint('Ejecta velocity', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
                         
                         elif CE_method=='SN':
                 
