@@ -89,7 +89,7 @@ parser.add_argument("--rho_match", action='store_true',
                    help="Match density at sphere edge to ambient medium dens \
                          by tanh smoothing or flooring. \
                          This alters the sphere mass.")
-parser.add_argument("-s", "--seed", default=-1, required=False, type=int,
+parser.add_argument("-s", "--seed", default=0, required=False, type=int,
                    help="Random seed.")
 
 parser.add_argument("-f", "--filename", default=None, required=False,
