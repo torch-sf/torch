@@ -181,9 +181,9 @@ Credits
 
 The Torch code includes contributions by:
 
+* Eric Andersson
 * Sabrina Appel
 * Claude Cournoyer-Cloutier
-* Raúl Domínguez
 * Will Farner
 * Joseph Glaser
 * Ralf Klessen
@@ -193,9 +193,10 @@ The Torch code includes contributions by:
 * Andrew Pellegrino
 * Brooke Polak
 * Simon Portegies Zwart
+* Steven Rieder
 * Aaron Tran
 * Joshua Wall
-* Martijn Wilhelm
+* Maite Wilhelm
 
 In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 
@@ -204,4 +205,7 @@ In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 * Moo Kwang Ryan Joung
 * Juan Camilo Ibáñez-Mejía
 * Daniel Seifried
+* Long Wang
 * Richard Wünsch
+
+Torch also acknowledges the contributions of everyone who helped build FLASH and AMUSE.

@@ -345,7 +345,7 @@ def user_parameters():
 
     # <job>
 
-    ntasks = get_ntasks_from_run_script("submit")
+    ntasks = get_ntasks_from_run_script("run.sh")
 
     p['num_grav_workers'] = 1#8 # must be power of 2 for PeTar
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse

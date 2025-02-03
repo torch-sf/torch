@@ -117,8 +117,8 @@ do i=1, localnpf
 #endif
       
       
-        call inject_direct([xloc, yloc, zloc], inj_mass, inj_vel_mag, mass, twind, dt, bgdy)
-#ifdef DEBUG
+        call inject_direct([xloc, yloc, zloc], inj_mass, inj_vel_mag, twind, dt, bgdy)
+
         print*, "[Particles_sinkWind]: background density =", bgdy, "g / cm^3."
 #endif
 
