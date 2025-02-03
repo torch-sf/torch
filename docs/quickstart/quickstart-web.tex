@@ -107,7 +107,7 @@ Last updated: \today \\
 \textbf{Torch} is a star formation simulation code with magnetohydrodynamics
 (FLASH), radiative transfer (Fervent), self-gravity \& sinks, star particles,
 feedback (stellar winds, SNe), stellar evolution tracks (SeBa), and N-body
-dynamics (AMUSE).
+dynamics (AMUSE/PeTar).
 Torch features and add-ons are listed in Figure~\ref{fig:features},
 and references for the major components are in Appendix~\ref{sec:components}.
 
@@ -372,6 +372,7 @@ included in AMUSE.  To request only the codes needed for Torch, do:
 make framework
 make flash.code
 make kepler.code
+make petar.code
 make ph4.code
 make seba.code
 make smalln.code
@@ -403,17 +404,18 @@ mkdir data
 
 The file \texttt{torch\_mainloop.py} is the heart of the simulation.  It
 performs the split time-evolution with both FLASH and the n-body integrator
-ph4, handles stellar evolution, and lots more. \texttt{torch\_user.py} is the main
+ph4 or PeTar, handles stellar evolution, and lots more. \texttt{torch\_user.py} is the main
 source of control for users of Torch, where parameters can be set and initial stellar
 conditions defined. 
 
 The simulation should take 1--10 minutes to reach
 $t_\mt{max} = 2 \unit{Myr} = 6.31 \times 10^{13} \unit{s}$.
-It will use 7 threads: 2 for FLASH, 1 for n-body integration (ph4), 2 for
-n-body binary interactions (multiples), 1 for stellar evolution, and 1 for
-AMUSE itself.  At around $1 \unit{Myr}$, a sink particle will form and begin
-creating stars.  One or a few $\ge 7 \Msun$ stars may begin blowing a wind, so
-the time step may drop; you may wish to end the simulation early.
+It will use 7 threads: 2 for FLASH, 1+2 for n-body integration (ph4) and 
+n-body binary interactions (multiples) or 1 for stellar dynamics (PeTar), 
+1 for stellar evolution, and 1 for AMUSE itself.  At around $1 \unit{Myr}$, 
+a sink particle will form and begin creating stars.  One or a few $\ge 7 \Msun$ 
+stars may begin blowing a wind, so the time step may drop; you may wish 
+to end the simulation early.
 
 To run the simulation interactively, execute the command:
 \begin{lstlisting}[language=bash]
@@ -564,6 +566,18 @@ These setup flags are aliases for various FLASH units; the flags are defined in
 
 Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
+
+% ============
+%     PeTar
+% ============
+\subsection{PeTar Stellar Dynamics}
+
+Torch is now capable of using \texttt{PeTar} for stellar dynamics. This is recommended for all runs, but particularly for runs with $>5,000$ stars or runs containing many binaries such as those with primordial binaries. To use \texttt{PeTar}, set
+\begin{lstlisting}[language=python]
+p['with_petar'] = True
+p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+\end{lstlisting}
+in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
 
 % ============
 % VorAMR Addon
