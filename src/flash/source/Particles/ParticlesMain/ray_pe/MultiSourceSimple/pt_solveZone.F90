@@ -319,7 +319,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
         f_ext  = exp(-3.5*Av) ! Fraction of background FUV that makes it through to here.
         !Av     = lam_j * numdens * sigDust      ! Using actual dust cross section.
         !f_ext  = exp(-Av) ! Fraction of background FUV that makes it through to here.
-        bgFlux = 10.*1.69*f_ext! Draine field is 1.69*G_0
+        bgFlux = 1.69*f_ext! Draine field is 1.69*G_0
     
         ! If flux on this cell and flux still in the ray are less than the background
         ! Draine field, terminate this ray.
