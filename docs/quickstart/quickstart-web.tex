@@ -676,6 +676,27 @@ In addition to the usual Torch output, \texttt{VorAMR} produces two more files:
 	\item \texttt{interp-data.hdf5} - the file from which the interpolation kdtree is built. Only \texttt{AMUSE} sees this file, but then passes info from it to \texttt{FLASH}. This file will always contain all data from the source file.
 \end{enumerate}
 These files are both produced as sometimes we only want \texttt{FLASH} to refine on a portion of the source data, but we want \texttt{AMUSE} to have an accurate kdtree for all data to avoid domain edge effects during interpolation.
+
+\subsection{Regional Refinement}
+
+Torch is capable of de-refining the grid to a user defined level outside of a user defined rectangular region of interest. This is most useful in large-scale runs such as those initialized with \texttt{VorAMR}. To use this capability, the user must set the parameters listed below in the \texttt{flash.par} file. 
+
+\begin{lstlisting}[language=bash]
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .true.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
+\end{lstlisting}
+
+
 % ============
 % Known Issues
 % ============
