@@ -199,8 +199,13 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 !  call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
 !#endif
 
-  Flux = phih*numdens*xH0*dr*FullEion
-  
+  !Flux = phih*numdens*xH0*dr*FullEion
+! Using the phion rate double counts the flux if two rays pass through 
+! a cell in a given timestep. Use actual number of absorbed photons 
+! instead. -BP 24Jan23
+! Use Area=Vpix/dr to convert to flux to avoid overestimating. -BP 30Jan23
+  Flux  = DNionHI*FullEion*dr/(dtin * Vpix)
+ 
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
   call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, cellFlux)
