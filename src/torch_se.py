@@ -396,12 +396,12 @@ class PulsStellarWind(object):
 # Merges stars with delta_x = 0, collisions not handled in current version of petar in amuse
 def remove_merged_stars(remove, state, hydro, grav, se):
     if remove:        
-         print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
+        print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
 
         #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
         pp = np.array([state.stars.x.value_in(units.cm),
-                state.stars.y.value_in(units.cm),
-                state.stars.z.value_in(units.cm)]).T
+                       state.stars.y.value_in(units.cm),
+                       state.stars.z.value_in(units.cm)]).T
 
         unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
         cnt_mask = unq_cnt > 1
