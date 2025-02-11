@@ -32,7 +32,7 @@ parser.add_argument("-temp", "--temperature", default=-1, type=float,
                    help="Temperature in cube [K]. If temp<0, derive pressure from cooling curve.")
 parser.add_argument("-res", "--resolution", default=128, type=int,
                    help="Resolution of data.")
-parser.add_argument("-turb", "--use_turb", action='store_true',
+parser.add_argument("-turb", "--use_turb", type=bool,
                    help="Add turbulent velocity field")
 parser.add_argument("-rms", "--turb_rms_velocity", default=1.0, type=float,
                    help="Turbulent velocity field [km/s]")
@@ -44,6 +44,8 @@ parser.add_argument("-exp", "--turb_exp", default=5./3., type=float,
                    help="Exponent of the energy spectrum for the turbulence. \
                          Default is Kolmogorov (-5/3). Note that you pass the positive \
                          value and the code tacks on the negative sign.")
+parser.add_argument("-vel", "--vel_disp", default=20, required=False, type=float,
+                   help="Velocity dispersion of the turbulent velocities [cm/s].")
 parser.add_argument("-s", "--seed", default=-1, type=int,
                    help="Random seed.")
 parser.add_argument("-o", "--filename", default="cube", type=str,
@@ -74,9 +76,9 @@ def create_spspace_box(NCD, kmin, kmax, exp):
 
     # create mask that filters selected modes and gives weights according to the
     # given spectrum
-    ax = NCD[0]/2-np.abs(np.arange(NCD[0], dtype=float64)-NCD[0]/2)
-    ay = NCD[1]/2-np.abs(np.arange(NCD[1], dtype=float64)-NCD[1]/2)
-    az = NCD[2]/2-np.abs(np.arange(NCD[2], dtype=float64)-NCD[2]/2)
+    ax = NCD[0]/2-np.abs(np.arange(NCD[0], dtype='float64')-NCD[0]/2)
+    ay = NCD[1]/2-np.abs(np.arange(NCD[1], dtype='float64')-NCD[1]/2)
+    az = NCD[2]/2-np.abs(np.arange(NCD[2], dtype='float64')-NCD[2]/2)
 
     (mx, my, mz) = np.meshgrid(ax,ay,az)
 
@@ -95,9 +97,9 @@ def create_spspace_box(NCD, kmin, kmax, exp):
 def kolmogorov_vel(NCD, kmin, kmax, exp):
     # create velocity field in spectral space (sp_vel[xyz])
     # and FFT it to configuration space (vel[xyz])
-    sp_velx = create_spspace_box(kmin, kmax, NCD, exp)
-    sp_vely = create_spspace_box(kmin, kmax, NCD, exp)
-    sp_velz = create_spspace_box(kmin, kmax, NCD, exp)
+    sp_velx = create_spspace_box(NCD, kmin, kmax, exp)
+    sp_vely = create_spspace_box(NCD, kmin, kmax, exp)
+    sp_velz = create_spspace_box(NCD, kmin, kmax, exp)
 
     velx = np.fft.ifftn(sp_velx).real
     vely = np.fft.ifftn(sp_vely).real
@@ -129,9 +131,23 @@ if __name__ == "__main__":
     cube[1] *= args.density*kB*args.temperature # Ideal gas law
 
     # Velocity
-    if args.use_turb:
-        raise NotImplementedError("Need to implement setting rms velocity.")
-        cube[2], cube[3], cube[4] = kolomogorov_vel(cube.shape, args.kmin, args.kmax, args.turp_exp)
+    if args.use_turb:        
+        NCD = (args.resolution,args.resolution,args.resolution)
+        # calculate turbulent velocity field
+        (velx, vely, velz) = kolmogorov_vel(NCD, args.kmin, args.kmax, args.turb_exp)
+        v_mag = np.sqrt(velx**2 + vely**2 + velz**2)
+        print('Raw velocity dispersion', np.std(v_mag))
+        vel_ratio = args.vel_disp/np.std(v_mag)
+
+        # scale velocities to achieve desired dispersion
+        velx *= vel_ratio
+        vely *= vel_ratio
+        velz *= vel_ratio
+
+        v_mag = np.sqrt(velx**2 + vely**2 + velz**2)
+        print('Scaled velocity dispersion', np.std(v_mag))
+
+        cube[2], cube[3], cube[4] = velx, vely, velz
     else:
         cube[2:5] *= 0.0
 
