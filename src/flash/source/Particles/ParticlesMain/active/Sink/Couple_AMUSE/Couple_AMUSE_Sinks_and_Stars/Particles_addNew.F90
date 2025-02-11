@@ -154,7 +154,7 @@ do i=1, count
   ! Particles_sinkData -JW
   
     number_new_massive = number_new_massive + 1
-    new_massive_tags(number_new_massive) = int(particles(TAG_PART_PROP, pno))
+    new_massive_tags(number_new_massive) = int(particles(TAG_PART_PROP, pno),8)
   
   !print*, "Number of new sinks =", number_new_sinks
   !print*, "New tags = ", new_tags(1:number_new_sinks)
