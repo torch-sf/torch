@@ -68,6 +68,7 @@ subroutine pt_solveZone(dtin, blockID, ind, dr, Eion, sH, Nion, Vpix, &
   logical :: stoppH, fully_ionized
   real, parameter   :: Newton = 6.6725985d-8, pi = 3.1415926535897932384d0, N_H0=1.87e21
   real    :: Av, f_ext, lam_j, temp, cellFlux, bgFlux
+  real    :: DNambient, ambientFlux, surface_correction
 
 ! if dr = 0, we didn't move the ray so just return.
 
@@ -108,6 +109,15 @@ if (dr .le. 0.0d0) return
             write(*,'(A,ES13.3E3)') "[pt_solveZone]: Begin phi*rt_dt =", phih*rt_dt
             write(*,*) "[pt_solveZone]: fully_ionized=", fully_ionized
 #endif
+
+
+! Correction to effective surfaces of cells -MW
+! Projected area of each face is the area times the dot product of the face's 
+! normal and the viewing vector (the direction of the ray). Every ray pierces
+! two faces, so need only count every dimension once. Sum of all faces is then
+! sum of (normalized) cartesian unit vectors dot product with ray
+surface_correction = (abs(dirx) + abs(diry) + abs(dirz))/sqrt(dirx*dirx + diry*diry + dirz*dirz)
+
 
 ! Select the correct bin before calculating ionization and heating. - JW
 if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
@@ -195,12 +205,18 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 ! instead. -BP 24Jan23
 ! Use Area=Vpix/dr to convert to flux to avoid overestimating. -BP 30Jan23
   Flux  = DNionHI*FullEion*dr/(dtin * Vpix)
-  
+ 
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
   call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, cellFlux)
   Flux = Flux + cellFlux
   call Grid_putPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, Flux)
+
+  ! Store unabsorbed (ambient) flux similarly. - MW
+  Flux = (Nion-DNionHI)*dr/(dtin*Vpix) * FullEion
+  call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
+  Flux = Flux + cellFlux
+  call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
 #endif
   Flux = 0.0d0
 
@@ -213,6 +229,15 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 
 
 else
+
+  ! Code above is skipped if ionizing photon can't ionize
+  ! still save ambient field - MW
+  if (ph_type == ion_photon) then
+    Flux = Nion*dr/(dtin*Vpix) * FullEion
+    call Grid_getPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, cellFlux)
+    Flux = Flux + cellFlux
+    call Grid_putPointData(blockID, CENTER, AUVF_VAR, INTERIOR, ind, Flux)
+  endif
 
   FullEion = Eion ! The energy is already all there.
 
@@ -252,11 +277,15 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 
 ! number of photons that strike dust grains. - JW
   DNdust = Nion*(1d0-dexp(-DtauDust))
+
+! the rest of the photons, which form the ambient FUV field. - MW
+  DNambient = Nion - DNdust
   
 ! Convert this number into a flux by multiplying by the
 ! average energy of a photon in this bin. - JW
 
   Flux = DNdust*FullEion/dtin
+  ambientFlux = DNambient*FullEion/dtin
 
 ! Now convert this to a Habing 1968 (G_conv = 1.6 x 10^-3 ergs cm^-2 s^-1) normalized flux as
 ! described in Baczynski 2015. Note we can probably do
@@ -264,8 +293,11 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
 ! good enough for now.
 
 ! Also note, implict assumption here that cells are cubes! - JW
-  Flux = Flux / (1.6d-3 * zone_size**2.0)
+! I've also applied a correction depending on incident angle -MW
+  Flux = Flux / (1.6d-3 * surface_correction*zone_size**2.0)
   GFlux = GFlux + Flux
+
+  ambientFlux = ambientFlux / (1.6d-3 * surface_correction*zone_size**2.0)
 
   if (isNaN(GFlux)) then
     write(*,'(A,9ES10.3)') "[pt_solveZone]: ephen, kion, xH0, xHp, Nion, DNionHI, &
@@ -296,7 +328,7 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     
         ! If flux on this cell and flux still in the ray are less than the background
         ! Draine field, terminate this ray.
-        if (Flux < bgFlux .and. (Nion-DNdust)*FullEion/dtin/(1.6d-3*zone_size**2.0) < bgFlux) then 
+        if (Flux < bgFlux .and. ambientFlux < bgFlux) then 
             !print*, "bgFlux =", bgFlux, "Flux =", Flux
             Nion = 0.0
             stopp = .true.
@@ -309,6 +341,11 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
     call Grid_getPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, cellFlux)
     Flux = Flux*1.6d-3 + cellFlux ! Convert back to ergs cm^-2 s^-1
     call Grid_putPointData(blockID, CENTER, FUFL_VAR, INTERIOR, ind, Flux)
+
+    ! Unabsorbed, ambient flux, stored similarly. -MW
+    call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
+    ambientFlux = ambientFlux*1.6d-3 + cellFlux
+    call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
   end if
 #endif
 
@@ -318,6 +355,16 @@ if ((Nion .gt. 1.0d0) .and. (temp < he_dust_sputter_temp) .and. &
   DustVel = DustMom/(dens*Vpix)
 
   Nion = Nion - DNdust
+
+! Code above is skipped if photoelectric photon can't be absorbed
+! still save ambient field - MW
+else if (ph_type == pe_photon) then
+
+  ambientFlux = Nion*FullEion/dtin / (surface_correction*zone_size**2.0)
+
+  call Grid_getPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, cellFlux)
+  ambientFlux = ambientFlux + cellFlux
+  call Grid_putPointData(blockID, CENTER, AFUF_VAR, INTERIOR, ind, ambientFlux)
 
   
 end if

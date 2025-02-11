@@ -313,12 +313,8 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-    # Set this r_bin such that initially, when clusters are sparse and non-spherical, binaries with <r_bin separation
-    # are properly handles. If you get up to cluster with 10,000+ stars, upon restart set this to 0.0 so PeTar automatically
-    # selects the correct separation to apply SDAR, or you will get excessively large binary treees. -BP 13Apr23
-    p['petar_rbin'] = 100.0 | units.AU
-    p['with_petar'] = False #True
-
+    p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+    p['merge_stars'] = False # set to true when restarting a run with PeTer having crashed with pos[0] is nan error. This merges collided stars.
 
     # <stellar evolution>
 
@@ -333,10 +329,10 @@ def user_parameters():
 
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100.0 | units.MSun
-    p['sample_imf_mass'] = 100000.0 | units.MSun
+    p['sample_imf_mass'] = 10000.0 | units.MSun
     p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
-    p['sum_small'] = True  # agglomerate low-mass stars into particles with mass >= m_small Msun?
+    p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
     p['m_small'] = 1.0 # agglomerate mass in Msun
 
     # <amuse file overwrite>
@@ -347,14 +343,14 @@ def user_parameters():
 
     ntasks = get_ntasks_from_run_script("run.sh")
 
-    p['num_grav_workers'] = 1#8 # must be power of 2 for PeTar
+    p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
-    
+
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
-    
+
     if p['with_se']:
         p['num_hy_workers'] -= 1
 

@@ -151,6 +151,16 @@ This reports to STDOUT something like:
     Total - ambient mass (Msun): [9.978e+02 9.978e+02 5.686e+03 4.849e+05 6.290e+08]
     t_freefall (Myr): [2.865 2.865 3.394 4.109 3.608]
 
+PeTar Stellar Dynamics
+----------------------
+
+Torch is now capable of using PeTar for stellar dynamics. This is recommended for all runs, but particularly for runs with >5,000 stars or runs containing many binaries such as those with primordial binaries. To use PeTar, set
+
+    p['with_petar'] = True
+    p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+
+in `torch_user.py`. PeTar accepts the user parameter `r_out` which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in PeTar, users should familiarize themselves with the [README](https://github.com/lwang-astro/PeTar) of the PeTar github and the PeTar [methods paper](https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract)
+
 VorAMR
 ======
 VorAMR is a utility developed within the Torch framework which allows for the conversion 

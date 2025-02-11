@@ -427,7 +427,6 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
     end if
   end do
 
-
   if (myProc == 0) then
 
     !call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
@@ -464,6 +463,85 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
 END FUNCTION
 
 
+! Gets the photoelectric flux of a block/grid.
+FUNCTION get_grid_flux_photoelectric(i, j, k, index_of_grid, nproc, flux_pe, n)
+
+  INTEGER :: n, m, myProc, communicator, ierr
+  INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
+  DOUBLE PRECISION :: flux_pe(n)
+  INTEGER :: get_grid_flux_photoelectric
+
+
+call Driver_getComm(GLOBAL_COMM, communicator)
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+flux_pe = 0.0
+
+do m=1, n
+
+  if (myProc == nproc(m)) then
+
+    !call Grid_getBlkData(index_of_grid, CENTER, AFUF_VAR, INTERIOR, [i,j,k], flux_pe)
+    call Grid_getPointData(index_of_grid(m), CENTER, AFUF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_pe(m))
+
+  end if
+
+end do
+
+  if (myProc == 0) then
+
+    call MPI_Reduce(MPI_IN_PLACE, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                    0, communicator, ierr)
+  else
+
+    call MPI_Reduce(flux_pe, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                    0, communicator, ierr)
+  end if
+
+
+  get_grid_flux_photoelectric=0
+END FUNCTION
+
+! Gets the photoionizing flux of a block/grid.
+FUNCTION get_grid_flux_ionizing(i, j, k, index_of_grid, nproc, flux_ion, n)
+
+  INTEGER :: n, m, myProc, communicator, ierr
+  INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
+  DOUBLE PRECISION :: flux_ion(n)
+  INTEGER :: get_grid_flux_ionizing
+
+
+call Driver_getComm(GLOBAL_COMM, communicator)
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+flux_ion = 0.0
+
+do m=1, n
+
+  if (myProc == nproc(m)) then
+
+    !call Grid_getBlkData(index_of_grid, CENTER, AUVF_VAR, INTERIOR, [i,j,k], flux_ion)
+    call Grid_getPointData(index_of_grid(m), CENTER, AUVF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_ion(m))
+
+  end if
+
+end do
+
+  if (myProc == 0) then
+
+    call MPI_Reduce(MPI_IN_PLACE, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                    0, communicator, ierr)
+  else
+
+    call MPI_Reduce(flux_ion, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                    0, communicator, ierr)
+  end if
+
+
+  get_grid_flux_ionizing=0
+END FUNCTION
+
+
 FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
   use Grid_interface, only : Grid_getBlkIndexLimits
   INTEGER :: nx, ny, nz, nproc, myProc, communicator, ierr
@@ -485,7 +563,6 @@ FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
     !  jmin = 1 !(blkLimitsGC(HIGH,JAXIS) - blkLimits(HIGH,JAXIS))/2
     !  kmin = 1 !(blkLimitsGC(HIGH,KAXIS) - blkLimits(HIGH,KAXIS))/2
   end if
-
 
   if (myProc == 0) then
       call MPI_Reduce(MPI_IN_PLACE, nx, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)

@@ -183,6 +183,8 @@ do while ((dt-total_timestep) .gt. (1d-6*dt))
       call Grid_getBlkPtr(tmpID,solnData)
       solnData(UVFL_VAR,:,:,:) = 0d0
       solnData(FUFL_VAR,:,:,:) = 0d0
+      solnData(AUVF_VAR,:,:,:) = 0d0
+      solnData(AFUF_VAR,:,:,:) = 0d0
       ! Store the old photoionization heating rates for convergence check.
       !solnData(OPHH_VAR,:,:,:) = solnData(PHHE_VAR,:,:,:)
       solnData(PHHE_VAR,:,:,:) = 0d0
