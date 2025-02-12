@@ -4549,7 +4549,8 @@ FUNCTION set_particle_mass(tags,mass, nparts)
 
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
-  integer :: set_particle_mass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_mass, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
@@ -4607,7 +4608,8 @@ FUNCTION set_particle_oldmass(tags,mass, nparts)
 
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
-  integer :: set_particle_oldmass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_oldmass, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
@@ -4801,7 +4803,8 @@ FUNCTION set_particle_nion(tags, nion, nparts)
 ! Set the particle's number of ionizing photons by tag number.
   integer :: nparts
   double precision :: nion(nparts), tags(nparts)
-  integer :: set_particle_nion, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_nion, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
@@ -7118,8 +7121,8 @@ real*8  :: tags(nparts)
 integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 integer   :: communicator, ierr
-integer*8 :: new_tags_array(nparts)
 integer   :: num_array(dr_globalNumProcs)
+integer*8 :: new_tags_array(nparts)
 integer   :: disp(dr_globalNumProcs), rank_minus_one
 integer   :: type_begin, type_end, type_count
 real*8    :: real_tags(nparts)
@@ -7179,7 +7182,8 @@ call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
-  call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end)), &
+  
+  call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end),8), &
                    type_count, MPI_LONG, new_tags_array, num_array, &
                    disp, MPI_LONG, 0, communicator, ierr)
 

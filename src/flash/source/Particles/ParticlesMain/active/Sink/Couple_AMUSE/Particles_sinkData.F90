@@ -52,7 +52,7 @@ module Particles_sinkData
   real, save, allocatable, dimension(:,:), target :: particles_local
   real, save, allocatable, dimension(:,:), target :: particles_global
   
-  integer, save :: local_tag_number
+  integer*8, save :: local_tag_number
   integer, save, target :: localnp, localnpf ! Added target attribute. - JW
 
   ! variables needed for Ewald correction in case of periodic BCs

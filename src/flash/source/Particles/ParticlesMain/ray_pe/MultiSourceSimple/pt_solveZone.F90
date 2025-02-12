@@ -205,7 +205,7 @@ if ( (ph_type == ion_photon) .and. (.not. fully_ionized) ) then
 ! instead. -BP 24Jan23
 ! Use Area=Vpix/dr to convert to flux to avoid overestimating. -BP 30Jan23
   Flux  = DNionHI*FullEion*dr/(dtin * Vpix)
-  
+ 
 ! Store the flux in a scratch variable to look at later in plot files.
 #ifdef UVFL_VAR
   call Grid_getPointData(blockID, CENTER, UVFL_VAR, INTERIOR, ind, cellFlux)

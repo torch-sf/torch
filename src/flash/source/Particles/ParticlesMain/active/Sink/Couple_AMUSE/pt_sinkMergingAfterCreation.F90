@@ -61,7 +61,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
 
   integer, parameter  :: maxpart = 200
   integer, dimension(maxpart) :: pindex, plistcount, merged_list
-  integer, dimension(maxpart) :: delete_id, keep_id, delete_id_red, keep_id_red
+  integer*8, dimension(maxpart) :: delete_id, keep_id, delete_id_red, keep_id_red
   real, dimension(maxpart) :: keep_posx, keep_posy, keep_posz, keep_posx_red, keep_posy_red, keep_posz_red
   integer, dimension(maxpart, maxpart) :: plist
 
@@ -177,10 +177,10 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
               ! delete merged particles; only keep ip1 (to which we merge)
               if (ip1 .ne. plist(ip1,ip2)) then
                  n_delete = n_delete+1
-                 delete_id(n_delete) = int(particles_global(iptag,pindex(plist(ip1,ip2))))
+                 delete_id(n_delete) = int(particles_global(iptag,pindex(plist(ip1,ip2))),8)
                  write(*,'(A,I8,A,I8,A,3(3X,ES16.9))') 'SinkMergingAfterCreation: zero-mass sink merged TO tag: ', &
-                    int(particles_global(iptag,pindex(ip1))), ' FROM tag: ', &
-                    int(particles_global(iptag,pindex(plist(ip1,ip2)))), &
+                    int(particles_global(iptag,pindex(ip1)),8), ' FROM tag: ', &
+                    int(particles_global(iptag,pindex(plist(ip1,ip2))),8), &
                     ' from pos: ', particles_global(ipx,pindex(plist(ip1,ip2))), &
                                    particles_global(ipy,pindex(plist(ip1,ip2))), &
                                    particles_global(ipz,pindex(plist(ip1,ip2)))
@@ -196,7 +196,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
            if (.not. merged_with_itself) then
 
               n_keep = n_keep + 1
-              keep_id(n_keep) = int(particles_global(iptag,pindex(ip1)))
+              keep_id(n_keep) = int(particles_global(iptag,pindex(ip1)),8)
 
               keep_posx(n_keep) = merged_xpos/real(plistcount(ip1))
               keep_posy(n_keep) = merged_ypos/real(plistcount(ip1))
@@ -207,7 +207,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
               particles_global(ipz,pindex(ip1)) = merged_zpos/real(plistcount(ip1))
 
               write(*,'(A,I8,A,3(3X,ES16.9))') 'SinkMergingAfterCreation: new position of tag ', &
-                int(particles_global(iptag,pindex(ip1))), ': ', particles_global(ipx,pindex(ip1)), &
+                int(particles_global(iptag,pindex(ip1)),8), ': ', particles_global(ipx,pindex(ip1)), &
                                                                 particles_global(ipy,pindex(ip1)), &
                                                                 particles_global(ipz,pindex(ip1))
               write(*,'(A)') &
@@ -262,7 +262,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
      ! loop over particles to keep
      do j = 1, n_keep
         do i = 1, localnp
-           if (int(particles_local(iptag,i)) .eq. keep_id(j)) then
+           if (int(particles_local(iptag,i),8) .eq. keep_id(j)) then
               particles_local(ipx,i) = keep_posx(j)
               particles_local(ipy,i) = keep_posy(j)
               particles_local(ipz,i) = keep_posz(j)
@@ -273,7 +273,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
      ! loop over the particles to delete
      do j = 1, n_delete
         do i = 1, localnp
-           if (int(particles_local(iptag,i)) .eq. delete_id(j)) then
+           if (int(particles_local(iptag,i),8) .eq. delete_id(j)) then
               ! I can't find anywhere else in Flash this this used. So
               ! comment it out. -JW
               !NumParticlesPerBlock(int(particles_local(ipblk,i))) = &
@@ -290,7 +290,7 @@ subroutine pt_sinkMergingAfterCreation(delta_at_lrefmax)
         !!! move to AMUSE. Note we have to do this after merging
         !!! of new particles, or we get too many sinks. - JW
         do i = 1, number_new_sinks
-           if (int(new_sink_tags(i)) .eq. delete_id(j)) then
+           if (int(new_sink_tags(i),8) .eq. delete_id(j)) then
               new_sink_tags(i) = new_sink_tags(number_new_sinks)
               number_new_sinks = number_new_sinks - 1
               exit

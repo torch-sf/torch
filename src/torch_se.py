@@ -47,6 +47,8 @@ def stellar_evolution(time, dt, state, hydro, se,
     assert min_feedback_mass is not None
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
+    # index of feedback stars to evolve
+    #idx = np.where(state.stars.initial_mass >= min_feedback_mass)
 
     # Always recompute star's age from hydro time and particle creation time.
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
@@ -146,6 +148,9 @@ def stellar_evolution(time, dt, state, hydro, se,
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+
+    # Update star radii for N-body collisions in petar -BP 08.19.22
+    state.stars.radius = se_radius
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -411,6 +416,58 @@ class PulsStellarWind(object):
                             - 1.601*np.log10(self.vterm/self.vesc/2.0) \
                             + 1.07*np.log10(teff/2e4)
         return log_dm_dt
+
+# Merges stars with delta_x = 0, collisions not handled in current version of petar in amuse
+def remove_merged_stars(remove, state, hydro, grav, se):
+    if remove:        
+        print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
+
+        #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
+        pp = np.array([state.stars.x.value_in(units.cm),
+                       state.stars.y.value_in(units.cm),
+                       state.stars.z.value_in(units.cm)]).T
+
+        unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
+        cnt_mask = unq_cnt > 1
+        cnt_idx, = np.nonzero(cnt_mask)
+        idx_mask = np.in1d(unq_idx, cnt_idx)
+        idx_idx, = np.nonzero(idx_mask)
+        srt_idx = np.argsort(unq_idx[idx_mask])
+        dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
+
+        # add particles to seba
+        se.particles.add_particles(state.stars)
+        seba_to_stars = se.particles.new_channel_to(state.stars)
+
+        # loop over pairs of stars with identical positions
+        stars_rem = Particles()
+        for i in range(len(dup_idx)):
+            star1_idx = dup_idx[i][0]
+            star2_idx = dup_idx[i][1]
+            print("[remove_merged_stars]: Before merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+            print("[remove_merged_stars]: Before merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+            se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+            print("[remove_merged_stars]: After merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
+            print("[remove_merged_stars]: After merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
+            stars_rem.add_particle(state.stars[star2_idx])
+            print(stars_rem)
+
+        grav_rem = stars_rem.copy()
+        se_rem = stars_rem.copy()
+
+        # hydro requires sorted tags for removal
+        # only the stars particle set has a tag attribute.
+        t = stars_rem.tag
+        t = np.sort(np.array(t).flatten())
+        print("[remove_merged_stars]: remove tags",t)
+        hydro.remove_particles(t)
+        state.stars.remove_particles(stars_rem)
+        grav.particles.remove_particles(grav_rem)
+        grav.particles.synchronize_to(state.stars)
+        se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
+        se.particles.synchronize_to(state.stars)
+
+        print("[remove_merged_stars]: final Nstars = ",len(state.stars),hydro.get_number_of_particles())
 
 
 if __name__ == '__main__':
