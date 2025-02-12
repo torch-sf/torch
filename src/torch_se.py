@@ -150,9 +150,6 @@ def stellar_evolution(time, dt, state, hydro, se,
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
-    # Update star radii for N-body collisions in petar -BP 08.19.22
-    state.stars.radius = se_radius
-
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
