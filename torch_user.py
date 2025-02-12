@@ -272,7 +272,6 @@ def user_parameters():
 
     p['with_petar'] = True
     p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
-    p['merge_stars'] = False # set to true when restarting a run with PeTer having crashed with pos[0] is nan error. This merges collided stars.
 
     # <stellar evolution>
 
