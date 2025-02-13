@@ -64,7 +64,6 @@ from torch_se import (
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
-#    remove_merged_stars,
     make_stars_from_sinks,
     queue_stars,
     random_three_vector,
@@ -207,11 +206,6 @@ def evolve(state, hydro, grav, mult, se):
     dt_old = dt
 
     num_stars = hydro.get_number_of_particles()
-    
-    if not USER['with_petar']: # only initialize PeTar if there are stars
-        grav.parameters.begin_time  = hy_time
-        grav.evolve_model(hy_time)
-        gr_time = grav.get_time()
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -255,15 +249,6 @@ def evolve(state, hydro, grav, mult, se):
             tprint("... Num stars:", num_stars)
 
         if num_stars > 0:
-
-            # initialize PeTar once more than 1!!! star forms
-            if num_stars > 1 and first_star == 0:
-                first_star = 1
-                if USER['with_petar']:
-                    tprint("First stars have formed. Initializing PETAR.")
-                    grav.parameters.begin_time = hy_time
-                    grav.evolve_model(hy_time)
-                    print(grav.parameters)
 
             tprint("Evolving hydro with grav to reach t =", hy_time+dt)
             # initialize PeTar once more than 1!!! star forms
@@ -390,9 +375,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
 
-
-                #if USER['with_petar']:
-                    #remove_merged_stars(state, hydro, grav)
 
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
