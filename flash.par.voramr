@@ -5,7 +5,7 @@
 basenm          = "turbsph_"
 log_file        = "turbsph.log"
 run_comment     = "Turbulent sphere"
-output_directory= "/projects/0/einf3298/sean/tmp"
+output_directory= "./data"
 
 
 # ==============================
