@@ -338,7 +338,7 @@ def user_parameters():
     p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
-    p['m_small'] = 1.0 # agglomerate mass in Msun
+    p['m_small'] = 1.0 | units.MSun # agglomerate mass in Msun
 
     # <amuse file overwrite>
 

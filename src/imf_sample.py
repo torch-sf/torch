@@ -11,7 +11,7 @@ from scipy.integrate import quad
 
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False):
+                              max_samp_mass=150.0, sum_small=False, m_small=1.0):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
