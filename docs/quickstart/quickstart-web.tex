@@ -276,6 +276,10 @@ Cartesius in Josh's thesis, you may need to (1) remove
 \texttt{-march=core-avx2} flags throughout, and/or (2) remove
 \texttt{-lhdf5\_fortran} from the \texttt{LIB\_HDF5} variable declaration.
 
+You will also need to add the following flags to \texttt{FFLAGS\_OPT}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
+
 Then, issue the setup command (update ``mysitedir''):
 \begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
@@ -361,6 +365,11 @@ You may need to manually edit the files:
     src/amuse/community/flash/Makefile
 \end{verbatim}
 to select the correct compilers and libraries.
+
+You will need to add the following flags to \texttt{FCFLAGS} in both \texttt{config.mk}
+and \texttt{src/amuse/community/flash/Makefile}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
 
 Now, you can make the AMUSE \texttt{flash\_worker}, which is basically an
 AMUSE-hooked replacement for the normal \texttt{flash4} executable.
