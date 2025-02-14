@@ -87,6 +87,15 @@ source tree.
             Grid/
             ...
 
+The path `src/voramr/` holds Python-side utilities for the VorAMR
+grid converter tool which are called by `torch_mainloop.py`.
+
+    src/voramr/
+        hdf5_convert.py
+        kdtree.py
+        ...
+        
+
 The path `utils/` provides user-contributed tools (AS-IS, support not
 guaranteed) that may be of use for setting up, running, and/or analyzing Torch
 simulations.
@@ -152,8 +161,33 @@ Torch is now capable of using PeTar for stellar dynamics. This is recommended fo
 
 in `torch_user.py`. PeTar accepts the user parameter `r_out` which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in PeTar, users should familiarize themselves with the [README](https://github.com/lwang-astro/PeTar) of the PeTar github and the PeTar [methods paper](https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract)
 
+VorAMR
+======
+VorAMR is a utility developed within the Torch framework which allows for the conversion 
+of output data from one hydrodynamical software suite to another. Specifically, VorAMR
+takes data from the Vornoi mesh code AREPO and interpolates the data into FLASH for use
+in Torch.
+
+In principle, VorAMR can be extended to interpolate data from ANY type of hydrodynamical
+code into FLASH/Torch including other AMR grid codes, or SPH codes.
+
+How VorAMR works
+----------------
+1. Voronoi cell position data sent to FLASH. Positions and field value (density, internal energy, velocity, etc.) data sent to AMUSE.
+2. FLASH views the Voronoi positional data as particles and builds an AMR grid that satisfies the refine-on-particle criteria. 
+The particles used for refinement are erased from memory.
+3. AMUSE constructs a KDtree with field values assigned to leaf nodes.
+4. For each block data-structure, FLASH sends AMUSE an empty 16x16x16 matrix.
+5. AMUSE passes the entire matrix into a N-dimensional nearest neighbor interpolation routine which maps field data 
+corresponding to the closest KDtree leaf for each matrix cell, creating a 4 dimensional matrix of matrices.
+6. AMUSE sends the populated block matrix back to FLASH via the interface, mapping each field value to the cells within the 
+FLASH AMR grid structure.
+7. FLASH outputs a refined AMR grid with all cells populated with field data ready for use in Torch, Torch then proceeds as normal.
+
+See the [Quickstart Guide](https://torch-sf.bitbucket.io/quickstart.pdf) for how to use VorAMR.
+
 Credits
--------
+=======
 
 The Torch code includes contributions by:
 

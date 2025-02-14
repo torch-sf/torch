@@ -13,6 +13,46 @@ implicit none
 
 contains
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Grid Block get/set operations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!FUNCTION get_block(i, j, k, index_of_grid, nproc, n)
+! Grid_getBlkData(blockID, gridDataStruct, structIndex, beginCount, startingPos, datablock, dataSize)
+  ! Arguments (IN):
+  ! blockID: integer, local block ID
+  ! gridDataStruct: options defined in constants.h - CENTER, FACEX, FACEY, FACEZ, etc.
+  ! structIndex: integer, unless using constants.h gridDataStruct where specific VARS are available: DENS_VAR, PRES_VAR
+  !beginCount: Defines style of indexing of cells. INTERIOR ignores guardcells, EXTERIOR includes guardcells
+  ! startingPos: starting position of block being fetched
+       ! integer ::    startingPos(MDIM)
+       ! startingPos(1) = 1 getting the entire extent of dim
+       ! startingPos(2) = 1 !getting the entire extent of dim
+       ! startingPos(3) = 1 !getting the entire extent of dim
+  ! Arguments (OUT):
+  ! dataBlock: real 3d array  containing block data. Dimensions are dataBlock(irange,jrange,krange)
+  ! dataSize: an integer array specifying the dimensions for datablock
+  !call Grid_getBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k], en) 
+!  INTEGER :: n, m, myProc
+! cell indices, block index on local proc, proc #                                                                     
+!  INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
+!  DOUBLE PRECISION :: en, rho, enrho(n)
+!  INTEGER :: set_grid_energy_density
+
+!  call Driver_getMype(GLOBAL_COMM, myProc)
+
+!  do m=1, n
+!    if (myProc == nproc(m)) then
+
+!        call Grid_putBlkData(index_of_grid, CENTER, EINT_VAR, INTERIOR, [i,j,k],en) 
+!        call Grid_getPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho)
+
+!        print*, "Got density:", rho 
+!    end if
+!  end do
+!  get_block=0
+!FUNCTION
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! Grid variable get/set operations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -26,7 +66,7 @@ FUNCTION set_grid_energy_density(i, j, k, index_of_grid, nproc, enrho, n)
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: en, rho, enrho(n)
   INTEGER :: set_grid_energy_density
-
+  
   call Driver_getMype(GLOBAL_COMM, myProc)
 
   do m=1, n
@@ -273,19 +313,23 @@ FUNCTION set_grid_density(i, j, k, index_of_grid, nproc, rho, n)
   INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
   DOUBLE PRECISION :: rho(n)
   INTEGER :: set_grid_density
-
+  print*, "Inside set_grid_density, getting Mype"
   call Driver_getMype(GLOBAL_COMM, myProc)
 
   do m=1, n
-
-    if (myProc == nproc(m)) then
-
-      call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
-
-    end if
-
+    print*, "In first loop. m=", m
+    !if (myProc == nproc(m)) then
+    !  print*, "In correct processor, myproc=", myProc
+    !  print*, "Setting density with Grid_putPointData"
+    !  print*, "index_of_grid(m), [i(m),j(m),k(m)], rho(m): ", index_of_grid(m), i(m),j(m),k(m), rho(m)
+    !  call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
+    !
+    !end if
+    print*, "Setting density with Grid_putPointData"
+    print*, "index_of_grid(m), [i(m),j(m),k(m)], rho(m): ", index_of_grid(m), i(m),j(m),k(m), rho(m)
+    call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, [i(m),j(m),k(m)], rho(m))
   end do
-
+  print*, "Leaving set_grid_density."
   set_grid_density=0
 END FUNCTION
 
@@ -335,35 +379,53 @@ FUNCTION set_grid_state(i, j, k, index_of_grid, nproc, rho, rhovx, rhovy, rhovz,
   INTEGER :: set_grid_state
 
   call Driver_getMype(GLOBAL_COMM, myProc)
-
+  print*, "n=", n
   do m=1, n
-
-    if (myProc == nproc(m)) then
-
-      vx = rhovx(m) / rho(m); vy = rhovy(m) / rho(m); vz = rhovz(m) / rho(m)
-      en = rhoen(m) / rho(m)
-
-      call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, &
-                            [i(m),j(m),k(m)], rho(m))
-      call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, &
-                            [i(m),j(m),k(m)], vx)
-      call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, &
-                            [i(m),j(m),k(m)], vy)
-      call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, &
-                            [i(m),j(m),k(m)], vz)
-      call Grid_putPointData(index_of_grid(m), CENTER, ENER_VAR, INTERIOR, &
-                            [i(m),j(m),k(m)], en)
-
-    end if
-
+    print*, "m=",m
+    print*, "Entered set_grid_state. In block loop."
+    vx = rhovx(m) / rho(m); vy = rhovy(m) / rho(m); vz = rhovz(m) / rho(m)
+    en = rhoen(m) / rho(m)
+    print*, "> Calling Grid_putPointData"
+    print*, "index_of_grid(m), [i(m),j(m),k(m)]: ", index_of_grid(m), i(m),j(m),k(m)
+    print*, "rho(m):", rho(m)
+    print*, "vx,vy,vz:", vx,vy,vz
+    call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, &
+                          [i(m),j(m),k(m)], rho(m))
+    call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, &
+                          [i(m),j(m),k(m)], vx)
+    call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, &
+                          [i(m),j(m),k(m)], vy)
+    call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, &
+                          [i(m),j(m),k(m)], vz)
+    call Grid_putPointData(index_of_grid(m), CENTER, ENER_VAR, INTERIOR, &
+                          [i(m),j(m),k(m)], en)
+    print*, "> Done putting point data."
+    !if (myProc == nproc(m)) then
+    !  print*, "> In proc conditional."
+    !  vx = rhovx(m) / rho(m); vy = rhovy(m) / rho(m); vz = rhovz(m) / rho(m)
+    !  en = rhoen(m) / rho(m)
+    !  print*, "> Calling Grid_putPointData"
+    !  call Grid_putPointData(index_of_grid(m), CENTER, DENS_VAR, INTERIOR, &
+    !                        [i(m),j(m),k(m)], rho(m))
+    !  call Grid_putPointData(index_of_grid(m), CENTER, VELX_VAR, INTERIOR, &
+    !                        [i(m),j(m),k(m)], vx)
+    !  call Grid_putPointData(index_of_grid(m), CENTER, VELY_VAR, INTERIOR, &
+    !                        [i(m),j(m),k(m)], vy)
+    !  call Grid_putPointData(index_of_grid(m), CENTER, VELZ_VAR, INTERIOR, &
+    !                        [i(m),j(m),k(m)], vz)
+    !  call Grid_putPointData(index_of_grid(m), CENTER, ENER_VAR, INTERIOR, &
+    !                        [i(m),j(m),k(m)], en)
+    !  print*, "> Done putting point data."
+    !end if
+    print*, "Exited block loops. Done."
   end do
-
+  
   set_grid_state=0
-END FUNCTION set_grid_state
+END FUNCTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! New block-by-block grid setter for VorAMR.
-!!! - SCL
+!!! New block-by-block grid setter. In active development.
+!!! - SCL 11/08/22
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 FUNCTION set_block_state(blockID, dataSize, rho, vx, vy, vz, eint, gpot)
   INTEGER :: blockID
@@ -372,8 +434,17 @@ FUNCTION set_block_state(blockID, dataSize, rho, vx, vy, vz, eint, gpot)
   INTEGER :: set_block_state !beginCount, set_block_state
   INTEGER,dimension(3) :: startPos, dataDims
   startPos = [1,1,1]
+  !beginCount = 1
   dataDims = (/dataSize,dataSize,dataSize /)
-
+  !print*, "Inside set_block_state."
+  !print*, "blockID: ", blockID
+  !print*, "gridDataStruct: ", CENTER
+  !print*, "structIndex: ", DENS_VAR
+  !print*, "beginCount: ", INTERIOR
+  !print*, "startingPos: ", startPos
+  !print*, "dataSize: ", dataSize
+  !print*, "dataDims: ", dataDims
+  !print*, "Calling Grid_putBlkData(blockID, structIndez, )"
   call Grid_putBlkData(blockID, CENTER, DENS_VAR, INTERIOR, &
                       startPos, rho, dataDims)
   call Grid_putBlkData(blockID, CENTER, VELX_VAR, INTERIOR, &
@@ -427,6 +498,7 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
     end if
   end do
 
+
   if (myProc == 0) then
 
     !call MPI_Reduce(MPI_IN_PLACE, [rhovx, rhovy, rhovz, rhoen, rho], 5, &
@@ -463,85 +535,6 @@ FUNCTION get_grid_state(i, j, k, index_of_grid, nproc, &
 END FUNCTION
 
 
-! Gets the photoelectric flux of a block/grid.
-FUNCTION get_grid_flux_photoelectric(i, j, k, index_of_grid, nproc, flux_pe, n)
-
-  INTEGER :: n, m, myProc, communicator, ierr
-  INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
-  DOUBLE PRECISION :: flux_pe(n)
-  INTEGER :: get_grid_flux_photoelectric
-
-
-call Driver_getComm(GLOBAL_COMM, communicator)
-call Driver_getMype(GLOBAL_COMM, myProc)
-
-flux_pe = 0.0
-
-do m=1, n
-
-  if (myProc == nproc(m)) then
-
-    !call Grid_getBlkData(index_of_grid, CENTER, AFUF_VAR, INTERIOR, [i,j,k], flux_pe)
-    call Grid_getPointData(index_of_grid(m), CENTER, AFUF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_pe(m))
-
-  end if
-
-end do
-
-  if (myProc == 0) then
-
-    call MPI_Reduce(MPI_IN_PLACE, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
-                    0, communicator, ierr)
-  else
-
-    call MPI_Reduce(flux_pe, flux_pe, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
-                    0, communicator, ierr)
-  end if
-
-
-  get_grid_flux_photoelectric=0
-END FUNCTION
-
-! Gets the photoionizing flux of a block/grid.
-FUNCTION get_grid_flux_ionizing(i, j, k, index_of_grid, nproc, flux_ion, n)
-
-  INTEGER :: n, m, myProc, communicator, ierr
-  INTEGER, dimension(n) :: i, j, k, index_of_grid, nproc
-  DOUBLE PRECISION :: flux_ion(n)
-  INTEGER :: get_grid_flux_ionizing
-
-
-call Driver_getComm(GLOBAL_COMM, communicator)
-call Driver_getMype(GLOBAL_COMM, myProc)
-
-flux_ion = 0.0
-
-do m=1, n
-
-  if (myProc == nproc(m)) then
-
-    !call Grid_getBlkData(index_of_grid, CENTER, AUVF_VAR, INTERIOR, [i,j,k], flux_ion)
-    call Grid_getPointData(index_of_grid(m), CENTER, AUVF_VAR, INTERIOR, [i(m),j(m),k(m)], flux_ion(m))
-
-  end if
-
-end do
-
-  if (myProc == 0) then
-
-    call MPI_Reduce(MPI_IN_PLACE, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
-                    0, communicator, ierr)
-  else
-
-    call MPI_Reduce(flux_ion, flux_ion, n, MPI_DOUBLE_PRECISION, MPI_SUM, &
-                    0, communicator, ierr)
-  end if
-
-
-  get_grid_flux_ionizing=0
-END FUNCTION
-
-
 FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
   use Grid_interface, only : Grid_getBlkIndexLimits
   INTEGER :: nx, ny, nz, nproc, myProc, communicator, ierr
@@ -563,6 +556,7 @@ FUNCTION get_grid_range(nx, ny, nz, index_of_grid, nproc)
     !  jmin = 1 !(blkLimitsGC(HIGH,JAXIS) - blkLimits(HIGH,JAXIS))/2
     !  kmin = 1 !(blkLimitsGC(HIGH,KAXIS) - blkLimits(HIGH,KAXIS))/2
   end if
+
 
   if (myProc == 0) then
       call MPI_Reduce(MPI_IN_PLACE, nx, 1, MPI_INT, MPI_SUM, 0, communicator, ierr)

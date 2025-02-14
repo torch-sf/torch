@@ -276,6 +276,10 @@ Cartesius in Josh's thesis, you may need to (1) remove
 \texttt{-march=core-avx2} flags throughout, and/or (2) remove
 \texttt{-lhdf5\_fortran} from the \texttt{LIB\_HDF5} variable declaration.
 
+You will also need to add the following flags to \texttt{FFLAGS\_OPT}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
+
 Then, issue the setup command (update ``mysitedir''):
 \begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
@@ -361,6 +365,11 @@ You may need to manually edit the files:
     src/amuse/community/flash/Makefile
 \end{verbatim}
 to select the correct compilers and libraries.
+
+You will need to add the following flags to \texttt{FCFLAGS} in both \texttt{config.mk}
+and \texttt{src/amuse/community/flash/Makefile}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
 
 Now, you can make the AMUSE \texttt{flash\_worker}, which is basically an
 AMUSE-hooked replacement for the normal \texttt{flash4} executable.
@@ -690,6 +699,27 @@ In addition to the usual Torch output, \texttt{VorAMR} produces two more files:
 	\item \texttt{interp-data.hdf5} - the file from which the interpolation kdtree is built. Only \texttt{AMUSE} sees this file, but then passes info from it to \texttt{FLASH}. This file will always contain all data from the source file.
 \end{enumerate}
 These files are both produced as sometimes we only want \texttt{FLASH} to refine on a portion of the source data, but we want \texttt{AMUSE} to have an accurate kdtree for all data to avoid domain edge effects during interpolation.
+
+\subsection{Regional Refinement}
+
+Torch is capable of de-refining the grid to a user defined level outside of a user defined rectangular region of interest. This is most useful in large-scale runs such as those initialized with \texttt{VorAMR}. To use this capability, the user must set the parameters listed below in the \texttt{flash.par} file. 
+
+\begin{lstlisting}[language=bash]
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .true.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
+\end{lstlisting}
+
+
 % ============
 % Known Issues
 % ============
