@@ -55,10 +55,10 @@ cp -v ${asrc}/Makefile.prototype        ${adest}/Makefile || { echo $errstr; exi
 #cp -v ${asrc}/petar_download.py         ${pdest}/download.py || { echo $errstr; exit 255; }
 
 #SeBa files - CCC 15/12/2024
-sdest="${AMUSE_DIR}/src/amuse/community/seba" || { echo $errstr; exit 255; }
-cp -v ${asrc}/seba/interface.cc         ${sdest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/seba/interface.py         ${sdest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/seba/Makefile             ${sdest}/ || { echo $errstr; exit 255; } #Disable download from web to make changes in SeBa source code
+#sdest="${AMUSE_DIR}/src/amuse/community/seba" || { echo $errstr; exit 255; }
+#cp -v ${asrc}/seba/interface.cc         ${sdest}/ || { echo $errstr; exit 255; }
+#cp -v ${asrc}/seba/interface.py         ${sdest}/ || { echo $errstr; exit 255; }
+#cp -v ${asrc}/seba/Makefile             ${sdest}/ || { echo $errstr; exit 255; } #Disable download from web to make changes in SeBa source code
 
 mkdir -p ${adest}/src
 cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 255; }
