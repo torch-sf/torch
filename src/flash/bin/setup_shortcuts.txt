@@ -240,6 +240,9 @@ raySink::--with-unit=Particles/ParticlesMain/ray/MultiSourceSimple/Active/Sink:-
 rayPE::--with-unit=Particles/ParticlesMain/ray_pe/MultiSourceSimple/Active/Sink:--with-unit=physics/RadTrans/RadTransMain/RayRad/SinksRad
 #:--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
 
+# Shortcut for VETTAM radiative transfer
+vettam::--with-unit=physics/RadTrans/RadTransMain/VETTAM/:--with-unit=physics/RadTrans/RadTransMain/VETTAM/RayTrace:--with-unit=physics/materialProperties/Opacity/RadTrans:--without-unit=physics/RayTrace
+
 # Dust and Molecular cooling
 dustcool::--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat/molecules+dust
 HandCnew::--with-unit=physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat/mol_and_dust/solver
