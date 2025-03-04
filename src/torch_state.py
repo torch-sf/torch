@@ -5,6 +5,7 @@ from __future__ import division, print_function
 import numpy as np
 from os import path
 import pickle
+import glob
 
 from amuse.datamodel import Particles
 from amuse.io import write_set_to_file
@@ -169,6 +170,26 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
+
+    ## Define alt version of out_stars that will save each particle set
+    ## without overwriting the stars file -SA 20250130
+    def out_stars_debug(self, overwrite):
+        """Write star particles to AMUSE file without overwrite"""
+
+        # First, get a list of the stars_debug files
+        file_list = sorted(glob.glob(self.output_dir+"/stars_debug*"))
+        if not file_list:
+            index = 1 # This means no stars_debug files have been generated yet
+        else:
+            last_file_num = file_list[-1].split(".")[-2]  # Extract last file number
+            index = int(last_file_num) + 1  # Otherwise increment the index
+        print("File number: ", index)
+        stars_fname = path.join(self.output_dir,
+                            "stars_debug.{:04d}.amuse".format(index))
+        print("Saving to: ", stars_fname)
+
+        write_set_to_file(self.stars, stars_fname, format='hdf5', append_to_file = False, overwrite_file=overwrite)
+
 
     def stars_to_mult_grav_copy(self, attr):
         """

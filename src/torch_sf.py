@@ -77,7 +77,9 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.stellar_type = 1 | units.stellar_type # ZAMS star
     add_star.radius = 100 | units.AU # initial collision radius
     add_star.initial_mass = initMass # for SE/SN uses
-    add_star.ang_mom = angMom # add angular mometum code -SA 20230301
+    #add_star.ang_mom = angMom # add angular mometum code -SA 20230301
+    # Removing the line to add ang_mom to the AMUSE particle set 
+    # as the amuse particle set doesn't need it and breaks if it's added. -SA 20250226
 # don't need to carry this around because we don't need history
 # just update directly in hydro
     #if with_lyc:
@@ -105,25 +107,27 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
 
-    tprint("Check add_star before adding particles: id, tag, mass, stellar_type")
-    print(add_star.id, add_star.tag, add_star.mass, add_star.stellar_type)
-    tprint("Print x, y, z, vx, vy, vz")
-    print(add_star.x, add_star.y, add_star.z, add_star.vx, add_star.vy, add_star.vz)
-    tprint("Print radius, initMass, ang_mom")
-    print(add_star.radius, add_star.initial_mass, add_star.ang_mom)
-    tprint("Number of new particles to be added: ")
-    print(num_new_parts)
-    print(len(add_star.id))
-    tprint("Done printing properties. ")
+    # Many print statements to check issue with add_particles call.
+    # Commented out 20250304 but could be removed entirely soon. -SA
+    #tprint("Check add_star before adding particles: id, tag, mass, stellar_type")
+    #print(add_star.id, add_star.tag, add_star.mass, add_star.stellar_type)
+    #tprint("Print x, y, z, vx, vy, vz")
+    #print(add_star.x, add_star.y, add_star.z, add_star.vx, add_star.vy, add_star.vz)
+    #tprint("Print radius, initMass")
+    #print(add_star.radius, add_star.initial_mass) #, add_star.ang_mom)
+    #tprint("Number of new particles to be added: ")
+    #print(num_new_parts)
+    #print(len(add_star.id))
+    #tprint("Done printing properties. ")
 
-    tprint("Test pprint option.")
-    pprint.pp(add_star)
-    tprint("Finished pprint.")
+    #tprint("Test pprint option.")
+    #pprint.pp(add_star)
+    #tprint("Finished pprint.")
 
     state.stars.add_particles(add_star)
     tprint("Finished stars.add_particles()")
     state.stars = state.stars.sorted_by_attribute('tag')
-    tprint("Finished sorted_by_attribute")
+    #tprint("Finished sorted_by_attribute")
 
     grav.particles.add_particles(add_star)
     tprint("Finished grav.particles.add_particles()")

@@ -376,6 +376,9 @@ def evolve(state, hydro, grav, mult, se):
 
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
         if made_stars:
+            # Option to save a fresh copy of the star particle set every time step.
+            #tprint("Saving particle set before adding particles to grav.")
+            #state.out_stars_debug(overwrite=USER['overwrite']) # Added 20250128 -SA
             add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
         ### ----------------------------
