@@ -14,6 +14,7 @@ speed = generic_unit_system.speed
 density = generic_unit_system.density
 momentum =  generic_unit_system.momentum_density
 energy =  generic_unit_system.energy_density
+enerInt = generic_unit_system.length ** 2 / generic_unit_system.time ** 2
 potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
@@ -77,6 +78,18 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         for x in ['rho','rhovx', 'rhovy', 'rhovz', 'rhoen']:
             function.addParameter(x, dtype='d', direction=function.IN)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def set_block_state():
+        # VorAMR addition - SCL
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('dataSize', dtype='i', direction=function.IN)
+        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
+            function.addParameter(x, dtype='d', direction=function.IN)
         function.result_type='int32'
         return function
 
@@ -1348,6 +1361,13 @@ class Flash(CommonCode):
             density, momentum, momentum, momentum, energy),
             (object.ERROR_CODE,)
         )
+        # VorAMR addition - SCL
+        object.add_method(
+            'set_block_state',
+            (object.INDEX, object.INDEX,
+            density, speed, speed, speed, enerInt, potential),
+            (object.ERROR_CODE,)
+        )
 
         object.add_method(
             'get_grid_energy_density',
@@ -1967,7 +1987,7 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-
+        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot')) # VorAMR addition - SCL
         definition.add_getter('get_grid_density', names=('rho',))
         definition.add_setter('set_grid_density', names=('rho',))
 
@@ -2058,6 +2078,7 @@ class Flash(CommonCode):
                     'set_particle_pointers',
                     'get_grid_state',
                     'set_grid_state',
+                    'set_block_state', # VorAMR addition - SCL
                     'get_potential_at_point',
                     'get_potential',
 #                    'get_gravity_at_point',
