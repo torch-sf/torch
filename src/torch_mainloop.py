@@ -259,8 +259,6 @@ def evolve(state, hydro, grav, mult, se):
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
 
-            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
-
             ### ------------------
             ### First bridge kick.
             ### ------------------
