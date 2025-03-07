@@ -168,6 +168,7 @@ To download AMUSE, do:
 cd your/code/directory
 git clone https://github.com/amusecode/amuse.git
 \end{lstlisting}
+If you have a previously installed version of AMUSE, make sure that it is more recent than \textbf{Feb 28, 2025}.
 
 To download Torch:
 \begin{lstlisting}[language=bash]
@@ -1020,6 +1021,12 @@ This list includes most major components, but is not comprehensive.
         \href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{Federrath+ 2010}
     \item Multiples (N-body):
         \href{https://iopscience.iop.org/book/978-0-7503-1320-9}{AMUSE book (see Sec.~4.5)}
+    \item PeTar (N-body):
+        \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{PeTar, Wang+ 2020b}
+        \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.493.3398W/abstract}{SDAR, Wang+ 2020a}
+    \item SeBa (stellar evolution):
+        \href{https://ui.adsabs.harvard.edu/abs/1996A&A...309..179P/abstract}{Portegies Zwart \& Verbunt 1996}
+        \href{https://ui.adsabs.harvard.edu/abs/2012A&A...546A..70T/abstract}{Toonen, Nelemans \& Portegies Zwart 2012}
     \item Stratified box setup:
         \href{https://ui.adsabs.harvard.edu/abs/2006ApJ...653.1266J/abstract}{Joung \& Mac Low 2006},
         \href{https://ui.adsabs.harvard.edu/abs/2016ApJ...824...41I/abstract}{Ib\'{a}\~{n}ez-Mej\'{i}a+ 2016}
@@ -1282,7 +1289,7 @@ Instead of supplying ./configure with arguments when setting up AMUSE, all relev
 After this point everything is described in the guide.
 
 \subsection{Stampede2}
-This setup guide is credited to Brooke Polak.
+This setup guide is credited to Brooke Polak. \textbf{STAMPEDE2 IS NOW DISCONTINUED} - We leave the build instructions here as many of the steps are similar to other systems.
 
 After downloading AMUSE, Torch, and FLASH via git, load the following modules in \texttt{$\sim$/.profile}
 \begin{lstlisting}[language=bash]
@@ -1396,6 +1403,136 @@ SLURM submit script:
 #SBATCH --time=0:10:00
 export FI_PROVIDER=tcp
 ibrun -n 1 /home1/05402/bp4928/TORCH/env/torch_env/bin/python torch_user.py
+\end{lstlisting}
+
+\subsection{Stampede3}
+Those installation instructions are from Claude Cournoyer-Cloutier and Brooke Polak, with contributions from Eric Andersson. 
+
+After downloading AMUSE and Torch via git, and downloading FLASH from the FLASH website, create a torch.sh file and load the following modules:
+\begin{lstlisting}[language=bash]
+module load gcc/13.2.0
+module load impi
+module load python/3.9.18
+module load hdf5/1.10.11
+module load gsl/2.8
+module load mpfr/4.2.1
+module load fftw3/3.3.10
+\end{lstlisting}
+
+Also specify the following paths in torch.sh:
+\begin{lstlisting}[language=bash]
+export AMUSE_DIR=/home1/10548/cournoyc/TORCH/amuse
+export FLASH_DIR=/home1/10548/cournoyc/TORCH/FLASH4.6.2
+export TORCH_DIR=/home1/10548/cournoyc/TORCH/torch
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+
+export MODLOC=/opt/apps
+
+export MPIHOME=/opt/intel/oneapi/mpi/2021.11
+export MPI_HOME=$MPIHOME
+export MPI_RUN=$MPI_HOME/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+
+export HDF5_HOME=/opt/apps/gcc13/hdf5/1.10.11                                                                                                                                                                                                                                   
+export HDF5DIR=$HDF5_HOME
+export HDF5INCLUDE=$TACC_HDF5_INC
+export HDF5LIB="lhdf5_fortran -lhdf5"                                                                                                                                                                                                                                                  
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${TACC_MKL_LIB}:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export LIBRARY_PATH=${TACC_MKL_LIB}:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+
+### this fixes an error running a job                                                                                                                                                                                                                                            
+export MV2_ENABLE_AFFINITY=0
+\end{lstlisting}
+
+You can then create your virtual environment. Using a CONDA environment should also work, but the instructions below use a standard Python virtual environment.
+\begin{lstlisting}
+cd /home1/10548/cournoyc/TORCH
+python -m venv /home1/10548/cournoyc/TORCH/torch_env
+source /home1/10548/cournoyc/TORCH/torch_env/bin/activate 
+pip install --upgrade pip
+pip install ipython matplotlib numpy scipy docutils gmp h5py nose pytest
+pip install --upgrade setuptools
+pip install --no-cache-dir mpi4py
+\end{lstlisting}
+
+Now, you can install and configure Torch. You should start by running
+\begin{lstlisting}
+cd $TORCH_DIR
+./install.sh
+\end{lstlisting}
+
+You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH_DIR/sites}, run:
+\begin{lstlisting}
+cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
+\end{lstlisting}
+Then in \texttt{\$FLASH_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
+\begin{lstlisting}
+MPI_PATH   = ${MPI_HOME}
+HDF5_PATH   = ${HDF5_HOME}
+F90FLAGES = -fallow-argument-mismatch
+CFLAGS_HDF5 = -I${TACC_HDF5_INC} -DH5_USE_16_API
+LIB_HDF5  = -L ${HDF5_HOME}/lib -Wl,-rpath,${TACC_HDF5_LIB} -lhdf5 -lhdf5_fortran -lz
+\end{lstlisting}
+and replace all instances of \texttt{mpifort} by \texttt{mpif90}. Also change \texttt{setcheckinterval} to \texttt{setswitchinterval} in \texttt{FLASH4.6.2/bin/setup.py}. After this, you can compile FLASH:
+\begin{lstlisting}
+./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev +cube16 -maxblocks=50 --site=stampede3.tacc.utexas.edu
+cd object
+make 
+\end{lstlisting}
+
+Once you have successfully compiled FLASH, you can configure and build AMUSE. Go the AMUSE directory and un the following commands:
+\begin{lstlisting}
+./configure  # It should find the correct paths on its own
+make framework
+\end{lstlisting}
+To install the AMUSE flash worker, set the following in \texttt{amuse/src/amuse/community/flash/Makefile}:
+\begin{lstlisting}
+opt:   FCFLAGS = -O3 -march=native -fallow-argument-mismatch
+\end{lstlisting}
+In \texttt{amuse/config.mk}, set:
+\begin{lstlisting}
+FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
+\end{lstlisting}
+To install the AMUSE petar work, set the following in \texttt{amuse/src/amuse/community/petar/Makefile} (uncomment if commented out) and add the \texttt{-I} flag beofre \texttt{{\$INCLUDE}}:
+\begin{lstlisting}
+# arch
+CXXFLAGS += -march=core-avx2
+CXXFLAGS += -D INTRINSIC_X86
+CXXFLAGS += -D USE_SIMD
+CXXFLAGS += -D DIV_FIX
+\end{lstlisting}
+From there, you can make the worker codes:
+\begin{lstlisting}
+make flash.code petar.code seba.code kepler.code smalln.code ph4.code
+\end{lstlisting}
+
+SLURM submit script:
+\begin{lstlisting}
+#!/bin/sh
+#SBATCH --job-name=test
+#SBATCH -N 1
+#SBATCH -n 32
+#SBATCH -p skx-dev
+#SBATCH --time=0:10:00
+export FI_PROVIDER=psm3
+
+source /home1/10548/cournoyc/TORCH/torch_env/bin/activate
+
+ibrun -n 1 python torch_user.py
 \end{lstlisting}
 
 \newpage
