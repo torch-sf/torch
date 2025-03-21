@@ -108,12 +108,14 @@ SUBROUTINE rt_ionise(blockCount_,blockList_,dt,time)
     call PhysicalConstants_get("Boltzmann",kb)
 #ifdef IHA_SPEC
     !Save mass per particle in units of mH for species
-    call Multispecies_getProperty(IHA_SPEC,A,hA)
-    call Multispecies_getProperty(IHP_SPEC,A,hpA)
+    !call Multispecies_getProperty(IHA_SPEC,A,hA)
+    !call Multispecies_getProperty(IHP_SPEC,A,hpA)
 #ifdef H2_SPEC
     call Multispecies_getProperty(H2_SPEC,A,h2A)
 #endif
     !Convert this to mass
+    hA = 1.0
+    hpA = 1.0
     hA = hA * mH
     hpA = hpA * mH
     h2A = h2A * mH

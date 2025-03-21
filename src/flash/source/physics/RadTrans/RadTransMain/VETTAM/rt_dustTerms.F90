@@ -85,7 +85,8 @@ SUBROUTINE rt_dustTerms(dt)
 #ifdef PEFL_VAR
           if(current_band .eq. 'FUV') then 
           !Accumulate the energy absorbed by dust in the PE band
-            solnData(PEFL_VAR,i,j,k) = solnData(PEFL_VAR,i,j,k) + opac_planck * rt_speedlt * solnData(ERAD_VAR,i,j,k) * dt * rt_speedlt/1.6e-3 * rt_speedlt/1.6e-3
+            solnData(PEFL_VAR,i,j,k) = solnData(PEFL_VAR,i,j,k) + opac_planck * rt_speedlt * solnData(ERAD_VAR,i,j,k) * dt &
+                    & * rt_speedlt/1.6e-3 * rt_speedlt/1.6e-3
           endif
 #endif
 

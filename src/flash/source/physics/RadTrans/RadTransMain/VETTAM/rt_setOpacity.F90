@@ -50,11 +50,14 @@ SUBROUTINE rt_setOpacity()
     call PhysicalConstants_get("proton mass",mH)
 #if defined(IHA_SPEC) && defined(UEUV_VAR)
     !Set the mass per atoms here; although rt_ionise will do this, this is called after
-    call Multispecies_getProperty(IHA_SPEC,A,hA)
-    call Multispecies_getProperty(IHP_SPEC,A,hpA)
-    call Multispecies_getProperty(ELEC_SPEC,A,elecA)
-    call Multispecies_getProperty(H2_SPEC,A,h2A)
+    !call Multispecies_getProperty(IHA_SPEC,A,hA)
+    !call Multispecies_getProperty(IHP_SPEC,A,hpA)
+    !call Multispecies_getProperty(ELEC_SPEC,A,elecA)
+    !call Multispecies_getProperty(H2_SPEC,A,h2A)
     !Convert this to mass
+    hA = 1.0
+    hpA = 1.0
+    elecA = 0.0
     hA = hA * mH
     hpA = hpA * mH
     elecA = elecA * mH

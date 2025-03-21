@@ -26,11 +26,15 @@
 #include "Flash.h"
 #include "constants.h"
 #include "Multispecies.h"
+#include "Particles.h"
+
 SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
-#ifdef SINK_PART_TYPE
+#ifdef ACTIVE_PART_TYPE
   use Particles_sinkData, ONLY : particles_global, localnp, localnpf
   use Grid_interface, ONLY: Grid_getBlkIndexLimits,Grid_getBlkPtr, Grid_releaseBlkPtr, Grid_getCellCoords, Grid_getMinCellSize
   use pt_sinkInterface, ONLY: pt_sinkGatherGlobal
+  use Particles_data, only : particles, pt_typeInfo, pt_numLocal, allproc_particles
+  use Particles_interface, only : Particles_getGlobalNum, pt_gatherGlobal
   use Timers_interface, ONLY: Timers_start, Timers_stop
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use Driver_data, ONLY : dr_globalMe
@@ -51,6 +55,8 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
   real :: lum_sink, radius_cluster, jstr, sigma_sink, sink_pos(NDIM)
   real :: xdist, ydist, zdist, distsqr_point, delx
   integer :: b, blockID, i, j, k, p, istat
+  ! For counting particles.
+  integer                :: p_begin, p_end, p_num, p_globalnum
 
   !Ionizing Star Case (e.g.: source/Particles/ParticlesMain/Sink/StellarEvolution/PopIII/)
 #ifdef EUVRATE_13P6_15P2_PART_PROP
@@ -66,10 +72,10 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
     (/ integer :: LUMEUV_PART_PROP, LUMLW_PART_PROP, LUMPE_PART_PROP /)
   !Star cluster case (e.g.:  /scratch/ek9/sm5890/flash_newnew/flash-rsaa/source/Particles/ParticlesMain/Sink/StellarEvolution/StarCluster)
 #elif NION_PART_PROP
-    integer, parameter :: gather_nprops = 3
+    integer, parameter :: gather_nprops = 4
     integer, dimension(gather_nprops), save :: gather_propinds = &
-    (/ integer :: NION_PART_PROP, NPEP_PART_PROP, EPEP_PART_PROP /)
-    real :: lum_sink_sum, lum_weighted_thermpion, energyPerIonH
+    (/ integer :: NION_PART_PROP, EION_PART_PROP, NPEP_PART_PROP, EPEP_PART_PROP /)
+    real :: lum_sink_sum, lum_weighted_thermpion !, energyPerIonH
   !Star case (e.g.: /scratch/ek9/sm5890/flash_newnew/flash-rsaa/source/Particles/ParticlesMain/Sink/StellarEvolution)
 #else
   integer, parameter :: gather_nprops = 2
@@ -93,8 +99,9 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
 
   call Timers_start("sink_gaussian")
   !Gather all sink particles even from other procs
-  call pt_sinkGatherGlobal(gather_propinds, gather_nprops)
-
+  !call pt_sinkGatherGlobal(gather_propinds, gather_nprops)
+  call pt_gatherGlobal() !gather_propinds, gather_nprops)
+  call Particles_getGlobalNum(p_globalnum)
   !Currently just using minimum cell size globally in domain for dx
   call Grid_getMinCellSize(delx)
 
@@ -127,9 +134,15 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
   thermpionH2 = 0.0
 #endif
 
+
+! Local number of massive/active particles.
+p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
+p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
+p_end   = p_num + p_begin - 1
+
   !Loop over all sink particles in domain
-  do p = 1, localnpf
-    sink_pos = particles_global(POSX_PART_PROP:POSZ_PART_PROP,p)
+  do p = 1, p_globalnum !p_begin, p_end
+    sink_pos = allproc_particles(POSX_PART_PROP:POSZ_PART_PROP,p)
   !Ionizing Star Case (e.g.: source/Particles/ParticlesMain/Sink/StellarEvolution/PopIII/)
 #ifdef EUVRATE_13P6_15P2_PART_PROP
     !TODO: Here hnu is kept fixed in both the bands = 18eV. Should use 13.6eV and 18eV maybe respectively.
@@ -141,7 +154,7 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
 #ifdef LUMLW_PART_PROP
       lum_sink = particles_global(LUMLW_PART_PROP,p)
 #else
-      lum_sink = particles_global(NPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
 #endif
     else
       print *, "WARNING: Current band ", current_band, " not considered by Particles_sinkStellarEvolution. &
@@ -169,7 +182,7 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
 #elif defined(LUMEUV_PART_PROP)
     if(current_band .eq. 'EUV') then
 #ifdef UEUV_VAR
-      lum_sink = particles_global(LUMEUV_PART_PROP,p) !Note here it is not the EUVRate but the EUVLuminosity
+      lum_sink = particles(LUMEUV_PART_PROP,p) !Note here it is not the EUVRate but the EUVLuminosity
 #else
       call Driver_abortFlash("VETTAM/Photoionization is not compiled in but the EUV band is included.")
 #endif
@@ -185,24 +198,24 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
 #elif defined(NION_PART_PROP) 
     if(current_band .eq. 'EUV') then
 #ifdef UEUV_VAR
-      lum_sink = particles_global(NION_PART_PROP,p) * hnu
+      lum_sink = allproc_particles(NION_PART_PROP,p) * hnu 
 #ifdef EION_PART_PROP
       lum_sink_sum = lum_sink_sum + lum_sink
-      lum_weighted_thermpion = lum_weighted_thermpion + lum_sink * particles_global(EION_PART_PROP,p)
-      thermpionH = particles_global(EION_PART_PROP,p)
+      lum_weighted_thermpion = lum_weighted_thermpion + lum_sink * allproc_particles(EION_PART_PROP,p)
+      thermpionH = allproc_particles(EION_PART_PROP,p)
 #endif
 #else
       call Driver_abortFlash("VETTAM/Photoionization is not compiled in but the EUV band is included.")
 #endif
     else if(current_band .eq. 'FUV') then 
-      lum_sink = particles_global(NPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
     else if(current_band .eq. 'IR' .and. rt_freqbands .eq. 1) then
-      lum_sink = particles_global(NPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p) !Assume entire FUV luminosity of cluster reprocessed to IR at the subgrid level
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p) !Assume entire FUV luminosity of cluster reprocessed to IR at the subgrid level
     else if(current_band .eq. 'LYMAN_WERNER' .or. current_band .eq. 'LW') then
 #ifdef LUMLW_PART_PROP
       lum_sink = particles_global(LUMLW_PART_PROP,p)
 #else
-      lum_sink = particles_global(NPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)*particles_global(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
 #endif
     else
       lum_sink = 0.0
@@ -214,7 +227,6 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
 
 
     sigma_sink = sigma_star * delx
-
     !Loop over all blocks and cells
     do b = 1, blockCount_
       blockID = blockList_(b)
@@ -306,6 +318,7 @@ SUBROUTINE rt_sinkInject(blockCount_, blockList_, dtstep)
       call Grid_releaseBlkPtr(blockID,solnData)
   end do
 #endif
+
 
   call Timers_stop("sink_gaussian")
 

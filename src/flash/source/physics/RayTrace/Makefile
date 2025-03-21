@@ -1,1 +1,0 @@
-RayTrace += RayTrace.o           

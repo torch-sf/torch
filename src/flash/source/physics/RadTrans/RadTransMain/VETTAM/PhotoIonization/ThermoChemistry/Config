@@ -1,8 +1,10 @@
 # Configuration file for ionization with using KROME containers for quantifying/storing the ionisation state
 # AUTHOR: Shyam Menon (2022-2023)
-REQUESTS physics/sourceTerms/KromeChemistry
+#REQUESTS physics/sourceTerms/KromeChemistry
 
 #Neutral Atomic Hydrogen ionizations in per unit second -> to send to KROME
 VARIABLE IH
 #Molecular Hydrogen ionizations in per unit second -> to send to KROME
 VARIABLE IH2
+
+SPECIES ELEC

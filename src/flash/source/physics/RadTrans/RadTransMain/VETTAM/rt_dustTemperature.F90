@@ -582,7 +582,7 @@ CONTAINS
 
 #ifdef IHA_SPEC
     ggprod = (1.0 / (solnData(GAMC_VAR,i,j,k) - 1.0)) * eos_gasConstant
-    call Eos_getAbarZbar(solnData, abar)
+    call Eos_getAbarZbar(solnData(:,i,j,k), abar)
     alpha = (rho * ggprod)/abar
 #else
     ggprod = eos_gammam1 * eos_gasConstant
@@ -697,7 +697,7 @@ CONTAINS
 #endif
     d2 = dt*rt_speedlt
 #ifdef IHA_SPEC
-    call Eos_getAbarZbar(solnData, abar)
+    call Eos_getAbarZbar(solnData(:,i,j,k), abar)
     alpha = (rho * kB)/((solnData(GAMC_VAR,i,j,k)-1.0)*mH*abar)
 #else
     abar = eos_singleSpeciesA
@@ -757,7 +757,7 @@ CONTAINS
 
     d2 = dt*rt_speedlt
 #ifdef IHA_SPEC
-    call Eos_getAbarZbar(solnData, abar)
+    call Eos_getAbarZbar(solnData(:,i,j,k), abar)
     alpha = (solnData(GAMC_VAR,i,j,k)-1.0)*mH*abar/(rho * kB)
 #else
     abar = eos_singleSpeciesA

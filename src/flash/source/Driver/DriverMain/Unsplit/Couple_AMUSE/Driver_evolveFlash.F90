@@ -71,6 +71,9 @@ subroutine Driver_evolveFlash()
                                   Cosmology_solveFriedmannEqn, &
                                   Cosmology_getRedshift
   use RadTrans_interface,  ONLY : RadTrans
+#ifdef VETTAM  
+  use RadTrans_interface,  ONLY : IonHeatCool
+#endif
   use Eos_interface,       ONLY : Eos_logDiagnostics
   use Simulation_interface, ONLY: Simulation_adjustEvolution
   use Profiler_interface, ONLY : Profiler_start, Profiler_stop
@@ -438,6 +441,9 @@ subroutine Driver_evolveFlash()
         ! 3. Diffusive processes: 
         !    Radiation, viscosity, conduction, & magnetic registivity
         call RadTrans(blockCount, blockList, dr_dt)
+#ifdef VETTAM
+        call IonHeatCool(blockCount, blockList, dr_dt)
+#endif
         call Diffuse(blockCount, blockList, dr_dt)
         call Driver_driftUnk(__FILE__,__LINE__,driftUnk_flags)
 #ifdef DEBUG_DRIVER
@@ -516,6 +522,9 @@ subroutine Driver_evolveFlash()
         ! 3. Diffusive processes: *** CHANGED ORDER !!! ***
         !    Radiation, viscosity, conduction, & magnetic registivity
         call RadTrans(blockCount, blockList, dr_dt)
+#ifdef VETTAM
+        call IonHeatCool(blockCount, blockList, dr_dt)
+#endif
         call Diffuse(blockCount, blockList, dr_dt)
         call Driver_driftUnk(__FILE__,__LINE__,driftUnk_flags)
 #ifdef DEBUG_DRIVER

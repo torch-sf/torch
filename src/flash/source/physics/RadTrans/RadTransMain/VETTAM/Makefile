@@ -1,6 +1,7 @@
 #	Makefile for the VETTAM RHD Module
 
 RadTrans += RadTrans_data.o \
+        IonHeatCool.o calc_ionization.o rt_data.o \
 	rt_petsc.o \
     rt_fillMatrix.o \
     rt_dustTerms.o \
@@ -20,3 +21,4 @@ rt_fillMatrix.o : RadTrans_data.o \
 	       rt_setOpacity.o
 rt_dustTerms.o : RadTrans_data.o
 rt_dustTemperature.o : RadTrans_data.o
+

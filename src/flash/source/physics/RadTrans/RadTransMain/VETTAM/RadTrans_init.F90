@@ -24,6 +24,7 @@
 subroutine RadTrans_init()
 
   use RadTrans_data
+  use rt_interface, ONLY: rt_init
   use Driver_interface, ONLY            : Driver_abortFlash, Driver_getMype, Driver_getComm
   use Driver_data, ONLY                 : dr_globalMe
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
@@ -43,6 +44,9 @@ subroutine RadTrans_init()
 
   
   call RuntimeParameters_get("rt_T_min",rt_T_min)
+
+  !Torch stuff 
+  call rt_init
 
   !Flag for HLLE Correction (see Jiang et al 2013)
   call RuntimeParameters_get("rt_hlle_correction",use_hlle_correction)
