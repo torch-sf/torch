@@ -167,6 +167,11 @@ def binary_evolution(time, dt, state, hydro, se,
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
                 # implicitly zeros out feedback properties by not setting
+
+                # Update velocity from kick velocity - CCC 06/04/2025
+                s.vx += s.natal_kick_x
+                s.vy += s.natal_kick_y
+                s.vz += s.natal_kick_z
                 
                 # Set star to evolved after SN - CCC 29/10/2024
                 evolved_stars.add_particle(s)
@@ -201,15 +206,15 @@ def binary_evolution(time, dt, state, hydro, se,
                             # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                             # CCC 12/09/2024, 20/06/2023
                             E_bind = CE_alpha * _dE
-                            tprint('Ejecta energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
+                            #tprint('Ejecta energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
                         
                             # If there is no energy from the envelope ejection, do wind mass loss
                             # for the donor star instead
                         
                             if CE_method=='wind':
                                 
-                                if E_bind > 0 | units.erg:
-                                    _vterm = compute_vterm_binary(inj_mass, E_bind)
+                                if E_bind < 0 | units.erg:
+                                    _vterm = compute_vterm_binary(inj_mass, np.abs(E_bind.value_in(units.erg)) | units.erg)
                                     tprint('Ejecta velocity from change in energy', "{0:.1e}".format(_vterm.value_in(units.km/units.s)), 'km/s')
                                 else:
                                     _vterm = 1e6 | units.km/units.s # Very high velocity to ensure it defaults to wind velocity - CCC 06/04/2025
@@ -264,7 +269,7 @@ def binary_evolution(time, dt, state, hydro, se,
                                                                                    be.semi_major_axis, be.eccentricity,
                                                                                    orbital_elements[4][j], orbital_elements[5][j],
                                                                                    orbital_elements[6][j], orbital_elements[7][j])
-                        m1_f = 1./(1 + s.mass/t.mass)                                                                                                                                                           
+                        m1_f = 1./(1 + s.mass/t.mass)                                                                                                                                                
                         m2_f = 1./(1 + t.mass/s.mass)
                         s.position = COM - m1_f*rel_pos[0]
                         t.position = COM + m2_f*rel_pos[0]
