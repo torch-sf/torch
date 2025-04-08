@@ -181,7 +181,8 @@ def binary_evolution(time, dt, state, hydro, se,
                 if in_binary:
 
                     be = se.binaries[j] # Evolved binary
-                    
+
+                    # Energy after minus energy before --> should be > 0 for CE - CCC 08/04/2025
                     _dE = (units.constants.G / 2) * (((s.mass * t.mass / be.semi_major_axis) - old_mass[i]*old_mass[k] / b.semi_major_axis))[0] # Try here - CCC 08/12/2024
                     tprint('Change in binding energy:', "{0:.1e}".format(_dE.value_in(units.erg)), 'erg')
                     inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
@@ -192,7 +193,6 @@ def binary_evolution(time, dt, state, hydro, se,
                     or accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): 
                 
                         tprint('... Do mass transfer')
-                        tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
 
                         # Compare to wind mass loss rate - CCC 06/04/2025
                         dm_dt_wind_1, vterm_wind_1 = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
@@ -201,7 +201,9 @@ def binary_evolution(time, dt, state, hydro, se,
                                                                         massloss_method=massloss_method)
 
                         # If lost mass in excess of wind mass loss rate - CCC 06/04/2025
-                        if dm_dt_wind_1*dt > (old_mass[i] - s.mass) or dm_dt_wind_2*dt > (old_mass[k] - t.mass):                
+                        if dm_dt_wind_1*dt < (old_mass[i] - s.mass) or dm_dt_wind_2*dt < (old_mass[k] - t.mass): 
+
+                            tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
 
                             # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
                             # CCC 12/09/2024, 20/06/2023
@@ -213,8 +215,8 @@ def binary_evolution(time, dt, state, hydro, se,
                         
                             if CE_method=='wind':
                                 
-                                if E_bind < 0 | units.erg:
-                                    _vterm = compute_vterm_binary(inj_mass, np.abs(E_bind.value_in(units.erg)) | units.erg)
+                                if E_bind > 0 | units.erg:
+                                    _vterm = compute_vterm_binary(inj_mass, E_bind)
                                     tprint('Ejecta velocity from change in energy', "{0:.1e}".format(_vterm.value_in(units.km/units.s)), 'km/s')
                                 else:
                                     _vterm = 1e6 | units.km/units.s # Very high velocity to ensure it defaults to wind velocity - CCC 06/04/2025
@@ -269,7 +271,7 @@ def binary_evolution(time, dt, state, hydro, se,
                                                                                    be.semi_major_axis, be.eccentricity,
                                                                                    orbital_elements[4][j], orbital_elements[5][j],
                                                                                    orbital_elements[6][j], orbital_elements[7][j])
-                        m1_f = 1./(1 + s.mass/t.mass)                                                                                                                                                
+                        m1_f = 1./(1 + s.mass/t.mass)                                                                                                                                     
                         m2_f = 1./(1 + t.mass/s.mass)
                         s.position = COM - m1_f*rel_pos[0]
                         t.position = COM + m2_f*rel_pos[0]
