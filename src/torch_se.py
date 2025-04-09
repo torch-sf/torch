@@ -214,22 +214,24 @@ def binary_evolution(time, dt, state, hydro, se,
                             # for the donor star instead
                         
                             if CE_method=='wind':
-                                
-                                if E_bind > 0 | units.erg:
-                                    _vterm = compute_vterm_binary(inj_mass, E_bind)
-                                    tprint('Ejecta velocity from change in energy', "{0:.1e}".format(_vterm.value_in(units.km/units.s)), 'km/s')
-                                else:
-                                    _vterm = 1e6 | units.km/units.s # Very high velocity to ensure it defaults to wind velocity - CCC 06/04/2025
                             
                                 if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
                                     # If donor is star s
                                     dm_dt[i] = inj_mass/dt
-                                    vterm[i] = min([_vterm, vterm_wind_1]) # Cap the ejecta velocity at the wind velocity
-                                    tprint('Ejecta velocity', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
+                                    if E_bind > 0 | units.erg:
+                                        vterm[i] = compute_vterm_binary(inj_mass, E_bind)
+                                        tprint('Ejecta velocity from change in energy', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
+                                    else:
+                                        vterm[i] = vterm_wind_1 # Cap the ejecta velocity at the wind velocity
+                                        tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
                                 else:
                                     dm_dt[k] = inj_mass/dt
-                                    vterm[k] = min([_vterm, vterm_wind_2]) # Cap the ejecta velocity at the wind velocity
-                                    tprint('Ejecta velocity', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
+                                    if E_bind > 0 | units.erg:
+                                        vterm[k] = compute_vterm_binary(inj_mass, E_bind)
+                                        tprint('Ejecta velocity from change in energy', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
+                                    else:
+                                        vterm[k] = vterm_wind_2 # Cap the ejecta velocity at the wind velocity
+                                        tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
                         
                             elif CE_method=='SN':
                                 _tmp = hydro.energy_injection(E_bind, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
@@ -733,7 +735,7 @@ class PulsStellarWind(object):
     def thom_Gam(self):
         self.thom_Gam = 7.66e-5*self.thom_sig/self.mass.value_in(units.MSun)*self.lum.value_in(units.LSun)
         tprint('Gamma =', self.thom_Gam)
-        self.thom_Gam = min(self.thom_Gam, 0.5)
+        self.thom_Gam = min(self.thom_Gam, 0.8)
         return
 
     def vesc(self):
