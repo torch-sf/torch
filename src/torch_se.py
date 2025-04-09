@@ -79,6 +79,10 @@ def binary_evolution(time, dt, state, hydro, se,
         # Initial guess for the radius if running with user ICs - CCC 12/05/2023
         # Use BB luminosity and radius, luminosity
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
+    if "wind_mass_loss_rate" not in _attributes:
+        # Save wind mass loss rate for comparison - CCC 09/04/2025
+        # Set to 0 initially
+        state.stars.wind_mass_loss_rate = np.zeros(len(state.stars)) | units.MSun / units.yr 
 
     
     # Update ALL the star properties in bulk for consistency.
@@ -184,15 +188,14 @@ def binary_evolution(time, dt, state, hydro, se,
 
                     # Energy after minus energy before --> should be > 0 for CE - CCC 08/04/2025
                     _dE = (units.constants.G / 2) * (((s.mass * t.mass / be.semi_major_axis) - old_mass[i]*old_mass[k] / b.semi_major_axis))[0] # Try here - CCC 08/12/2024
-                    tprint('Change in binding energy:', "{0:.1e}".format(_dE.value_in(units.erg)), 'erg')
                     inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
                     # If _dE > 0, mass transfer or CE; if _dE < 0, wind mass loss
 
                     # Different ways to detect the interaction - CCC 06/04/2025
                     if (_dE > (0 | units.erg)) or (be.binary_type > 2) or (be.semi_major_axis < b.semi_major_axis) \
                     or accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): 
-                
-                        tprint('... Do mass transfer')
+                        
+                        tprint('... Change orbit from BE')
 
                         # Compare to wind mass loss rate - CCC 06/04/2025
                         dm_dt_wind_1, vterm_wind_1 = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
@@ -201,8 +204,11 @@ def binary_evolution(time, dt, state, hydro, se,
                                                                         massloss_method=massloss_method)
 
                         # If lost mass in excess of wind mass loss rate - CCC 06/04/2025
-                        if dm_dt_wind_1*dt < (old_mass[i] - s.mass) or dm_dt_wind_2*dt < (old_mass[k] - t.mass): 
-
+                        # Wind mass loss rate from SeBa is negative by definition
+                        if dm_dt_wind_1 > -1*s.wind_mass_loss_rate or dm_dt_wind_2 > -1*t.wind_mass_loss_rate: 
+                            print(dm_dt_wind_1.value_in(units.MSun/units.yr), s.wind_mass_loss_rate.value_in(units.MSun/units.yr), 
+                                  dm_dt_wind_2.value_in(units.MSun/units.yr), t.wind_mass_loss_rate.value_in(units.MSun/units.yr))
+                            tprint('... Do mass transfer')
                             tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
 
                             # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
