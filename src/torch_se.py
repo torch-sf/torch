@@ -180,6 +180,32 @@ def binary_evolution(time, dt, state, hydro, se,
                 # Set star to evolved after SN - CCC 29/10/2024
                 evolved_stars.add_particle(s)
                 
+            # Check if companion went supernova - CCC 15/04/2025
+            if in_binary and with_sn and went_supernova(t.stellar_type):
+                
+                inj_mass = old_mass[k] - t.mass  # minus stellar remnant's mass
+                
+                if inj_mass > 15.0|units.MSun:
+                    # expected upper limit for SeBa tracks; see
+                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                    inj_mass = 15.0|units.MSun
+
+                # inject energy and mass onto grid
+                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), t.x, t.y, t.z)
+                se_dt = min(se_dt, _tmp)
+                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(t.x, t.y, t.z, inj_mass.value_in(units.MSun), s.tag))
+
+                # implicitly zeros out feedback properties by not setting
+
+                # Update velocity from kick velocity - CCC 06/04/2025
+                t.vx += t.natal_kick_x
+                t.vy += t.natal_kick_y
+                t.vz += t.natal_kick_z
+                
+                # Set star to evolved after SN - CCC 29/10/2024
+                evolved_stars.add_particle(t)
+                
             else: # Check if in binary to determine the feedback mechanisms - CCC 29/10/2024
                 
                 if in_binary:
