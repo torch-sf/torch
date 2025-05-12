@@ -243,6 +243,10 @@ SPECIES IHA
 PPDEFINE VETTAM
 
 # TORCH STUFF
+# CFL factor to limit radiation pressure velocity
+# of timestep with newly formed feedback stars -BP19Jan23
+PARAMETER cfl_radPressure REAL 0.3
+
 #rt_maxHchange Max change in H ionization/neutral fraction to target
 #D & during rad/ionize subcycle timestep.  This linearly modifies the radiation
 #D & timestep adopted by code.

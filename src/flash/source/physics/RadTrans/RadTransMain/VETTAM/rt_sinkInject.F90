@@ -154,7 +154,7 @@ p_end   = p_num + p_begin - 1
 #ifdef LUMLW_PART_PROP
       lum_sink = particles_global(LUMLW_PART_PROP,p)
 #else
-      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
 #endif
     else
       print *, "WARNING: Current band ", current_band, " not considered by Particles_sinkStellarEvolution. &
@@ -208,14 +208,14 @@ p_end   = p_num + p_begin - 1
       call Driver_abortFlash("VETTAM/Photoionization is not compiled in but the EUV band is included.")
 #endif
     else if(current_band .eq. 'FUV') then 
-      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
     else if(current_band .eq. 'IR' .and. rt_freqbands .eq. 1) then
-      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p) !Assume entire FUV luminosity of cluster reprocessed to IR at the subgrid level
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p) !Assume entire FUV luminosity of cluster reprocessed to IR at the subgrid level
     else if(current_band .eq. 'LYMAN_WERNER' .or. current_band .eq. 'LW') then
 #ifdef LUMLW_PART_PROP
       lum_sink = particles_global(LUMLW_PART_PROP,p)
 #else
-      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
+      lum_sink = allproc_particles(NPEP_PART_PROP,p)*allproc_particles(EPEP_PART_PROP,p)
 #endif
     else
       lum_sink = 0.0

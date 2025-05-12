@@ -27,6 +27,7 @@ SUBROUTINE rt_setOpacity()
   use SemenovOpacities, only: getOpacity_planck, getOpacity_rosseland
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY: PhysicalConstants_get
+  use Heat_data, ONLY: he_dust_sputter_temp
 #if defined(IHA_SPEC) && defined(UEUV_VAR)
   use rt_ionisedata, ONLY : hA, hpA, elecA, h2A, ion_sigmaH, ion_sigmaH2, ion_sigmaH2_15p2_infty, &
                             & ion_sigmaH_13p6_15p2, ion_sigmaH_15p2_infty, useH2Ionize
@@ -48,6 +49,8 @@ SUBROUTINE rt_setOpacity()
     if ((dr_globalMe .eq. MASTER_PE)) &
       & print *, 'Dust to Gas ratio adopted = ',dusttoGasRatio
     call PhysicalConstants_get("proton mass",mH)
+    call RuntimeParameters_get('sim_A_n', hA)
+    call RuntimeParameters_get('sim_A_i', hpA)
 #if defined(IHA_SPEC) && defined(UEUV_VAR)
     !Set the mass per atoms here; although rt_ionise will do this, this is called after
     !call Multispecies_getProperty(IHA_SPEC,A,hA)
@@ -55,8 +58,8 @@ SUBROUTINE rt_setOpacity()
     !call Multispecies_getProperty(ELEC_SPEC,A,elecA)
     !call Multispecies_getProperty(H2_SPEC,A,h2A)
     !Convert this to mass
-    hA = 1.0
-    hpA = 1.0
+    !hA = 1.0
+    !hpA = 1.0
     elecA = 0.0
     hA = hA * mH
     hpA = hpA * mH
@@ -192,7 +195,7 @@ SUBROUTINE rt_setOpacity()
 #ifdef TEMP_VAR
           !Destroy dust opacities due to thermal sputtering if gas temperatures > 10^6 K
           !TODO: Implement non-thermal sputtering
-          if(solnData(TEMP_VAR,i,j,k) .gt. 1.e6) then
+          if(solnData(TEMP_VAR,i,j,k) .gt. he_dust_sputter_temp) then
             opac_planck = 0.0
             opac_rosseland = 0.0
           endif
