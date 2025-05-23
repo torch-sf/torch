@@ -1,636 +1,226 @@
 """
-Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017), Winters et al. (2019) and Offner et al. (2022)
-Claude Cournoyer-Cloutier, McMaster University, 2020, 2021, 2023
-If used, please cite Cournoyer-Cloutier et al. (2021), MNRAS 501, 4464.
+Binary generation algorithm, making use of statistics by Moe & Di Stefano (2017), 
+Winters et al. (2019) and Offner et al. (2022)
+Claude Cournoyer-Cloutier, McMaster University, 2020-2025
+If used, please cite Cournoyer-Cloutier et al. (2024), ApJ 977, Issue 2, id. 203
+https://ui.adsabs.harvard.edu/abs/2024ApJ...977..203C/abstract
 """
 
 import numpy as np
 from amuse.lab import units
-from amuse.ext.orbital_elements import generate_binaries, true_anomaly_from_eccentric_anomaly
+from amuse.ext.orbital_elements import *
 
-
-def get_multiplicity(m_arr, binaries=True, mult_frac='field'):
-
-    def interpolate(m_low, m_high, CF_low, CF_high, m):
-        a = (CF_high - CF_low) / (m_high - m_low)
-        b = CF_high - a * m_high
-        return a * m + b
-
+def get_multiplicity(m):
+    """
+    Return a boolean array, with true for primaries and false for singles
+    - CCC 16/11/2024
+    """
+    
     def companion_frequency(m):
-
-        if mult_frac == 'field':
+        """
+        Use a piecewise function to return the companion frequency as a function of primary mass.
+        Between mass ranges, use the average.
+        """
+        mass_ranges = [m < 0.15, 
+                       (m >= 0.15) & (m < 0.30), 
+                       (m >= 0.30) & (m < 0.60), 
+                       (m >= 0.60) & (m < 0.80), 
+                       (m >= 0.80) & (m < 1.2), 
+                       (m >= 1.2) & (m < 2), 
+                       (m >= 2) & (m < 5), 
+                       (m >= 5) & (m < 9), 
+                       (m >= 9) & (m < 16), 
+                       m >= 16]
+        frequencies = [0.19, 0.23, 0.30, 0.35, 0.40, 0.50, 0.59, 0.76, 0.84, 0.94]
+        
+        return np.piecewise(m, mass_ranges, frequencies)
     
-            """
-            For masses below 0.6 MSun, we use the primary mass dependent binary fraction from Winters et al. (2019)
-            as reported and corrected in Offner et al. (2022). Above 0.8 MSun, we use the multiple star fraction
-            (binary + triple/quad fraction) from Moe & di Stefano (2017). Between mass bins, we interpolate.
-            """
+    def random_fraction(m):
+        """
+        Get a random value between 0 and 1 with the same shape as the mass array
+        """
+        return np.random.uniform(size=len(m))
+
+    frq = companion_frequency(m)
+    rnd = random_fraction(m)
+    
+    primaries_IDs = np.zeros(len(frq), dtype=bool)
+    singles_IDs   = np.zeros(len(frq), dtype=bool)
+    primaries_IDs[np.where(rnd < frq)] = np.ones(len(np.where(rnd < frq)), dtype=bool)
+    singles_IDs[np.where(rnd >= frq)]  = np.ones(len(np.where(rnd >= frq)), dtype=bool)
+
+    return primaries_IDs, singles_IDs
+
+
+
+def get_periods_M17(m, pdist='inner'):
+    """
+    Sample the period based on the distributions reported by Moe & di Stefano (2017),
+    for the specified mass range and period distribution. Choices of mass distributions
+    are 'solar', 'AB', 'mid-B', 'early-B', and 'O'; choices of period distributions are
+    'field' and 'inner'. 
+    out: period in days
+    - CCC 17/11/2024
+    """
+        
+    def pdf(log_p, m_range=-1, pdist=pdist):
+        
+        log_p_values = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
+        
+        frequencies = np.array([[0.027, 0.027, 0.057, 0.057, 0.095, 0.095, 0.075, 0.075], #solar
+                                [0.07, 0.07, 0.12, 0.12, 0.13, 0.13, 0.09, 0.09], # AB
+                                [0.14, 0.14, 0.22, 0.22, 0.20, 0.20, 0.11, 0.11], # mid B
+                                [0.19, 0.19, 0.26, 0.26, 0.23, 0.23, 0.13, 0.13], # early B
+                                [0.29, 0.29, 0.32, 0.32, 0.30, 0.30, 0.18, 0.18]]) # O
+        
+        frac_close = np.array([15./50, 37./59, 63./76, 80./84, 1.])
+        
+        probabilities = np.interp(log_p, log_p_values, frequencies[m_range], left=0, right=0) # Zero outside bounds
+        
+        if pdist == 'inner':
+            _inner = np.where(log_p <= 3.7)[0]
+            _outer = np.where(log_p > 3.7)[0]
+            probabilities[_inner] *= frac_close[m_range]
+            probabilities[_outer] *= (1-frac_close)[m_range]
             
-            if m < 0.15:
-                CF = 0.19
-            elif 0.15 <= m < 0.3:
-                CF = 0.23
-            elif 0.3 <= m < 0.6:
-                CF = 0.30
-            elif 0.6 <= m < 0.8:
-                CF = interpolate(0.6, 0.8, 0.282, 0.4, m)                        
-            elif 0.8 <= m < 1.2:
-                CF = 0.4                                
-            elif 1.2 <= m < 2:
-                CF = interpolate(1.2, 2, 0.4, 0.59, m)                                                
-            elif 2 <= m < 5:
-                CF = 0.59                                                
-            elif 5 <= m < 9:
-                CF = 0.76                                                        
-            elif 9 <= m < 16:
-                CF = 0.84                                                                
-            elif m >= 16:
-                CF = 0.94
-                                                                                        
-            return CF
+        return probabilities
+        
+    def inv_transform_sampling(m, m_range=-1, pdist=pdist):
+            
+        log_p = np.arange(0.5, 7.501, 0.001)
+        
+        _pdf = pdf(log_p, m_range, pdist=pdist)
+            
+        cdf = np.cumsum(_pdf)
+        cdf = cdf/cdf[-1] # Normalize the cdf
+            
+        percentiles = np.random.uniform(size=len(m))
+        args = abs(percentiles[:, None] - cdf[None, :]).argmin(axis=-1)
+        return_log_p = log_p[args]
+            
+        return return_log_p
 
-        else:
-            print('Please select a valid argument for the multiplicity. Options are \'field\' and TBD.')
+    p = np.zeros(len(m))
+    # O stars
+    _mask = np.where(m >= 16)[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-1, pdist=pdist)
+    # Early B stars
+    _mask = np.where((m >= 9) & (m < 16))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=3, pdist=pdist)
+    # Mid B stars
+    _mask = np.where((m >= 5) & (m < 9))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
+    # AB stars
+    _mask = np.where((m >= 1.6) & (m < 5))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=1, pdist=pdist)
+    # Solar-type stars and below
+    _mask = np.where(m < 1.6)[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=0, pdist=pdist)
 
-    multiplicity = []
-    singles      = []
-    primaries    = []
+    return p
 
-    if (binaries):
-        for m in m_arr:
-            mult_prob = np.random.uniform()
-            if mult_prob <= companion_frequency(m):
-                multiplicity.append(1)
-                primaries.append(m)
-            else:
-                multiplicity.append(0)
-                singles.append(m)
+
+def get_mass_ratios_M17(m, p):
+    """
+    Sample the mass ratio based on the distributions reported by Moe & di Stefano (2017),
+    for the specified mass range, for a given period. Choices of mass distributions
+    are 'solar', 'AB', 'mid-B', 'early-B', and 'O'.
+    out: mass ratio (dimensionless)
+    - CCC 17/11/2024
+    """
+
+    def pdf(q, p, m_range=-1):
+        
+        q_ranges = [q < 0.1, (q >= 0.1) & (q < 0.3), (q >= 0.3) & (q < 0.95), (q >= 0.95) & (q <= 1), q > 1]
+        
+        gamma_S = np.array([[0.3, 0.3, 0.3, 0.3],
+                            [0.2, 0.1, -0.5, -1.0],
+                            [0.1, -0.2, -1.2, -1.5],
+                            [0.1, -0.2, -1.2, -1.5],
+                            [0.1, -0.2, -1.2, -1.5]]) # Check values
+        
+        gamma_L = np.array([[-0.5, -0.5, -0.5, -1.1],
+                            [-0.5, -0.9, -1.4, -2.0],
+                            [-0.5, -1.7, -2.0, -2.0],
+                            [-0.5, -1.7, -2.0, -2.0],
+                            [-0.5, -1.7, -2.0, -2.0]]) # Check values
+        
+        excess_twin = np.array([[0.23, 0.2, 0.1, 0],
+                                [0.22, 0.10, 0, 0],
+                                [0.17, 0, 0, 0],
+                                [0.14, 0, 0, 0],
+                                [0.08, 0, 0, 0]])
+            
+        pdfs = np.zeros((4, len(q))) # Create an array for the different pdfs, with four period bins
+        
+        for i in range(4): # 4 period bins here
+            frequencies = [lambda q: 0, 
+                           lambda q: q**gamma_S[m_range][i] * 0.3**(gamma_L[m_range][i]-gamma_S[m_range][i]), 
+                           lambda q: q**gamma_L[m_range][i], 
+                           lambda q: q**gamma_L[m_range][i] + excess_twin[m_range][i], 
+                           lambda q: 0]
+            
+            probabilities = np.piecewise(q, q_ranges, frequencies) #m, mass_ranges, frequencies
+            pdfs[i] = probabilities
+        
+        return pdfs
+    
+    def inv_transform_sampling(p, m):
+            
+        q = np.arange(0.1, 1.001, 0.001)
+        
+        return_q = np.zeros(len(p))
+        
+        def get_q(q, _p, m_range=-1):
+            
+            _return_q = np.zeros(len(_p))
+
+            pdfs = pdf(q, _p, m_range) # One per period range
+        
+            log_p_centres = np.array([1, 3, 5, 7])
+            args = abs(np.log10(_p)[:, None] - log_p_centres[None, :]).argmin(axis=-1)
+        
+            # Per period range
+            for i, arg in enumerate(np.unique(args)):
+                _pdf = pdfs[i]
+                p_mask = np.where(args == arg)[0] 
+            
+                cdf = np.cumsum(_pdf)
+                cdf = cdf/cdf[-1] # Normalize the cdf
+            
+                percentiles = np.random.uniform(size=len(p[p_mask]))
+                q_args = abs(percentiles[:, None] - cdf[None, :]).argmin(axis=-1)
+            
+                _return_q[p_mask] = q[q_args]
+            
+            return _return_q
                 
-    else:
-        for m in m_arr:
-            multiplicity.append(0)
-            singles.append(m)
-
-    return multiplicity, singles, primaries
-
-
-
-def get_period(mass, pdist='field'):
-    
-    """
-    For masses below 0.6 MSun, we use the lognormal period distributions from Winters et al. (2019).
-    The means are those reported in Offner et al. (2022) and the standard deviations are obtained
-    from table 2 in Offer et al. (2022), with the one from 0.15 MSun to 0.30 MSun taken as the
-    midpoint in logpsace between the other two standard deviations.
-    For masses above 0.6 MSun, we use the period distributions from Moe & Di Stefano. We extend the
-    period distrbutions up and down to 1.6 MSun from 1.2 and 2 MSun.
-    """
-    
-    def interpolate(p_high, p_low, prob_high, prob_low, p):
-        a = (prob_high - prob_low) / (p_high - p_low)
-        b = prob_high - a * p_high
-        return a * p + b
-    
-    
-    def m_dwarfs(m, pdist):
-        
-        def probability(m, pdist):
+        # O stars
+        _mask = np.where(m >= 16)[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=-1)            
+        # Early B stars
+        _mask = np.where((m >= 9) & (m < 16))[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=3) 
+        # Mid B stars
+        _mask = np.where((m >= 5) & (m < 9))[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=2) 
+        # AB stars
+        _mask = np.where((m >= 1.6) & (m < 5))[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=1) 
+        # Solar-type stars
+        _mask = np.where(m < 1.6)[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=0) 
             
-            if pdist == 'inner':
-                if m < 0.15:
-                    a = 10**(np.random.normal(np.log10(3.1), 0.7))
-                elif 0.15 <= m < 0.30:
-                    a = 10**(np.random.normal(np.log10(6), 1.1))
-                elif 0.30 <= m:
-                    a = 10**(np.random.normal(np.log10(14), 1.3))
-            
-            elif pdist == 'field':
-                if m < 0.15:
-                    a = 10**(np.random.normal(np.log10(3.9), 0.7))
-                elif 0.15 <= m < 0.30:
-                    a = 10**(np.random.normal(np.log10(10), 1.1))
-                elif 0.30 <= m:
-                    a = 10**(np.random.normal(np.log10(26), 1.3))
+        return return_q
+    
+    q = inv_transform_sampling(p, m)
 
-            return a
-        
-        def mass_ratio(m):
-            
-            q = 0
-            h = 10
-            prob = 0
-            
-            while prob < h:
-                low = np.max([0.1, 0.08 / m])
-                q = np.random.uniform(low, 1)
-                if m < 0.3:
-                    prob = q**0.7
-                else:
-                    prob = q**0.1
-                h = np.random.uniform(0, 1)
-            
-            return q
-        
-        def period(m, pdist):
-            
-            q = mass_ratio(m)
-            m2 = q*m
-            p = 0
-            while (p < 0.5) or (p > 7.5):
-                a = probability(m, pdist) | units.AU
-                M = (m+m2) | units.MSun
-                p = np.log10(np.sqrt(4*(np.pi**2)*(a**3)/(units.constants.G*M)).value_in(units.yr)*(365.25))
-            
-            return p, q
-        
-        period_m_dwarf, q_m_dwarf = period(m, pdist)
-        
-        return period_m_dwarf, q_m_dwarf
-    
-    
-    def solar_and_above(m):
-        
-        def probability(m, x):
-            
-            if 0.6 <= m < 1.6:
-                prob_max = 0.095
-                if 0.5 <= x < 1.5:
-                    prob = 0.027
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.057, 0.027, x)
-                elif 2.5 <= x < 3.5:
-                    prob = 0.057
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.095, 0.057, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.095
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.075, 0.095, x)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.075
-                else:
-                    prob = 0
-        
-        
-            elif 1.6 <= m < 5:
-                prob_max = 0.13
-                if 0.5 <= x < 1.5:
-                    prob = 0.07
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.12, 0.07, x)
-                elif 2.5 <= x < 3.5:
-                    prob = 0.12
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.13, 0.12, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.13
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.09, 0.13, x)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.09
-                else:
-                    prob = 0
-    
-            elif 5 <= m < 9:
-                prob_max = 0.22
-                if 0.5 <= x < 1.5:
-                    prob = 0.14
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.22, 0.14, x)
-                elif 2.5 <= x < 3.5:
-                    prob = 0.22
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.20, 0.22, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.20
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.11, 0.20, x)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.11
-                else:
-                    prob = 0
-                        
-            elif 9 <= m < 16:
-                prob_max = 0.26
-                if 0.5 <= x < 1.5:
-                    prob = 0.19
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.26, 0.19, x)
-                elif 2.5 <= x < 3.5:
-                    prob = 0.26
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.23, 0.26, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.23
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.13, 0.23, x)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.13
-                else:
-                    prob = 0
-                                                                                            
-            elif m >= 16:
-                prob_max = 0.32
-                if 0.5 <= x < 1.5:
-                    prob = 0.29
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.32, 0.29, x)
-                elif 2.5 <= x < 3.5:
-                    prob = 0.32
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.30, 0.32, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.30
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.18, 0.30, x)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.18
-                else:
-                    prob = 0
-                                                                                                                                                                
-            return prob, prob_max
-
-        def period(m):
-            p = np.random.uniform(0.5, 7.5)
-            h = 1
-            prob, prob_max = probability(m, p)
-            while prob < h:
-                p = np.random.uniform(0.5, 7.5)
-                h = np.random.uniform(0, prob_max)
-                prob, prob_max = probability(m, p)
-            return p
-                                    
-        period_above_solar = period(m)
-        return period_above_solar
-        
-    def inner_solar_and_above(m):
-        
-        def probability(m, x):
-            
-            if 0.6 <= m < 1.6:
-                frac_close = 15./50
-                prob_max = np.max([0.095 * (1-frac_close), 0.057*frac_close])
-                if 0.5 <= x < 1.5:
-                    prob = 0.027 * frac_close
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.057, 0.027, x) * frac_close
-                elif 2.5 <= x < 3.5:
-                    prob = 0.057 * frac_close
-                elif 3.5 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.095 * (1-frac_close), 0.057 * frac_close, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.095 * (1-frac_close)
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.075, 0.095, x) * (1-frac_close)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.075 * (1-frac_close)
-                else:
-                    prob = 0
-        
-            elif 1.6 <= m < 5:
-                frac_close = 37./59
-                prob_max = np.max([0.13 * (1-frac_close), 0.12*frac_close])
-                if 0.5 <= x < 1.5:
-                    prob = 0.07 * frac_close
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.12, 0.07, x) * frac_close
-                elif 2.5 <= x < 3.7:
-                    prob = 0.12 * frac_close
-                elif 3.7 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.13*(1-frac_close), 0.12*frac_close, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.13 * (1-frac_close)
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.09, 0.13, x) * (1-frac_close)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.09 * (1-frac_close)
-                else:
-                    prob = 0
-
-            elif 5 <= m < 9:
-                frac_close = 63./76
-                prob_max = np.max([0.2 * (1-frac_close), 0.22*frac_close])
-                if 0.5 <= x < 1.5:
-                    prob = 0.14 * frac_close
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.22, 0.14, x) * frac_close
-                elif 2.5 <= x < 3.7:
-                    prob = 0.22 * frac_close
-                elif 3.7 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.20 * (1-frac_close), 0.22 * frac_close, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.20 * (1-frac_close)
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.11, 0.20, x) * (1-frac_close)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.11 * (1-frac_close)
-                else:
-                    prob = 0
-        
-            elif 9 <= m < 16:
-                frac_close = 80./84
-                prob_max = np.max([0.26*(1-frac_close), 0.23*frac_close])
-                if 0.5 <= x < 1.5:
-                    prob = 0.19*frac_close
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.26, 0.19, x)*frac_close
-                elif 2.5 <= x < 3.7: # Extend to 3.7
-                    prob = 0.26*frac_close
-                elif 3.7 <= x < 4.5:
-                    prob = interpolate(4.5, 3.5, 0.23*(1-frac_close), 0.26*frac_close, x)
-                elif 4.5 <= x < 5.5:
-                    prob = 0.23*(1-frac_close)
-                elif 5.5 <= x < 6.5:
-                    prob = interpolate(6.5, 5.5, 0.13, 0.23, x)*(1-frac_close)
-                elif 6.5 <= x < 7.5:
-                    prob = 0.13*(1-frac_close)
-                else:
-                    prob = 0
-
-            elif m >= 16:
-                prob_max = 0.32
-                if 0.5 <= x < 1.5:
-                    prob = 0.29
-                elif 1.5 <= x < 2.5:
-                    prob = interpolate(2.5, 1.5, 0.32, 0.29, x)
-                elif 2.5 <= x < 3.7: # Extend to 3.7
-                    prob = 0.32
-                else:
-                    prob = 0
-                        
-            return prob, prob_max
-                
-        def period(m):
-            p = np.random.uniform(0.5, 7.5)
-            h = 1
-            prob, prob_max = probability(m, p)
-            while prob < h:
-                p = np.random.uniform(0.5, 7.5)
-                h = np.random.uniform(0, prob_max)
-                prob, prob_max = probability(m, p)
-            return p
-
-        period_above_solar = period(m)
-        return period_above_solar
-
-    if pdist == 'field':
-        if mass < 0.6:
-            p, q = m_dwarfs(mass, pdist)
-        else:
-            p = solar_and_above(mass)
-            q = -1
-    elif pdist == 'inner':
-        if mass < 0.6:
-            p, q = m_dwarfs(mass, pdist)
-        else:
-            p = inner_solar_and_above(mass)
-            q = -1
-    else:
-        print('Please select a valid argument for the period distribution. Options are \'field\' and \'inner\'.')
-
-    return p, q
-
-
-def get_companion_mass(mass, period, q_tmp, qdist='field'):
-    
-    """
-    From Moe & di Stefano (2017), except for M-dwarfs from Winters et al. (2019)
-    M-dwarfs have a uniform distribution of mass ratios; the mass ratio is already
-    selected in the period step for M-dwarfs. The mass bins are extended, there is
-    no interpolation.
-    """
-    
-    # Between 0.6 and 1.6 MSun
-    def prob_solar(P, x):
-        
-        # Period ranges
-        if 0.5 <= P < 6:
-            g_small = 0.3
-            g_large = -0.5
-        else:
-            g_small = 0.3
-            g_large = -1.1
-        
-        # Match the values at q=0.3
-        corr_fac = 0.3**(g_small-g_large)
-        
-        # Excess twin fraction
-        if x >= 0.95:
-            if P <= 2:
-                twin = 0.3
-            elif 2 < P <= 4:
-                twin = 0.2
-            elif 4 < P <= 6:
-                twin = 0.1
-            else:
-                twin = 0
-        else:
-            twin = 0
-        
-        # Probabilities
-        if x < 0.3:
-            prob = x**g_small + twin
-        else:
-            prob = corr_fac * x**g_large + twin
-        
-        return prob
-    
-    # Between 1.6 and 5 MSun
-    def prob_AB(P, x):
-        
-        # Period ranges
-        if 0.5 <= P < 2:
-            g_small = 0.2
-            g_large = -0.5
-        elif 2 <= P < 4:
-            g_small = 0.1
-            g_large = -0.9
-        elif 4 <= P < 6:
-            g_small = -0.5
-            g_large = -1.4
-        else:
-            g_small = -1.0
-            g_large = -2.0
-        
-        # Match the values at q=0.3
-        corr_fac = 0.3**(g_small-g_large)
-        
-        # Excess twin fraction
-        if x >= 0.95:
-            if P <= 2:
-                twin = 0.22
-            elif 2 < P <= 4:
-                twin = 0.10
-            else:
-                twin = 0
-        else:
-            twin = 0
-        
-        # Probabilities
-        if x < 0.3:
-            prob = x**g_small + twin
-        else:
-            prob = corr_fac * x**g_large + twin
-        
-        return prob
-    
-    # Between 5 and 9 MSun
-    def prob_midB(P, x):
-        
-        # Period ranges
-        if 0.5 <= P < 2:
-            g_small = 0.1
-            g_large = -0.5
-        elif 2 <= P < 4:
-            g_small = -0.2
-            g_large = -1.7
-        elif 4 <= P < 6:
-            g_small = -1.2
-            g_large = -2.0
-        else:
-            g_small = -1.5
-            g_large = -2.0
-        
-        # Match the values at q=0.3
-        corr_fac = 0.3**(g_small-g_large)
-        
-        # Excess twin fraction
-        if x >= 0.95:
-            if P <= 2:
-                twin = 0.17
-            else:
-                twin = 0
-        else:
-            twin = 0
-        
-        # Probabilities
-        if x < 0.3:
-            prob = x**g_small + twin
-        else:
-            prob = corr_fac * x**g_large + twin
-        
-        return prob
-    
-    # Between 9 and 16 MSun
-    def prob_earlyB(P, x):
-        
-        # Period ranges
-        if 0.5 <= P < 2:
-            g_small = 0.1
-            g_large = -0.5
-        elif 2 <= P < 4:
-            g_small = -0.2
-            g_large = -1.7
-        elif 4 <= P < 6:
-            g_small = -1.2
-            g_large = -2.0
-        else:
-            g_small = -1.5
-            g_large = -2.0
-        
-        # Match the values at q=0.3
-        corr_fac = 0.3**(g_small-g_large)
-        
-        # Excess twin fraction
-        if x >= 0.95:
-            if P <= 2:
-                twin = 0.14
-            else:
-                twin = 0
-        else:
-            twin = 0
-        
-        # Probabilities
-        if x < 0.3:
-            prob = x**g_small + twin
-        else:
-            prob = corr_fac * x**g_large + twin
-        
-        return prob
-    
-    # Above 16 MSun
-    def prob_O(P, x):
-        
-        # Period ranges
-        if 0.5 <= P < 2:
-            g_small = 0.1
-            g_large = -0.5
-        elif 2 <= P < 4:
-            g_small = -0.2
-            g_large = -1.7
-        elif 4 <= P < 6:
-            g_small = -1.2
-            g_large = -2.0
-        else:
-            g_small = -1.5
-            g_large = -2.0
-        
-        # Match the values at q=0.3
-        corr_fac = 0.3**(g_small-g_large)
-        
-        # Excess twin fraction
-        if x >= 0.95:
-            if P <= 2:
-                twin = 0.08
-            else:
-                twin = 0
-        else:
-            twin = 0
-        
-        # Probabilities
-        if x < 0.3:
-            prob = x**g_small + twin
-        else:
-            prob = corr_fac * x**g_large + twin
-        
-        return prob
-    
-    def mass_ratio(m, P, q_tmp):
-        
-        q = 0
-        h = 10
-        prob = 0
-        
-        while prob < h:
-            low = np.max([0.1, 0.08 / m])
-            q = np.random.uniform(low, 1)
-            if m < 0.6:
-                q = q_tmp
-                # Exit loop
-                prob = 1
-                h = 0
-            elif 0.6 < m <= 1.6:
-                prob = prob_solar(P, q)
-                h = np.random.uniform(0, np.max([prob_solar(P, 0.1), prob_solar(P, 0.3), prob_solar(P, 1)]))
-            elif 1.6 < m <= 5:
-                prob = prob_AB(P, q)
-                h = np.random.uniform(0, np.max([prob_AB(P, 0.1), prob_AB(P, 0.3), prob_AB(P, 1)]))
-            elif 5 < m < 9:
-                prob = prob_midB(P, q)
-                h = np.random.uniform(0, np.max([prob_midB(P, 0.1), prob_midB(P, 0.3), prob_midB(P, 1)]))
-            elif 9 < m < 16:
-                prob = prob_earlyB(P, q)
-                h = np.random.uniform(0, np.max([prob_earlyB(P, 0.1), prob_earlyB(P, 0.3), prob_earlyB(P, 1)]))
-            else:
-                prob = prob_O(P, q)
-                h = np.random.uniform(0, np.max([prob_O(P, 0.1), prob_O(P, 0.3), prob_O(P, 1)]))
-            
-            mass_ratio = q
-        
-        return mass_ratio
-
-    
-    if qdist == 'field':
-        mr = mass_ratio(mass, period, q_tmp)
-        cm = mass * mr
-    else:
-        print('Please select a valid argument for the mass ratio distribution. Options are \'field\' and TBD.')
-    
-    return cm
-
+    return q
 
 
 def get_eccentricity(mass, period, edist = 'field'):
+    
+    period = np.log10(period)
     
     def ecc_max(p):
         e_max = 1 - (10 ** p / 2) ** (-2 / 3)
@@ -667,87 +257,72 @@ def get_eccentricity(mass, period, edist = 'field'):
 
 
 
-def orbits(mass_array, binaries=True, mult_frac='field', pdist='field', qdist='field', edist='field', min_mass=0.1):
+def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='field', edist='field', min_mass=0.1):
 
-    def semi_major_axis_from_period(primary_mass, companion_mass, log_period):
-        """
-        returns the semi-major axes from the primary and companion masses and the period
-        uses eq. 2.45 from van de Kamp (1964) chap. 8.4
-        """
-        primary_mass = primary_mass
-        companion_mass = companion_mass
-        period = 10 ** log_period | units.day
-        semi_major_axis = (units.constants.G * (primary_mass + companion_mass)) ** (1./3) * period ** (2./3)
+    """
+    Generates binaries from arrays of masses
+    The input array has no units
+    """
 
-        return semi_major_axis.as_quantity_in(units.AU)
+    p_IDs, s_IDs  = get_multiplicity(mass_array)
+    print(p_IDs)
 
-
-    def generate_binaries_with_orientation(mass_array = mass_array, binaries = binaries, mult_frac = mult_frac, pdist = pdist, qdist = qdist, edist = edist, min_mass = min_mass):
-        """
-        Generates binaries from arrays of masses
-        The input array has no units
-        """
-
-        multiplicity  = get_multiplicity(mass_array, binaries, mult_frac)[0]
-        masses        = []
-        system_masses = []
-        positions     = []
-        velocities    = []
-
-        for i in range(len(multiplicity)):
-
-            if multiplicity[i] == 1:
-                primary_mass      = mass_array[i]
-                log_period, q_tmp = get_period(primary_mass, pdist)
-                companion_mass    = get_companion_mass(primary_mass, log_period, q_tmp, qdist) | units.MSun
-
-                # Check if companion mass is above the minimum mass, CCC 27/10/2023
-                if companion_mass.value_in(units.MSun) >= min_mass:
-                
-                    eccentricity      = get_eccentricity(primary_mass, log_period, edist)
-                    primary_mass      = primary_mass | units.MSun
-                    semi_major_axis   = semi_major_axis_from_period(primary_mass, companion_mass, log_period)
-
-                    E = np.random.uniform(-1 * np.pi, np.pi)
-                    true_anomaly                    = true_anomaly_from_eccentric_anomaly(E, eccentricity) | units.rad
-                    inclination                     = np.random.uniform(-np.pi / 2, np.pi / 2) | units.rad
-                    longitude_of_the_ascending_node = np.random.vonmises(np.pi, 0) | units.rad
-                    argument_of_periapsis           = np.random.vonmises(np.pi, 0) | units.rad
-
-                    binary = generate_binaries(primary_mass, companion_mass, semi_major_axis, eccentricity, true_anomaly, inclination, longitude_of_the_ascending_node, argument_of_periapsis, G = units.constants.G)
-
-                    primary_set = binary[0]
-                    primary = primary_set[0]
-                    companion_set = binary[1]
-                    companion = companion_set[0]
-
-                    masses.append(primary.mass.value_in(units.MSun))
-                    masses.append(companion.mass.value_in(units.MSun))
-                    system_masses.append(primary.mass.value_in(units.MSun) + companion.mass.value_in(units.MSun))
-                    system_masses.append(0)
-                    positions.append(primary.position.value_in(units.cm))
-                    positions.append(companion.position.value_in(units.cm))
-                    velocities.append(primary.velocity.value_in(units.cm / units.s))
-                    velocities.append(companion.velocity.value_in(units.cm / units.s))
-
-                else:
-                    masses.append(primary_mass)
-                    system_masses.append(primary_mass)
-                    positions.append([0, 0, 0])
-                    velocities.append([0, 0 ,0])
-                    
-            else:
-                mass = mass_array[i]
-                masses.append(mass)
-                system_masses.append(mass)
-                positions.append([0, 0, 0])
-                velocities.append([0, 0 ,0])
-
-        return masses, system_masses, positions, velocities
+    # Insert companions with binaries
+    which_s = np.ones(len(mass_array))
+    # Leave primaries as 1's
+    # Set singles to 0's
+    which_s[s_IDs] = np.zeros(len(which_s[s_IDs]))
+    # Set companions to -1's
+    which_s = np.insert(which_s, np.arange(len(p_IDs))[p_IDs] + 1, -1) # Insert companions after primaries
+    _mask_s = np.where(which_s == 0)
+    _mask_p = np.where(which_s == 1)
+    _mask_c = np.where(which_s == -1)
     
-    binaries = generate_binaries_with_orientation()
+    masses        = np.zeros(len(which_s))
+    system_masses = np.zeros(len(which_s))
+    positions     = np.zeros((len(which_s), 3))
+    velocities    = np.zeros((len(which_s), 3))
     
-    return binaries
+    primaries      = mass_array[p_IDs]
+    singles        = mass_array[s_IDs]
+    periods        = get_periods_M17(primaries, pdist=pdist)
+    mass_ratios    = get_mass_ratios_M17(primaries, periods)
+    companions     = primaries * mass_ratios
+    semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
+    eccentricities = np.zeros(len(primaries))
+    for i in range(len(primaries)):
+        eccentricities[i] = get_eccentricity(primaries[i], periods[i])
+
+    E = np.random.uniform(-1 * np.pi, np.pi, size=len(primaries))
+    true_anomalies                   = true_anomaly_from_eccentric_anomaly(E, eccentricities) | units.rad
+    inclinations                     = np.random.uniform(-np.pi / 2, np.pi / 2, size=len(primaries)) | units.rad
+    longitudes_of_the_ascending_node = np.random.vonmises(np.pi, 0, size=len(primaries)) | units.rad
+    arguments_of_periapsis           = np.random.vonmises(np.pi, 0, size=len(primaries)) | units.rad
+    
+    rel_pos, rel_vel = rel_posvel_arrays_from_orbital_elements(primaries | units.MSun, companions | units.MSun, 
+                                                               semimajor_axes, eccentricities, true_anomalies, 
+                                                               inclinations, longitudes_of_the_ascending_node, 
+                                                               arguments_of_periapsis, G = units.constants.G)
+    
+    # Offset by COM
+    COM_pos = center_of_mass_array(rel_pos, primaries | units.MSun, companions | units.MSun)
+    COM_vel = center_of_mass_array(rel_vel, primaries | units.MSun, companions | units.MSun)
+
+    # Set the masses
+    masses[_mask_s] = singles
+    masses[_mask_p] = primaries
+    masses[_mask_c] = companions
+    # Set the system masses to Mtot for primaries and 0 for companions
+    system_masses[_mask_s] = singles
+    system_masses[_mask_p] = primaries + companions
+    system_masses[_mask_c] = np.zeros(len(_mask_c))
+    # Set the positions and velocities for binaries only
+    positions[_mask_p]  = (-1*COM_pos).value_in(units.cm)
+    positions[_mask_c]  = (rel_pos - COM_pos).value_in(units.cm)
+    velocities[_mask_p] = (-1*COM_vel).value_in(units.cm/units.s)
+    velocities[_mask_c] = (rel_vel - COM_vel).value_in(units.cm/units.s)
+    
+    return masses, system_masses, positions, velocities
 
 
 if __name__ == '__main__':
