@@ -53,29 +53,34 @@ def get_multiplicity(m):
 
 
 
-def get_periods_M17(m, pdist='inner'):
+def get_periods(m, pdist='inner'):
     """
     Sample the period based on the distributions reported by Moe & di Stefano (2017),
     for the specified mass range and period distribution. Choices of mass distributions
     are 'solar', 'AB', 'mid-B', 'early-B', and 'O'; choices of period distributions are
     'field' and 'inner'. 
+    For M-dwarfs, the period distributions are derived from the semi-major distributions
+    compiled by Winters et al. 2019, using the mass ratio distributions reported in
+    Offner et al. 2023.
+    in: masses in solar masses, period distribution
     out: period in days
-    - CCC 17/11/2024
+    - CCC 17/11/2024, 12/06/2025
     """
         
     def pdf(log_p, m_range=-1, pdist=pdist):
         
-        log_p_values = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
+        log_p_values = [1., 3., 5., 7.]
         
-        frequencies = np.array([[0.027, 0.027, 0.057, 0.057, 0.095, 0.095, 0.075, 0.075], #solar
-                                [0.07, 0.07, 0.12, 0.12, 0.13, 0.13, 0.09, 0.09], # AB
-                                [0.14, 0.14, 0.22, 0.22, 0.20, 0.20, 0.11, 0.11], # mid B
-                                [0.19, 0.19, 0.26, 0.26, 0.23, 0.23, 0.13, 0.13], # early B
-                                [0.29, 0.29, 0.32, 0.32, 0.30, 0.30, 0.18, 0.18]]) # O
+        frequencies = np.array([[0.027, 0.057, 0.095, 0.075], #solar
+                                [0.07, 0.12, 0.13, 0.09], # AB
+                                [0.14, 0.22, 0.20, 0.11], # mid B
+                                [0.19, 0.26, 0.23, 0.13], # early B
+                                [0.29, 0.32, 0.30, 0.18]]) # O
         
-        frac_close = np.array([15./50, 37./59, 63./76, 80./84, 1.])
+        # 1./2 leaves the probability unchanged
+        frac_close = np.array([1./2, 1./2, 63./76, 80./84, 1.]) # From close binary frequency
         
-        probabilities = np.interp(log_p, log_p_values, frequencies[m_range], left=0, right=0) # Zero outside bounds
+        probabilities = np.interp(log_p, log_p_values, frequencies[m_range]) # Flat beyond bounds
         
         if pdist == 'inner':
             _inner = np.where(log_p <= 3.7)[0]
@@ -84,12 +89,32 @@ def get_periods_M17(m, pdist='inner'):
             probabilities[_outer] *= (1-frac_close)[m_range]
             
         return probabilities
+    
+    def pdf_Mdwarf(log_p, m_range=-1, pdist=pdist):
+        """
+        Same structure as pdf for M17, but more period values
+        and no inner/outer distinction
+        """
+        
+        log_p_values = [1., 2., 3., 4., 5., 6., 7.]
+        
+        # Derived from Winters et al. 2019
+        frequencies = np.array([[0.019, 0.12, 0.31, 0.35, 0.17, 0.036, 0.003], # < 0.15 MSun
+                                [0.052,  0.13,  0.21,  0.24,  0.20,  0.12,  0.047], # 0.15-0.30 MSun
+                                [0.052,  0.11,  0.17,  0.22,  0.21,  0.16,  0.087]]) # 0.30-0.60 MSun
+        
+        probabilities = np.interp(log_p, log_p_values, frequencies[m_range]) # Flat beyond bounds
+            
+        return probabilities
         
     def inv_transform_sampling(m, m_range=-1, pdist=pdist):
             
-        log_p = np.arange(0.5, 7.501, 0.001)
+        log_p = np.arange(0.2, 7.501, 0.001)
         
-        _pdf = pdf(log_p, m_range, pdist=pdist)
+        if m_range < 0:
+            _pdf = pdf(log_p, m_range, pdist=pdist)
+        else:
+            _pdf = pdf_Mdwarf(log_p, m_range, pdist=pdist)
             
         cdf = np.cumsum(_pdf)
         cdf = cdf/cdf[-1] # Normalize the cdf
@@ -101,21 +126,29 @@ def get_periods_M17(m, pdist='inner'):
         return return_log_p
 
     p = np.zeros(len(m))
+    # Use negative ranges for M17 and positive for M dwarfs
     # O stars
     _mask = np.where(m >= 16)[0]
     p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-1, pdist=pdist)
     # Early B stars
     _mask = np.where((m >= 9) & (m < 16))[0]
-    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=3, pdist=pdist)
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-2, pdist=pdist)
     # Mid B stars
     _mask = np.where((m >= 5) & (m < 9))[0]
-    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-3, pdist=pdist)
     # AB stars
     _mask = np.where((m >= 1.6) & (m < 5))[0]
-    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=1, pdist=pdist)
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-4, pdist=pdist)
     # Solar-type stars and below
-    _mask = np.where(m < 1.6)[0]
+    _mask = np.where((m >= 0.6) & (m < 1.6))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=-5, pdist=pdist)
+    # M-dwarfs
+    _mask = np.where(m < 0.15)[0]
     p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=0, pdist=pdist)
+    _mask = np.where((m >= 0.15) & (m < 0.3))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=1, pdist=pdist)
+    _mask = np.where((m >= 0.3) & (m < 0.6))[0]
+    p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
 
     return p
 
@@ -285,7 +318,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     
     primaries      = mass_array[p_IDs]
     singles        = mass_array[s_IDs]
-    periods        = get_periods_M17(primaries, pdist=pdist)
+    periods        = get_periods(primaries, pdist=pdist)
     mass_ratios    = get_mass_ratios_M17(primaries, periods)
     companions     = primaries * mass_ratios
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
