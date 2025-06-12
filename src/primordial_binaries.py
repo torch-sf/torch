@@ -62,8 +62,8 @@ def get_periods(m, pdist='inner'):
     For M-dwarfs, the period distributions are derived from the semi-major distributions
     compiled by Winters et al. 2019, using the mass ratio distributions reported in
     Offner et al. 2023.
-    in: masses in solar masses, period distribution
-    out: period in days
+    in: masses in solar masses (dimensionless), period distribution
+    out: period in days (dimensionless)
     - CCC 17/11/2024, 12/06/2025
     """
         
@@ -153,36 +153,42 @@ def get_periods(m, pdist='inner'):
     return p
 
 
-def get_mass_ratios_M17(m, p):
+def get_mass_ratios(m, p):
     """
     Sample the mass ratio based on the distributions reported by Moe & di Stefano (2017),
-    for the specified mass range, for a given period. Choices of mass distributions
-    are 'solar', 'AB', 'mid-B', 'early-B', and 'O'.
+    for the specified mass range, for a given period. For M dwarfs, slopes are from
+    Offner et al. 2023, with the 0.15-0.30 MSun also used below 0.15 MSun.
     out: mass ratio (dimensionless)
-    - CCC 17/11/2024
+    - CCC 17/11/2024, 12/06/2025
     """
 
     def pdf(q, p, m_range=-1):
         
         q_ranges = [q < 0.1, (q >= 0.1) & (q < 0.3), (q >= 0.3) & (q < 0.95), (q >= 0.95) & (q <= 1), q > 1]
         
-        gamma_S = np.array([[0.3, 0.3, 0.3, 0.3],
+        gamma_S = np.array([[0.7, 0.7, 0.7, 0.7],
+                            [0.1, 0.1, 0.1, 0.1],
+                            [0.3, 0.3, 0.3, 0.3],
                             [0.2, 0.1, -0.5, -1.0],
                             [0.1, -0.2, -1.2, -1.5],
                             [0.1, -0.2, -1.2, -1.5],
-                            [0.1, -0.2, -1.2, -1.5]]) # Check values
+                            [0.1, -0.2, -1.2, -1.5]])
         
-        gamma_L = np.array([[-0.5, -0.5, -0.5, -1.1],
+        gamma_L = np.array([[0.7, 0.7, 0.7, 0.7],
+                            [0.1, 0.1, 0.1, 0.1],
+                            [-0.5, -0.5, -0.5, -1.1],
                             [-0.5, -0.9, -1.4, -2.0],
                             [-0.5, -1.7, -2.0, -2.0],
                             [-0.5, -1.7, -2.0, -2.0],
-                            [-0.5, -1.7, -2.0, -2.0]]) # Check values
+                            [-0.5, -1.7, -2.0, -2.0]])
         
-        excess_twin = np.array([[0.3, 0.2, 0.1, 0],
-                                [0.22, 0.10, 0, 0],
-                                [0.17, 0, 0, 0],
-                                [0.14, 0, 0, 0],
-                                [0.08, 0, 0, 0]])
+        excess_twin = np.array([[0., 0., 0., 0.,],
+                                [0., 0., 0., 0.,],
+                                [0.30, 0.2, 0.1, 0.],
+                                [0.22, 0.10, 0., 0.],
+                                [0.17, 0., 0., 0.],
+                                [0.14, 0., 0., 0.],
+                                [0.08, 0., 0., 0.]])
             
         pdfs = np.zeros((4, len(q))) # Create an array for the different pdfs, with four period bins
         
@@ -233,15 +239,21 @@ def get_mass_ratios_M17(m, p):
         return_q[_mask] = get_q(q, p[_mask], m_range=-1)            
         # Early B stars
         _mask = np.where((m >= 9) & (m < 16))[0]
-        return_q[_mask] = get_q(q, p[_mask], m_range=3) 
+        return_q[_mask] = get_q(q, p[_mask], m_range=-2) 
         # Mid B stars
         _mask = np.where((m >= 5) & (m < 9))[0]
-        return_q[_mask] = get_q(q, p[_mask], m_range=2) 
+        return_q[_mask] = get_q(q, p[_mask], m_range=-3) 
         # AB stars
         _mask = np.where((m >= 1.6) & (m < 5))[0]
-        return_q[_mask] = get_q(q, p[_mask], m_range=1) 
+        return_q[_mask] = get_q(q, p[_mask], m_range=-4) 
         # Solar-type stars
-        _mask = np.where(m < 1.6)[0]
+        _mask = np.where((m >= 0.6) & (m < 1.6))[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=-5) 
+        # 0.3-0.6 MSun M dwarfs
+        _mask = np.where((m >= 0.3) & (m < 0.6))[0]
+        return_q[_mask] = get_q(q, p[_mask], m_range=1) 
+        # < 0.3 MSun M dwarfs
+        _mask = np.where(m < 0.3)[0]
         return_q[_mask] = get_q(q, p[_mask], m_range=0) 
             
         return return_q
@@ -319,7 +331,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     primaries      = mass_array[p_IDs]
     singles        = mass_array[s_IDs]
     periods        = get_periods(primaries, pdist=pdist)
-    mass_ratios    = get_mass_ratios_M17(primaries, periods)
+    mass_ratios    = get_mass_ratios(primaries, periods)
     companions     = primaries * mass_ratios
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
     eccentricities = np.zeros(len(primaries))
