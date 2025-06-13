@@ -263,42 +263,128 @@ def get_mass_ratios(m, p):
     return q
 
 
-def get_eccentricity(mass, period, edist = 'field'):
+def get_eccentricities(m, p):
     
-    period = np.log10(period)
+    def ecc_max(p_range=0):
+        """
+        Calculate maximum eccentricity for minimum period
+        in the period bin; use same bins as below
+        """
+        e_max = np.array([0.318, 0.368, 0.458, 0.569, 0.658, 0.748, 0.815, 0.864, 0.926, 0.966, 0.993, 0.998, 1])
     
-    def ecc_max(p):
-        e_max = 1 - (10 ** p / 2) ** (-2 / 3)
-        return e_max
+        return e_max[p_range]
     
-    def prob_eta(m, p):
-        if m <= 5:
-            eta = 0.6 - 0.7 / (p - 0.5)
-        else:
-            eta = 0.9 - 0.2 / (p - 0.5)
-        return eta
-    
-    def get_ecc(m, P):
-        if P <= 0.55:
-            ecc = np.random.uniform(0, ecc_max(P))
-        else:
-            t = 0
-            e = 1
-            h = 10
-            n = 0
-            while (e ** n) < h:
-                emax = ecc_max(P)
-                ecc  = np.random.uniform(0, emax)
-                n    = prob_eta(m, P)
-                h    = np.random.uniform(0, emax ** n)
-        return ecc
-    
-    if edist == 'field':
-        eccentricity = get_ecc(mass, period)
-    else:
-        print('Please select a valid argument for the eccentricity distribution. Options are \'field\' and TBD.')
+    def pdf(ecc_values, p_range=0, m_range=-1):
+        """
+        Create a grid with the same log period bins as the M dwarfs
+        Equation evaluated at logP=0.55, 0.6, 0.7, 0.85, 1, 1.3, 1.6, 2, 2.5, 3.5, 4.5, 5.5
+        """
+        # Mass ranges: <= 5 MSun and > 5 MSun
+        eta = np.array([[-13.4, -6.4, -2.9, -1.4, -0.8, -0.4, -0.178, -0.036, 0.133, 0.25, 0.367, 0.425, 0.46],
+                        [-3.1, -1.1, -0.1, 0.329, 0.5, 0.614, 0.678, 0.718, 0.767, 0.8, 0.833, 0.85, 0.86]])
         
-    return eccentricity
+        
+        probabilities = ecc_values**eta[m_range][p_range]
+            
+        return probabilities
+        
+    def inv_transform_sampling(p, p_range=0, m_range=-1):
+            
+        ecc = np.arange(0.001, 1.001, 0.001)
+        emax = ecc_max(p_range)
+        
+        _pdf = pdf(ecc[ecc <= emax], p_range, m_range)
+            
+        cdf = np.cumsum(_pdf)
+        cdf = cdf/cdf[-1] # Normalize the cdf
+            
+        percentiles = np.random.uniform(size=len(p))
+        args = abs(percentiles[:, None] - cdf[None, :]).argmin(axis=-1)
+        return_ecc = ecc[args]
+            
+        return return_ecc
+
+    ecc = np.zeros(len(m))
+    
+    # Late-type stars
+    # Leave periods below logP = 0.55 circularized
+    # logP < 0.6
+    _mask = np.where((m <= 5) & (np.log10(p) < 0.6) & (np.log10(p) >= 0.55))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=0, m_range=0)
+    # 0.6 < logP < 0.7
+    _mask = np.where((m <= 5) & (0.6 <= np.log10(p)) & (np.log10(p) < 0.7))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=1, m_range=0)
+    # 0.7 < logP < 0.85
+    _mask = np.where((m <= 5) & (0.7 <= np.log10(p)) & (np.log10(p) < 0.85))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=2, m_range=0)
+    # 0.85 < logP < 1
+    _mask = np.where((m <= 5) & (0.85 <= np.log10(p)) & (np.log10(p) < 1))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=3, m_range=0)
+    # 1 < logP < 1.2
+    _mask = np.where((m <= 5) & (1 <= np.log10(p)) & (np.log10(p) < 1.2))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=4, m_range=0)
+    # 1.2 < logP < 1.4
+    _mask = np.where((m <= 5) & (1.2 <= np.log10(p)) & (np.log10(p) < 1.4))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=5, m_range=0)
+    # 1.4 < logP < 1.6
+    _mask = np.where((m <= 5) & (1.4 <= np.log10(p)) & (np.log10(p) < 1.6))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=6, m_range=0)
+    # 1.6 < logP < 2
+    _mask = np.where((m <= 5) & (1.6 <= np.log10(p)) & (np.log10(p) < 2))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=7, m_range=0)
+    # 2 < logP < 2.5
+    _mask = np.where((m <= 5) & (2 <= np.log10(p)) & (np.log10(p) < 2.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=8, m_range=0)
+    # 2.5 < logP < 3.5
+    _mask = np.where((m <= 5) & (2.5 <= np.log10(p)) & (np.log10(p) < 3.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=9, m_range=0)
+    # 3.5 < logP < 4.5
+    _mask = np.where((m <= 5) & (3.5 <= np.log10(p)) & (np.log10(p) < 4.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=10, m_range=0)
+    # logP > 4.5
+    _mask = np.where((m <= 5) & (4.5 <= np.log10(p)))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=-1, m_range=0)
+    
+    # Early-type stars
+    # Leave periods below logP = 0.55 circularized
+    # logP < 0.6
+    _mask = np.where((m > 5) & (np.log10(p) < 0.6) & (np.log10(p) >= 0.55))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=0, m_range=1)
+    # 0.6 < logP < 0.7
+    _mask = np.where((m > 5) & (0.6 <= np.log10(p)) & (np.log10(p) < 0.7))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=1, m_range=1)
+    # 0.7 < logP < 0.85
+    _mask = np.where((m > 5) & (0.7 <= np.log10(p)) & (np.log10(p) < 0.85))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=2, m_range=1)
+    # 0.85 < logP < 1
+    _mask = np.where((m > 5) & (0.85 <= np.log10(p)) & (np.log10(p) < 1))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=3, m_range=1)
+    # 1 < logP < 1.2
+    _mask = np.where((m > 5) & (1 <= np.log10(p)) & (np.log10(p) < 1.2))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=4, m_range=1)
+    # 1.2 < logP < 1.4
+    _mask = np.where((m > 5) & (1.2 <= np.log10(p)) & (np.log10(p) < 1.4))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=5, m_range=1)
+    # 1.4 < logP < 1.6
+    _mask = np.where((m > 5) & (1.4 <= np.log10(p)) & (np.log10(p) < 1.6))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=6, m_range=1)
+    # 1.6 < logP < 2
+    _mask = np.where((m > 5) & (1.6 <= np.log10(p)) & (np.log10(p) < 2))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=7, m_range=1)
+    # 2 < logP < 2.5
+    _mask = np.where((m > 5) & (2 <= np.log10(p)) & (np.log10(p) < 2.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=8, m_range=1)
+    # 2.5 < logP < 3.5
+    _mask = np.where((m > 5) & (2.5 <= np.log10(p)) & (np.log10(p) < 3.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=9, m_range=1)
+    # 3.5 < logP < 4.5
+    _mask = np.where((m > 5) & (3.5 <= np.log10(p)) & (np.log10(p) < 4.5))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=10, m_range=1)
+    # logP > 4.5
+    _mask = np.where((m > 5) & (4.5 <= np.log10(p)))[0]
+    ecc[_mask] = inv_transform_sampling(p[_mask], p_range=-1, m_range=1)
+        
+    return ecc
 
 
 
@@ -334,9 +420,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     mass_ratios    = get_mass_ratios(primaries, periods)
     companions     = primaries * mass_ratios
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
-    eccentricities = np.zeros(len(primaries))
-    for i in range(len(primaries)):
-        eccentricities[i] = get_eccentricity(primaries[i], periods[i])
+    eccentricities = get_eccentricities(primaries, periods)
 
     E = np.random.uniform(-1 * np.pi, np.pi, size=len(primaries))
     true_anomalies                   = true_anomaly_from_eccentric_anomaly(E, eccentricities) | units.rad
