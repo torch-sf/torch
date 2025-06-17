@@ -98,10 +98,10 @@ def get_periods(m, pdist='inner'):
         
         log_p_values = [1., 2., 3., 4., 5., 6., 7.]
         
-        # Derived from Winters et al. 2019
-        frequencies = np.array([[0.019, 0.12, 0.31, 0.35, 0.17, 0.036, 0.003], # < 0.15 MSun
-                                [0.052,  0.13,  0.21,  0.24,  0.20,  0.12,  0.047], # 0.15-0.30 MSun
-                                [0.052,  0.11,  0.17,  0.22,  0.21,  0.16,  0.087]]) # 0.30-0.60 MSun
+        # Derived from Winters et al. 2019, using 1e6 stars and a random seed of 0
+        frequencies = np.array([[0.020,  0.117,  0.308,  0.346,  0.170,  0.035,  0.003], # < 0.15 MSun
+                                [0.053,  0.125,  0.211,  0.245,  0.203,  0.116,  0.047], # 0.15-0.30 MSun
+                                [0.049,  0.106,  0.171,  0.217,  0.212,  0.154,  0.091]]) # 0.30-0.60 MSun
         
         probabilities = np.interp(log_p, log_p_values, frequencies[m_range]) # Flat beyond bounds
             
