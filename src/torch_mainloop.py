@@ -461,7 +461,7 @@ def evolve(state, hydro, grav, mult, se):
         #Write checkpoint at sink formation to have a record of the binaries and stars to be formed, CCC 26/04/2023                                                                                     
         if queued_stars:
             state.force_output(overwrite=USER['overwrite'])
-        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
+        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'], binaries=USER['binaries'])  # in hydro
         if made_stars:
             add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 

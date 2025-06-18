@@ -238,42 +238,73 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     # Josh wrote efficient code to update new sinks using cached, sorted list
     # of old sinks, which I (AT) removed for brevity.
     # Simple for-loop should work fine for up to few thousand sinks...
-    for sink_tag in sink_tags:
+    
+    # Only set system_masses, all_positions and all_velocities if binaries=True - CCC 18/06/2025
+    if binaries:
+        
+        for sink_tag in sink_tags:
 
-        if sink_tag not in state.all_masses:
-            state.all_masses[sink_tag]     = np.array([])
-            state.system_masses[sink_tag]  = np.array([]) #Added by CCC for binaries, May 4, 2020
-            state.all_positions[sink_tag]  = np.empty([0,3]) #Added by CCC for binaries, May 7, 2020 (below too)
-            state.all_velocities[sink_tag] = np.empty([0,3])
-            tprint("... new sink tag {}".format(sink_tag))
-            new_sink_ = True # CCC 27/04/2023, to save original sink list
+            if sink_tag not in state.all_masses:
+                state.all_masses[sink_tag]     = np.array([])
+                state.system_masses[sink_tag]  = np.array([])    # Added by CCC for binaries, 04/04/2020
+                state.all_positions[sink_tag]  = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
+                state.all_velocities[sink_tag] = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
+                tprint("... new sink tag {}".format(sink_tag))
+                new_sink_ = True # CCC 27/04/2023, to save original sink list
 
-        while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-            new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
-                            sample_imf_mass.value_in(units.MSun),
-                            num_bins=sample_imf_bins,
-                            min_samp_mass=min_imf_mass.value_in(units.MSun),
-                            max_samp_mass=max_imf_mass.value_in(units.MSun),
-                            sum_small=sum_small, binaries=binaries,
-                            mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
-            )
+            while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
+                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
+                                                                                    sample_imf_mass.value_in(units.MSun),
+                                                                                    num_bins=sample_imf_bins,
+                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                                                                    sum_small=sum_small, binaries=binaries,
+                                                                                    mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
+                                                                                    )
             
-            tprint("... sink tag {}".format(sink_tag), end='')
-            print(" queued {} stars,".format(len(new_masses)), end='')
-            print(" mass {},".format(np.sum(new_masses)), end='')
-            print(" max mass {}".format(np.amax(new_masses)))
+                tprint("... sink tag {}".format(sink_tag), end='')
+                print(" queued {} stars,".format(len(new_masses)), end='')
+                print(" mass {},".format(np.sum(new_masses)), end='')
+                print(" max mass {}".format(np.amax(new_masses)))
 
-            state.all_masses[sink_tag]     = np.concatenate((state.all_masses[sink_tag], new_masses))
-            state.system_masses[sink_tag]  = np.concatenate((state.system_masses[sink_tag], new_system_masses))
-            state.all_positions[sink_tag]  = np.concatenate((state.all_positions[sink_tag], new_positions))
-            state.all_velocities[sink_tag] = np.concatenate((state.all_velocities[sink_tag], new_velocities))
+                state.all_masses[sink_tag]     = np.concatenate((state.all_masses[sink_tag], new_masses))
+                state.system_masses[sink_tag]  = np.concatenate((state.system_masses[sink_tag], new_system_masses))
+                state.all_positions[sink_tag]  = np.concatenate((state.all_positions[sink_tag], new_positions))
+                state.all_velocities[sink_tag] = np.concatenate((state.all_velocities[sink_tag], new_velocities))
+                
+    else:
+        
+        for sink_tag in sink_tags:
+
+            if sink_tag not in state.all_masses:
+                state.all_masses[sink_tag]     = np.array([])
+                tprint("... new sink tag {}".format(sink_tag))
+                new_sink_ = True # CCC 27/04/2023, to save original sink list
+
+            while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
+                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
+                                                                                    sample_imf_mass.value_in(units.MSun),
+                                                                                    num_bins=sample_imf_bins,
+                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                                                                    sum_small=sum_small, binaries=binaries,
+                                                                                    mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
+                                                                                    )
+            
+                tprint("... sink tag {}".format(sink_tag), end='')
+                print(" queued {} stars,".format(len(new_masses)), end='')
+                print(" mass {},".format(np.sum(new_masses)), end='')
+                print(" max mass {}".format(np.amax(new_masses)))
+
+                # Only set masses
+                state.all_masses[sink_tag]     = np.concatenate((state.all_masses[sink_tag], new_masses))
 
     hydro.set_particle_pointers('mass')
     
     return new_sink_ # CCC 27/04/2023, to save original sink list
 
 
-def make_stars_from_sinks(state, hydro, sink_rad=None):
+def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
     """
     Given an initial sampling of the IMF, distribute the stars randomly
     as sinks accrete the required mass to form them.
@@ -305,20 +336,28 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_pos = hydro.get_particle_position(sink_tag)
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
-
-        # get all the stars that we can form now
-        csum = np.cumsum(state.system_masses[sink_tag]) #Changed from all_masses to accomodate binaries
-        i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
-        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+        
+        if binaries:
+            # get all the stars that we can form now
+            csum = np.cumsum(state.system_masses[sink_tag]) #Changed from all_masses to accomodate binaries
+            i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
+            assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
+        else:
+            # get all the stars that we can form now
+            csum = np.cumsum(state.all_masses[sink_tag])
+            i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
+            assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
         spawn_masses     = state.all_masses[sink_tag][:i]
-        spawn_systems    = state.system_masses[sink_tag][:i]
-        spawn_positions  = state.all_positions[sink_tag][:i]
-        spawn_velocities = state.all_velocities[sink_tag][:i]
+        if binaries:
+            spawn_systems    = state.system_masses[sink_tag][:i]
+            spawn_positions  = state.all_positions[sink_tag][:i]
+            spawn_velocities = state.all_velocities[sink_tag][:i]
+        
         nnew = len(spawn_masses)
-
-        nbin = nnew - np.count_nonzero(spawn_systems)
-        nsin = nnew - 2 * nbin
+        if binaries:
+            nbin = nnew - np.count_nonzero(spawn_systems)
+            nsin = nnew - 2 * nbin
 
         if nnew == 0:
 
@@ -328,8 +367,9 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
             print(" {} stars,".format(nnew), end='')
-            print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries      
-            print(" and {} binaries),".format(nbin), end='')
+            if binaries:
+                print("({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries      
+                print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" due to absence of nearby cold gas")
 
@@ -337,17 +377,19 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
             print(" {} stars".format(nnew), end='')
-            print(" ({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
-            print(" and {} binaries),".format(nbin), end='')
+            if binaries:
+                print(" ({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
+                print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" max mass {}".format(np.amax(spawn_masses)))
             formed_stars = True
 
             # Remove newly-created stars from sink's queue
             state.all_masses[sink_tag]     = state.all_masses[sink_tag][nnew:]
-            state.system_masses[sink_tag]  = state.system_masses[sink_tag][nnew:]
-            state.all_positions[sink_tag]  = state.all_positions[sink_tag][nnew:]
-            state.all_velocities[sink_tag] = state.all_velocities[sink_tag][nnew:]
+            if binaries:
+                state.system_masses[sink_tag]  = state.system_masses[sink_tag][nnew:]
+                state.all_positions[sink_tag]  = state.all_positions[sink_tag][nnew:]
+                state.all_velocities[sink_tag] = state.all_velocities[sink_tag][nnew:]
 
             # Remove the mass from the sink.
             sink_mass = sink_mass - (np.sum(spawn_masses)|units.MSun)
@@ -362,20 +404,21 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2                                           
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3                                              
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
-            for j in range(len(star)):
-                spawn_position = spawn_positions[j]
-                spawn_velocity = spawn_velocities[j]
-                if spawn_systems[j] == 0:
-                    star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
-                    star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
-                else:
-                    random_pos = sink_rad*np.random.rand()*random_three_vector()
-                    random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
-                    star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
-                    star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
-
-            # star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)
-            # star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s) + (spawn_velocities | units.cm/units.s)
+            if binaries:
+                for j in range(len(star)):
+                    spawn_position = spawn_positions[j]
+                    spawn_velocity = spawn_velocities[j]
+                    if spawn_systems[j] == 0:
+                        star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
+                        star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
+                    else:
+                        random_pos = sink_rad*np.random.rand()*random_three_vector()
+                        random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
+                        star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
+                        star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
+            else:
+                star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)
+                star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s) + (spawn_velocities | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
