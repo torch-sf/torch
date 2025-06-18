@@ -585,9 +585,21 @@ recompile the AMUSE worker too.
 Torch is now capable of using \texttt{PeTar} for stellar dynamics. This is recommended for all runs, but particularly for runs with $>5,000$ stars or runs containing many binaries such as those with primordial binaries. To use \texttt{PeTar}, set
 \begin{lstlisting}[language=python]
 p['with_petar'] = True
-p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+p['r_bin'] = 100 | units.au
+p['r_out'] = 0.03 | units.pc # outer radius for tree 
+p['dt_soft_max'] = 0.125 | units.kyr # maximum PeTar timestep
 \end{lstlisting}
-in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. 
+For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+\texttt{r\_out} and \texttt{dt\_soft\_max} must be set together, to ensure that dynamics are properly resolved at all separations. In the plot below, the different combinations have been chosen for
+binaries with masses 1 M$_{\odot}$ and 0.1 M$_{\odot}$, and correspond to the timestep and \texttt{r\_out} for which an orbit is resolved by 10 or 100 steps, at \texttt{r\_out} or \texttt{r\_in}.
+The recommended usage is to pick a combination of timestep and \texttt{r\_out} along or below the red line, which ensures that orbits with separation \texttt{r\_in} are resolved by 100 steps. 
+The default values (0.03 pc and 125 yr) are shown as the black star, and were chosen to match the upper limit of a FLASH timestep once feedback stars have formed, at a resolution around 0.1-0.2 pc.
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.7\textwidth]{fig/petar_dt.pdf}
+    \label{fig:petar_dt}
+\end{figure}
 
 % ============
 % VorAMR Addon
