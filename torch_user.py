@@ -287,10 +287,9 @@ def user_parameters():
 
     p['with_petar'] = True
     p['r_bin'] = 100 | units.au
-    p['r_out'] = 0.1 | units.pc
-    p['r_stall'] = 0.022 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
-    # Relevant values are 0.055 pc for 250 yr, 0.035 pc for 125 yr, 0.022 pc for 62.5 yr and 0.014 pc for 31.25 yr
-    p['dt_soft_max'] = 0.5 | units.kyr
+    p['r_out'] = 0.03 | units.pc 
+    p['r_stall'] = 1e-3 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
+    p['dt_soft_max'] = 0.125 | units.kyr
     p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023
     
     # <stellar evolution>
@@ -307,7 +306,7 @@ def user_parameters():
     p['binaries'] = True
     #Not used if binaries is false, can leave to default values                                                                
     p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
-    p['pdist'] = 'field' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
+    p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
     p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun

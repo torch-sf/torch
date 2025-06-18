@@ -10,7 +10,7 @@ import numpy as np
 from amuse.lab import units
 from amuse.ext.orbital_elements import *
 
-def get_multiplicity(m):
+def get_multiplicity(m, mult_frac='field'):
     """
     Return a boolean array, with true for primaries and false for singles
     - CCC 16/11/2024
@@ -153,7 +153,7 @@ def get_periods(m, pdist='inner'):
     return p
 
 
-def get_mass_ratios(m, p):
+def get_mass_ratios(m, p, qdist='field'):
     """
     Sample the mass ratio based on the distributions reported by Moe & di Stefano (2017),
     for the specified mass range, for a given period. For M dwarfs, slopes are from
@@ -263,7 +263,7 @@ def get_mass_ratios(m, p):
     return q
 
 
-def get_eccentricities(m, p):
+def get_eccentricities(m, p, edist='field'):
     
     def ecc_max(p_range=0):
         """
@@ -395,8 +395,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     The input array has no units
     """
 
-    p_IDs, s_IDs  = get_multiplicity(mass_array)
-    print(p_IDs)
+    p_IDs, s_IDs  = get_multiplicity(mass_array, mult_frac=mult_frac)
 
     # Insert companions with binaries
     which_s = np.ones(len(mass_array))
@@ -417,10 +416,10 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     primaries      = mass_array[p_IDs]
     singles        = mass_array[s_IDs]
     periods        = get_periods(primaries, pdist=pdist)
-    mass_ratios    = get_mass_ratios(primaries, periods)
+    mass_ratios    = get_mass_ratios(primaries, periods, qdist=qdist)
     companions     = primaries * mass_ratios
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
-    eccentricities = get_eccentricities(primaries, periods)
+    eccentricities = get_eccentricities(primaries, periods, edist=edist)
 
     E = np.random.uniform(-1 * np.pi, np.pi, size=len(primaries))
     true_anomalies                   = true_anomaly_from_eccentric_anomaly(E, eccentricities) | units.rad
