@@ -290,7 +290,7 @@ def user_parameters():
     p['r_out'] = 0.1 | units.pc
     p['r_stall'] = 0.022 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
     # Relevant values are 0.055 pc for 250 yr, 0.035 pc for 125 yr, 0.022 pc for 62.5 yr and 0.014 pc for 31.25 yr
-    p['dt_soft_min'] = 0.5 | units.kyr
+    p['dt_soft_max'] = 0.5 | units.kyr
     p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023
     
     # <stellar evolution>

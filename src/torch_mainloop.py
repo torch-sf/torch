@@ -176,6 +176,8 @@ def evolve(state, hydro, grav, mult, se):
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
     se_dt = 1e99 | units.s
+    
+    num_stars = hydro.get_number_of_particles()
 
     # bridge loop control
     it = 1
@@ -183,7 +185,7 @@ def evolve(state, hydro, grav, mult, se):
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
         # Get minimum dt from torch_user.py
-        dt_min = USER['dt_soft_min']
+        dt_max = USER['dt_soft_max']
         # Recalculate PeTar parameters on the fly, CCC 28/02/23
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
@@ -193,10 +195,10 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
         grav.parameters.begin_time = hy_time
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        dt = np.min([dt_nbody.value_in(units.kyr), dt_min.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
-        tprint('dt_nbody =', dt_nbody)
-
-    num_stars = hydro.get_number_of_particles()
+        if num_stars > 0:
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
+        else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+            dt = dt_nbody
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -526,8 +528,10 @@ def evolve(state, hydro, grav, mult, se):
             grav.parameters.begin_time = hy_time
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_min.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023 
-            tprint('dt_nbody =', dt_nbody)
+            if num_stars > 0:
+                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
+            else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+                dt = dt_nbody
 
         num_stars = hydro.get_number_of_particles()  # loop variable
 
