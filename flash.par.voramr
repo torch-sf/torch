@@ -12,7 +12,7 @@ output_directory= "./data"
 # Simulation/SimulationMain/Cube
 # ==============================
 
-sim_cubeFile        ="./cube128"
+sim_cubeFile         = "./cube128 "#"./fake_cube"
 #sim_cubeFile        ="./M3V02B/cubeM3V02B" # "./cubefile"
 #sim_cubeFile        ="./M4V02B/cubeM4V02B" # "./cubefile"
 #sim_cubeFile        ="./M5V02B/cubeM5V02B" # "./cubefile"
@@ -29,6 +29,36 @@ bx0 = 0.0e0
 by0 = 0.0e0
 bz0 = 3.0e-6
 
+# ================
+# VorAMR extension
+# ================
+use_voramr = .true.
+voramr_source = "snapshot_518_9.hdf5"
+voramr_input = "voramr_input.hdf5"
+
+refine_on_particle_count = .true.
+min_particles_per_blk    = 4096 # Assumes 16x16x16 blocks
+max_particles_per_blk    = 4096 
+pt_maxPerProc            = 10000000 # Enough to fit all particles on one proc
+#refine_var_2 = "dens"
+refineonjeanslength = .true. #.false.
+
+# Restrict initial refinement by only placing particles within radius 
+use_localRef = .false. #.true.
+center_localRef = .false.
+localRef_x = 3.20621187e+20 # cm
+localRef_y = 6.24367575e+20
+localRef_z = -1.51873194e+20
+localRef_r = 1.543e+20
+
+# Background Potential
+sim_withStaticGrav = .true.
+              # AREPO 518_9   # Hill et al 2012
+sim_aParm1  = 1.31142525e-72  #4.39996789e-9  # [cm/s^2]     # 1.42E-3 [kpc/Myr^2]
+sim_aParm2  = 1.35401904e-52  #5.51293615e-31 # [1/s^2]      # 5.49E-4 [1/Myr^2]
+sim_aParm3  = -2.36078509e-30 #5.55421965e20  # [cm]         # 0.18E0  [kpc]
+sim_aParm4  = 4.06112841e-11  #1.62715932e-53 # [1/(cm s^2)] #5 .0E-5  [1/kpc Myr^2]
+#sim_aParm5  = 0d0
 
 # ===================
 # physics/Eos/EosMain
@@ -43,13 +73,21 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
+# For the AREPO snapshot
+xmax  	  	 = 1.079987157e+21 #350pc #6.171e+20 # 200pc #3.086e+20 # 100pc
+xmin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20  
+ymax		 = 1.079987157e+21 #3.086e+20 #6.171e+20 #3.086e+20 
+ymin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20 
+zmax		 = 1.079987157e+21 #3.086e+20 #6.171e+20 #3.086e+20 
+zmin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20 
+
 # For the 10^3 cloud
-xmax            =  2.1602e+19 # 7 pc 1.5428388e+19 #10.0 pc #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
-xmin            = -2.1602e+19 #-1.5428388e+19 #3.0856776e+19
-ymax            =  2.1602e+19
-ymin            = -2.1602e+19
-zmax            =  2.1602e+19
-zmin            = -2.1602e+19
+#xmax            =  2.1602e+19 # 7 pc 1.5428388e+19 #10.0 pc #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
+#xmin            = -2.1602e+19 #-1.5428388e+19 #3.0856776e+19
+#ymax            =  2.1602e+19
+#ymin            = -2.1602e+19
+#zmax            =  2.1602e+19
+#zmin            = -2.1602e+19
 
 # For the 10^4 cloud
 #xmax            =  3.7032e+19 #12.0 pc  #1.5428388e+19 #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
@@ -81,15 +119,17 @@ zr_boundary_type      = "outflow" #"diode"
 nblockx         = 1
 nblocky         = 1
 nblockz         = 1
-lrefine_max     = 2
-lrefine_min     = 2
+lrefine_max     = 3
+lrefine_min     = 2 #1
 
-refine_var_1    = "pres"
+#refine_var_1    = "pres"
+refine_var_1 = "none"
+
 refine_filter_1 = 1e-2
 # Note a factor of 2 in difference gives 0.97087
 # A factor of 3 is just above 0.98
 refine_cutoff_1 = 0.98
-derefine_cutoff_1 = 0.6  # fairly aggressive
+derefine_cutoff_1 = 0.6 # fairly aggressive
 
 # ===================================================
 # Derefinement outside rectangular region of interest
@@ -121,7 +161,7 @@ gr_pmrpConserve          = .true.
 # ==================================================
 restart         = .false.
 nend            = 999999999
-tmax            = 6.3113852e13 # 2 Myr
+tmax            = 6.30e8 # two init timesteps #6.3113852e14 # 20 Myr
 dtinit          = 3.15e8
 dtmin           = 3.15e7
 dtmax           = 3.15e12
@@ -132,13 +172,13 @@ wall_clock_checkpoint       = 0.432e+05
 wall_clock_time_limit       = 1.0e99
 checkpointFileNumber        = 0
 checkpointFileIntervalStep  = 0
-checkpointFileIntervalTime  = 3.1556926e13 # 1 Myr
+checkpointFileIntervalTime  = 3.15e7 #3.15e8 #10yr #3.1556926e13 # 1 Myr
 plotFileNumber              = 0
 plotFileIntervalStep        = 0
-plotFileIntervalTime        = 3.1556926e12 # 0.1 Myr
+plotFileIntervalTime        = 3.15e8 #3.1556926e12 # 0.1 Myr
 particleFileNumber          = 0
 particleFileIntervalStep    = 0
-particleFileIntervalTime    = 3.1556926e12 # 0.1 Myr
+particleFileIntervalTime    = 3.15e8 #3.1556926e12 # 0.1 Myr
 
 # Time step limiting for positive definiteness
 # New in FLASH4.5, see Sec 7.1.5.1 of Flash User's Guide
@@ -167,8 +207,6 @@ plot_var_13 = "magy"
 plot_var_14 = "magz"
 plot_var_15 = "uvfl"
 plot_var_16 = "fufl"
-plot_var_15 = "auvf"
-plot_var_16 = "afuf"
 plot_var_17 = "magp"
 plot_var_18 = "gpot"
 plot_var_19 = "bgpt"
@@ -263,19 +301,46 @@ useParticles        = T
 useSinkParticles    = .true.
 
 # maximum number of total particles, not just rays
-pt_maxPerProc   = 10000
+# pt_maxPerProc   = 10000
 
 # --------------------------------------------
 # Particles/ParticlesMain/active/SinkNoAdvance
 # --------------------------------------------
 
-jeans_ncells_ref    = 12.0  #20.0 #32.0
-jeans_ncells_deref  = 24.0  #40.0 #64.0
+jeans_ncells_ref    = 5.0 #32.0 #12.0  #20.0 #32.0 # - SCL
+jeans_ncells_deref  = 10.0 #64.0 #24.0  #40.0 #64.0 # - SCL 03/01/23
+
+#rho = (pi*c_s**2)/(G*jeanL**2)
+
+# For -+350pc box with lrefine=4
+sink_density_thresh       = 1.693740067596277e-22
+sink_accretion_radius     = 4.21869983203125e+19
+sink_softening_radius     = 4.21869983203125e+19
+
+# For -+350pc box with lrefine=5
+#sink_density_thresh	   = 4.2342494626279594e-23 #9.936820206203192e-21 #6.65689322407753e-21
+#sink_accretion_radius	   = 2.109349916015625e+19
+#sink_softening_radius	   = 2.109349916015625e+19
+
+# For -+350pc box with lrefine=2
+#sink_density_thresh = 1.654043034761989e-23
+#sink_accretion_radius = 1.6874799328125e+20
+#sink_softening_radius = 1.6874799328125e+20
+
+#For -+100pc box with lrefine=2
+#sink_density_thresh        = 1.90196949259358e-21
+#sink_accretion_radius	   = 4.821371236607143e+19
+#sink_softening_radius	   = 4.821371236607143e+19
+
+#For -+100pc box with lrefine=4
+#sink_density_thresh        = 3.80393898518716e-21
+#sink_accretion_radius      = 1.2053428091517858e+19
+#sink_softening_radius      = 1.2053428091517858e+19
 
 # For -+7pc box with lrefine=2, demonstration problem
-sink_density_thresh       = 8.52171362932e-22
-sink_accretion_radius     = 3.3753125e+18
-sink_softening_radius     = 3.3753125e+18
+#sink_density_thresh       = 8.52171362932e-22
+#sink_accretion_radius     = 3.3753125e+18
+#sink_softening_radius     = 3.3753125e+18
 # For -+7pc box
 #sink_density_thresh       = 2.47685070948e-21 # 7pc 4.85564e-21 # 10 pc box # 3.47202e-22 # 50 pc box #5.24209e-21 #1.0e-18
 #sink_accretion_radius     = 1.68765625e+18 # 7 pc 1.205e18 #for 10 pc box # 6.02734e18 # for 50 pc box 7.5333925e+16 # 2.5 x grid cell size #2.1096e17 # 7 cell radius for winds  #
@@ -480,9 +545,9 @@ rt_ion_min = 1e-8
 # rapidly from high to zero, making things unstable. -JW
 rt_neutral_min = 1e-10
 
-# temperature that radiation will heat gas to, used as a limiter of 
+# temperature that radiation will heat gas to, used as a limiter of
 # first timestep after a feedback star is put on the grid. -BP 19Jan23
-rt_dt_temp     = 1.0e5
+rt_dt_temp = 1.0e5
 
 ph_sampling     = 2.0
 ph_initHPlevel  = 2
@@ -493,7 +558,7 @@ ph_raysToBundle = 5
 ph_CommCheckInterval = 20
 ph_radPressure  = T
 
-# cfl factor used to limit velocity of radiation pressure, used as a limiter of 
+# cfl factor used to limit velocity of radiation pressure, used as a limiter of
 # first timestep after a feedback star is put on the grid. -BP 19Jan23
 cfl_radPressure = 0.3
 

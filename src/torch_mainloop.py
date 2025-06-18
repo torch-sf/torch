@@ -57,15 +57,40 @@ from amuse.community.smalln.interface import SmallN
 from amuse.community.petar.interface import Petar
 from amuse.couple import multiples
 
-from torch_se import stellar_evolution, remove_merged_stars
+from torch_se import (
+    stellar_evolution,
+    remove_merged_stars,
+)
 from torch_sf import (
     add_particles_to_grav,
     remove_particles_outside_bndbox,
     make_stars_from_sinks,
     queue_stars,
+    random_three_vector,
 )
 from torch_state import TorchState
 from torch_stdout import tprint
+
+from voramr.hdf5_convert import (
+    extract_data,
+    rescale_coords_vels,
+    write_corrected_file,
+    write_voramr_data_to_txt_file
+)
+from voramr.kdtree import (
+    read_hdf5,
+    build_kdtree,
+    pickle_tree,
+    unpickle_tree,
+    interp_data
+)
+from voramr.voramr_mainloop import (
+    get_ntasks_from_run_script,
+    get_leaf_blocks,
+    interpolate_fields
+)
+from voramr.voramr_stdout import vprint
+
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -129,7 +154,7 @@ def initialize_workers():
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
-        mult.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
+        mult.check_tidal_perturbation    = True
         mult.neighbor_perturbation_limit = 0.05 # TODO how was this chosen?! -AT,2019oct13
         mult.wide_perturbation_limit     = 0.08
 
@@ -163,9 +188,7 @@ def initialize_workers():
 # ============================================================================
 
 def evolve(state, hydro, grav, mult, se):
-
-    time_file = open("grav_timer.txt",'w')
-
+    
     # FLASH loop control
     hy_dt           = hydro.get_timestep()
     hy_step         = hydro.get_current_step()
@@ -224,12 +247,10 @@ def evolve(state, hydro, grav, mult, se):
             elif name == "grav":
                 pool_table_grav.append(i)
 
-
-
     first_star = 0
 
     while hy_time < hy_max_time and hy_step < hy_max_steps:
-
+        
         tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
             it, hy_time.value_in(units.s), dt.value_in(units.s),
         ))
@@ -245,11 +266,12 @@ def evolve(state, hydro, grav, mult, se):
 
         if num_stars > 0:
 
+            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
             # initialize PeTar once more than 1!!! star forms
             if num_stars > 1 and first_star == 0:
                 first_star = 1
                 if USER['with_petar']:
-                    tprint("First stars have formed. Initializing PETAR.")
+                    tprint("First stars have formed. Initializing PeTar.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
                         
@@ -258,6 +280,7 @@ def evolve(state, hydro, grav, mult, se):
             ### ------------------
             ### First bridge kick.
             ### ------------------
+
             state_ = state # save a copy of state in case we need to save then exit during the loop, CCC 09/03/2023
             # Merge stars at same location, based on fix by BP, commit 366d5be on petar branch - 06/03/2024
             # Repeat every timestep - CCC 18/11/2024
@@ -304,7 +327,6 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
-                #tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
 
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
@@ -339,8 +361,8 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        if USER['with_petar']:
-                            grav.parameters.dt_soft = dt
+                        grav.parameters.dt_soft = dt
+                        dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
                         pool.add_request(req_grav, handle_result, ["grav", it])
@@ -386,8 +408,6 @@ def evolve(state, hydro, grav, mult, se):
                         start_t = time.time()
                         grav.evolve_model(hy_time+dt)
                         gr_evolve_time = time.time()-start_t
-                        time_file.write(str(gr_evolve_time)+" "+str(num_stars)+" "+str(hy_time+dt)+"\n") 
-                        time_file.flush()
                     tprint("Advance hydro")
                     hydro.evolve_model(hy_time+dt)
 
@@ -415,7 +435,6 @@ def evolve(state, hydro, grav, mult, se):
 
                 hydro.evolve_model(hy_time+dt)
                 hy_time = hydro.get_time()
-
 
         else: # num_stars == 0
 
@@ -479,6 +498,7 @@ def evolve(state, hydro, grav, mult, se):
         ### -------------------
 
         num_stars = hydro.get_number_of_particles()
+        
         if num_stars > 0 and USER['with_bridge']:  # in case all stars exited domain
             tprint("Second bridge kick")
             kick_number = 2  # recompute grav pot (BGPT), accel (BGA{X,Y,Z}) from stars
@@ -547,7 +567,6 @@ def evolve(state, hydro, grav, mult, se):
             assert num_stars == len(mult.stars)
         else:
             assert num_stars == len(grav.particles)
-
     return
 
 # ============================================================================
@@ -581,13 +600,62 @@ def run_torch(user_initial_conditions, user_parameters):
 
     if USER['npy_seed'] is not None:
         np.random.seed(USER['npy_seed'])
+    if USER['with_voramr']:
+        tprint("Initializing with VorAMR.")
+        if USER['convert_file']:
+            vprint("Converting  provided hdf5 file.")
+            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sfmtime, smet = extract_data(USER['source_file'],
+                                                                apply_consts=True)
+            coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
+                                                                               scoords, svels,
+                                                                               use_com_coords=False)
+            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
+                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet,
+                                 USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
 
+            #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
+            coords, field_set = read_hdf5("interp-data.hdf5")
+        else:
+            vprint("Using unconverted source file.")
+            coords, field_set = read_hdf5(USER['source_file'])
+
+        # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
+        #vprint('About to call write_voramr_data_to_txt_file')
+        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['use_localRef'], USER['local_ref'])
+
+        vprint("Building field interpolator.")
+        kdtree = build_kdtree(coords, field_set)
+        if(USER['pickle_kdtree']):
+            pickle_tree(kdtree, USER['pickle_file_name'])
+            vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
+    # End VorAMR file init
+    
     hydro, grav, mult, se = initialize_workers()
 
     state = TorchState(hydro, grav, mult, se)
 
-    state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
+    # VORAMR-LITE Testing - SCL ####################
+    #from amuse.community.voramr.interface import Flash
+    #convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+    #hydro = Flash(
+    #    unit_converter=convert2,
+    #    number_of_workers=1,#USER['num_hy_workers'],
+    #    redirection='file',
+    #    redirect_stdout_file='voramr_worker.out',
+    #    redirect_stderr_file='voramr_worker.err',
+    #    )
+    ###################################################
+    # After hydro initialize, interpolate data onto grid if using VorAMR.
+    if USER['with_voramr']:
+        vprint("Interpolating external data to FLASH grid via VorAMR.")
+        leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+        interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
+        vprint("Done interpolating. VorAMR complete.")
+        #hydro.hydro.write_chpt()
+        #vprint("Wrote checkpoint.")
 
+    state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
+    
     if not state.restart:
         user_initial_conditions(state, hydro)
     elif state.restart and USER['restart_with_user_ics']:

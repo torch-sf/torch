@@ -1,0 +1,53 @@
+#Config file for Grid/GridMain/paramesh/paramesh4
+
+# Requires use of the Grid SetupVariable
+USESETUPVARS Grid
+
+REQUIRES flashUtilities/sorting/quicksort
+
+IF Grid not in ["","PM4DEV","PM40","PM4","PM3","PM2","PM"]
+   SETUPERROR The variable Grid is not in ["","PM4DEV","PM40","PM4","PM3","PM2","PM"]
+ENDIF
+
+IF Grid=='PM2'
+   SETUPERROR Cannot include Grid/GridMain/paramesh/paramesh4 when setup variable Grid is "PM2"
+ENDIF
+
+DEFAULT Paramesh4dev
+
+IF (Grid=='PM40' or Grid=='PM3')
+   DEFAULT Paramesh4.0
+ENDIF
+
+
+CONFLICTS IO/IOMain/hdf5/parallel/UG
+CONFLICTS IO/IOMain/hdf5/serial/UG
+
+D gr_sanitizeDataMode What to do when gr_sanitizeDataAfterInterp is called
+D & to check for acceptable values in the dens, ener, and eint cell-centered variables
+D & after a Grid operation may have resulted in grid interpolation.
+D & 0: Do nothing.
+D & 1: Check (if variable is not masked out) and report (see sanitizeVerbosity).
+D & 2: Check (ignoring variable mask) and report (see sanitizeVerbosity).
+D & 3: Check (if variable is not masked out) and fix (apply floor value).
+D & 4: Check (if variable is not masked out) and abort if cell is found below floor value.
+PARAMETER gr_sanitizeDataMode	INTEGER	1	[0,1,2,3,4]
+
+D gr_sanitizeVerbosity How to write information about unacceptable
+D & values in the dens, ener, and eint cell-centered variables if gr_sanitizeDataAfterInterp
+D & finds value that are below the acceptable floor.
+D & This reporting is in addition to other actions selected with gr_sanitizeDataMode=3 or 4.
+D & 0: Be quiet.
+D & 1: Only write a log file message per block if unacceptable value found on MASTER_PE.
+D & 4: As 1, and each proc writes a line to standard output for each block with bad values.
+D & 5: As 4, and each proc writes lines showing the values in all cells of the block (in 1D/2D)
+D & or a 2D slice (in 3D).
+D PARAMETER gr_sanitizeVerbosity	INTEGER	5	[0,1,4,5]
+PARAMETER gr_sanitizeVerbosity	      INTEGER 0
+# Suppressing overly verbose reporting of 0.0 denisty and eint grid values. - SCL 09/29/22
+
+D enableMaskedGCFill When enableMaskedGCFill is FALSE, Grid_fillGuardCells is forced
+D &                  to always ignore optional mask arguments when present in calls.
+D &                  This is the default behavior.
+D &                  Set enableMaskedGCFill TRUE to enable masked guard cell filling.
+PARAMETER enableMaskedGCFill BOOLEAN FALSE

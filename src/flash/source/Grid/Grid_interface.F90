@@ -408,6 +408,15 @@ Module Grid_interface
      end subroutine Grid_markRefineSpecialized
   end interface
 
+  interface Grid_markDerefineSpecialized
+     subroutine Grid_markDerefineSpecialized(criterion,size,specs,lref)
+       integer, intent(IN) :: criterion
+       integer, intent(IN) :: size
+       real,dimension(size),intent(IN) :: specs
+       integer, intent(IN) ::  lref
+     end subroutine Grid_markDerefineSpecialized
+  end interface
+
   interface Grid_moveParticles
      subroutine Grid_moveParticles(dataBuf, propCount, maxCount, localCount, &
        index_list, indexCount,&

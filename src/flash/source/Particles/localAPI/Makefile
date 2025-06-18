@@ -12,7 +12,7 @@ Particles += pt_interface.o pt_initPositions.o pt_initPositionsLattice.o \
 	pt_advanceCharged.o pt_advanceCustom.o pt_findTagOffset.o \
 	pt_advanceRKstatic.o pt_advanceRKthermo.o pt_advanceMonteCarlo.o \
 	pt_initPositionsNParPerZone.o pt_initPositionsNParPerZoneMC.o \
-	pt_mapFromMeshNone.o pt_mapFromMeshInZone.o
+	pt_mapFromMeshNone.o pt_mapFromMeshInZone.o pt_initVoronoiPositions.o
 
 Particles += pt_utFakeParticlesAdvance.o pt_utUpdateAnaPosns.o \
 	pt_utAnaGetNewPosComponents.o pt_utComputeError.o 

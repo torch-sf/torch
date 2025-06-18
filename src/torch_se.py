@@ -49,6 +49,8 @@ def stellar_evolution(time, dt, state, hydro, se,
     assert min_feedback_mass is not None
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
+    # index of feedback stars to evolve
+    #idx = np.where(state.stars.initial_mass >= min_feedback_mass)
 
     # Always recompute star's age from hydro time and particle creation time.
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star

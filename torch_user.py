@@ -248,8 +248,36 @@ def user_initial_conditions(state, hydro):
 #
 #    make_cluster_in_hydro(cluster, xmax)
 
+    # ------------------------------------------------------------------------ 
+    # Start with a cluster extracted from VorAMR initial file.
     # ------------------------------------------------------------------------
-
+#    import numpy as np
+#    from amuse.units import nbody_system
+#    import h5py
+#    print("Reading input hdf5 for stars")
+#    f = h5py.File("voramr_input.hdf5", "r")
+#    ds = f['PartType4']
+#    c = ds['Coordinates'][:]
+#    m = ds['Masses'][:]
+#    v = ds['Velocities'][:]
+#    im = ds['GFM_InitialMass']
+#    a = ds['GFM_StellarFormationTime']
+#    print("Extracted data")
+#    pos = np.array([c[:,0], c[:,1], c[:,2]]).T
+#    vel = np.array([v[:,0], v[:,1], c[:,2]]).T
+#    #age = 0.499035 - a
+#    stars = Particles(len(m))
+#    stars.mass = m | units.MSun
+#    stars.position = pos | units.cm
+#    stars.velocity = vel | units.cm/units.s
+#    print("Converted to AMUSE particle set")
+#    tag = hydro.add_particles(stars.x, stars.y, stars.z)
+#    hydro.set_particle_mass(tag, stars.mass)
+#    hydro.set_particle_velocity(tag, stars.vx, stars.vy, stars.vz)
+#    hydro.set_particle_oldmass(tag, stars.mass) # for SE code
+#    #hydro.set_particle_creation_time(tag, creation_time)
+#    f.close()
+#    print("Set hydro data")
     return
 
 def user_parameters():
@@ -260,6 +288,26 @@ def user_parameters():
     p = {}
     flashp = FlashPar("flash.par")
 
+    # <VorAMR>
+
+    
+    try:
+        p['with_voramr'] = flashp['use_voramr']
+    except KeyError:
+        p['with_voramr'] = False
+    if p['with_voramr']:    
+        p['source_file'] = flashp['voramr_source']
+        p['convert_file'] = True
+        p['use_localRef'] = flashp['use_localRef']
+        p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
+        #None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
+        p['center_local_ref'] = flashp['center_localRef']
+        p['input_file'] = flashp['voramr_input']
+        p['pickle_kdtree'] = False
+        p['pickle_file_name'] = "kdtree.pickle"
+        p['numBlocks'] = 15000 #345
+        p['cellsPerBlock'] = 16
+        
     # <bridge>
 
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
@@ -273,6 +321,7 @@ def user_parameters():
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
+    p['remove_merged'] = True # remove merged stars
 
     # <timestepping>
 
@@ -290,8 +339,8 @@ def user_parameters():
     p['r_out'] = 0.03 | units.pc 
     p['r_stall'] = 1e-3 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
     p['dt_soft_max'] = 0.125 | units.kyr
-    p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023
-    
+    p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023 
+
     # <stellar evolution>
 
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
@@ -299,7 +348,7 @@ def user_parameters():
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
-    p['min_feedback_mass'] = 8.0 | units.MSun
+    p['min_feedback_mass'] = 7.0 | units.MSun
 
     # <star particle creation>
 
@@ -315,7 +364,7 @@ def user_parameters():
     p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
-    p['m_small'] = 1.0 # agglomerate mass in Msun
+    p['m_small'] = 1.0 | units.MSun # agglomerate mass in Msun
 
     # <amuse file overwrite>
 
@@ -325,7 +374,7 @@ def user_parameters():
 
     ntasks = get_ntasks_from_run_script("run.sh")
 
-    p['num_grav_workers'] = 2 # must be power of 2 for PeTar 
+    p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
     p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 

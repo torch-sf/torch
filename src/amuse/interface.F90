@@ -3496,7 +3496,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3554,7 +3554,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3633,7 +3633,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3691,7 +3691,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3766,7 +3766,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3824,7 +3824,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3899,7 +3899,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3957,7 +3957,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -4031,7 +4031,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4089,7 +4089,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -4163,7 +4163,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4221,7 +4221,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -5649,7 +5649,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5692,7 +5692,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -5785,7 +5785,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5828,7 +5828,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -5921,7 +5921,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5964,7 +5964,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -6056,7 +6056,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -6099,7 +6099,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -6191,7 +6191,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -6234,7 +6234,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -6325,7 +6325,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -6368,7 +6368,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -6842,7 +6842,7 @@ END FUNCTION
 !  integer :: nparts
 !  double precision :: prop(nparts), tags(nparts)
 !  integer :: set_particle_prop, i, p, j, oldj
-!  integer, dimension(:), allocatable :: QSindex, id_sorted
+!  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 !! Are we using radiation?
 !!#ifdef FERVENT
@@ -6858,7 +6858,7 @@ END FUNCTION
 !allocate(id_sorted(localnp))
 
 !do p = 1, localnp
-!   id_sorted(p) = int(particles_local(iptag,p))
+!   id_sorted(p) = int(particles_local(iptag,p),8)
 !end do
 
 !call NewQsort_IN(id_sorted, QSindex)
@@ -7182,6 +7182,7 @@ call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
+  
   call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end),8), &
                    type_count, MPI_LONG, new_tags_array, num_array, &
                    disp, MPI_LONG, 0, communicator, ierr)
@@ -7196,7 +7197,7 @@ allocate(QSindex(nparts))
 allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
-!     id_sorted(p) = int(particles_global(iptag,p))
+!     id_sorted(p) = int(particles_global(iptag,p),8)
 !  enddo
 
   call NewQsort_IN(new_tags_array, QSindex)
@@ -7417,7 +7418,7 @@ allocate(QSindex(nparts))
 allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
-!     id_sorted(p) = int(particles_global(iptag,p))
+!     id_sorted(p) = int(particles_global(iptag,p),8)
 !  enddo
 
   call NewQsort_IN(new_tags_array, QSindex)
