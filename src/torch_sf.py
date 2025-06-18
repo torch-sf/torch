@@ -412,13 +412,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
                         star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
                     else:
-                        random_pos = sink_rad*np.random.rand()*random_three_vector()
+                        random_pos = sink_rad*np.random.rand()*random_three_vector_for_binaries()
                         random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
                         star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
             else:
-                star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew) + (spawn_positions | units.cm)
-                star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s) + (spawn_velocities | units.cm/units.s)
+                star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
+                star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -438,7 +438,23 @@ def random_three_vector(n=1):
     Generates a random 3D unit vector (direction) with a uniform spherical distribution
     Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
     """
-    three_vector = np.zeros(3) #Modified by CCC to "unvectorize" it -- is now designed to be used for each formed star individually
+    three_vector = np.zeros((n,3))
+
+    phi = np.random.uniform(0,np.pi*2,n)
+    costheta = np.random.uniform(-1,1,n)
+
+    theta = np.arccos( costheta )
+    three_vector[:,0] = np.sin( theta) * np.cos( phi )
+    three_vector[:,1] = np.sin( theta) * np.sin( phi )
+    three_vector[:,2] = np.cos( theta )
+    return three_vector
+
+def random_three_vector_for_binaries(n=1):
+    """
+    Generates a random 3D unit vector (direction) with a uniform spherical distribution
+    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+    """
+    three_vector = np.zeros(3) # Modified by CCC to "unvectorize" it -- is now designed to be used for each formed star individually
 
     phi = np.random.uniform(0,np.pi*2,n)
     costheta = np.random.uniform(-1,1,n)
