@@ -242,10 +242,22 @@ def binary_evolution(time, dt, state, hydro, se,
                             E_bind = CE_alpha * _dE
                             #tprint('Ejecta energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
                         
-                            # If there is no energy from the envelope ejection, do wind mass loss
-                            # for the donor star instead
                         
                             if CE_method=='wind':
+                            
+                                if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
+                                    # If donor is star s
+                                    dm_dt[i] = inj_mass/dt
+                                    vterm[i] = vterm_wind_1 # Cap the ejecta velocity at the wind velocity
+                                    tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
+                                else:
+                                    dm_dt[k] = inj_mass/dt
+                                    vterm[k] = vterm_wind_2 # Cap the ejecta velocity at the wind velocity
+                                    tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
+                            
+                            # If there is no energy from the envelope ejection, do wind mass loss
+                            # for the donor star instead
+                            elif CE_method=='alpha':
                             
                                 if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
                                     # If donor is star s
