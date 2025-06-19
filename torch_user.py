@@ -45,11 +45,11 @@ def get_ntasks_from_run_script(name="run.sh"):
                 nodes =	int(''.join(char for char in w[1] if char.isdigit()))
                 nodes = int(os.getenv("SLURM_JOB_NUM_NODES"))
                 #print(nodes, 'nodes')
-    #assert n is None
-    #n = nodes*cores
-    #assert n is not None
-    return int(os.getenv("SLURM_NTASKS"))
-    #return n
+    #return int(os.getenv("SLURM_NTASKS"))
+    assert n is None
+    n = nodes*cores
+    assert n is not None
+    return n
 
 def user_initial_conditions(state, hydro):
     """
@@ -100,28 +100,24 @@ def user_initial_conditions(state, hydro):
 #    hydro.set_particle_creation_time(tag, creation_time)
 
     # ------------------------------------------------------------------------
-    # SeBa test: get binaries from stars.amuse
+#    # SeBa test: get binaries from stars.amuse
 
-    # Stars
-    add_stars = read_set_from_file('BE_SN.amuse')
-    #_mask = np.argsort(_stars.initial_mass.value_in(units.MSun))[::-1][:20]
-    #add_stars = _stars[_mask]
-    print(add_stars.get_attribute_names_defined_in_store())
-    print(add_stars.mass.value_in(units.MSun))
-    # FLASH
-    creation_time = hydro.get_time() - add_stars.age
-    tag = hydro.add_particles(add_stars.x, add_stars.y, add_stars.z)
-    hydro.set_particle_mass(tag, add_stars.mass)
-    hydro.set_particle_velocity(tag, add_stars.vx, add_stars.vy, add_stars.vz)                                                                                                                 
-    hydro.set_particle_oldmass(tag, add_stars.initial_mass) # for SE code
-    hydro.set_particle_creation_time(tag, creation_time)
-    # Evolved stars - CCC 01/08/2024
-    hydro.set_particle_rel_age(tag, add_stars.relative_age)
-    hydro.set_particle_rel_mass(tag, add_stars.relative_mass)
-    hydro.set_particle_corem(tag, add_stars.core_mass)
-    hydro.set_particle_co_corem(tag, add_stars.COcore_mass)
-    hydro.set_particle_stype(tag, add_stars.stellar_type.value_in(units.stellar_type))
-    hydro.set_particle_radius(tag, add_stars.radius)
+#    # Stars
+#    add_stars = read_set_from_file('BE_SN.amuse')
+#    # FLASH
+#    creation_time = hydro.get_time() - add_stars.age
+#    tag = hydro.add_particles(add_stars.x, add_stars.y, add_stars.z)
+#    hydro.set_particle_mass(tag, add_stars.mass)
+#    hydro.set_particle_velocity(tag, add_stars.vx, add_stars.vy, add_stars.vz)                                                                                                                 
+#    hydro.set_particle_oldmass(tag, add_stars.initial_mass) # for SE code
+#    hydro.set_particle_creation_time(tag, creation_time)
+#    # Evolved stars - CCC 01/08/2024
+#    hydro.set_particle_rel_age(tag, add_stars.relative_age)
+#    hydro.set_particle_rel_mass(tag, add_stars.relative_mass)
+#    hydro.set_particle_corem(tag, add_stars.core_mass)
+#    hydro.set_particle_co_corem(tag, add_stars.COcore_mass)
+#    hydro.set_particle_stype(tag, add_stars.stellar_type.value_in(units.stellar_type))
+#    hydro.set_particle_radius(tag, add_stars.radius)
     
     # ------------------------------------------------------------------------  
 #    # Multiples test: plop a binary system 
@@ -281,8 +277,36 @@ def user_initial_conditions(state, hydro):
 #
 #    make_cluster_in_hydro(cluster, xmax)
 
+    # ------------------------------------------------------------------------ 
+    # Start with a cluster extracted from VorAMR initial file.
     # ------------------------------------------------------------------------
-
+#    import numpy as np
+#    from amuse.units import nbody_system
+#    import h5py
+#    print("Reading input hdf5 for stars")
+#    f = h5py.File("voramr_input.hdf5", "r")
+#    ds = f['PartType4']
+#    c = ds['Coordinates'][:]
+#    m = ds['Masses'][:]
+#    v = ds['Velocities'][:]
+#    im = ds['GFM_InitialMass']
+#    a = ds['GFM_StellarFormationTime']
+#    print("Extracted data")
+#    pos = np.array([c[:,0], c[:,1], c[:,2]]).T
+#    vel = np.array([v[:,0], v[:,1], c[:,2]]).T
+#    #age = 0.499035 - a
+#    stars = Particles(len(m))
+#    stars.mass = m | units.MSun
+#    stars.position = pos | units.cm
+#    stars.velocity = vel | units.cm/units.s
+#    print("Converted to AMUSE particle set")
+#    tag = hydro.add_particles(stars.x, stars.y, stars.z)
+#    hydro.set_particle_mass(tag, stars.mass)
+#    hydro.set_particle_velocity(tag, stars.vx, stars.vy, stars.vz)
+#    hydro.set_particle_oldmass(tag, stars.mass) # for SE code
+#    #hydro.set_particle_creation_time(tag, creation_time)
+#    f.close()
+#    print("Set hydro data")
     return
 
 def user_parameters():
@@ -293,73 +317,94 @@ def user_parameters():
     p = {}
     flashp = FlashPar("flash.par")
 
-    # <bridge>
+    # <VorAMR>
 
+    try:
+        p['with_voramr'] = flashp['use_voramr']
+    except KeyError:
+        p['with_voramr'] = False
+    if p['with_voramr']:    
+        p['source_file'] = flashp['voramr_source']
+        p['convert_file'] = True
+        p['use_localRef'] = flashp['use_localRef']
+        p['local_ref'] = [flashp['localRef_x'], flashp['localRef_y'], flashp['localRef_z'], flashp['localRef_r']]
+        #None #[3.20621187e+20, 6.24367575e+20, -1.51873194e+20, 1.543e+20] # Restrict particles included in input hdf5 file by defining spherical region. None or [center_x, center_y, center_z, radius] (cm)
+        p['center_local_ref'] = flashp['center_localRef']
+        p['input_file'] = flashp['voramr_input']
+        p['pickle_kdtree'] = False
+        p['pickle_file_name'] = "kdtree.pickle"
+        p['numBlocks'] = 15000 #345
+        p['cellsPerBlock'] = 16
+        
+    # <bridge>
+    
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
-    p['restart_with_user_ics'] = True  # meant for testing
-    p['check_for_stall'] = True # use to save and exit if gravity takes longer than hydro
+    p['restart_with_user_ics'] = False  # meant for testing
+    p['check_for_stall'] = False # use to save and exit if gravity takes longer than hydro
     p['restart_from_stall'] = False # did PeTar stall and exit? Check for merged stars
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
+    p['remove_merged'] = True # remove merged stars
 
     # <timestepping>
-
+    
     p['hy_dt_factor'] = 0.99999  # pin bridge timestep to <= hy_dt_factor*(hydro timestep)
 
     # <star/n-body gravity>
-
+    
     p['with_ph4'] = True  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <star/n-body gravity & binaries>
-
-    p['with_petar'] = True
-    p['r_bin'] = 50 | units.au 
-    p['r_out'] = 625 | units.au
-    p['r_stall'] = 1e-10 | units.pc
-    p['dt_soft_min'] = 31.25 | units.yr #7.8125 | units.yr
-    p['set_timeout'] = 300 | units.s # Set timeout stopping condition to 5 minutes, to allow hydro to finish before timeout, CCC 09/03/2023
     
+    p['with_petar'] = True
+    p['r_bin'] = 100 | units.au
+    p['r_out'] = 0.03 | units.pc 
+    p['r_stall'] = 1e-3 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
+    p['dt_soft_max'] = 0.125 | units.kyr
+    p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023 
+
     # <stellar evolution>
+    
     p['with_be'] = True  # do binary evolution?
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'seba_puls'
-    p['min_feedback_mass'] = 10 | units.MSun
+    p['min_feedback_mass'] = 7 | units.MSun
     p['CE_method'] = 'wind' # method for CE ejection; use the wind injection scheme ('wind') or SN injection scheme ('SN') -CCC 27/11/2024
     p['CE_alpha'] = 1 # efficiency for CE ejection; default is 1 but we also test 0.1 and 10 - CCC 13/09/2024
     
     # <star particle creation>
-
+    
     p['binaries'] = True
     p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction.
-    p['pdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                        
+    p['pdist'] = 'inner' #Currently accepted method is 'field'. TO DO: Add inner and lognormal.                        
     p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.                                   
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
-    p['min_imf_mass'] = 0.5 | units.MSun
-    p['max_imf_mass'] = 0.5 | units.MSun
+    p['min_imf_mass'] = 0.08 | units.MSun
+    p['max_imf_mass'] = 100 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 1 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
+    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
-    p['m_small'] = 1.0 # agglomerate mass in Msun
+    p['m_small'] = 1.0 | units.MSun # agglomerate mass in Msun
 
     # <amuse file overwrite>
 
     p['overwrite'] = True # <True> Passes flag to AMUSE write_set_to_file(); allows .amuse files to be overwritten without warning.
 
     # <job>
-    ntasks = get_ntasks_from_run_script()
-
+    
+    ntasks = get_ntasks_from_run_script("run.sh")
 
     p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
-    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # amuse + binary evolution (two systems)
+    p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 1  # amuse
     #p['num_hy_workers'] = ntasks - p['num_grav_workers'] - 2  # if using fractal cluster IC, need extra worker
 
     if p['with_petar']:

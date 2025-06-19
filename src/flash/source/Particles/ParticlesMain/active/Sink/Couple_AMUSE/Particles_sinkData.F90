@@ -52,7 +52,7 @@ module Particles_sinkData
   real, save, allocatable, dimension(:,:), target :: particles_local
   real, save, allocatable, dimension(:,:), target :: particles_global
   
-  integer, save :: local_tag_number
+  integer*8, save :: local_tag_number
   integer, save, target :: localnp, localnpf ! Added target attribute. - JW
 
   ! variables needed for Ewald correction in case of periodic BCs
@@ -68,7 +68,7 @@ module Particles_sinkData
   ! Flash evolution step. - JW
   
   integer, save, target :: number_new_sinks
-  integer, save, allocatable, dimension(:), target :: new_sink_tags
+  integer*8, save, allocatable, dimension(:), target :: new_sink_tags
   logical, save, target :: new_evolution_step = .true.
 
 end module

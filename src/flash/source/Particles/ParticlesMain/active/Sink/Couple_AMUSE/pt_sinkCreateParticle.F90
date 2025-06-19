@@ -61,7 +61,8 @@ function pt_sinkCreateParticle(x, y, z, pt, block_no, MyPE)
   real, intent(IN)    :: x, y, z, pt
   integer, intent(IN) :: block_no, MyPE
 
-  integer             :: pt_sinkCreateParticle, pno, ire, tag
+  real*8              :: tag
+  integer             :: pt_sinkCreateParticle, pno, ire
   logical, parameter  :: debug = .false.
 
 
@@ -107,7 +108,7 @@ function pt_sinkCreateParticle(x, y, z, pt, block_no, MyPE)
   particles_local(TYPE_PART_PROP, pno) = SINK_PART_TYPE
 #endif
 
-  tag = int(particles_local(iptag, pno))
+  tag = particles_local(iptag, pno)
 
   pt_sinkCreateParticle = localnp
 
@@ -118,7 +119,7 @@ function pt_sinkCreateParticle(x, y, z, pt, block_no, MyPE)
      print*, "z pos=", z
      print*, "creation time=", pt
      print*, "cpu=", MyPE
-     print*, "tag=",  int(particles_local(iptag, pno))
+     print*, "tag=",  particles_local(iptag, pno)
   end if
 
   ! Additions for AMUSE to learn if new particles were created during
@@ -126,7 +127,7 @@ function pt_sinkCreateParticle(x, y, z, pt, block_no, MyPE)
   ! first call in an evolution. -JW
   
   number_new_sinks = number_new_sinks + 1
-  new_sink_tags(number_new_sinks) = int(particles_local(iptag, pno))
+  new_sink_tags(number_new_sinks) = int(particles_local(iptag, pno),8)
   
   !print*, "Number of new sinks =", number_new_sinks
   !print*, "New tags = ", new_tags(1:number_new_sinks)

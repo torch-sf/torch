@@ -23,7 +23,7 @@ sim_A_i                   =  0.6698 #-1.0
 #initial magnetic field
 bx0 = 0.0e0
 by0 = 0.0e0
-bz0 = 0.0e0
+bz0 = 3.0e-6
 
 
 # ===================
@@ -192,7 +192,7 @@ cvisc		    = 0.1     # coefficient for artificial viscosity
 use_flattening	= .false. # use flattening (dissipative) (originally for PPM)
 use_steepening	= .false. # use contact steepening (originally for PPM)
 use_upwindTVD	= .true.  #use upwind biased TVD slope for PPM (need nguard=6)
-use_gravhalfupdate = .false. # This would violate the bridge stuff, no?
+use_gravhalfupdate = .true. # Matched to value in main, CCC 26/09/2023
 
 hy_fallbackLowerCFL = .true.
 hy_cflFallbackFactor = 0.9
@@ -203,7 +203,7 @@ E_modification	= .true.           # High order algorithm for E-field constructio
 E_upwind        = .true.           # Better E field reconstruction (Lee and Deane 2009)
 energyFix	    = .true.           # Update magnetic energy using staggered B-fields
 ForceHydroLimit	= .false.          # Pure Hydro Limit (B=0)
-prolMethod      = "balsara_prol" #"injection_prol" # Prolongation method (injecton_prol, balsara_prol)
+prolMethod      = "injection_prol" # Prolongation method (injecton_prol, balsara_prol)
 #useMagneticResistivity = .true.
 #resistivity = 7.3e-14 # Spitzer resistivity for T = 10^4 K #1.0E-0
 
@@ -240,9 +240,8 @@ pt_maxPerProc   = 100000
 # Particles/ParticlesMain/active/SinkNoAdvance
 # --------------------------------------------
 
-# Should I go back to 12.0 from Federrath 2010?
-jeans_ncells_ref    = 6.0 #12.0  #20.0 #32.0
-jeans_ncells_deref  = 12.0 #24.0  #40.0 #64.0
+jeans_ncells_ref    = 12.0  #20.0 #32.0
+jeans_ncells_deref  = 24.0  #40.0 #64.0
 
 # For -+7pc box with lrefine=2, demonstration problem
 #sink_density_thresh       = 8.52171362932e-22
@@ -469,7 +468,7 @@ rt_maxHchange = 0.1
 rt_dt_temp     = 1.0e5
 
 ph_sampling     = 2.0
-ph_initHPlevel  = 2
+ph_initHPlevel  = 1 #2 # 1 --> 12 pixels, 2 --> 48 pixels, CCC 27/09/2023
 ph_inBlockSplit = T
 ph_rotRays      = T
 ph_maxNRays     = 1000000 #300000
@@ -486,6 +485,10 @@ sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine
 dust_gas_ratio  = 0.01  # 1% dust
 ph_EUVonDust    = T     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
 
+rt_useRadTransDt = .true.
+# Use the feedback safety timestep on start or restart?
+rt_useNumstepsRadTransDtOnStart = .false.  # actually has no effect in code -AT,2019oct23
+rt_numStepsRadTransDt = 10  # how many safe steps to take
 
 # ======================================================================================
 # wind options
@@ -515,7 +518,7 @@ min_wind_mass = 1.5912e34 # 8 solar masses # 1.3923e34 # 7 solar masses
 # shock temperature in the hot wind.
 mass_load  = .true.
 var_radius = .false. 
-wind_target_temp = 1e6
+wind_target_temp = 3e5
 
 # Perturb the wind velocity by a normal distribution?
 perturb_velocity = .false. #.true. #

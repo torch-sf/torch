@@ -107,7 +107,7 @@ Last updated: \today \\
 \textbf{Torch} is a star formation simulation code with magnetohydrodynamics
 (FLASH), radiative transfer (Fervent), self-gravity \& sinks, star particles,
 feedback (stellar winds, SNe), stellar evolution tracks (SeBa), and N-body
-dynamics (AMUSE).
+dynamics (AMUSE/PeTar).
 Torch features and add-ons are listed in Figure~\ref{fig:features},
 and references for the major components are in Appendix~\ref{sec:components}.
 
@@ -168,6 +168,7 @@ To download AMUSE, do:
 cd your/code/directory
 git clone https://github.com/amusecode/amuse.git
 \end{lstlisting}
+If you have a previously installed version of AMUSE, make sure that it is more recent than \textbf{Feb 28, 2025}.
 
 To download Torch:
 \begin{lstlisting}[language=bash]
@@ -276,6 +277,10 @@ Cartesius in Josh's thesis, you may need to (1) remove
 \texttt{-march=core-avx2} flags throughout, and/or (2) remove
 \texttt{-lhdf5\_fortran} from the \texttt{LIB\_HDF5} variable declaration.
 
+You will also need to add the following flags to \texttt{FFLAGS\_OPT}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
+
 Then, issue the setup command (update ``mysitedir''):
 \begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
@@ -362,6 +367,11 @@ You may need to manually edit the files:
 \end{verbatim}
 to select the correct compilers and libraries.
 
+You will need to add the following flags to \texttt{FCFLAGS} in both \texttt{config.mk}
+and \texttt{src/amuse/community/flash/Makefile}:
+\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
+to your HDF5 install.
+
 Now, you can make the AMUSE \texttt{flash\_worker}, which is basically an
 AMUSE-hooked replacement for the normal \texttt{flash4} executable.
 The standard \texttt{make} takes ~10--20 minutes and builds all the codes
@@ -372,6 +382,7 @@ included in AMUSE.  To request only the codes needed for Torch, do:
 make framework
 make flash.code
 make kepler.code
+make petar.code
 make ph4.code
 make seba.code
 make smalln.code
@@ -403,17 +414,18 @@ mkdir data
 
 The file \texttt{torch\_mainloop.py} is the heart of the simulation.  It
 performs the split time-evolution with both FLASH and the n-body integrator
-ph4, handles stellar evolution, and lots more. \texttt{torch\_user.py} is the main
+ph4 or PeTar, handles stellar evolution, and lots more. \texttt{torch\_user.py} is the main
 source of control for users of Torch, where parameters can be set and initial stellar
 conditions defined. 
 
 The simulation should take 1--10 minutes to reach
 $t_\mt{max} = 2 \unit{Myr} = 6.31 \times 10^{13} \unit{s}$.
-It will use 7 threads: 2 for FLASH, 1 for n-body integration (ph4), 2 for
-n-body binary interactions (multiples), 1 for stellar evolution, and 1 for
-AMUSE itself.  At around $1 \unit{Myr}$, a sink particle will form and begin
-creating stars.  One or a few $\ge 7 \Msun$ stars may begin blowing a wind, so
-the time step may drop; you may wish to end the simulation early.
+It will use 7 threads: 2 for FLASH, 1+2 for n-body integration (ph4) and 
+n-body binary interactions (multiples) or 1 for stellar dynamics (PeTar), 
+1 for stellar evolution, and 1 for AMUSE itself.  At around $1 \unit{Myr}$, 
+a sink particle will form and begin creating stars.  One or a few $\ge 7 \Msun$ 
+stars may begin blowing a wind, so the time step may drop; you may wish 
+to end the simulation early.
 
 To run the simulation interactively, execute the command:
 \begin{lstlisting}[language=bash]
@@ -566,6 +578,30 @@ Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
 
 % ============
+%     PeTar
+% ============
+\subsection{PeTar Stellar Dynamics}
+
+Torch is now capable of using \texttt{PeTar} for stellar dynamics. This is recommended for all runs, but particularly for runs with $>5,000$ stars or runs containing many binaries such as those with primordial binaries. To use \texttt{PeTar}, set
+\begin{lstlisting}[language=python]
+p['with_petar'] = True
+p['r_bin'] = 100 | units.au
+p['r_out'] = 0.03 | units.pc # outer radius for tree 
+p['dt_soft_max'] = 0.125 | units.kyr # maximum PeTar timestep
+\end{lstlisting}
+in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. 
+For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+\texttt{r\_out} and \texttt{dt\_soft\_max} must be set together, to ensure that dynamics are properly resolved at all separations. In the plot below, the different combinations have been chosen for
+binaries with masses 1 M$_{\odot}$ and 0.1 M$_{\odot}$, and correspond to the timestep and \texttt{r\_out} for which an orbit is resolved by 10 or 100 steps, at \texttt{r\_out} or \texttt{r\_in}.
+The recommended usage is to pick a combination of timestep and \texttt{r\_out} along or below the red line, which ensures that orbits with separation \texttt{r\_in} are resolved by 100 steps. 
+The default values (0.03 pc and 125 yr) are shown as the black star, and were chosen to match the upper limit of a FLASH timestep once feedback stars have formed, at a resolution around 0.1-0.2 pc.
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.7\textwidth]{fig/petar_dt.pdf}
+    \label{fig:petar_dt}
+\end{figure}
+
+% ============
 % VorAMR Addon
 % ============
 \section{VorAMR: Expanded Options for Initial Conditions}
@@ -676,6 +712,27 @@ In addition to the usual Torch output, \texttt{VorAMR} produces two more files:
 	\item \texttt{interp-data.hdf5} - the file from which the interpolation kdtree is built. Only \texttt{AMUSE} sees this file, but then passes info from it to \texttt{FLASH}. This file will always contain all data from the source file.
 \end{enumerate}
 These files are both produced as sometimes we only want \texttt{FLASH} to refine on a portion of the source data, but we want \texttt{AMUSE} to have an accurate kdtree for all data to avoid domain edge effects during interpolation.
+
+\subsection{Regional Refinement}
+
+Torch is capable of de-refining the grid to a user defined level outside of a user defined rectangular region of interest. This is most useful in large-scale runs such as those initialized with \texttt{VorAMR}. To use this capability, the user must set the parameters listed below in the \texttt{flash.par} file. 
+
+\begin{lstlisting}[language=bash]
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .true.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
+\end{lstlisting}
+
+
 % ============
 % Known Issues
 % ============
@@ -976,6 +1033,12 @@ This list includes most major components, but is not comprehensive.
         \href{https://ui.adsabs.harvard.edu/abs/2010ApJ...713..269F/abstract}{Federrath+ 2010}
     \item Multiples (N-body):
         \href{https://iopscience.iop.org/book/978-0-7503-1320-9}{AMUSE book (see Sec.~4.5)}
+    \item PeTar (N-body):
+        \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{PeTar, Wang+ 2020b}
+        \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.493.3398W/abstract}{SDAR, Wang+ 2020a}
+    \item SeBa (stellar evolution):
+        \href{https://ui.adsabs.harvard.edu/abs/1996A&A...309..179P/abstract}{Portegies Zwart \& Verbunt 1996}
+        \href{https://ui.adsabs.harvard.edu/abs/2012A&A...546A..70T/abstract}{Toonen, Nelemans \& Portegies Zwart 2012}
     \item Stratified box setup:
         \href{https://ui.adsabs.harvard.edu/abs/2006ApJ...653.1266J/abstract}{Joung \& Mac Low 2006},
         \href{https://ui.adsabs.harvard.edu/abs/2016ApJ...824...41I/abstract}{Ib\'{a}\~{n}ez-Mej\'{i}a+ 2016}
@@ -1238,7 +1301,7 @@ Instead of supplying ./configure with arguments when setting up AMUSE, all relev
 After this point everything is described in the guide.
 
 \subsection{Stampede2}
-This setup guide is credited to Brooke Polak.
+This setup guide is credited to Brooke Polak. \textbf{STAMPEDE2 IS NOW DISCONTINUED} - We leave the build instructions here as many of the steps are similar to other systems.
 
 After downloading AMUSE, Torch, and FLASH via git, load the following modules in \texttt{$\sim$/.profile}
 \begin{lstlisting}[language=bash]
@@ -1352,6 +1415,136 @@ SLURM submit script:
 #SBATCH --time=0:10:00
 export FI_PROVIDER=tcp
 ibrun -n 1 /home1/05402/bp4928/TORCH/env/torch_env/bin/python torch_user.py
+\end{lstlisting}
+
+\subsection{Stampede3}
+Those installation instructions are from Claude Cournoyer-Cloutier and Brooke Polak, with contributions from Eric Andersson. 
+
+After downloading AMUSE and Torch via git, and downloading FLASH from the FLASH website, create a torch.sh file and load the following modules:
+\begin{lstlisting}[language=bash]
+module load gcc/13.2.0
+module load impi
+module load python/3.9.18
+module load hdf5/1.10.11
+module load gsl/2.8
+module load mpfr/4.2.1
+module load fftw3/3.3.10
+\end{lstlisting}
+
+Also specify the following paths in torch.sh:
+\begin{lstlisting}[language=bash]
+export AMUSE_DIR=/home1/10548/cournoyc/TORCH/amuse
+export FLASH_DIR=/home1/10548/cournoyc/TORCH/FLASH4.6.2
+export TORCH_DIR=/home1/10548/cournoyc/TORCH/torch
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
+export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
+
+export MODLOC=/opt/apps
+
+export MPIHOME=/opt/intel/oneapi/mpi/2021.11
+export MPI_HOME=$MPIHOME
+export MPI_RUN=$MPI_HOME/bin/mpirun
+export PATH=$MPI_HOME/bin:$PATH
+export MANPATH=$MPI_HOME/share/man:$MANPATH
+export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+export CPATH=$MPI_HOME/include:$CPATH
+
+export HDF5_HOME=/opt/apps/gcc13/hdf5/1.10.11                                                                                                                                                                                                                                   
+export HDF5DIR=$HDF5_HOME
+export HDF5INCLUDE=$TACC_HDF5_INC
+export HDF5LIB="lhdf5_fortran -lhdf5"                                                                                                                                                                                                                                                  
+export PATH=${HDF5_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${TACC_MKL_LIB}:$LD_LIBRARY_PATH
+export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+export LIBRARY_PATH=${TACC_MKL_LIB}:$LIBRARY_PATH
+export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+
+### this fixes an error running a job                                                                                                                                                                                                                                            
+export MV2_ENABLE_AFFINITY=0
+\end{lstlisting}
+
+You can then create your virtual environment. Using a CONDA environment should also work, but the instructions below use a standard Python virtual environment.
+\begin{lstlisting}
+cd /home1/10548/cournoyc/TORCH
+python -m venv /home1/10548/cournoyc/TORCH/torch_env
+source /home1/10548/cournoyc/TORCH/torch_env/bin/activate 
+pip install --upgrade pip
+pip install ipython matplotlib numpy scipy docutils gmp h5py nose pytest
+pip install --upgrade setuptools
+pip install --no-cache-dir mpi4py
+\end{lstlisting}
+
+Now, you can install and configure Torch. You should start by running
+\begin{lstlisting}
+cd $TORCH_DIR
+./install.sh
+\end{lstlisting}
+
+You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH_DIR/sites}, run:
+\begin{lstlisting}
+cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
+\end{lstlisting}
+Then in \texttt{\$FLASH_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
+\begin{lstlisting}
+MPI_PATH   = ${MPI_HOME}
+HDF5_PATH   = ${HDF5_HOME}
+F90FLAGES = -fallow-argument-mismatch
+CFLAGS_HDF5 = -I${TACC_HDF5_INC} -DH5_USE_16_API
+LIB_HDF5  = -L ${HDF5_HOME}/lib -Wl,-rpath,${TACC_HDF5_LIB} -lhdf5 -lhdf5_fortran -lz
+\end{lstlisting}
+and replace all instances of \texttt{mpifort} by \texttt{mpif90}. Also change \texttt{setcheckinterval} to \texttt{setswitchinterval} in \texttt{FLASH4.6.2/bin/setup.py}. After this, you can compile FLASH:
+\begin{lstlisting}
+./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev +cube16 -maxblocks=50 --site=stampede3.tacc.utexas.edu
+cd object
+make 
+\end{lstlisting}
+
+Once you have successfully compiled FLASH, you can configure and build AMUSE. Go the AMUSE directory and un the following commands:
+\begin{lstlisting}
+./configure  # It should find the correct paths on its own
+make framework
+\end{lstlisting}
+To install the AMUSE flash worker, set the following in \texttt{amuse/src/amuse/community/flash/Makefile}:
+\begin{lstlisting}
+opt:   FCFLAGS = -O3 -march=native -fallow-argument-mismatch
+\end{lstlisting}
+In \texttt{amuse/config.mk}, set:
+\begin{lstlisting}
+FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
+\end{lstlisting}
+To install the AMUSE petar work, set the following in \texttt{amuse/src/amuse/community/petar/Makefile} (uncomment if commented out) and add the \texttt{-I} flag beofre \texttt{{\$INCLUDE}}:
+\begin{lstlisting}
+# arch
+CXXFLAGS += -march=core-avx2
+CXXFLAGS += -D INTRINSIC_X86
+CXXFLAGS += -D USE_SIMD
+CXXFLAGS += -D DIV_FIX
+\end{lstlisting}
+From there, you can make the worker codes:
+\begin{lstlisting}
+make flash.code petar.code seba.code kepler.code smalln.code ph4.code
+\end{lstlisting}
+
+SLURM submit script:
+\begin{lstlisting}
+#!/bin/sh
+#SBATCH --job-name=test
+#SBATCH -N 1
+#SBATCH -n 32
+#SBATCH -p skx-dev
+#SBATCH --time=0:10:00
+export FI_PROVIDER=psm3
+
+source /home1/10548/cournoyc/TORCH/torch_env/bin/activate
+
+ibrun -n 1 python torch_user.py
 \end{lstlisting}
 
 \newpage

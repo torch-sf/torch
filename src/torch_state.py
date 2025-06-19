@@ -3,7 +3,7 @@
 
 
 import numpy as np
-from os import path
+from os import path, listdir
 import pickle
 
 from amuse.datamodel import Particles
@@ -165,16 +165,13 @@ class TorchState(object):
         self.chknum = self.hydro.IO_num('chk')
 
     # Force a checkpoint (to use for stalls), CCC 09/03/2023
+    # Also used to ensure a checkpoint is written immediately after sink formation, CCC 04/05/2023
     def force_output(self, overwrite):
         """
         Force write chk and full Torch state.
         """
-        hy_chknum = self.hydro.IO_out('chk')
-        #print("hy_chknum:", hy_chknum)
-        #print("self.chknum:", self.chknum)
 
         # Force a checkpoint to be written, CCC 09/03/2023
-        self.hydro.write_chpt()
         # Torch state files
         self.out_loop()
         self.out_mass()
@@ -183,7 +180,13 @@ class TorchState(object):
         self.out_velocity()
         self.out_rnd()
         
-        self.chknum = hy_chknum
+        hy_chknum = self.hydro.IO_out('chk')
+        # Check if a checkpoint would have been written at the end of the step, and update nums accordingly
+        if hy_chknum > self.chknum:
+            self.chknum = hy_chknum
+        else:
+            self.hydro.write_chpt()
+            self.chknum += 1
 
                 
     def output(self, overwrite):
@@ -275,6 +278,30 @@ class TorchState(object):
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
         tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
+        
+    def out_merged_stars(self, removed_stars, overwrite):
+        """Write merged star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "merged_stars.amuse")
+        if stars_fname in listdir(self.output_dir):
+            all_removed_stars = read_set_from_file(stars_fname)
+            all_removed_stars.add_particles(removed_stars)
+        else:
+            all_removed_stars = removed_stars
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote merged stars to merged_stars.amuse")
+        
+    def out_escaped_stars(self, removed_stars, overwrite):
+        """Write merged star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "escaped_stars.amuse")
+        if stars_fname in listdir(self.output_dir):
+            all_removed_stars = read_set_from_file(stars_fname)
+            all_removed_stars.add_particles(removed_stars)
+        else:
+            all_removed_stars = removed_stars
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote escaped stars to escaped_stars.amuse")
 
     def out_binaries(self, overwrite):
         """Write binary particles to AMUSE file"""

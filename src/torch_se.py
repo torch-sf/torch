@@ -828,6 +828,62 @@ class PulsStellarWind(object):
                             - 1.601*np.log10(self.vterm/self.vesc/2.0) \
                             + 1.07*np.log10(teff/2e4)
         return log_dm_dt
+    
+    
+# Merges stars with delta_r < r_1 + r_2, collisions not handled in current version of petar in amuse
+def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
+    if remove:
+        tprint("... checking for merged stars")
+        
+        x_mask = np.argsort(state.stars.x.value_in(units.pc))
+        x_dist = state.stars.x[x_mask][1:] - state.stars.x[x_mask][:-1]
+        r_both = state.stars.radius[x_mask][1:] + state.stars.radius[x_mask][:-1]
+        r_mask = np.where(x_dist <= r_both)
+        # Check 3D distance for those
+        r_dist = ((state.stars.x[x_mask][1:][r_mask] - state.stars.x[x_mask][:-1][r_mask])**2
+                 + (state.stars.y[x_mask][1:][r_mask] - state.stars.y[x_mask][:-1][r_mask])**2
+                 + (state.stars.z[x_mask][1:][r_mask] - state.stars.z[x_mask][:-1][r_mask])**2)**(1./2)
+        idx_w = np.where(r_dist <= r_both[r_mask])[0]
+        idx_1 = x_mask[1:][r_mask][idx_w]
+        idx_2 = x_mask[:-1][r_mask][idx_w]
+
+        # loop over pairs of stars with identical positions
+        if len(idx_w) > 0: # Check if array is empty
+            stars_rem = Particles()
+            for i in range(len(idx_w)):
+                star1_idx = idx_1[i]
+                star2_idx = idx_2[i]
+                se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                # Save tag of star it merged with
+                state.stars[star2_idx].merged_with = state.stars[star1_idx].tag
+                # Save merged time
+                state.stars[star2_idx].merger_time = hydro.get_time()
+                stars_rem.add_particle(state.stars[star2_idx])
+
+            # hydro requires sorted tags for removal
+            # only the stars particle set has a tag attribute.
+            t = stars_rem.tag
+            t = np.sort(np.array(t).flatten())
+            tprint("Removing ", len(t), "merged star(s)")
+            # Remove from hydro
+            hydro.remove_particles(t)
+            # Remove from SE
+            se.particles.remove_particles(stars_rem)
+            # Synchronize to state and copy mass
+            se.particles.synchronize_to(state.stars)
+            state.se_to_stars.copy_attributes(["mass"])
+            # Remove and re-add to grav
+            state.stars.synchronize_to(grav.particles)
+            state.stars_to_grav.copy_attributes(["mass"])
+            if len(grav.particles) != len(state.stars):
+                # See this issue: https://github.com/amusecode/amuse/issues/518
+                tprint('... forced to re-sync grav from stars')
+                grav.particles = Particles()
+                grav.particles.add_particles(state.stars)
+            state.out_merged_stars(stars_rem, overwrite)
+               
+        else:
+            pass
 
     
 if __name__ == '__main__':

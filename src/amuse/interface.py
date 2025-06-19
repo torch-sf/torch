@@ -14,10 +14,12 @@ speed = generic_unit_system.speed
 density = generic_unit_system.density
 momentum =  generic_unit_system.momentum_density
 energy =  generic_unit_system.energy_density
+enerInt = generic_unit_system.length ** 2 / generic_unit_system.time ** 2
 potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
 potential = generic_unit_system.potential
+flux = generic_unit_system.energy / time / length ** 2
 
 class FlashInterface(CodeInterface, HydrodynamicsInterface):
 
@@ -80,6 +82,18 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_block_state():
+        # VorAMR addition - SCL
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('dataSize', dtype='i', direction=function.IN)
+        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
+            function.addParameter(x, dtype='d', direction=function.IN)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
     def get_grid_momentum_density():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -106,7 +120,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     @legacy_function
     def get_grid_velocity():
         function = LegacyFunctionSpecification()
-        function.can_handle_array = True
+        function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         for x in ['vx', 'vy', 'vz']:
@@ -118,7 +132,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     @legacy_function
     def set_grid_velocity():
         function = LegacyFunctionSpecification()
-        function.can_handle_array = True
+        function.must_handle_array = True
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         for x in ['vx', 'vy', 'vz']:
@@ -167,6 +181,28 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         for x in ['i','j','k', 'index_of_grid','nproc']:
             function.addParameter(x, dtype='i', direction=function.IN)
         function.addParameter('rho', dtype='d', direction=function.IN)
+        function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def get_grid_flux_photoelectric():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        for x in ['i','j','k', 'index_of_grid','nproc']:
+            function.addParameter(x, dtype='i', direction=function.IN)
+        function.addParameter('flux_pe', dtype='d', direction=function.OUT)
+        function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def get_grid_flux_ionizing():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        for x in ['i','j','k', 'index_of_grid','nproc']:
+            function.addParameter(x, dtype='i', direction=function.IN)
+        function.addParameter('flux_ion', dtype='d', direction=function.OUT)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
         function.result_type='int32'
         return function
@@ -1325,6 +1361,13 @@ class Flash(CommonCode):
             density, momentum, momentum, momentum, energy),
             (object.ERROR_CODE,)
         )
+        # VorAMR addition - SCL
+        object.add_method(
+            'set_block_state',
+            (object.INDEX, object.INDEX,
+            density, speed, speed, speed, enerInt, potential),
+            (object.ERROR_CODE,)
+        )
 
         object.add_method(
             'get_grid_energy_density',
@@ -1404,6 +1447,18 @@ class Flash(CommonCode):
             'get_cell_volume',
             (object.INDEX, object.INDEX, object.INDEX, object.INDEX),
             (length**3, object.ERROR_CODE,)
+        )
+
+        object.add_method(
+            'get_grid_flux_photoelectric',
+            (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
+            (flux, object.ERROR_CODE,)
+        )
+
+        object.add_method(
+            'get_grid_flux_ionizing',
+            (object.INDEX, object.INDEX, object.INDEX, object.INDEX, object.INDEX),
+            (flux, object.ERROR_CODE,)
         )
 
         object.add_method(
@@ -1932,7 +1987,7 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-
+        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot')) # VorAMR addition - SCL
         definition.add_getter('get_grid_density', names=('rho',))
         definition.add_setter('set_grid_density', names=('rho',))
 
@@ -1948,6 +2003,9 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_energy_density', names=('energy',))
         definition.add_setter('set_grid_energy_density', names=('energy',))
+
+        definition.add_getter('get_grid_flux_photoelectric', names=('flux_photoelectric',))
+        definition.add_getter('get_grid_flux_ionizing', names=('flux_ionizing',))
 
 
 #       definition.add_getter('get_grid_gravitational_potential', names=('gravitational_potential',))
@@ -2020,6 +2078,7 @@ class Flash(CommonCode):
                     'set_particle_pointers',
                     'get_grid_state',
                     'set_grid_state',
+                    'set_block_state', # VorAMR addition - SCL
                     'get_potential_at_point',
                     'get_potential',
 #                    'get_gravity_at_point',
@@ -2032,6 +2091,8 @@ class Flash(CommonCode):
                     'set_grid_momentum_density',
                     'get_grid_velocity',
                     'set_grid_velocity',
+                    'get_grid_flux_photoelectric',
+                    'get_grid_flux_ionizing',
                     'get_position_of_index',
                     'get_index_of_position',
                     'get_max_refinement',

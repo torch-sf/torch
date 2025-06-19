@@ -1,3 +1,4 @@
+
 # ==================================================================
 # Simulation/SimulationMain, monitors/Logfile/LogfileMain, IO/IOMain
 # ==================================================================
@@ -11,9 +12,7 @@ output_directory= "./data"
 # Simulation/SimulationMain/Cube
 # ==============================
 
-#sim_cubeFile         = ""
-sim_cubeFile        ="./M4V02_R07" # "./cubefiles/M5V02B"
-#sim_cubeFile        ="./cube128"
+sim_cubeFile         = "./cube128 "#"./fake_cube"
 #sim_cubeFile        ="./M3V02B/cubeM3V02B" # "./cubefile"
 #sim_cubeFile        ="./M4V02B/cubeM4V02B" # "./cubefile"
 #sim_cubeFile        ="./M5V02B/cubeM5V02B" # "./cubefile"
@@ -30,6 +29,36 @@ bx0 = 0.0e0
 by0 = 0.0e0
 bz0 = 3.0e-6
 
+# ================
+# VorAMR extension
+# ================
+use_voramr = .true.
+voramr_source = "snapshot_518_9.hdf5"
+voramr_input = "voramr_input.hdf5"
+
+refine_on_particle_count = .true.
+min_particles_per_blk    = 4096 # Assumes 16x16x16 blocks
+max_particles_per_blk    = 4096 
+pt_maxPerProc            = 10000000 # Enough to fit all particles on one proc
+#refine_var_2 = "dens"
+refineonjeanslength = .true. #.false.
+
+# Restrict initial refinement by only placing particles within radius 
+use_localRef = .false. #.true.
+center_localRef = .false.
+localRef_x = 3.20621187e+20 # cm
+localRef_y = 6.24367575e+20
+localRef_z = -1.51873194e+20
+localRef_r = 1.543e+20
+
+# Background Potential
+sim_withStaticGrav = .true.
+              # AREPO 518_9   # Hill et al 2012
+sim_aParm1  = 1.31142525e-72  #4.39996789e-9  # [cm/s^2]     # 1.42E-3 [kpc/Myr^2]
+sim_aParm2  = 1.35401904e-52  #5.51293615e-31 # [1/s^2]      # 5.49E-4 [1/Myr^2]
+sim_aParm3  = -2.36078509e-30 #5.55421965e20  # [cm]         # 0.18E0  [kpc]
+sim_aParm4  = 4.06112841e-11  #1.62715932e-53 # [1/(cm s^2)] #5 .0E-5  [1/kpc Myr^2]
+#sim_aParm5  = 0d0
 
 # ===================
 # physics/Eos/EosMain
@@ -44,13 +73,13 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For Sean's 10^4 cloud
-xmax  	     	=  2.6999e+19 # 8.75 pc
-xmin		= -2.6999e+19
-ymax		=  2.6999e+19
-ymin		= -2.6999e+19
-zmax		=  2.6999e+19
-zmin		= -2.6999e+19
+# For the AREPO snapshot
+xmax  	  	 = 1.079987157e+21 #350pc #6.171e+20 # 200pc #3.086e+20 # 100pc
+xmin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20  
+ymax		 = 1.079987157e+21 #3.086e+20 #6.171e+20 #3.086e+20 
+ymin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20 
+zmax		 = 1.079987157e+21 #3.086e+20 #6.171e+20 #3.086e+20 
+zmin		 = -1.079987157e+21 #-3.086e+20 #-6.171e+20 #-3.086e+20 
 
 # For the 10^3 cloud
 #xmax            =  2.1602e+19 # 7 pc 1.5428388e+19 #10.0 pc #3.0856776e+19 # extend one side to get 239861 blks 1.5428388e+19 # (-5pc,5pc)^3
@@ -90,17 +119,30 @@ zr_boundary_type      = "outflow" #"diode"
 nblockx         = 1
 nblocky         = 1
 nblockz         = 1
-lrefine_max     = 5
-lrefine_min     = 4  
-refine_var_1 = "none"
-refine_var_2 = "none"
+lrefine_max     = 3
+lrefine_min     = 2 #1
 
 #refine_var_1    = "pres"
-#refine_filter_1 = 1e-2
-## Note a factor of 2 in difference gives 0.97087
-## A factor of 3 is just above 0.98
-#refine_cutoff_1 = 0.98
-#derefine_cutoff_1 = 0.6  # fairly aggressive
+refine_var_1 = "none"
+
+refine_filter_1 = 1e-2
+# Note a factor of 2 in difference gives 0.97087
+# A factor of 3 is just above 0.98
+refine_cutoff_1 = 0.98
+derefine_cutoff_1 = 0.6 # fairly aggressive
+
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .false.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
 
 #   maximum change of refinements per step
 #nrefs = 2
@@ -111,31 +153,32 @@ refine_var_2 = "none"
 gr_sanitizeDataMode  = 3 # Try to correct "bad data"
 gr_sanitizeVerbosity = 4 # Just print warning, not cell info
 
+gr_pmrpConserve          = .true.
 
 # ==================================================
 # simulation time, output file intervals, restarting
 # Driver/DriverMain, IO/IOMain
 # ==================================================
-restart         = .true. 
+restart         = .false.
 nend            = 999999999
-tmax            = 8.365e13 # from last plotfile in other directory
+tmax            = 6.30e8 # two init timesteps #6.3113852e14 # 20 Myr
 dtinit          = 3.15e8
 dtmin           = 3.15e7
 dtmax           = 3.15e12
 dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 2.0
 
-wall_clock_checkpoint       = 1.44e+04 #4h
+wall_clock_checkpoint       = 0.432e+05
 wall_clock_time_limit       = 1.0e99
-checkpointFileNumber        = 291
+checkpointFileNumber        = 0
 checkpointFileIntervalStep  = 0
-checkpointFileIntervalTime  = 3.1556926e11 #10 kyr #3.1556926e12 #0.1 Myr
-plotFileNumber              = 152
+checkpointFileIntervalTime  = 3.15e7 #3.15e8 #10yr #3.1556926e13 # 1 Myr
+plotFileNumber              = 0
 plotFileIntervalStep        = 0
-plotFileIntervalTime        = 3.1556926e11 #10 kyr #3.1556926e12 # 0.1 Myr
-particleFileNumber          = 152
+plotFileIntervalTime        = 3.15e8 #3.1556926e12 # 0.1 Myr
+particleFileNumber          = 0
 particleFileIntervalStep    = 0
-particleFileIntervalTime    = 3.1556926e11 #10 kyr # 3.1556926e12 # 0.1 Myr
+particleFileIntervalTime    = 3.15e8 #3.1556926e12 # 0.1 Myr
 
 # Time step limiting for positive definiteness
 # New in FLASH4.5, see Sec 7.1.5.1 of Flash User's Guide
@@ -175,7 +218,7 @@ plot_var_19 = "bgpt"
 
 useHydro       = T
 
-cfl		= 0.4  #0.4 #0.8
+cfl		= 0.8
 eintSwitch      = 1.e-4
 killdivb    = T
 UnitSystem  = "CGS"
@@ -216,18 +259,18 @@ cvisc		    = 0.1     # coefficient for artificial viscosity
 use_flattening	= .false. # use flattening (dissipative) (originally for PPM)
 use_steepening	= .false. # use contact steepening (originally for PPM)
 use_upwindTVD	= .true.  #use upwind biased TVD slope for PPM (need nguard=6)
-use_gravhalfupdate = .false. # This would violate the bridge stuff, no?
+use_gravhalfupdate = .true.
 
+use_hybridOrder     = .true.
 hy_fallbackLowerCFL = .true.
-hy_cflFallbackFactor = 0.25
-use_hybridOrder = .true.
+hy_cflFallbackFactor = 0.9
 
 #	II. MAGNETIC(B) AND ELECTRIC(E) FIELDS:
 E_modification	= .true.           # High order algorithm for E-field construction
 E_upwind        = .true.           # Better E field reconstruction (Lee and Deane 2009)
 energyFix	    = .true.           # Update magnetic energy using staggered B-fields
 ForceHydroLimit	= .false.          # Pure Hydro Limit (B=0)
-prolMethod      = "balsara_prol" #"injection_prol" # Prolongation method (injecton_prol, balsara_prol)
+prolMethod      = "injection_prol" # Prolongation method (injecton_prol, balsara_prol)
 #useMagneticResistivity = .true.
 #resistivity = 7.3e-14 # Spitzer resistivity for T = 10^4 K #1.0E-0
 
@@ -237,7 +280,7 @@ entropy         = .false.     # Entropy fix for the Roe solver
 EOSforRiemann	= .false.     # Call EOS in Riemann flux calculations
 
 #	IV. STRONG SHOCK HANDELING SCHEME:
-shockDetect	= .true.     # Shock Detect for numerical stability
+shockDetect	    = .true.      # Shock Detect for numerical stability
 shockLowerCFL   = .true.
 ## -------------------------------------------------------------##
 
@@ -258,27 +301,58 @@ useParticles        = T
 useSinkParticles    = .true.
 
 # maximum number of total particles, not just rays
-pt_maxPerProc   = 10000
+# pt_maxPerProc   = 10000
 
 # --------------------------------------------
 # Particles/ParticlesMain/active/SinkNoAdvance
 # --------------------------------------------
 
-jeans_ncells_ref    = 6.0 #12.0  #20.0 #32.0
-jeans_ncells_deref  = 12.0 #24.0  #40.0 #64.0
+jeans_ncells_ref    = 5.0 #32.0 #12.0  #20.0 #32.0 # - SCL
+jeans_ncells_deref  = 10.0 #64.0 #24.0  #40.0 #64.0 # - SCL 03/01/23
+
+#rho = (pi*c_s**2)/(G*jeanL**2)
+
+# For -+350pc box with lrefine=4
+sink_density_thresh       = 1.693740067596277e-22
+sink_accretion_radius     = 4.21869983203125e+19
+sink_softening_radius     = 4.21869983203125e+19
+
+# For -+350pc box with lrefine=5
+#sink_density_thresh	   = 4.2342494626279594e-23 #9.936820206203192e-21 #6.65689322407753e-21
+#sink_accretion_radius	   = 2.109349916015625e+19
+#sink_softening_radius	   = 2.109349916015625e+19
+
+# For -+350pc box with lrefine=2
+#sink_density_thresh = 1.654043034761989e-23
+#sink_accretion_radius = 1.6874799328125e+20
+#sink_softening_radius = 1.6874799328125e+20
+
+#For -+100pc box with lrefine=2
+#sink_density_thresh        = 1.90196949259358e-21
+#sink_accretion_radius	   = 4.821371236607143e+19
+#sink_softening_radius	   = 4.821371236607143e+19
+
+#For -+100pc box with lrefine=4
+#sink_density_thresh        = 3.80393898518716e-21
+#sink_accretion_radius      = 1.2053428091517858e+19
+#sink_softening_radius      = 1.2053428091517858e+19
 
 # For -+7pc box with lrefine=2, demonstration problem
 #sink_density_thresh       = 8.52171362932e-22
 #sink_accretion_radius     = 3.3753125e+18
 #sink_softening_radius     = 3.3753125e+18
-
-#---------------------------------------------
-# Claude's runs: 
-#---------------------------------------------
-#1e4 mass in -+8.75pc box lrefinemax=5, 8
-sink_density_thresh   	  = 3.82e-21       #From Federrath eq. 32, assuming cs = 1.9e4 cm s-1
-sink_accretion_radius	  = 5.2733744e+17  #2.5 cells at refmax=5
-sink_softening_radius	  = 5.2733744e+17  #2.5 cells at refmax=5 
+# For -+7pc box
+#sink_density_thresh       = 2.47685070948e-21 # 7pc 4.85564e-21 # 10 pc box # 3.47202e-22 # 50 pc box #5.24209e-21 #1.0e-18
+#sink_accretion_radius     = 1.68765625e+18 # 7 pc 1.205e18 #for 10 pc box # 6.02734e18 # for 50 pc box 7.5333925e+16 # 2.5 x grid cell size #2.1096e17 # 7 cell radius for winds  #
+#sink_softening_radius     = 1.68765625e+18 #1.205e18 # 6.02734e18 #7.5333925e+16 # 2.5 x grid cell size #2.1096e17 # to guarantee refinement. #
+# For -+12 pc box
+#sink_density_thresh       = 8.42817255308e-22 
+#sink_accretion_radius     = 2.893125e+18
+#sink_softening_radius     = 2.893125e+18
+#For -+55 pc box
+#sink_density_thresh       = 4.01208875254e-23
+#sink_accretion_radius     = 1.326015625e+19
+#sink_softening_radius     = 1.326015625e+19
 
 sink_softening_type_gas   = "spline" #"linear"
 sink_softening_type_sinks = "spline"
@@ -316,7 +390,7 @@ grav_boundary_type_z    = "isolated"
 # Multigrid solver
 # ----------------
 mpole_lmax = 10
-mg_maxresidualnorm = 1e-6
+mg_maxResidualNorm = 0.01 #1e-6
 mg_printNorm       = .false.
 
 ## -------------
@@ -385,19 +459,19 @@ he_pe_norm      = 1.3e-24
 
 # heating and cooling thresholds
 # at which temperatures to apply heating
-theatmin        = 0.0E0
+theatmin        = 1e-99
 theatmax        = 2.0E4
 
-# at which temperatures to apply cooling
-tradmin         = 10.0 # 0.0 # tradmin=0 will BREAK heat/cooling solver - 2019 Feb 26 AT
+# at which temperatures to apply atomic cooling curve
+tradmin         = 10.0  # tradmin=0 breaks heat/cool solver
 tradmax         = 1.E15 # so always
 
 # absolute thresholds never goes below or above these temperatures
 absTmin = 10.
 absTmax = 1e9
 
-# electron number densities at which to apply cooling
-dradmin   = 0.0 #1e-8
+# electron number densities at which to apply atomic cooling curve
+dradmin   = 1e-99
 dradmax   = 1e10
 
 # heat in exponential profile or uniformely
@@ -463,7 +537,17 @@ rt_rayTrace    = T
 # NOTE: useRadTrans and useRadTransfer do distinct things
 useRadTransfer = T
 
-rt_maxHchange = 0.1
+rt_maxHchange = 0.1  # this number shouldn't be doing anything now. -JW
+rt_ion_threshold = 0.1  # this replaces rt_maxHchange
+rt_ion_min = 1e-8
+# rt_neutral_min shouldn't be zero ever, because the radiation solver assumes
+# zero photons are absorbed and the heating from ionization will flip flop
+# rapidly from high to zero, making things unstable. -JW
+rt_neutral_min = 1e-10
+
+# temperature that radiation will heat gas to, used as a limiter of
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+rt_dt_temp = 1.0e5
 
 ph_sampling     = 2.0
 ph_initHPlevel  = 2
@@ -474,10 +558,19 @@ ph_raysToBundle = 5
 ph_CommCheckInterval = 20
 ph_radPressure  = T
 
+# cfl factor used to limit velocity of radiation pressure, used as a limiter of
+# first timestep after a feedback star is put on the grid. -BP 19Jan23
+cfl_radPressure = 0.3
+
 early_term_FUV  = T
 sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
 dust_gas_ratio  = 0.01  # 1% dust
 ph_EUVonDust    = T     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
+
+rt_useRadTransDt = .true.
+# Use the feedback safety timestep on start or restart?
+rt_useNumstepsRadTransDtOnStart = .false.  # actually has no effect in code -AT,2019oct23
+rt_numStepsRadTransDt = 10  # how many safe steps to take
 
 
 # ======================================================================================
@@ -513,3 +606,7 @@ wind_target_temp = 5e6
 # Perturb the wind velocity by a normal distribution?
 perturb_velocity = .false. #.true. #
 perturb_std_dev  = 0.05
+
+# Use internal (and generally very limiting) timestep calculation
+# in inject_direct.F90?
+use_wind_compute_dt = .false.

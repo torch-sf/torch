@@ -13,8 +13,9 @@ from scipy.integrate import quad
 from primordial_binaries import orbits
 
 
-def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1,
-                              max_samp_mass=150.0, sum_small=False, binaries=True, mult_frac='field', pdist='field', qdist='field', edist='field'):
+def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1, max_samp_mass=150.0, 
+                 sum_small=False, m_small=1, binaries=True, mult_frac='field', 
+                 pdist='field', qdist='field', edist='field'):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
@@ -41,7 +42,7 @@ def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1,
         masses = collect_small_stars_mass(masses,m_small)
 
     np.random.shuffle(masses)
-    masses, system_masses, positions, velocities = orbits(masses, binaries = binaries, mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist)
+    masses, system_masses, positions, velocities = orbits(masses, binaries = binaries, mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist, min_mass=min_samp_mass)
 
     return masses, system_masses, positions, velocities
 

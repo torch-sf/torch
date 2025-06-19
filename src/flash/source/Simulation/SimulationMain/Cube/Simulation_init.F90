@@ -28,7 +28,8 @@ subroutine Simulation_init()
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
   use Driver_interface, ONLY : Driver_abortFlash, Driver_getMype, Driver_getComm
-
+  use Logfile_interface, ONLY : Logfile_stamp
+  
   implicit none
 #include "Flash.h"
 #include "Eos.h"
@@ -80,6 +81,48 @@ subroutine Simulation_init()
 !  call RuntimeParameters_get('h_cr', sim_cr_h)
 !  call RuntimeParameters_get('use_constant_heating', sim_constant_heating)
 !  call RuntimeParameters_get('stratifyHeat',   sim_stratify_heating)
+
+  ! stratbox, gravity profile parameters, stellar disk
+  call RuntimeParameters_get('sim_aParm1',  sim_aParm1)
+  call RuntimeParameters_get('sim_aParm2',  sim_aParm2)
+  call RuntimeParameters_get('sim_aParm3',  sim_aParm3)
+  call RuntimeParameters_get('sim_aParm4',  sim_aParm4)
+  call RuntimeParameters_get('sim_withStaticGrav', sim_withStaticGrav)
+
+  ! VorAMR switches and info
+  call RuntimeParameters_get('use_voramr', use_voramr)
+  call RuntimeParameters_get('voramr_source', voramr_source)
+  call RuntimeParameters_get('voramr_input', voramr_input)
+  call RuntimeParameters_get('use_localRef', use_localRef)
+  call RuntimeParameters_get('center_localRef', center_localRef)
+  call RuntimeParameters_get('localRef_x', localRef_x)
+  call RuntimeParameters_get('localRef_y', localRef_y)
+  call RuntimeParameters_get('localRef_z', localRef_z)
+  call RuntimeParameters_get('localRef_r', localRef_r)
+  call RuntimeParameters_get('refine_on_particle_count', refPartCount)
+  if (sim_myPE.EQ.MASTER_PE) then
+     if (refPartCount) call Logfile_stamp('refine_on_particle_count is set to .TRUE.', "[Simulation_init]")
+     if (sim_withStaticGrav) call Logfile_stamp('sim_withStaticGrav is set to .TRUE.', "[Simulation_init]")
+     if (use_voramr) then
+        call Logfile_stamp('use_voramr is set to .TRUE. proceeding with VorAMR.', "[Simulation_init]")
+        call Logfile_stamp(voramr_source, "[Simulation_init]")
+     endif
+     if (use_localRef) call Logfile_stamp('use_localRef is set to .TRUE. only refining part of grid initially', &
+          & "[Simulation_init]")
+  endif
+  
+   !! Derefinement outside rectangular region of interest
+  call RuntimeParameters_get('use_deref', use_deref)
+  call RuntimeParameters_get('deref_lref', deref_lref)
+  call RuntimeParameters_get('deref_xl', deref_xl)
+  call RuntimeParameters_get('deref_xr', deref_xr)
+  call RuntimeParameters_get('deref_yl', deref_yl)
+  call RuntimeParameters_get('deref_yr', deref_yr)
+  call RuntimeParameters_get('deref_zl', deref_zl)
+  call RuntimeParameters_get('deref_zr', deref_zr)
+  if (sim_myPE.EQ.MASTER_PE) then
+     if (use_deref) call Logfile_stamp('derefining outside region of interest', "[Simulation_init]")
+  endif
 
   sim_abar = 1.0 + sim_abundM*sim_metal
 
