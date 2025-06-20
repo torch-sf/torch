@@ -548,7 +548,7 @@ min_jet_mass = 1.988e35 #in grams - 100 | units.Msun
 max_jet_mass = 1.988e31 #in grams - 0.01 | units.Msun 
 jet_mass_fraction = 0.0 #Set default to no jets
 jet_time = 0.0 #Set default to no jets
-jet_vel_fraction = 1
+jet_vel_fraction = 0.25
 
 ### The following values show an example of a basic set up with jets - SA 20230808
 # To ensure a single star only produces either jets OR winds, make sure 'min_wind_mass' and 'max_jet_mass' are equal.
@@ -560,5 +560,5 @@ jet_vel_fraction = 1
 # max_jet_mass = 1.3923e34 #in grams - 7.0 | units.MSun  #Stars at masses equal to or greater than this mass won't produce jets
 # jet_mass_fraction = 0.33  # Set default to 0.0 if no jets
 # jet_time = 3.154e12 #seconds = 1e5 | units.yr
-# jet_vel_fraction = 1 
+# jet_vel_fraction = 0.25
 #
