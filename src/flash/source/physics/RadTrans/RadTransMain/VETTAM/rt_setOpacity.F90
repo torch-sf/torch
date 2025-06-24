@@ -196,8 +196,8 @@ SUBROUTINE rt_setOpacity()
           !Destroy dust opacities due to thermal sputtering if gas temperatures > 10^6 K
           !TODO: Implement non-thermal sputtering
           if(solnData(TEMP_VAR,i,j,k) .gt. he_dust_sputter_temp) then
-            opac_planck = 0.0
-            opac_rosseland = 0.0
+            opac_planck = 1.0e-27 ! set floor to prevent NANs in boundary conditions
+            opac_rosseland = 1.0e-27
           endif
 #endif
 
