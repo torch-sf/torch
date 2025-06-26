@@ -258,14 +258,16 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PeTar.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-                    print(grav.parameters)
-
-                    remove_merged_stars(USER['merge_stars'], state, hydro, grav, se)
 
             ### ------------------
             ### First bridge kick.
             ### ------------------
-            remove_particles_outside_bndbox(state, hydro, grav, mult)
+
+            state_ = state # save a copy of state in case we need to save then exit during the loop, CCC 09/03/2023
+            # Merge stars at same location, based on fix by BP, commit 366d5be on petar branch - 06/03/2024
+            # Repeat every timestep - CCC 18/11/2024
+            remove_merged_stars(USER['remove_merged'], USER['overwrite'], state, hydro, grav, se)
+            remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
             hydro.particles_sort()  # also checks for stars outside domain
 
             if USER['with_bridge']:
@@ -288,7 +290,7 @@ def evolve(state, hydro, grav, mult, se):
                         mult.channel_from_code_to_memory.copy()     # grav  -> multiples
                         state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
 
-                remove_particles_outside_bndbox(state, hydro, grav, mult)
+                remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
                 hydro.particles_sort()  # also checks for stars outside domain
 
             ### ------------------
@@ -422,7 +424,7 @@ def evolve(state, hydro, grav, mult, se):
         ### Remove stars outside domain.
         ### ----------------------------
         # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(state, hydro, grav, mult)
+        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
         hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
@@ -442,7 +444,7 @@ def evolve(state, hydro, grav, mult, se):
         ### Remove stars outside domain.
         ### ----------------------------
         # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(state, hydro, grav, mult)
+        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
         hydro.particles_sort()  # also checks for stars outside domain
 
         ### -------------------
@@ -573,6 +575,8 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
+    state = TorchState(hydro, grav, mult, se)
+
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
     #convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
@@ -592,8 +596,6 @@ def run_torch(user_initial_conditions, user_parameters):
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")
-
-    state = TorchState(hydro, grav, mult)
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
     

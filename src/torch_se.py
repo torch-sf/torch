@@ -13,6 +13,7 @@ Includes subroutines to
 from __future__ import division, print_function
 
 import numpy as np
+import math
 from scipy.integrate import quad
 
 from amuse.units import units
@@ -24,6 +25,7 @@ h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
+sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4, CCC 26/04/2024
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
 E_ev = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
@@ -35,7 +37,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def stellar_evolution(time, dt, state, hydro, worker,
+def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
     """
@@ -53,12 +55,31 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    t_evol  = time - hydro.get_particle_creation_time(state.stars.tag)
 
+    # Set radius to physical radius for restart with user ICs
+    # This assumes the stars are ZAMS, which may be incorrect 
+    _attributes = state.stars.get_attribute_names_defined_in_store()
+    if 'radius' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # It must be somewhat realistic in case there is a contact system
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MRR for upper mass range
+        state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+    if 'luminosity' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+        # Use linear MLR for upper mass range
+        state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
+    if 'temperature' not in _attributes:
+        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Use BB luminosity and radius, luminosity
+        state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
+    
     # Update ALL the star properties in bulk for consistency.
     # Keep the old mass and type (in case we exit loop early, as for SN)
-    new_type = state.stars.stellar_type  # could update state.stars.{stellar_type,mass} directly,
-    new_mass = state.stars.mass          # but use intermediate variables to be consistent w/ other props
+    # CCC 26/04/2024
+    old_mass = np.copy(state.stars.mass)
+
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
     vterm   = np.zeros(len(state.stars)) | units.cm / units.s
     nion    = np.zeros(len(state.stars)) | units.s**-1
@@ -71,23 +92,26 @@ def stellar_evolution(time, dt, state, hydro, worker,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
+    # CCC 26/04/2024
+    # Structure changed to use evolve_model to evolve all stars at the same time
+    # This allows us to restart from evolved stars and use the same structure for
+    # binary evolution - CCC 04/11/2023
+    state.stars_to_se.copy()
+    se.evolve_model(time)
+    state.se_to_stars.copy()
+
+    # Reset the stars' age after the SE step, as the SeBa age is reset to 0
+    # at each restart - CCC 22/11/2024
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    
     for i, s in enumerate(state.stars):
 
         if went_supernova(s.stellar_type):
             continue
 
-        # SE code accepts initial mass, not the current mass
-        # the "se_" prefix denotes quantities after +dt evolve
-        _tmp = worker.evolve_star(s.initial_mass, t_evol[i], 0.02)  # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        assert se_time - t_evol[i] < 1e3 | units.s
-        del se_time, se_evol_time  # not needed
-
-        new_type[i] = se_type
-
         if s.mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(se_type):
+            if with_sn and went_supernova(s.stellar_type):
 
                 inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                 if inj_mass > 15.0|units.MSun:
@@ -106,36 +130,25 @@ def stellar_evolution(time, dt, state, hydro, worker,
             else:
 
                 if with_lyc:
-                    _tmp = compute_eion_nion_sigh(se_mass, se_temp, se_radius)
+                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
                     eion[i] = _tmp[0]
                     nion[i] = _tmp[1]
                     sigh[i] = _tmp[2]
                 if with_pe_heat:
-                    _tmp = compute_epe_npe(se_temp, se_radius)
+                    _tmp = compute_epe_npe(s.temperature, s.radius)
                     epe[i] = _tmp[0]
                     npe[i] = _tmp[1]
                     sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
                 if with_winds:
-                    _tmp = compute_dmdt_vterm(s.mass, se_temp, se_radius, se_mass, se_lum, dt,
+                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
+        # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
-            new_mass[i] = min(se_mass, s.mass - dm_dt[i]*dt)
-        else:
-            new_mass[i] = se_mass
-
-    # This assumes steps are relatively small in the mass loss rate of stars,
-    # so that gravity can use the mass after all the wind mass loss has
-    # occcured. Otherwise we'd have to average mass loss and keep up with old
-    # and new masses and it just gets ugly.
-    state.stars.mass = new_mass
-    state.stars.stellar_type = new_type
-
-    # Update star radii for N-body collisions in petar -BP 08.19.22
-    state.stars.radius = se_radius
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -152,6 +165,14 @@ def stellar_evolution(time, dt, state, hydro, worker,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
+    # Set SeBa properties for checkpoint - CCC 26/04/2024, 06/11/2024
+    hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
+    
     return se_dt
 
 
@@ -202,6 +223,7 @@ def compute_eion_nion_sigh(se_mass, se_temp, se_radius):
     [power, err] = quad(lum_wl_cs, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
     # Now integrate to find the number of photons.
     [per_ph, err] = quad(lum_wl_cs_per_ph, l_min, l_max, args=(l_max, se_temp.value_in(units.K)))
+    
     avg_E = power/per_ph / E_ev
     # Calculate the average frequency of an ionizing photon for this star
     avg_nu = avg_E*E_ev/h
@@ -393,58 +415,61 @@ class PulsStellarWind(object):
                             + 1.07*np.log10(teff/2e4)
         return log_dm_dt
 
-# Merges stars with delta_x = 0, collisions not handled in current version of petar in amuse
-def remove_merged_stars(remove, state, hydro, grav, se):
-    if remove:        
-        print("[remove_merged_stars]: initial Nstars = ",len(state.stars))
 
-        #### TEST TO MOVE PARTICLES WITH IDENTICAL POSITIONS ####
-        pp = np.array([state.stars.x.value_in(units.cm),
-                       state.stars.y.value_in(units.cm),
-                       state.stars.z.value_in(units.cm)]).T
-
-        unq, unq_idx, unq_cnt = np.unique(pp, axis=0, return_inverse=True, return_counts=True)
-        cnt_mask = unq_cnt > 1
-        cnt_idx, = np.nonzero(cnt_mask)
-        idx_mask = np.in1d(unq_idx, cnt_idx)
-        idx_idx, = np.nonzero(idx_mask)
-        srt_idx = np.argsort(unq_idx[idx_mask])
-        dup_idx = np.split(idx_idx[srt_idx], np.cumsum(unq_cnt[cnt_mask])[:-1])
-
-        # add particles to seba
-        se.particles.add_particles(state.stars)
-        seba_to_stars = se.particles.new_channel_to(state.stars)
+# Merges stars with delta_r < r_1 + r_2, collisions not handled in current version of petar in amuse
+def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
+    if remove:
+        tprint("... checking for merged stars")
+        
+        x_mask = np.argsort(state.stars.x.value_in(units.pc))
+        x_dist = state.stars.x[x_mask][1:] - state.stars.x[x_mask][:-1]
+        r_both = state.stars.radius[x_mask][1:] + state.stars.radius[x_mask][:-1]
+        r_mask = np.where(x_dist <= r_both)
+        # Check 3D distance for those
+        r_dist = ((state.stars.x[x_mask][1:][r_mask] - state.stars.x[x_mask][:-1][r_mask])**2
+                 + (state.stars.y[x_mask][1:][r_mask] - state.stars.y[x_mask][:-1][r_mask])**2
+                 + (state.stars.z[x_mask][1:][r_mask] - state.stars.z[x_mask][:-1][r_mask])**2)**(1./2)
+        idx_w = np.where(r_dist <= r_both[r_mask])[0]
+        idx_1 = x_mask[1:][r_mask][idx_w]
+        idx_2 = x_mask[:-1][r_mask][idx_w]
 
         # loop over pairs of stars with identical positions
-        stars_rem = Particles()
-        for i in range(len(dup_idx)):
-            star1_idx = dup_idx[i][0]
-            star2_idx = dup_idx[i][1]
-            print("[remove_merged_stars]: Before merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
-            print("[remove_merged_stars]: Before merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
-            se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
-            print("[remove_merged_stars]: After merge: Mass = ",se.particles[star1_idx].mass,se.particles[star2_idx].mass)
-            print("[remove_merged_stars]: After merge: Radius = ",se.particles[star1_idx].radius,se.particles[star2_idx].radius)
-            stars_rem.add_particle(state.stars[star2_idx])
-            print(stars_rem)
+        if len(idx_w) > 0: # Check if array is empty
+            stars_rem = Particles()
+            for i in range(len(idx_w)):
+                star1_idx = idx_1[i]
+                star2_idx = idx_2[i]
+                se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                # Save tag of star it merged with
+                state.stars[star2_idx].merged_with = state.stars[star1_idx].tag
+                # Save merged time
+                state.stars[star2_idx].merger_time = hydro.get_time()
+                stars_rem.add_particle(state.stars[star2_idx])
 
-        grav_rem = stars_rem.copy()
-        se_rem = stars_rem.copy()
-
-        # hydro requires sorted tags for removal
-        # only the stars particle set has a tag attribute.
-        t = stars_rem.tag
-        t = np.sort(np.array(t).flatten())
-        print("[remove_merged_stars]: remove tags",t)
-        hydro.remove_particles(t)
-        state.stars.remove_particles(stars_rem)
-        grav.particles.remove_particles(grav_rem)
-        grav.particles.synchronize_to(state.stars)
-        se.particles.remove_particles(se_rem) #.particles[star2_idx].as_set())
-        se.particles.synchronize_to(state.stars)
-
-        print("[remove_merged_stars]: final Nstars = ",len(state.stars),hydro.get_number_of_particles())
-
-
+            # hydro requires sorted tags for removal
+            # only the stars particle set has a tag attribute.
+            t = stars_rem.tag
+            t = np.sort(np.array(t).flatten())
+            tprint("Removing ", len(t), "merged star(s)")
+            # Remove from hydro
+            hydro.remove_particles(t)
+            # Remove from SE
+            se.particles.remove_particles(stars_rem)
+            # Synchronize to state and copy mass
+            se.particles.synchronize_to(state.stars)
+            state.se_to_stars.copy_attributes(["mass"])
+            # Remove and re-add to grav
+            state.stars.synchronize_to(grav.particles)
+            state.stars_to_grav.copy_attributes(["mass"])
+            if len(grav.particles) != len(state.stars):
+                # See this issue: https://github.com/amusecode/amuse/issues/518
+                tprint('... forced to re-sync grav from stars')
+                grav.particles = Particles()
+                grav.particles.add_particles(state.stars)
+            state.out_merged_stars(stars_rem, overwrite)
+               
+        else:
+            pass
+        
 if __name__ == '__main__':
     pass
