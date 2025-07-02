@@ -50,7 +50,8 @@ OPENMP = -fopenmp
 
 #FFLAGS_OPT = -ggdb -c -O3 -fdefault-real-8 -fdefault-double-8 \
 -mtune='intel' -Wuninitialized
-FFLAGS_OPT = -c -O2 -fdefault-real-8 -fdefault-double-8 
+FFLAGS_OPT = -c -O2 -fdefault-real-8 -fdefault-double-8 \
+  -I${HDF5_INC} -L${HDF5_LIB} -lhdf5_fortran
 
 #I explictly add -O0 because I found that compiling source files without
 #an optimization flag generates the same object code as compiling source
