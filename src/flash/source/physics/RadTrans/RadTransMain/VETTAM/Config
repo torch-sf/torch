@@ -1,0 +1,308 @@
+#
+# DESCRIPTION
+#
+# CONFIG file for the VETTAM radiation module
+# Please cite Menon et al. 2022; MNRAS 512, 401 if using this module in your work
+# Shyam Harimohan Menon, 2020-2024
+# 
+# Note on usage with multiple bands: the variables ERAD and MOHX/Y/Z are overwritten and resued by the different bands;
+# If you would like to store the value define variables BnER and/or BnFX, BnFY etc. where n is the band number for which you want to store
+# ER is the radiation energy and F is the flux. These variables are to be defined in your simulation config directory. 
+
+REQUIRES Driver
+REQUIRES physics/materialProperties/Opacity/RadTrans/Semenov
+CONFLICTS physics/RadTrans/RadTransMain/MGD
+
+LIBRARY PETSC
+
+D compute a time step associated with cooling
+PARAMETER rt_compute_Dt       BOOLEAN  FALSE
+
+D debug flag
+PARAMETER rt_debug            BOOLEAN  FALSE
+
+D Eddington tensor type
+PARAMETER rt_etens            STRING   "vet"
+
+D choose prescription for the timestep calculation. 1 = light crossing time, 2 = Radn modified CFL
+PARAMETER rt_Dt_type          INTEGER  2
+
+D cooling timestep factor
+PARAMETER rt_dtFactor         REAL     1.0
+
+D cool only in regimes where temperature > T_rt_min
+PARAMETER rt_T_min            REAL     0.0
+
+D relative error tolerance
+PARAMETER rt_rtol             REAL     1.e-8
+
+D absolute error tolereance
+PARAMETER rt_abstol           REAL     1.e-20
+
+D tolerance before diverged
+PARAMETER rt_dtol             REAL     1.e5
+
+D maximum number of iterations
+PARAMETER rt_maxits           INTEGER  1000
+
+D minimum number of iterations
+PARAMETER rt_minits           INTEGER  1
+
+D preconditioner for linear solver, e.g bjacobi, jacobi, shell, none
+PARAMETER rt_preconditioner   STRING   "asm"
+
+D linear solver, e.g. gmres, cg, bcgs
+PARAMETER rt_linearsolver     STRING   "gmres"
+
+D lower limit for erad
+PARAMETER rt_smalle 		REAL 		0.0
+
+D lower limit for frad
+PARAMETER rt_smallf 		REAL 		1.e-20
+
+D Temperature update type: 1=LTE, 2=Picard Iteration
+PARAMETER rt_hydro_type		INTEGER		2
+
+D Temperature update type: 1=Newton Rhapson, 2=Linearised, 3: Quartic
+PARAMETER rt_temp_type		INTEGER		1
+
+D Picard iteration rtol
+PARAMETER rt_picard_rtol		REAL 		1.e-3
+
+D Picard iteration rtol
+PARAMETER rt_picard_abstol		REAL 		1.e-10
+
+D Picard iteration maxsteps
+PARAMETER rt_picard_maxits 		INTEGER 		1000
+
+D Picard theta for next guess. 1 = newly computed guess, 2- previous guess
+PARAMETER rt_picard_theta        REAL      1.0
+
+D NR rtol
+PARAMETER rt_nr_rtol 		REAL 		1.e-4
+
+D NR maxits
+PARAMETER rt_nr_maxits 		INTEGER 		10000
+
+D NR Dtol
+PARAMETER rt_nr_dtol		REAL 		1.e5
+
+D HLLE Correction Flag
+PARAMETER rt_hlle_correction		BOOLEAN		TRUE	
+
+D Stellar Opacity Type
+PARAMETER rt_stellarop_type 		STRING 		"Fixed"
+	
+D Stellar Opacity
+PARAMETER rt_stellar_opacity		REAL 		64.0
+
+D Implicit Sink Heating
+PARAMETER rt_sink_implicit 		BOOLEAN 	FALSE
+
+D Picard temp correction
+PARAMETER rt_picard_correction    BOOLEAN     TRUE
+
+D O(v/c) correction terms flag
+PARAMETER rt_ovcterms    BOOLEAN     TRUE
+
+D Flag whether to use VETTAM when there are no sink particles
+PARAMETER noSink_VETTAM    BOOLEAN      TRUE
+
+D Parameters to control frequency of VETTAM (only use rt every dt)
+PARAMETER rt_useeverydt		REAL 		0.0
+
+D boundary condition: 1=Reflecting, 2=Outflow, 3=Fixed, 4=Periodic, 5=Vacuum, 6=Marshak
+PARAMETER xl_rad_BC			INTEGER 2
+PARAMETER xr_rad_BC			INTEGER 2
+PARAMETER yl_rad_BC			INTEGER 2
+PARAMETER yr_rad_BC			INTEGER 2
+PARAMETER zl_rad_BC			INTEGER 2
+PARAMETER zr_rad_BC			INTEGER 2
+
+D Update hydro quantites after radiation update
+PARAMETER rt_update_hydro		BOOLEAN  TRUE 
+
+D boundary condition, fixed boundary radiation temperature
+PARAMETER rt_boundary_T   REAL     10.
+
+D boundary condition, fixed boundary radiation flux
+PARAMETER fradx_boundary_value  REAL     0.0
+PARAMETER frady_boundary_value  REAL     0.0
+PARAMETER fradz_boundary_value  REAL     0.0  
+
+D Use ray-trace for direct sink contribution; false by default, i.e. uses moment update
+PARAMETER sink_useRayTrace    BOOLEAN  FALSE
+
+D sigma_star - smoothing length if Gaussian input for sinks used
+PARAMETER sigma_star    REAL  2.0
+
+D flag for sink heating contribution
+PARAMETER rt_sinkheat  BOOLEAN  TRUE 
+
+D flag for sink momentum contribution
+PARAMETER rt_sinkmom  BOOLEAN  TRUE
+
+D Multiband stuff -- by default 3 frequency bands
+PARAMETER  rt_freqbands  INTEGER  3
+
+D Frequency Band information : by default IR, FUV and EUV respectively
+PARAMETER rt_band1 		STRING 		"IR"
+PARAMETER rt_band2 		STRING 		"FUV"
+PARAMETER rt_band3 		STRING 		"EUV"
+PARAMETER rt_band4 		STRING 		"PE"
+PARAMETER rt_band5 		STRING 		"LYMAN_WERNER"
+
+D Flag for opacities. Values possible: "Semenov", "Fixed".
+PARAMETER dust_opacity_ir     STRING   "Semenov"
+PARAMETER dust_opacity_fuv    STRING   "Fixed"
+PARAMETER dust_opacity_euv     STRING   "Fixed"
+
+D Opacities in the bands if Fixed option is chosen. EUV opacity assumes pure hydrogen mixture; divide by eos_singlespeciesA 
+D These values are motivated by star cluster SED-weighted averages shown in Figure 22, Kim et al. 2023
+D Bands: FUV, EUV, Photoelectric (PE), Lyman-Werner (LW), Infrared (IR)
+PARAMETER dust_euvopac_value  REAL  1.25e3
+PARAMETER dust_fuvopac_value  REAL  600.0
+PARAMETER dust_peopac_value   REAL  514.0
+PARAMETER dust_lwopac_value   REAL  900.0
+PARAMETER dust_iropac_value   REAL  10.0
+
+D Dust to gas ratio relative to the solar value
+PARAMETER dusttoGasRatio    REAL  1.0
+
+D Variables
+VARIABLE erad
+VARIABLE mohx
+VARIABLE mohy
+VARIABLE mohz
+
+D Opacities: taup planck opacities, and taur Rosseland opacities
+VARIABLE taup
+VARIABLE taur
+
+D Old time states of radiation variables
+VARIABLE erao
+VARIABLE mhxo
+VARIABLE mhyo
+VARIABLE mhzo
+VARIABLE tmpo
+
+D Picard updated versions of radiation variables
+VARIABLE erap
+VARIABLE mhxp
+VARIABLE mhyp
+VARIABLE mhzp
+VARIABLE tmpp
+
+D Components of the Eddington Tensor (f_Eddington: 3x3 matrix)
+VARIABLE xxed
+VARIABLE xyed
+VARIABLE xzed
+VARIABLE yyed
+VARIABLE yzed
+VARIABLE zzed
+
+D Source term for sink radiation
+VARIABLE jstr
+
+D Reprocessed radiation to IR from higher energy radiation
+VARIABLE reir
+
+D rt_neutral_min Minimum neutral fraction tracked by IHA_SPEC,IHP_SPEC
+PARAMETER rt_neutral_min REAL 0.0
+
+# photoionization rate [1/s]
+VARIABLE phio
+
+# photoionization heating rate [erg/s]
+VARIABLE phhe
+
+# photoelectric flux [erg/s]
+# (In Habing units)
+VARIABLE PEFL
+
+# Here we make a couple of scratch variables
+# to hold the flux in a cell. Note these
+# don't participate in guardcell fills and are
+# not in checkpoint files.
+
+# photoionizing flux [erg/s]
+VARIABLE UVFL TYPE: GENERIC
+# photoelectric flux [ergs/s]
+VARIABLE FUFL TYPE: GENERIC
+
+# ambient fluxes, non-absorbed complement of above
+# ambient photoionizing flux [erg/s]
+VARIABLE AUVF TYPE: GENERIC
+# ambient photoelectric flux [erg/s]
+VARIABLE AFUF TYPE: GENERIC
+
+#define species here IHP is ionized, IHA is atomic
+SPECIES IHP
+SPECIES IHA
+
+PPDEFINE VETTAM
+
+# TORCH STUFF
+# CFL factor to limit radiation pressure velocity
+# of timestep with newly formed feedback stars -BP19Jan23
+PARAMETER cfl_radPressure REAL 0.3
+
+#rt_maxHchange Max change in H ionization/neutral fraction to target
+#D & during rad/ionize subcycle timestep.  This linearly modifies the radiation
+#D & timestep adopted by code.
+PARAMETER rt_maxHchange REAL 0.1
+
+#D rt_rayTrace Use raytracing from particles?
+#D & This parameter is distinct from useRadTrans, which toggles the entire
+#D & RadTrans unit (and so disables, e.g., both ray tracing and ionization)
+PARAMETER rt_rayTrace BOOLEAN True
+
+# Dust stuff
+PARAMETER sigDust        REAL   1e-23
+PARAMETER dust_gas_ratio REAL   0.01
+
+# Temperature that sets the radtrans timestep, what temp the ionized gas will be
+PARAMETER rt_dt_temp REAL 1.0d4
+
+
+# Some parameters of my own design. -JW
+
+D rt_heatInRad Subcycle the heating and cooling inside the ionization
+D & calculation (subcycle them together)?
+PARAMETER rt_heatInRad BOOLEAN True 
+
+D rt_numstepsRadTransDt Number of steps to take at a safe RadTrans dt
+PARAMETER rt_numstepsRadTransDt INTEGER 1
+
+D rt_useNumstepsRadTransDtOnStart Whether to use rt_numstepsRadTransDt on
+D & startup/restart.
+PARAMETER rt_useNumstepsRadTransDtOnStart BOOLEAN True
+
+D rt_useRadTransDt Whether to use RadTrans_computeDt at all?
+PARAMETER rt_useRadTransDt BOOLEAN True
+
+USESETUPVARS vary_atomic_frac
+IF vary_atomic_frac
+  PPDEFINE VARY_ATM_FRAC
+  D rt_vary_atomic_frac allow for varying atomic weight?
+  PARAMETER rt_vary_atomic_frac BOOLEAN False
+  D atmu atomic weight 
+  VARIABLE atmu
+ENDIF
+
+D rt_ion_min Minimum ionization fraction tracked by IHA_SPEC,IHP_SPEC
+PARAMETER rt_ion_min REAL 1e-8
+D rt_ion_threshold  Convergence threshold for radiation + ionization fraction
+D & subcycling.  Used to advance radiation until photo-ionization bubbles
+D & reach a rough steady state.  This rad/ionize subcycling effectively
+D & compensates for too-large radiation timesteps, and so enables
+D & (radiation,ionization,heat/cool) dt to be roughly the hydro dt.
+D & WARNING, rt_ion_threshold must be relatively large compared to rt_ion_min,
+D & or else the code will subcycle ionization unphysically, and may advance
+D & radiation + ionization too far ahead in time.
+# Should probably be the same as the minimum ionization or less,
+# since you can't otherwise resolve the minimum ionization (you might
+# overshoot then get corrected back above the converged solution).
+# UPDATE: behavior has changed, not clear that comment about being same as
+# minimum ionization or less applies - AT, 2019 May 01
+PARAMETER rt_ion_threshold REAL 1e-1

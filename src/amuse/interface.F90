@@ -3093,7 +3093,6 @@ FUNCTION get_particle_nion(tags,nion,nparts)
   double precision, dimension(nparts) :: nion, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3210,7 +3209,6 @@ if (MyPe .eq. 0) then
 
 end if
 #endif
-#endif
 get_particle_nion=0
 END FUNCTION
 
@@ -3222,7 +3220,6 @@ FUNCTION get_particle_eion(tags,eion,nparts)
   double precision, dimension(nparts) :: eion, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3339,7 +3336,6 @@ if (MyPe .eq. 0) then
 
 end if
 #endif
-#endif
 get_particle_eion=0
 END FUNCTION
 
@@ -3350,7 +3346,6 @@ FUNCTION get_particle_sigh(tags,sigh,nparts)
   double precision, dimension(nparts) :: sigh, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3470,7 +3465,6 @@ end if
 
 #endif
 
-#endif
 get_particle_sigh=0
 END FUNCTION
 
@@ -4807,7 +4801,6 @@ FUNCTION set_particle_nion(tags, nion, nparts)
   integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -4927,7 +4920,6 @@ end do
 deallocate(QSindex)
 deallocate(id_sorted)
 #endif
-#endif
 
 set_particle_nion=0
 !stop
@@ -4948,7 +4940,6 @@ FUNCTION set_particle_eion(tags, eion, nparts)
   integer :: set_particle_eion, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -5068,7 +5059,6 @@ do i=1, localnp
 end do
 deallocate(QSindex)
 deallocate(id_sorted)
-#endif
 
 #endif
 
@@ -5084,7 +5074,6 @@ FUNCTION set_particle_sigh(tags, sigh, nparts)
   integer :: set_particle_sigh, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
 
 #ifdef bisect
 
@@ -5206,7 +5195,6 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
 
 set_particle_sigh=0
 END FUNCTION
@@ -5220,9 +5208,7 @@ FUNCTION set_particle_npep(tags, nion, nparts)
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
-#ifdef FERVENT
 ! Are we using photoelectric heating?
-#ifdef PE_HEAT
 #ifdef bisect
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -5341,9 +5327,7 @@ do i=1, localnp
 end do
 deallocate(QSindex)
 deallocate(id_sorted)
-#endif
 
-#endif
 #endif
 
 set_particle_npep=0
@@ -5359,9 +5343,7 @@ FUNCTION set_particle_epep(tags, eion, nparts)
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
-#ifdef FERVENT
 ! Are we using photoelectric heating?
-#ifdef PE_HEAT
 #ifdef bisect
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -5482,8 +5464,6 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
-#endif
 
 set_particle_epep=0
 
@@ -5497,9 +5477,7 @@ FUNCTION set_particle_sigd(tags, sigh, nparts)
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
-#ifdef FERVENT
 ! Are we using photoelectric heating?
-#ifdef PE_HEAT
 #ifdef bisect
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -5620,8 +5598,6 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
-#endif
 
 set_particle_sigd=0
 
