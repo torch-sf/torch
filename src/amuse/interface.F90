@@ -3475,7 +3475,7 @@ FUNCTION get_particle_rel_mass(tags,rel_mass,nparts)
   double precision, dimension(nparts) :: rel_mass, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3595,7 +3595,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_rel_mass=0
 END FUNCTION
 
@@ -3612,7 +3612,7 @@ FUNCTION get_particle_rel_age(tags,rel_age,nparts)
   double precision, dimension(nparts) :: rel_age, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3732,7 +3732,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_rel_age=0
 END FUNCTION
 
@@ -3745,7 +3745,7 @@ FUNCTION get_particle_corem(tags,corem,nparts)
   double precision, dimension(nparts) :: corem, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3865,7 +3865,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_corem=0
 END FUNCTION
 
@@ -3878,7 +3878,7 @@ FUNCTION get_particle_co_corem(tags,co_corem,nparts)
   double precision, dimension(nparts) :: co_corem, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -3998,7 +3998,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_co_corem=0
 END FUNCTION
 
@@ -4010,7 +4010,7 @@ FUNCTION get_particle_stype(tags,stype,nparts)
   double precision, dimension(nparts) :: stype, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -4130,7 +4130,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_stype=0
 END FUNCTION
 
@@ -4142,7 +4142,7 @@ FUNCTION get_particle_radius(tags,radius,nparts)
   double precision, dimension(nparts) :: radius, tags
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -4262,7 +4262,7 @@ end if
 
 #endif
 
-#endif
+!#endif
 get_particle_radius=0
 END FUNCTION
 
@@ -5610,7 +5610,7 @@ FUNCTION set_particle_rel_mass(tags, rel_mass, nparts)
   integer :: set_particle_rel_mass, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -5732,7 +5732,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_rel_mass=0
 END FUNCTION
@@ -5746,7 +5746,7 @@ FUNCTION set_particle_rel_age(tags, rel_age, nparts)
   integer :: set_particle_rel_age, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -5868,7 +5868,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_rel_age=0
 END FUNCTION
@@ -5882,7 +5882,7 @@ FUNCTION set_particle_corem(tags, corem, nparts)
   integer :: set_particle_corem, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -6004,7 +6004,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_corem=0
 END FUNCTION
@@ -6017,7 +6017,7 @@ FUNCTION set_particle_co_corem(tags, co_corem, nparts)
   integer :: set_particle_co_corem, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -6139,7 +6139,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_co_corem=0
 END FUNCTION
@@ -6152,7 +6152,7 @@ FUNCTION set_particle_stype(tags, stype, nparts)
   integer :: set_particle_stype, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -6274,7 +6274,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_stype=0
 END FUNCTION
@@ -6286,7 +6286,7 @@ FUNCTION set_particle_radius(tags, radius, nparts)
   integer :: set_particle_radius, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-#ifdef FERVENT
+!#ifdef FERVENT
 
 #ifdef bisect
 
@@ -6408,7 +6408,7 @@ deallocate(QSindex)
 deallocate(id_sorted)
 #endif
 
-#endif
+!#endif
 
 set_particle_radius=0
 END FUNCTION
