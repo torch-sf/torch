@@ -684,7 +684,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                         norm_factor = 1.0
 
                         ave_delta = SUM(delta)/3   !!  Not sure if this is what we want ultimately, but should let the code run.
-                        delta_theta = atan(ave_delta/rad_jet) !atan(1.0/8.0) !! This is from Cunningham?  UPDATE!
+                        !delta_theta = atan(ave_delta/rad_jet) ! This version was used for the Methods paper runs -SA 20250716
+                        delta_theta = atan(1.0/8.0) ! This is the value from Cunningham that we want to test -SA 20250716
 
                         theta_zero = 0.01
                     
