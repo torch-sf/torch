@@ -137,7 +137,13 @@ subroutine Particles_sinkCreateAccrete(dt)
                   POSX_PART_PROP, POSY_PART_PROP, POSZ_PART_PROP, &
                   VELX_PART_PROP, VELY_PART_PROP, VELZ_PART_PROP, &
                   X_ANG_PART_PROP, Y_ANG_PART_PROP, Z_ANG_PART_PROP /)
-                  
+
+#ifdef ELEMENTS
+  integer, dimension(pt_nelements), save :: gather_eleminds  
+  integer :: ielem
+  real, dimension(pt_nelements, maxsinks) :: elem_mass
+#endif
+
   integer :: blk_refine_level
   
   real :: gas_mean_vel_x, gas_mean_vel_y, gas_mean_vel_z, &
@@ -174,6 +180,13 @@ subroutine Particles_sinkCreateAccrete(dt)
     iYcoord  = JAXIS
     iZcoord  = KAXIS
     izn = CENTER
+
+#ifdef ELEMENTS
+    ! Gather element indices for particles.
+    do ielem = 1, pt_nelements
+      gather_eleminds(ielem) = pt_elem_begin + (ielem - 1)
+    enddo
+#endif
 
     call RuntimeParameters_get("sink_density_thresh", density_thresh)
     call RuntimeParameters_get("sink_accretion_radius", accretion_radius)
@@ -626,6 +639,9 @@ subroutine Particles_sinkCreateAccrete(dt)
   ang_x(:)      = 0.
   ang_y(:)      = 0.
   ang_z(:)      = 0.
+#ifdef ELEMENTS
+  elem_mass = 0.
+#endif
 
   ! do it again, but only loop over affected blocks and
   ! add mass to particles
@@ -832,6 +848,13 @@ subroutine Particles_sinkCreateAccrete(dt)
                         ang_z(pno_to_accrete)    = ang_z(pno_to_accrete) + &
                              & (distx*solnData(ively,ip,jp,kp)-disty*solnData(ivelx,ip,jp,kp))*mass
 
+#ifdef ELEMENTS
+                        ! Save metal mass, convert to fraction later.
+                        do ielem = 1, pt_nelements
+                          elem_mass(ielem, pno_to_accrete) = elem_mass(ielem, pno_to_accrete) + &
+                             & solnData(MASS_SCALARS_BEGIN+(ielem-1),ip,jp,kp)*mass
+                        enddo
+#endif
                     end if
 
                   end if
@@ -870,10 +893,22 @@ subroutine Particles_sinkCreateAccrete(dt)
       particles_local(iplx,lp) = ang_x(lp)
       particles_local(iply,lp) = ang_y(lp)
       particles_local(iplz,lp) = ang_z(lp)
+#ifdef ELEMENTS
+      ! Convert from mass to fraction
+      if (tot_mass(lp) .ne. 0.0) then
+         do ielem = 1, pt_nelements
+            particles_local(gather_eleminds(ielem),lp) = elem_mass(ielem,lp)/tot_mass(lp)
+         enddo
+      endif
+#endif
    end do
 
    ! Exchange information across CPUs
    call pt_sinkGatherGlobal(gather_propinds, gather_nprops)
+#ifdef ELEMENTS
+   ! Handle information exchange for element tracers separately.
+   call pt_sinkGatherGlobal(gather_eleminds, pt_nelements)
+#endif
 
    npart = localnp
 
@@ -902,6 +937,11 @@ subroutine Particles_sinkCreateAccrete(dt)
             ang_x(lp) = ang_x(lp) + particles_global(iplx,nlp)
             ang_y(lp) = ang_y(lp) + particles_global(iply,nlp)
             ang_z(lp) = ang_z(lp) + particles_global(iplz,nlp)
+#ifdef ELEMENTS
+            do ielem = 1,pt_nelements
+               elem_mass(ielem,lp) = elem_mass(ielem,lp) + particles_global(gather_eleminds(ielem),nlp)*particles_global(ipm,nlp)
+            enddo
+#endif
          end if
       end do
 
@@ -940,6 +980,14 @@ subroutine Particles_sinkCreateAccrete(dt)
          particles_local(iplz,lp) = particles_local(iplz,lp) + ang_z(lp) - particles_local(ipm,lp) * &
                                     ( (particles_local(ipx,lp)-px_old)*particles_local(ipvy,lp) - &
                                       (particles_local(ipy,lp)-py_old)*particles_local(ipvx,lp)  )
+#ifdef ELEMENTS
+         ! element update
+         do ielem = 1,pt_nelements
+            particles_local(gather_eleminds(ielem),lp) = (particles_local(gather_eleminds(ielem),lp) * &
+                                    & particles_local(iold_pmass,lp) + elem_mass(ielem,lp)) / &
+                                    & particles_local(ipm,lp)
+         enddo
+#endif
       end if ! mass was accreted
 
       particles_local(ipmdot,lp) = (particles_local(ipm,lp) - particles_local(iold_pmass,lp)) / dt
