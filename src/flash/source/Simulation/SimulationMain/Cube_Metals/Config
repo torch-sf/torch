@@ -38,8 +38,6 @@ PARAMETER sim_tdust     REAL    18.0
 #### Metals
 # Flag telling FLASH to include element tracers. 
 PPDEFINE ELEMENTS
-# Number of elements
-PARAMETER sim_nelements INTEGER 2
 
 # Tracer fields as mass scalars.
 MASS_SCALAR E001

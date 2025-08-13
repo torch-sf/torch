@@ -35,7 +35,6 @@ module Simulation_data
   real, allocatable, save :: sim_velyArr(:,:,:), sim_velzArr(:,:,:)
   
   !! Arrays and variables for elements.
-  integer, save :: sim_nelements
   real, allocatable, save :: sim_elemArr(:,:,:,:)
   
 ! single fluid stuff

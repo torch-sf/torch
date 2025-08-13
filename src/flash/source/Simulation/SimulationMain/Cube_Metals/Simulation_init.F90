@@ -74,17 +74,6 @@ subroutine Simulation_init()
   call RuntimeParameters_get( 'sim_tdust', sim_tdust)
   call RuntimeParameters_get('killdivb', sim_killdivb)
   
-  call RuntimeParameters_get('nelements', sim_nelements)
-  
-! Check for consistent setup.
-  if (NMASS_SCALARS .ne. sim_nelements) then
-    if (sim_myPE .eq. MASTER_PE) then
-      print*, "Number of mass scalars is not consitent with sim_nelements: NMASS_SCALARS, sim_nelements = ", NMASS_SCALARS, sim_nelements
-    end if
-    call Driver_abortFlash("Inconsitency between number of elements and mass scalars. Check flash.par and Simulation Config.")
-  endif
-
-
 ! New Parameterized heating and cooling
 !  call RuntimeParameters_get('sim_Z',  sim_Z)
 !  call RuntimeParameters_get('sim_G0', sim_G0)
