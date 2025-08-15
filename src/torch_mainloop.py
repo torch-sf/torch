@@ -128,7 +128,7 @@ def initialize_workers():
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     elif USER['with_petar']:
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
-        grav.parameters.epsilon_squared = USER['epsilon']**2.0
+        #grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_out = USER['petar_rout']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
@@ -343,7 +343,8 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        grav.parameters.dt_soft = dt
+                        if USER['with_petar']:
+                            grav.parameters.dt_soft = dt
                         dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
@@ -591,8 +592,8 @@ def run_torch(user_initial_conditions, user_parameters):
     # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")
-        leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
-        interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
+        leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+        interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")

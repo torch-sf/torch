@@ -365,14 +365,22 @@ END FUNCTION set_grid_state
 !!! New block-by-block grid setter for VorAMR.
 !!! - SCL
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FUNCTION set_block_state(blockID, dataSize, rho, vx, vy, vz, eint, gpot)
-  INTEGER :: blockID
+FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot)
+  INTEGER :: blockID, procID
   INTEGER :: dataSize
   DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot
   INTEGER :: set_block_state !beginCount, set_block_state
   INTEGER,dimension(3) :: startPos, dataDims
+
+  INTEGER :: myProc, communicator, ierr
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call Driver_getComm(GLOBAL_COMM, communicator)
+
   startPos = [1,1,1]
   dataDims = (/dataSize,dataSize,dataSize /)
+
+  if (myProc .eq. procID) then
 
   call Grid_putBlkData(blockID, CENTER, DENS_VAR, INTERIOR, &
                       startPos, rho, dataDims)
@@ -386,6 +394,9 @@ FUNCTION set_block_state(blockID, dataSize, rho, vx, vy, vz, eint, gpot)
                       startPos, eint, dataDims)
   call Grid_putBlkData(blockID, CENTER, GPOT_VAR, INTERIOR, &
                       startPos, gpot, dataDims)
+
+  endif
+
   set_block_state=0
 END FUNCTION
 
@@ -732,65 +743,62 @@ FUNCTION get_position_of_index(i, j, k, index_of_grid, Proc_ID, x, y, z, n)
   get_position_of_index=0
 END FUNCTION
 
-FUNCTION get_leaf_indices(dummy,ind,ret_cnt,num_of_blks,nparts)
+FUNCTION get_leaf_indices(dummy, ind, ret_cnt, num_of_blks, nparts)
 
-  use Driver_data, only : dr_globalNumProcs
+  USE mpi
+  USE Driver_data, ONLY : dr_globalNumProcs
+  IMPLICIT NONE
 
-  integer :: get_leaf_indices, nparts, num_of_blks, ret_num_blks
-  integer :: myProc, ierr, comm, i
-  integer, dimension(nparts) :: ind, ret_ind, ret_cnt, dummy
-  integer, dimension(dr_globalNumProcs) :: disp, rec_count
+  INTEGER :: get_leaf_indices, nparts, num_of_blks
+  INTEGER :: myProc, ierr, comm, i, total_blocks
+  INTEGER, DIMENSION(nparts) :: ind, dummy
+  INTEGER, DIMENSION(dr_globalNumProcs) :: ret_cnt, disp
+  INTEGER, ALLOCATABLE :: ret_ind(:)
+  INTEGER :: local_ind(nparts) ! Local temp copy of ind (avoid overwrite during gather)
+
   dummy = 0
   disp = 0
-  rec_count = 0
   ret_cnt = 0
-  ret_ind = -1
   ind = -1
-  call Grid_getListOfBlocks(LEAF, ind, num_of_blks)
-  call Driver_getComm(GLOBAL_COMM, comm)
-  call Driver_getMype(comm, myProc)
-  !print*, "ind =", ind, myProc
-  !print*, "numblks = ", num_of_blks, myProc
-! Gather the array on the root process. Note that we require the
-  ! user to pass the proper length of the final array.
+  local_ind = -1
 
-  ! Make an array of the # of leaf grids from each processor.
-  call MPI_Gather(num_of_blks, 1, MPI_INTEGER, &
-                  rec_count, 1, MPI_INTEGER, &
-                  0, comm, ierr)
-  ret_cnt(:dr_globalNumProcs) = rec_count
-  ! Set the displacement for the incoming data based on how many
-  ! particles are coming in from each processor. Note the displacement
-  ! for the root process is zero, for rank 1 disp = num on root,
-  ! for rank 2 disp = num on root + num on 1, etc etc.
+  ! Get local block IDs
+  CALL Grid_getListOfBlocks(LEAF, ind, num_of_blks)
+  local_ind(:num_of_blks) = ind(:num_of_blks)  ! Save a local copy to avoid confusion
 
-  do i=1, dr_globalNumProcs-1
+  ! Get communicator and rank
+  CALL Driver_getComm(GLOBAL_COMM, comm)
+  CALL Driver_getMype(comm, myProc)
 
-    disp(i+1) = disp(i) + rec_count(i)
+  ! Step 1: Gather num_of_blks from all procs
+  CALL MPI_Allgather(num_of_blks, 1, MPI_INTEGER, ret_cnt, 1, MPI_INTEGER, comm, ierr)
 
-  end do
-  !print*, "dr_globalNumProcs =", dr_globalNumProcs
-  !print*, "rec_count = ", rec_count
-  !print*, "disp = ", disp
+  ! Step 2: Compute displacements
+  disp(1) = 0
+  DO i = 2, dr_globalNumProcs
+     disp(i) = disp(i-1) + ret_cnt(i-1)
+  END DO
 
-  ! Now actually gather the leaf grids using the variable length array
-  ! gather command in MPI.
+  total_blocks = SUM(ret_cnt)
 
-  call MPI_Gatherv(ind, num_of_blks, MPI_INTEGER, &
-                   ret_ind, rec_count, disp, MPI_INTEGER, &
-                   0, comm, ierr)
+  ! Step 3: Allocate space for all block IDs
+  ALLOCATE(ret_ind(total_blocks))
 
-  ind = ret_ind
+  ! Step 4: Gather all block IDs into ret_ind (same on all procs)
+  CALL MPI_Allgatherv(local_ind, num_of_blks, MPI_INTEGER, &
+                      ret_ind, ret_cnt, disp, MPI_INTEGER, &
+                      comm, ierr)
 
-  !print*, "ind =", ind, myProc
+  ! Step 5: Replace output ind with full block list
+  ind(:total_blocks) = ret_ind(:)
+  num_of_blks = total_blocks
 
-  !call MPI_Reduce(ret_num_blks,num_of_blks, 1, MPI_INTEGER, MPI_SUM, 0, comm, ierr)
+  ! Clean up
+  DEALLOCATE(ret_ind)
 
-  num_of_blks = sum(rec_count)
-  !print*, "numblks =", num_of_blks, myProc
-
-  get_leaf_indices=0
+  get_leaf_indices = 0
 END FUNCTION
+
 
 FUNCTION get_max_refinement(max_refine)
 
