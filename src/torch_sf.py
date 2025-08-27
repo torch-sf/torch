@@ -307,13 +307,6 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} did not spawn stars".format(sink_tag))
 
-        elif np.isnan(sink_cs.value_in(units.cm/units.s)):
-
-            tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
-            print(" {:d} stars,".format(nnew), end='')
-            print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
-            print(" due to absence of nearby cold gas")
-
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
@@ -338,8 +331,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
-            star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
-
+            # with the maximum value corresponding to gas at T=100K
+            spawn_vel = sink_cs.value_in(units.cm/units.s)
+            if np.isnan(spawn_vel):
+                spawn_vel = 117200.0
+            star.velocity = sink_vel + (np.random.normal(scale=spawn_vel, size=(nnew,3)) | units.cm/units.s)
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
