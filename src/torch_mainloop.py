@@ -343,7 +343,8 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        grav.parameters.dt_soft = dt
+                        if USER['with_petar']:
+                            grav.parameters.dt_soft = dt
                         dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
