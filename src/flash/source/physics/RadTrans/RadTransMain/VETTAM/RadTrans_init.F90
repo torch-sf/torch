@@ -114,6 +114,9 @@ subroutine RadTrans_init()
   !Flag for whether to use VETTAM if there are no sinks
   call RuntimeParameters_get("noSink_VETTAM",noSink_VETTAM)
 
+  !Flag for whether to use VETTAM if there are no stars
+  call RuntimeParameters_get("noStar_VETTAM",noStar_VETTAM)
+
   !Parameters to control frequency of VETTAM (only use rt every dt; default 0)
   call RuntimeParameters_get("rt_useeverydt",rt_useeverydt)
 

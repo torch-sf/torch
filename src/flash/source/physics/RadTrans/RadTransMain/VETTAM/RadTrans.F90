@@ -51,6 +51,10 @@ SUBROUTINE RadTrans(blockCount_,blockList_,dt,time)
   use pt_sinkInterface, ONLY: pt_sinkGatherGlobal
 #endif
 
+#ifdef ACTIVE_PART_TYPE
+    use Particles_interface, only : Particles_getGlobalNum
+#endif
+
 #ifdef UEUV_VAR
   use rt_ionisedata, ONLY: multiple_ionbands, useEUVIonize
 #endif
@@ -75,7 +79,8 @@ SUBROUTINE RadTrans(blockCount_,blockList_,dt,time)
   logical, save                              :: doRTDiffuse, directSinkContribution, sink_useRayTrace, firstCall=.true.
   real, save                                 :: tsinceLastCall
   integer, parameter                         :: max_freqbands = 5
-  
+  integer                                    :: p_globalnum ! track global number of stars
+
   if(firstCall) then
 
     if(rt_freqbands .gt. max_freqbands) then
@@ -139,6 +144,15 @@ SUBROUTINE RadTrans(blockCount_,blockList_,dt,time)
   if(localnpf .eq. 0 .and. .not. noSink_VETTAM) then
     if(dr_globalMe .eq. MASTER_PE) &
     & print *, "No sinks in domain and noSink_VETTAM is false. Skipping VETTAM" 
+    return
+  endif
+#endif
+
+#ifdef ACTIVE_PART_TYPE
+  call Particles_getGlobalNum(p_globalnum)
+  if(p_globalnum .eq. 0 .and. .not. noStar_VETTAM) then
+    if(dr_globalMe .eq. MASTER_PE) &
+    & print *, "No stars in domain and noStar_VETTAM is false. Skipping VETTAM" 
     return
   endif
 #endif
