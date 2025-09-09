@@ -40,7 +40,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None):
+    massloss_method=None, min_feedback_mass=None, unit_test=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -106,14 +106,20 @@ def stellar_evolution(time, dt, state, hydro, se,
 
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
-    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    if unit_test == None:
+        state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
 
     # TODO: combine this with a mass-limit mask to not loop over non-feedback stars??
     for i, s in enumerate(state.stars):
 
-        if s.mass >= min_feedback_mass:
+        if s.initial_mass >= min_feedback_mass:
 
             if with_sn and went_supernova(s.stellar_type) and s.tag not in remnants:
+
+                if unit_test=="SUPERNOVA_PART1":
+                    return 1
+                if unit_test=="SUPERNOVA_PART2":
+                    return 0
 
                 inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                 if inj_mass > 15.0|units.MSun:
@@ -146,6 +152,11 @@ def stellar_evolution(time, dt, state, hydro, se,
                                               massloss_method=massloss_method)
                     dm_dt[i] = _tmp[0]
                     vterm[i] = _tmp[1]
+
+        if unit_test=="SUPERNOVA_PART1":
+            return 0
+        if unit_test=="SUPERNOVA_PART2":
+            return 1
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
