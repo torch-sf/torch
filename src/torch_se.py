@@ -267,7 +267,7 @@ def compute_epe_npe(se_temp, se_radius):
 
 def went_supernova(stellar_type):
     """
-    Determines whether a SeBa star has went supernova or not. Types 13-14 are neutron star, black hole,
+    Determines whether a SeBa star has went supernova or not. Types 13-15 are neutron star, black hole,
     and disintegrated. This function returns an array or scalar based on input type.
     """
     types = stellar_type.value_in(units.stellar_type)
