@@ -17,7 +17,6 @@ import math
 from scipy.integrate import quad
 
 from amuse.units import units
-from amuse.datamodel import Particles
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
@@ -93,6 +92,9 @@ def stellar_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
+    # make list of remnant stars so we don't explode them again
+    remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
+
     # CCC 26/04/2024
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
@@ -104,15 +106,13 @@ def stellar_evolution(time, dt, state, hydro, se,
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
     state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
-    
-    for i, s in enumerate(state.stars):
 
-        if went_supernova(s.stellar_type):
-            continue
+    # TODO: combine this with a mass-limit mask to not loop over non-feedback stars??
+    for i, s in enumerate(state.stars):
 
         if s.mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(s.stellar_type):
+            if with_sn and went_supernova(s.stellar_type) and s.tag not in remnants:
 
                 inj_mass = s.mass - se_mass  # minus stellar remnant's mass
                 if inj_mass > 15.0|units.MSun:
@@ -265,8 +265,12 @@ def compute_epe_npe(se_temp, se_radius):
 
 
 def went_supernova(stellar_type):
-    return 13 <= stellar_type.value_in(units.stellar_type) <= 15
-
+    """
+    Determines whether a SeBa star has went supernova or not. Types 13-14 are neutron star, black hole,
+    and disintegrated. This function returns an array or scalar based on input type.
+    """
+    types = stellar_type.value_in(units.stellar_type)
+    return (types >= 13) & (types <= 15)
 
 def lum_wl_cs(l, l_max, T):
     """
