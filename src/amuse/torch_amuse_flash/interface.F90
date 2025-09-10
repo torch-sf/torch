@@ -116,6 +116,9 @@ integer, pointer :: number_new_particles
 
 character(len=4), save :: part_type
 
+#ifdef ELEMENTS
+integer, save :: element_pointer = 1
+#endif
 
 contains
 
@@ -197,6 +200,22 @@ end if
 set_particle_pointers = 0
 
 call flush(6)
+END FUNCTION
+
+FUNCTION set_particle_elem_pointer(ielem_in)
+integer   :: set_particle_elem_pointer
+integer, intent(in) :: ielem_in
+
+#ifdef ELEMENTS
+! element_pointer starts counting at 1. 
+element_pointer = ielem_in
+#else
+    print*, "[set_particle_elem_pointer]: Tried to set element pointer &
+             but elements are not compiled in!"
+    call Driver_abortFlash("Tried to set invalid element pointer.")
+#endif
+
+set_particle_elem_pointer=0
 END FUNCTION
 
 FUNCTION internal_particle_integration_off()
@@ -1965,6 +1984,14 @@ FUNCTION get_global_grid_index_limits(global_indices)
   get_global_grid_index_limits=0
 END FUNCTION
 
+FUNCTION get_number_of_elements(value)
+
+  INTEGER :: value
+  INTEGER :: get_number_of_elements
+  value = NMASS_SCALARS
+  get_number_of_elements=0
+
+END FUNCTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! PARTICLE FUNCTIONS
@@ -2737,6 +2764,148 @@ endif
 #endif
 
 set_particle_creation_time=0
+END FUNCTION
+
+FUNCTION get_particle_elem(tags,elem,nparts)
+
+  integer :: nparts, MyPe
+  integer :: get_particle_elem, i, j, p, oldj, ierr, counter
+  double precision, dimension(nparts) :: elem, tags
+  integer :: type_begin, type_end, type_count, offset
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_elem_index
+  elem = 0.0
+
+#ifdef ELEMENTS
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+
+    ! Find index of element variable (element_pointer starts counting at 1).
+    part_elem_index = E001_PART_PROP - 1 + element_pointer
+
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    ! Offset for particles location in particles array possibly not starting at
+    ! first index.
+    offset = 0
+    if (type_begin /= 1) offset = type_begin - 1
+
+      allocate(QSindex(type_count))
+      allocate(id_sorted(type_count))
+
+      do p = type_begin, type_end
+        id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
+      end do
+
+      if (type_count .eq. 1) then
+        QSindex = 1
+      else
+        call NewQsort_IN(id_sorted, QSindex)
+      endif
+
+      ! Initial lower bound is 1.
+      j = 1
+
+      do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+        if (j .ne. -1) then
+          elem(i) = particles_pointer(part_elem_index, QSindex(j))
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+          j = oldj
+          elem(i) = 0.0
+        end if
+
+      end do ! end if particle list
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  
+  else ! not (type_count .ge. 1)
+    
+    elem = 0.0
+
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, elem, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#endif
+#endif
+  get_particle_elem=0
+END FUNCTION
+
+FUNCTION set_particle_elem(tags,elem,nparts)
+
+  integer :: nparts
+  double precision :: elem(nparts), tags(nparts)
+  integer :: set_particle_elem, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_elem_index
+
+#ifdef ELEMENTS
+! Are we tracing elements?
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE) 
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+
+    ! Find index of element variable (element_pointer starts counting at 1).
+    part_elem_index = E001_PART_PROP - 1 + element_pointer
+     
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+      ! If found, set particle attribute accordingly.
+      ! Note that since the inputs are sorted by tag, the last tag found
+      ! becomes the new lower bound for the next search.
+
+      if (j .ne. -1) then
+        particles_pointer(part_elem_index, QSindex(j)) = elem(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+      else ! If not found (j=-1), the particle is not on this proc. Skip.
+        j = oldj
+      end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+  endif
+#endif
+#endif
+  set_particle_elem=0
 END FUNCTION
 
 ! This function should be called on any restart with shared tags
@@ -6586,6 +6755,134 @@ call Driver_abortFlash("No winds compiled in, but attempting to set wind dmdt.")
 #endif
 
 set_particle_wind_mass=0
+
+END FUNCTION
+
+FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
+  ! Set the particle's yeild injection rate (mass/time) by tag number.
+  integer :: nparts
+  double precision :: dydt(nparts), tags(nparts)
+  integer :: set_particle_elem_dydt, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_elem_index
+
+#ifdef ELEMENTS
+#ifdef WIND_INJ
+  ! Are we using winds?
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+     
+    ! Find index of element variable (element_pointer starts counting at 1).
+    part_elem_index = Y001_PART_PROP - 1 + element_pointer
+
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+      ! If found, set particle attribute accordingly.
+      if (j .ne. -1) then
+        particles_pointer(part_elem_index, QSindex(j)) = dydt(i)
+      else ! If not found (j=-1), the particle is not on this proc. Skip.
+        j = oldj
+      end if
+
+    end do ! end of nparts
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  ! Sort by particle tag. Note that input array should also be
+  ! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p), 8)
+  end do
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  ! Are we updating every particle in the simulation?
+  if (nparts .eq. localnpf) then
+    ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+      particles_global(part_elem_index, QSindex(i)) = dydt(i)
+    end do
+
+  else
+    ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+      do i=1, localnpf
+        if (particles_global(iptag,i) .eq. tags(j)) then
+          particles_global(part_elem_index, i) = dydt(j)
+        end if
+      end do
+    end do
+
+  end if
+
+
+  ! The first localnp particles on a processor in particles_global are
+  ! the local particle arrays in order.
+  do i=1, localnp
+    particles_local(part_elem_index,i) = particles_global(part_elem_index, i)
+  end do
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+#else
+  
+  print*, "[interface.F90]: WARNING! Called particles_set_elem_dydt but &
+         winds are not compiled into Flash!"
+  call Driver_abortFlash("No winds compiled in, but attempting to set dydt.")
+
+#endif
+
+#else
+
+  print*, "[interface.F90]: WARNING! Called particles_set_elem_dydt but &
+         element tracers are not compiled into Flash!"
+  call Driver_abortFlash("No elements compiled in, but attempting to set dydt.")
+
+#endif
+
+  set_particle_elem_dydt=0
 
 END FUNCTION
 
