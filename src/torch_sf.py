@@ -279,6 +279,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
+    num_elements = hydro.get_number_of_elements()
     if num_sinks == 0:
         # can't get sink tags w/ empty list so need to exit early
         hydro.set_particle_pointers('mass')
@@ -294,6 +295,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_pos = hydro.get_particle_position(sink_tag)
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
+
+        if num_elements > 0:
+            sink_elem = []
+            for ielem in range(num_elements):
+                hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
+                sink_elem.append(hydro.get_particle_elem(sink_tag))
 
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
@@ -346,6 +353,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+            if num_elements > 0:
+                for ielem in range(num_elements):
+                    hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
+                    hydro.set_particle_elem(star_tag,sink_elem[ielem]*np.ones(nnew))
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
