@@ -52,3 +52,32 @@ PARTICLEPROP E002 REAL
 # Yields (mass/time) to be injected with feedback.
 PARTICLEPROP Y001 REAL
 PARTICLEPROP Y002 REAL
+
+# VorAMR Parameters
+PARAMETER use_voramr        BOOLEAN False
+PARAMETER voramr_source     STRING  "snapshot.hdf5"
+PARAMETER voramr_input      STRING  "voramr_input.hdf5"
+PARAMETER use_localRef      BOOLEAN False
+PARAMETER center_localRef   BOOLEAN False
+PARAMETER localRef_x        REAL    0.0
+PARAMETER localRef_y        REAL    0.0
+PARAMETER localRef_z        REAL    0.0
+PARAMETER localRef_r        REAL    0.0
+PARAMETER refine_on_particle_count BOOLEAN False
+# Derefinement outside rectangular region of interest
+PARAMETER use_deref         BOOLEAN False
+PARAMETER deref_lref        INTEGER 1
+PARAMETER deref_xl          REAL    0.0
+PARAMETER deref_xr          REAL    0.0
+PARAMETER deref_yl          REAL    0.0
+PARAMETER deref_yr          REAL    0.0
+PARAMETER deref_zl          REAL    0.0
+PARAMETER deref_zr          REAL    0.0
+
+
+# Static potential parameters
+PARAMETER sim_aParm1        REAL 0.0
+PARAMETER sim_aParm2        REAL 0.0
+PARAMETER sim_aParm3        REAL 0.0
+PARAMETER sim_aParm4        REAL 0.0
+PARAMETER sim_withStaticGrav    BOOLEAN     False

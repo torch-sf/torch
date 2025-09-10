@@ -1,1 +1,1 @@
-Simulation += Simulation_data.o
+Simulation += Simulation_data.o Simulation_addStaticAcceleration.o
