@@ -84,9 +84,9 @@ def get_leaf_blocks(hydro, cellsPerBlock=16, numBlocks=None):
     
     leaf_grids = np.resize(leaf_grids,numblks*lim3)
     
-    return leaf_grids[:numblks]
+    return leaf_grids[:numblks], block_array
 
-def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
+def interpolate_fields(hydro, leaf_grids, proc_blocks, kdtree, nprocs, cellsPerBlock=16):
     """
     This subroutine loops over each block in the computational domain
     and does three things. 
@@ -108,6 +108,8 @@ def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
     
     leaf_grids - list of active blockIDs.
 
+    proc_blocks = array of length number of processors, with value being number of blocks on that proc
+
     kdtree     - 3D tree object built previously from the input data, 
                  allows for nearest neighbor interpolation.
     """
@@ -119,33 +121,42 @@ def interpolate_fields(hydro, leaf_grids, kdtree, cellsPerBlock=16):
     c = np.empty_like(a)
     c.fill(3)
     vprint("Getting {} block cell coords, interpolating, pass back to FLASH.".format(leaf_grids[-1]))
-    for leaf in leaf_grids: # Cycle over BlkIDs
-        # Get x, y, z coordinates of cells in BlkID==leaf
-        x = np.array(hydro.get_1blk_cell_coords(a,leaf,lim).value_in(units.cm))
-        y = np.array(hydro.get_1blk_cell_coords(b,leaf,lim).value_in(units.cm))
-        z = np.array(hydro.get_1blk_cell_coords(c,leaf,lim).value_in(units.cm))
+    # loop over all processors
+    disp = 0
+    procID = 0
+    for i in range(nprocs): 
+        # number of leaf blocks on this processor
+        num_leaf_blks = proc_blocks[i]
+        # loop over each blockID on each processor
+        for j in range(num_leaf_blks): # Cycle over BlkIDs
+            curr_blk_id = leaf_grids[j+disp]
+            # Get x, y, z coordinates of cells in BlkID==leaf and myProc==leaf_proc
+            x = np.array(hydro.get_1blk_cell_coords(a,curr_blk_id,procID,lim).value_in(units.cm))
+            y = np.array(hydro.get_1blk_cell_coords(b,curr_blk_id,procID,lim).value_in(units.cm))
+            z = np.array(hydro.get_1blk_cell_coords(c,curr_blk_id,procID,lim).value_in(units.cm))
 
-        # Mesh coordinates into single 3D matrix object
-        coords_mesh = np.meshgrid(x,y,z,indexing='ij')
-        
-        # Pass coordinate mesh into kdtree interpolation, get field values for each coord point.
-        interp = interp_data(kdtree, coords_mesh)
-        
-        # Using interpolated data. Flatten to 1D to feed to Fortran.
-        rho = interp[:,:,:,0].flatten(order='F') | units.g/units.cm**3
-        eint = interp[:,:,:,1].flatten(order='F') | (units.cm**2)/(units.s**2)
-        vx = interp[:,:,:,2].flatten(order='F') | units.cm/units.s
-        vy = interp[:,:,:,3].flatten(order='F')	| units.cm/units.s
-        vz = interp[:,:,:,4].flatten(order='F') | units.cm/units.s
-        gpot = interp[:,:,:,5].flatten(order='F') | (units.cm**2)/(units.s**2)
-        
-        dataSize = cellsPerBlock
-        
-        # Feed field data to FLASH.
-        #Fortran can properly populate its NxNxN matrices when given a 1xN^3 matrix
-        hydro.set_block_state(leaf, dataSize, rho, vx, vy, vz, eint, gpot)
-        
-    vprint("Done setting blocks. Total blocks: ", leaf)
+            # Mesh coordinates into single 3D matrix object
+            coords_mesh = np.meshgrid(x,y,z,indexing='ij')
+            
+            # Pass coordinate mesh into kdtree interpolation, get field values for each coord point.
+            interp = interp_data(kdtree, coords_mesh)
+            
+            # Using interpolated data. Flatten to 1D to feed to Fortran.
+            rho = interp[:,:,:,0].flatten(order='F') | units.g/units.cm**3
+            eint = interp[:,:,:,1].flatten(order='F') | (units.cm**2)/(units.s**2)
+            vx = interp[:,:,:,2].flatten(order='F') | units.cm/units.s
+            vy = interp[:,:,:,3].flatten(order='F')	| units.cm/units.s
+            vz = interp[:,:,:,4].flatten(order='F') | units.cm/units.s
+            gpot = interp[:,:,:,5].flatten(order='F') | (units.cm**2)/(units.s**2)
+            
+            dataSize = cellsPerBlock
+            
+            # Feed field data to FLASH.
+            #Fortran can properly populate its NxNxN matrices when given a 1xN^3 matrix
+            hydro.set_block_state(curr_blk_id, procID, dataSize, rho, vx, vy, vz, eint, gpot)
+        disp += num_leaf_blks
+        procID += 1
+    #vprint("Done setting blocks. Total blocks: ", leaf)
     
 
 def run_flash(user_initial_conditions, user_parameters):
