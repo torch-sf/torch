@@ -415,15 +415,23 @@ END FUNCTION
 
 ! Currently implemented for 1 proc only.
 
-FUNCTION get_1blk_cell_coords(axis, blockID, limits, coords, nparts)
+FUNCTION get_1blk_cell_coords(axis, blockID, procID, limits, coords, nparts)
 
 integer :: get_1blk_cell_coords
-integer :: axis, blockID, limits
+integer :: axis, blockID, limits, procID
 integer :: nparts
 real*8  :: coords(nparts)
+  integer :: communicator, myProc, ierr, i
 
+  call Driver_getComm(GLOBAL_COMM, communicator)
+  call Driver_getMype(GLOBAL_COMM, myProc)
 
-call Grid_getCellCoords(axis,blockID,CENTER,.false.,coords, nparts)
+  if (myProc .eq. procID) then
+          call Grid_getCellCoords(axis,blockID,CENTER,.false.,coords, nparts)
+  endif
+
+  ! Gather coords from procID to all other processes
+  call MPI_Bcast(coords, nparts, FLASH_REAL, procID, communicator, ierr)
 
 get_1blk_cell_coords=0
 END FUNCTION
