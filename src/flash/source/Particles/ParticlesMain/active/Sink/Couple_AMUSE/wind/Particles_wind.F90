@@ -12,11 +12,6 @@
 !#define debug
 #define debug2
 
-! debug flags for timers - timerall is the whole file, timersub times
-! specific subsection including the AllGather calls and inject_direct
-! -SA 20240216
-#define debug_timerall
-#define debug_timersub
 
 subroutine Particles_wind(dt)
 
@@ -33,6 +28,7 @@ use Grid_interface, only : Grid_fillGuardCells
 
 use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
+! Timers used to time entire Particle_winds, MPI AllGather calls and inject direct routine.
 use Timers_interface, ONLY : Timers_start, Timers_stop  !SA 20240207
 
 
@@ -82,9 +78,7 @@ end if
 
 min_wind_dt = 1d99
 
-#ifdef debug_timerall
 call Timers_start("Particles_wind")
-#endif
 
 ! Local number of massive/active particles.
 p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
@@ -115,7 +109,7 @@ locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 ! set to the corresponding non-zero value for the star. At the end of the loop the first
 ! entries (a number matching the number of wind stars) will be non-zero and all subsequent
 ! entries will be zero.  The final value of the w_numloc index will also track the
-! total number of wind stars. (This is my current understanding.) -SA 20240216
+! total number of wind stars. -SA 20240216
 
 do p = p_begin, p_end
 #ifdef debug
@@ -195,9 +189,7 @@ print*, "num_array =", num_array, dr_globalMe
 print*, "disp =", disp, dr_globalMe
 #endif
 
-#ifdef debug_timersub
 call Timers_start("MPI_AllGather_winds")
-#endif
 
 ! Now actually gather the info on each proc using the variable length array
 ! gather command in MPI.
@@ -216,9 +208,7 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 
-#ifdef debug_timersub
 call Timers_stop("MPI_AllGather_winds")
-#endif
 
 ! Now all procs have an array of each value in the same order, so we can
 ! inject the wind at each point across all procs.
@@ -228,39 +218,31 @@ print*, "Done gathering.", dr_globalMe
 
 ! The following do loop goes over all the entries of the gathered arrays and injects
 ! winds with inject-direct. At this point every entry of these arrays should be
-! a wind star with non-zero dmdt. Thus, w_num is the number of wind stars. But
-! an extra if statement in the do loop will also double check for zero dmdt
-! values. -SA 20240216
+! a wind star with non-zero dmdt. Thus, w_num is the number of wind stars. -SA 20240216
 
 do p=1, w_num
   !dmdt(p) = 1d-6*solarMass/yr
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
-  if (dmdt(p) .gt. 0) then !Check that there's even anything to inject - SA 20240207
 #ifdef debug2
     if (dr_globalMe .eq. 0) &
       print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
 
-#ifdef debug_timersub
-    call Timers_start("inject_direct_call")
-#endif
+  call Timers_start("inject_direct_call")
 
-    call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
 
-#ifdef debug_timersub
-    call Timers_stop("inject_direct_call")
-#endif
+  call Timers_stop("inject_direct_call")
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
-    if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
-      if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
-        if (dr_globalMe .eq. dr_globalNumProcs - 1) then
-          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
-        else if (disp(dr_globalMe+2) - p >= 0) then
-          particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
-        end if
+  if (bgdy_old .eq. 0.0d0) then ! no recorded background density, so must be first loop.
+    if (disp(dr_globalMe+1) - p < 0) then ! do I own this particle?
+      if (dr_globalMe .eq. dr_globalNumProcs - 1) then
+        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
+      else if (disp(dr_globalMe+2) - p >= 0) then
+        particles(BGDY_PART_PROP, p_ind(p-disp(dr_globalMe+1))) = bgdy(p)
       end if
     end if
   end if
@@ -279,8 +261,6 @@ call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VEL
 
 call Grid_fillGuardCells(CENTER, ALLDIR) !, doEos=.true., eosMode=MODE_DENS_EI, selectBlockType=ACTIVE_BLKS)
 
-#ifdef debug_timerall
 call Timers_stop("Particles_wind")
-#endif
 
 end subroutine Particles_wind
