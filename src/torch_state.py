@@ -3,12 +3,12 @@
 from __future__ import division, print_function
 
 import numpy as np
-from os import path
+from os import path, listdir
 import pickle
 import glob
 
 from amuse.datamodel import Particles
-from amuse.io import write_set_to_file
+from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
 
 from torch_param import FlashPar
@@ -20,12 +20,13 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult):
+    def __init__(self, hydro, grav, mult, se):
 
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
-
+        self.se    = se     #CCC 26/04/2024 to match above
+        
         # "Global" AMUSE-level data structures
         self.all_masses = {}
         self.stars = Particles(0)
@@ -36,6 +37,10 @@ class TorchState(object):
 
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
+
+        # Stellar evolution to stars, CCC 26/04/2024
+        self.stars_to_se = self.stars.new_channel_to(se.particles)
+        self.se_to_stars = se.particles.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -170,6 +175,31 @@ class TorchState(object):
         #                      "mult{:04d}.amuse".format(self.pltnum))
         #multstars = mult.stars.copy_to_new_particles(, format='hdf5')
         #write_set_to_file(multstars, mult_file)
+        tprint("*** Wrote existing stars to {:s} ****".format(stars_fname))
+        
+    def out_merged_stars(self, removed_stars, overwrite):
+        """Write merged star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "merged_stars.amuse")
+        if stars_fname in listdir(self.output_dir):
+            all_removed_stars = read_set_from_file(stars_fname)
+            all_removed_stars.add_particles(removed_stars)
+        else:
+            all_removed_stars = removed_stars
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote merged stars to merged_stars.amuse")
+        
+    def out_escaped_stars(self, removed_stars, overwrite):
+        """Write merged star particles to AMUSE file"""
+        stars_fname = path.join(self.output_dir,
+                               "escaped_stars.amuse")
+        if stars_fname in listdir(self.output_dir):
+            all_removed_stars = read_set_from_file(stars_fname)
+            all_removed_stars.add_particles(removed_stars)
+        else:
+            all_removed_stars = removed_stars
+        write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote escaped stars to escaped_stars.amuse")
 
     ## Define alt version of out_stars that will save each particle set
     ## without overwriting the stars file -SA 20250130

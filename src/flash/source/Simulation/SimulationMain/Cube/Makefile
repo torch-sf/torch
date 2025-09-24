@@ -1,4 +1,4 @@
-Simulation += Simulation_data.o
+Simulation += Simulation_data.o Simulation_addStaticAcceleration.o
 #Heat += Parameterized_heating.o low_temp_cooling.o
 
 #Heat.o : Parameterized_heating.o low_temp_cooling.o Simulation_data.o

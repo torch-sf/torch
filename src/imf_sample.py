@@ -13,8 +13,9 @@ from amuse.units import units #Added 20230808 SA
 from torch_stdout import tprint
 
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
+                              max_samp_mass=150.0, sum_small=False, m_small=1.0, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
                               minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Added jet mass range -SA 20230728
+                              max_samp_mass=150.0, sum_small=False, m_small=1.0):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
@@ -38,7 +39,7 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
 
     # Sum all stars < 1 MSun into stars > 1 MSun.
     if (sum_small):
-        masses = collect_small_stars_mass(masses)
+        masses = collect_small_stars_mass(masses,m_small)
 
     np.random.shuffle(masses)
     
@@ -114,31 +115,32 @@ def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
 
 
 
-def collect_small_stars_mass(masses):
+def collect_small_stars_mass(masses,m_small=1.0):
 
     # Here we move all the stars smaller than 1 MSun into particles
     # that are at least 1 MSun. To do this we do a bit of fancy
     # footwork with the arrays.
 
-    small_masses = masses[np.where(masses < 1.0)] # Smaller than 1.0 MSun.
-    masses = masses[np.where(masses >= 1.0)]  # Everyone else.
+    # adapt code to vary clump mass cutoff
+    small_masses = masses[np.where(masses < m_small)] # Smaller than m_small [MSun].
+    masses = masses[np.where(masses >= m_small)]  # Everyone else.
 
     b = 0
     # If there are any left smaller than 1.0 MSun, sum with others
     # that are smaller than 1.0 MSun until there are none left.
 
     if (len(small_masses) > 1):
-        while(small_masses[-1] < 1.0 and len(small_masses[b:])>1):
+        while(small_masses[-1] < m_small and len(small_masses[b:])>1):
 
             small_masses[b] = small_masses[b]+small_masses[-1]
             small_masses = np.delete(small_masses, -1)
             if (len(small_masses[b:]) > 1):
-                if(small_masses[b] >= 1.0):
+                if(small_masses[b] >= m_small):
                     b += 1
 
         # If the last one is smaller than 1.0 MSun, lump that bit into
         # the last star.
-        if (small_masses[-1] < 1.0):
+        if (small_masses[-1] < m_small):
             small_masses[-2] = small_masses[-2] + small_masses[-1]
             small_masses = np.delete(small_masses, -1)
 

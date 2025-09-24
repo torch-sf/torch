@@ -91,6 +91,19 @@ refine_filter_1 = 1e-2
 refine_cutoff_1 = 0.98
 derefine_cutoff_1 = 0.6  # fairly aggressive
 
+# ===================================================
+# Derefinement outside rectangular region of interest
+# ===================================================
+use_deref         = .false.
+deref_lref        = 2  # level to derefine to
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
+deref_xr          =  1.543e+19 
+deref_yl          = -1.543e+19
+deref_yr          =  1.543e+19
+deref_zl          = -1.543e+19
+deref_zr          =  1.543e+19
+
 #   maximum change of refinements per step
 #nrefs = 2
 #converttoconsvdformeshcalls = .true.
@@ -154,6 +167,8 @@ plot_var_13 = "magy"
 plot_var_14 = "magz"
 plot_var_15 = "uvfl"
 plot_var_16 = "fufl"
+plot_var_15 = "auvf"
+plot_var_16 = "afuf"
 plot_var_17 = "magp"
 plot_var_18 = "gpot"
 plot_var_19 = "bgpt"

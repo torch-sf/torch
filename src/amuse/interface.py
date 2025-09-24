@@ -14,6 +14,7 @@ speed = generic_unit_system.speed
 density = generic_unit_system.density
 momentum =  generic_unit_system.momentum_density
 energy =  generic_unit_system.energy_density
+enerInt = generic_unit_system.length ** 2 / generic_unit_system.time ** 2
 potential_energy =  generic_unit_system.energy
 magnetic_field = generic_unit_system.mass / generic_unit_system.current / generic_unit_system.time ** 2
 acc = generic_unit_system.acceleration
@@ -77,6 +78,18 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         for x in ['rho','rhovx', 'rhovy', 'rhovz', 'rhoen']:
             function.addParameter(x, dtype='d', direction=function.IN)
         function.addParameter('ngridpoints', dtype='i', direction=function.LENGTH)
+        function.result_type='int32'
+        return function
+
+    @legacy_function
+    def set_block_state():
+        # VorAMR addition - SCL
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('dataSize', dtype='i', direction=function.IN)
+        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
+            function.addParameter(x, dtype='d', direction=function.IN)
         function.result_type='int32'
         return function
 
@@ -733,6 +746,66 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_particle_rel_mass():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_mass', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_rel_age():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_age', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('corem', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_co_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('co_corem', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    @legacy_function
+    def set_particle_stype():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('stype', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    @legacy_function
+    def set_particle_radius():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('radius', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -818,6 +891,67 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('eion', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_rel_mass():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_mass', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_rel_age():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rel_age', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('corem', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_co_corem():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('co_corem', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    
+    @legacy_function
+    def get_particle_stype():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('stype', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    
+    @legacy_function
+    def get_particle_radius():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('radius', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
@@ -1227,6 +1361,13 @@ class Flash(CommonCode):
             density, momentum, momentum, momentum, energy),
             (object.ERROR_CODE,)
         )
+        # VorAMR addition - SCL
+        object.add_method(
+            'set_block_state',
+            (object.INDEX, object.INDEX,
+            density, speed, speed, speed, enerInt, potential),
+            (object.ERROR_CODE,)
+        )
 
         object.add_method(
             'get_grid_energy_density',
@@ -1586,6 +1727,42 @@ class Flash(CommonCode):
             (object.INDEX),
             (mass*length**2.0*(time**-2.0), object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'get_particle_rel_mass',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_rel_age',
+            (object.INDEX), 
+            (time, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_corem',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_co_corem',
+            (object.INDEX), 
+            (mass, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_stype',
+            (object.INDEX), 
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'get_particle_radius',
+            (object.INDEX), 
+            (length, object.ERROR_CODE)
+        )
 
         object.add_method(
             'get_particle_sigh',
@@ -1614,6 +1791,42 @@ class Flash(CommonCode):
         object.add_method(
             'set_particle_eion',
             (object.INDEX, mass*length**2.0*(time**-2.0)),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_rel_mass',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_rel_age',
+            (object.INDEX, time),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_corem',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_co_corem',
+            (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_stype',
+            (object.INDEX, object.NO_UNIT), 
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_radius',
+            (object.INDEX, length), 
             (object.ERROR_CODE)
         )
 
@@ -1774,7 +1987,7 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-
+        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot')) # VorAMR addition - SCL
         definition.add_getter('get_grid_density', names=('rho',))
         definition.add_setter('set_grid_density', names=('rho',))
 
@@ -1865,6 +2078,7 @@ class Flash(CommonCode):
                     'set_particle_pointers',
                     'get_grid_state',
                     'set_grid_state',
+                    'set_block_state', # VorAMR addition - SCL
                     'get_potential_at_point',
                     'get_potential',
 #                    'get_gravity_at_point',
@@ -1939,6 +2153,18 @@ class Flash(CommonCode):
                     'set_particle_nion',
                     'get_particle_eion',
                     'set_particle_eion',
+                    'get_particle_rel_mass',
+                    'set_particle_rel_mass',
+                    'get_particle_rel_age',
+                    'set_particle_rel_age',
+                    'get_particle_corem',
+                    'set_particle_corem',
+                    'get_particle_co_corem',
+                    'set_particle_co_corem',
+                    'get_particle_stype',
+                    'set_particle_stype',
+                    'get_particle_radius',
+                    'set_particle_radius',
                     'get_particle_sigh',
                     'set_particle_sigh',
                     'set_particle_npep',

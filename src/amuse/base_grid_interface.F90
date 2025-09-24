@@ -359,6 +359,34 @@ FUNCTION set_grid_state(i, j, k, index_of_grid, nproc, rho, rhovx, rhovy, rhovz,
   end do
 
   set_grid_state=0
+END FUNCTION set_grid_state
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! New block-by-block grid setter for VorAMR.
+!!! - SCL
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+FUNCTION set_block_state(blockID, dataSize, rho, vx, vy, vz, eint, gpot)
+  INTEGER :: blockID
+  INTEGER :: dataSize
+  DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot
+  INTEGER :: set_block_state !beginCount, set_block_state
+  INTEGER,dimension(3) :: startPos, dataDims
+  startPos = [1,1,1]
+  dataDims = (/dataSize,dataSize,dataSize /)
+
+  call Grid_putBlkData(blockID, CENTER, DENS_VAR, INTERIOR, &
+                      startPos, rho, dataDims)
+  call Grid_putBlkData(blockID, CENTER, VELX_VAR, INTERIOR, &
+                      startPos, vx, dataDims)
+  call Grid_putBlkData(blockID, CENTER, VELY_VAR, INTERIOR, &
+                      startPos, vy, dataDims)
+  call Grid_putBlkData(blockID, CENTER, VELZ_VAR, INTERIOR, &
+                      startPos, vz, dataDims)
+  call Grid_putBlkData(blockID, CENTER, EINT_VAR, INTERIOR, &
+                      startPos, eint, dataDims)
+  call Grid_putBlkData(blockID, CENTER, GPOT_VAR, INTERIOR, &
+                      startPos, gpot, dataDims)
+  set_block_state=0
 END FUNCTION
 
 !!! TODO TODO TODO

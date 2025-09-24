@@ -111,7 +111,7 @@ integer, pointer :: num_part_local_ptr
 
 ! Pointer for array that captures when new particles are made in Flash to
 ! pass their tags on to AMUSE.
-integer, pointer, save, dimension(:) :: new_particles_tags
+integer*8, pointer, save, dimension(:) :: new_particles_tags
 integer, pointer :: number_new_particles
 
 character(len=4), save :: part_type
@@ -2010,7 +2010,7 @@ FUNCTION get_particle_position_array(tags, x, y, z, nparts)
   double precision, dimension(nparts) :: x, y, z, tags
   integer :: get_particle_position_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 x = 0.0
 y = 0.0
@@ -2036,7 +2036,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2103,7 +2103,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   end do
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -2161,7 +2161,7 @@ FUNCTION get_particle_velocity_array(tags,vx,vy,vz,nparts)
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_particle_velocity_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 vx = 0.0
 vy = 0.0
@@ -2187,7 +2187,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2252,7 +2252,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -2314,7 +2314,7 @@ FUNCTION get_particle_acceleration_array(tags, ax, ay, az, nparts)
   double precision, dimension(nparts) :: ax, ay, az, tags
   integer :: get_particle_acceleration_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 ax = 0.0
 ay = 0.0
@@ -2340,7 +2340,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2407,7 +2407,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   end do
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -2465,7 +2465,7 @@ FUNCTION get_particle_mass(tags,mass,nparts)
   integer :: get_particle_mass, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: mass, tags
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 mass = 0.0
 
@@ -2487,7 +2487,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2538,7 +2538,7 @@ FUNCTION get_particle_oldmass(tags,mass,nparts)
   integer :: get_particle_oldmass, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: mass, tags
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 mass = 0.0
 
@@ -2560,7 +2560,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2611,7 +2611,7 @@ FUNCTION get_particle_creation_time(tags,creation_time,nparts)
   integer :: get_particle_creation_time, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: creation_time, tags
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -2625,7 +2625,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2674,9 +2674,10 @@ FUNCTION set_particle_creation_time(tags,creation_time,nparts)
 
   integer :: nparts
   double precision :: creation_time(nparts), tags(nparts)
-  integer :: set_particle_creation_time, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_creation_time, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -2690,7 +2691,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2748,8 +2749,8 @@ integer set_starting_local_tag_numbers, lp
 !    for regular particles array?
     local_tag_number = 0
     do lp = 1, pt_numGlobal
-        if (get_ppe(int(allproc_particles(TAG_PART_PROP,lp))) .EQ. dr_globalMe) then
-           local_tag_number = max(local_tag_number, get_pno(int(allproc_particles(TAG_PART_PROP,lp))))
+        if (get_ppe(int(allproc_particles(TAG_PART_PROP,lp),8)) .EQ. dr_globalMe) then
+           local_tag_number = max(local_tag_number, get_pno(int(allproc_particles(TAG_PART_PROP,lp),8)))
         endif
     enddo
 
@@ -2762,7 +2763,7 @@ FUNCTION get_sink_mean_cs(tags,cs,nparts)
   integer :: get_sink_mean_cs, i, j, p, oldj, ierr, counter
   double precision, dimension(nparts) :: cs, tags
   integer :: type_begin, type_end, type_count, offset
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 cs = 0.0
 
@@ -2784,7 +2785,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p-offset) = int(particles_pointer(iptag,p))
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2835,7 +2836,7 @@ FUNCTION get_sink_mean_vel_array(tags,vx,vy,vz,nparts)
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_sink_mean_vel_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINKS_AND_STARS)
 
 #ifdef bisect
@@ -2851,7 +2852,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_local(iptag,p))
+       id_sorted(p) = int(particles_local(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -2918,7 +2919,7 @@ FUNCTION get_sink_var_vel_array(tags,vx,vy,vz,nparts)
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: get_sink_var_vel_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINKS_AND_STARS)
 
 #ifdef bisect
@@ -2934,7 +2935,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_local(iptag,p))
+       id_sorted(p) = int(particles_local(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3003,7 +3004,7 @@ FUNCTION get_particle_ang_mom_array(tags,lx,ly,lz,nparts) !previously get_sink_a
   double precision, dimension(nparts) :: lx, ly, lz, tags
   integer :: get_particle_ang_mom_array, i, j, p, oldj, ierr
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 #ifdef bisect
@@ -3019,7 +3020,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_local(iptag,p))
+       id_sorted(p) = int(particles_local(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3091,7 +3092,7 @@ FUNCTION get_particle_nion(tags,nion,nparts)
   integer :: get_particle_nion, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: nion, tags
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -3107,7 +3108,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3164,7 +3165,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3220,7 +3221,7 @@ FUNCTION get_particle_eion(tags,eion,nparts)
   integer :: get_particle_eion, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: eion, tags
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -3236,7 +3237,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3293,7 +3294,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3348,7 +3349,7 @@ FUNCTION get_particle_sigh(tags,sigh,nparts)
   integer :: get_particle_sigh, i, j, p, oldj, ierr
   double precision, dimension(nparts) :: sigh, tags
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -3364,7 +3365,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3422,7 +3423,7 @@ if (MyPe .eq. 0) then
   allocate(id_sorted(localnpf))
 
   do p = 1, localnpf
-     id_sorted(p) = int(particles_global(iptag,p))
+     id_sorted(p) = int(particles_global(iptag,p),8)
   enddo
 
   call NewQsort_IN(id_sorted, QSindex)
@@ -3473,13 +3474,813 @@ end if
 get_particle_sigh=0
 END FUNCTION
 
+FUNCTION get_particle_rel_mass(tags,rel_mass,nparts)
+! Get the SeBa relative mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_rel_mass, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rel_mass, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            rel_mass(i) = particles_pointer(REL_MASS_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            rel_mass(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    rel_mass = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, rel_mass, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      rel_mass(i) = particles_global(REL_MASS_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          rel_mass(j) = particles_global(REL_MASS_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_rel_mass=0
+END FUNCTION
+
+
+
+
+
+
+
+FUNCTION get_particle_rel_age(tags,rel_age,nparts)
+! Get the SeBa relative age from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_rel_age, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rel_age, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            rel_age(i) = particles_pointer(REL_AGE_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            rel_age(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    rel_age = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, rel_age, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      rel_age(i) = particles_global(REL_AGE_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          rel_age(j) = particles_global(REL_AGE_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_rel_age=0
+END FUNCTION
+
+
+
+FUNCTION get_particle_corem(tags,corem,nparts)
+! Get the SeBa core mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_corem, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: corem, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            corem(i) = particles_pointer(COREM_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            corem(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    corem = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, corem, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      corem(i) = particles_global(COREM_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          corem(j) = particles_global(COREM_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_corem=0
+END FUNCTION
+
+
+
+FUNCTION get_particle_co_corem(tags,co_corem,nparts)
+! Get the SeBa CO core mass from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_co_corem, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: co_corem, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            co_corem(i) = particles_pointer(CO_COREM_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            co_corem(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    co_corem = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, co_corem, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      co_corem(i) = particles_global(CO_COREM_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          co_corem(j) = particles_global(CO_COREM_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_co_corem=0
+END FUNCTION
+
+
+FUNCTION get_particle_stype(tags,stype,nparts)
+! Get the SeBa stellar type from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_stype, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: stype, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            stype(i) = particles_pointer(STYPE_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            stype(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    stype = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, stype, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      stype(i) = particles_global(STYPE_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          stype(j) = particles_global(STYPE_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_stype=0
+END FUNCTION
+
+
+FUNCTION get_particle_radius(tags,radius,nparts)
+! Get the SeBa radius from the particle by tag.
+  integer :: nparts, MyPe
+  integer :: get_particle_radius, i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: radius, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            radius(i) = particles_pointer(RADIUS_PART_PROP, QSindex(j))
+            !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            radius(i) = 0.0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    radius = 0.0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, radius, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+
+call Driver_getMype(GLOBAL_COMM, MyPe)
+call pt_sinkGatherGlobal()
+
+! I only need one proc to do this.
+
+if (MyPe .eq. 0) then
+
+! Sort by particle tag. Note that input positions should also be
+! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+     id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+
+  ! Are we updating every particle in the simulation?
+
+  if (nparts .eq. localnpf) then
+
+  ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+
+      radius(i) = particles_global(RADIUS_PART_PROP, QSindex(i))
+
+    end do
+
+  else
+
+  ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+
+      do i=1, localnpf
+
+        if (particles_global(iptag,i) .eq. tags(j)) then
+!        if (id_sorted(QSindex(i)) .eq. int(tags(j))) then
+
+          radius(j) = particles_global(RADIUS_PART_PROP, i)
+!          mass(j) = particles_global(ipm, QSindex(i))
+
+        end if
+
+      end do
+
+    end do
+
+  end if
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+
+end if
+
+#endif
+
+#endif
+get_particle_radius=0
+END FUNCTION
+
+
+
 FUNCTION set_particle_position(tags,x,y,z,nparts)
 
   integer :: nparts, MyPe
   double precision, dimension(nparts) :: x, y, z, tags
   integer :: set_particle_position, i, j, p, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 #ifdef bisect
@@ -3495,7 +4296,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3544,7 +4345,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -3614,7 +4415,7 @@ FUNCTION set_particle_velocity(tags,vx,vy,vz,nparts)
   double precision, dimension(nparts) :: vx, vy, vz, tags
   integer :: set_particle_velocity, i, p, j, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 #ifdef bisect
@@ -3630,7 +4431,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3678,7 +4479,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 enddo
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -3748,9 +4549,10 @@ FUNCTION set_particle_mass(tags,mass, nparts)
 
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
-  integer :: set_particle_mass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_mass, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -3764,7 +4566,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3806,9 +4608,10 @@ FUNCTION set_particle_oldmass(tags,mass, nparts)
 
   integer :: nparts
   double precision :: mass(nparts), tags(nparts)
-  integer :: set_particle_oldmass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_oldmass, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -3822,7 +4625,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3866,7 +4669,7 @@ FUNCTION set_particle_ang_mom(tags,lx,ly,lz,nparts)
   double precision, dimension(nparts) :: lx, ly, lz, tags
   integer :: set_particle_ang_mom, i, p, j, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 #ifdef bisect
@@ -3882,7 +4685,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -3930,7 +4733,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 enddo
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4000,9 +4803,10 @@ FUNCTION set_particle_nion(tags, nion, nparts)
 ! Set the particle's number of ionizing photons by tag number.
   integer :: nparts
   double precision :: nion(nparts), tags(nparts)
-  integer :: set_particle_nion, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_nion, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -4018,7 +4822,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4061,7 +4865,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4143,7 +4947,7 @@ FUNCTION set_particle_eion(tags, eion, nparts)
   double precision :: eion(nparts), tags(nparts)
   integer :: set_particle_eion, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -4159,7 +4963,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4203,7 +5007,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4279,7 +5083,7 @@ FUNCTION set_particle_sigh(tags, sigh, nparts)
   double precision :: sigh(nparts), tags(nparts)
   integer :: set_particle_sigh, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #ifdef FERVENT
 
 #ifdef bisect
@@ -4295,7 +5099,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4338,7 +5142,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4414,7 +5218,7 @@ FUNCTION set_particle_npep(tags, nion, nparts)
   double precision :: nion(nparts), tags(nparts)
   integer :: set_particle_npep, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
 #ifdef FERVENT
 ! Are we using photoelectric heating?
@@ -4432,7 +5236,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4475,7 +5279,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4553,7 +5357,7 @@ FUNCTION set_particle_epep(tags, eion, nparts)
   double precision :: eion(nparts), tags(nparts)
   integer :: set_particle_epep, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
 #ifdef FERVENT
 ! Are we using photoelectric heating?
@@ -4571,7 +5375,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4614,7 +5418,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4691,7 +5495,7 @@ FUNCTION set_particle_sigd(tags, sigh, nparts)
   double precision :: sigh(nparts), tags(nparts)
   integer :: set_particle_sigd, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 ! Are we using radiation?
 #ifdef FERVENT
 ! Are we using photoelectric heating?
@@ -4709,7 +5513,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4752,7 +5556,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4823,13 +5627,824 @@ set_particle_sigd=0
 
 END FUNCTION
 
+FUNCTION set_particle_rel_mass(tags, rel_mass, nparts)
+! Set the SeBa relative mass of a particle by tag number.
+  integer :: nparts
+  double precision :: rel_mass(nparts), tags(nparts)
+  integer :: set_particle_rel_mass, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(REL_MASS_PART_PROP, QSindex(j)) = rel_mass(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(REL_MASS_PART_PROP, QSindex(i)) = rel_mass(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(REL_MASS_PART_PROP, i) = rel_mass(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(REL_MASS_PART_PROP,i) = particles_global(REL_MASS_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_rel_mass=0
+END FUNCTION
+
+
+
+FUNCTION set_particle_rel_age(tags, rel_age, nparts)
+! Set the SeBa relative age of a particle by tag number.
+  integer :: nparts
+  double precision :: rel_age(nparts), tags(nparts)
+  integer :: set_particle_rel_age, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(REL_AGE_PART_PROP, QSindex(j)) = rel_age(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(REL_AGE_PART_PROP, QSindex(i)) = rel_age(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(REL_AGE_PART_PROP, i) = rel_age(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(REL_AGE_PART_PROP,i) = particles_global(REL_AGE_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_rel_age=0
+END FUNCTION
+
+
+
+FUNCTION set_particle_corem(tags, corem, nparts)
+! Set the SeBa core mass of a particle by tag number.
+  integer :: nparts
+  double precision :: corem(nparts), tags(nparts)
+  integer :: set_particle_corem, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(COREM_PART_PROP, QSindex(j)) = corem(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(COREM_PART_PROP, QSindex(i)) = corem(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(COREM_PART_PROP, i) = corem(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(COREM_PART_PROP,i) = particles_global(COREM_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_corem=0
+END FUNCTION
+
+
+FUNCTION set_particle_co_corem(tags, co_corem, nparts)
+! Set the SeBa CO core mass of a particle by tag number.
+  integer :: nparts
+  double precision :: co_corem(nparts), tags(nparts)
+  integer :: set_particle_co_corem, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(CO_COREM_PART_PROP, QSindex(j)) = co_corem(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(CO_COREM_PART_PROP, QSindex(i)) = co_corem(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(CO_COREM_PART_PROP, i) = co_corem(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(CO_COREM_PART_PROP,i) = particles_global(CO_COREM_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_co_corem=0
+END FUNCTION
+
+
+FUNCTION set_particle_stype(tags, stype, nparts)
+! Set the SeBa stellar type of a particle by tag number.
+  integer :: nparts
+  double precision :: stype(nparts), tags(nparts)
+  integer :: set_particle_stype, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(STYPE_PART_PROP, QSindex(j)) = stype(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(STYPE_PART_PROP, QSindex(i)) = stype(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(STYPE_PART_PROP, i) = stype(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(STYPE_PART_PROP,i) = particles_global(STYPE_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_stype=0
+END FUNCTION
+
+FUNCTION set_particle_radius(tags, radius, nparts)
+! Set the SeBa radius of a particle by tag number.
+  integer :: nparts
+  double precision :: radius(nparts), tags(nparts)
+  integer :: set_particle_radius, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#ifdef FERVENT
+
+#ifdef bisect
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            particles_pointer(RADIUS_PART_PROP, QSindex(j)) = radius(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+    deallocate(QSindex)
+    deallocate(id_sorted)
+endif
+#else
+
+call Driver_getMype(GLOBAL_COMM, myProc)
+
+call pt_sinkGatherGlobal()
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+allocate(QSindex(localnpf))
+allocate(id_sorted(localnpf))
+
+do p = 1, localnpf
+   id_sorted(p) = int(particles_global(iptag,p),8)
+end do
+
+call NewQsort_IN(id_sorted, QSindex)
+
+! Are we updating every particle in the simulation?
+
+if (nparts .eq. localnpf) then
+
+! Yes, then lets do them all at once.
+
+  do i=1, localnpf
+
+    particles_global(RADIUS_PART_PROP, QSindex(i)) = radius(i)
+
+  end do
+
+else
+
+! If not doing them all, have to do it by tag number.
+
+  do j=1, nparts
+
+    do i=1, localnpf
+
+!      local_index = id_sorted(QSindex(i))
+!      local_tag   = int(tags(j))
+
+      !if (local_index == local_tag) then
+!      if (id_sorted(QSindex(i)) == int(tags(j))) then
+       if (particles_global(iptag,i) .eq. tags(j)) then
+
+!        print*, "id_sorted and global mass", id_sorted(QSindex(i)), particles_global(iptag, QSindex(i)), &
+!                             & particles_global(ipm, QSindex(i)) , myProc
+!        print*, "tags and submitted mass", tags(j), mass(j), myProc
+
+        !particles_global(ipm, QSindex(i)) = mass(j)
+        particles_global(RADIUS_PART_PROP, i) = radius(j)
+!        print*, particles_global(ipm, i)
+
+       end if
+
+    end do
+
+  end do
+
+end if
+
+
+! The first localnp particles on a processor in particles_global are
+! the local particle arrays in order.
+
+do i=1, localnp
+
+    particles_local(RADIUS_PART_PROP,i) = particles_global(RADIUS_PART_PROP, i)
+!    print*, "Final local and global mass."
+!    print*, particles_local(ipm,i), myProc
+!    print*, particles_global(ipm,i), myProc
+
+end do
+deallocate(QSindex)
+deallocate(id_sorted)
+#endif
+
+#endif
+
+set_particle_radius=0
+END FUNCTION
+
+
 FUNCTION set_particle_wind_mass(tags, dmdt, nparts)
 ! Set the particle's wind dM/dt by tag number.
   integer :: nparts
   double precision :: dmdt(nparts), tags(nparts)
   integer :: set_particle_wind_mass, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 ! Are we using winds?
 #ifdef WIND_INJ
@@ -4847,7 +6462,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -4891,7 +6506,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -4973,7 +6588,7 @@ FUNCTION set_particle_wind_vel(tags, velw, nparts)
   double precision :: velw(nparts), tags(nparts)
   integer :: set_particle_wind_vel, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 ! Are we using winds?
 #ifdef WIND_INJ
@@ -4991,7 +6606,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5034,7 +6649,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -5115,7 +6730,7 @@ FUNCTION set_particle_gpot(tags,gpot,nparts)
   integer :: nparts
   double precision :: gpot(nparts), tags(nparts)
   integer :: set_particle_gpot, i, p, j, myProc, local_index, local_tag
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 #ifdef SINK_PART_TYPE
 
@@ -5130,7 +6745,7 @@ allocate(QSindex(localnpf))
 allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
-   id_sorted(p) = int(particles_global(iptag,p))
+   id_sorted(p) = int(particles_global(iptag,p),8)
 end do
 
 call NewQsort_IN(id_sorted, QSindex)
@@ -5228,7 +6843,7 @@ END FUNCTION
 !  integer :: nparts
 !  double precision :: prop(nparts), tags(nparts)
 !  integer :: set_particle_prop, i, p, j, oldj
-!  integer, dimension(:), allocatable :: QSindex, id_sorted
+!  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 !! Are we using radiation?
 !!#ifdef FERVENT
@@ -5244,7 +6859,7 @@ END FUNCTION
 !allocate(id_sorted(localnp))
 
 !do p = 1, localnp
-!   id_sorted(p) = int(particles_local(iptag,p))
+!   id_sorted(p) = int(particles_local(iptag,p),8)
 !end do
 
 !call NewQsort_IN(id_sorted, QSindex)
@@ -5504,10 +7119,11 @@ FUNCTION get_particle_tags(n, tags, nparts)
 
 integer :: get_particle_tags, nparts, i, j, p, MyPe, n(nparts)
 real*8  :: tags(nparts)
-integer, dimension(:), allocatable :: QSindex, id_sorted
+integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 integer   :: communicator, ierr
-integer   :: new_tags_array(nparts), num_array(dr_globalNumProcs)
+integer   :: num_array(dr_globalNumProcs)
+integer*8 :: new_tags_array(nparts)
 integer   :: disp(dr_globalNumProcs), rank_minus_one
 integer   :: type_begin, type_end, type_count
 real*8    :: real_tags(nparts)
@@ -5567,9 +7183,10 @@ call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
-  call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end)), &
-                   type_count, MPI_INTEGER, new_tags_array, num_array, &
-                   disp, MPI_INTEGER, 0, communicator, ierr)
+  
+  call MPI_Gatherv(int(particles_pointer(TAG_PART_PROP,type_begin:type_end),8), &
+                   type_count, MPI_LONG, new_tags_array, num_array, &
+                   disp, MPI_LONG, 0, communicator, ierr)
 
 ! I only need one proc to do this.
 
@@ -5581,7 +7198,7 @@ allocate(QSindex(nparts))
 allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
-!     id_sorted(p) = int(particles_global(iptag,p))
+!     id_sorted(p) = int(particles_global(iptag,p),8)
 !  enddo
 
   call NewQsort_IN(new_tags_array, QSindex)
@@ -5612,7 +7229,7 @@ FUNCTION get_particle_proc(tags, procs, nparts)
   double precision, dimension(nparts) :: tags
   integer, dimension(nparts) :: procs
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -5626,7 +7243,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5680,7 +7297,7 @@ FUNCTION get_particle_block(tags, blocks, nparts)
   double precision, dimension(nparts) :: tags
   integer, dimension(nparts) :: blocks
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
 call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
@@ -5694,7 +7311,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then
@@ -5750,9 +7367,10 @@ integer   :: nparts
 real*8    :: tags(nparts)
 integer   :: new_tags_length(nparts), get_new_tags
 integer   :: communicator, ierr, i
-integer   :: new_tags_array(nparts), num_array(dr_globalNumProcs)
+integer*8 :: new_tags_array(nparts)
+integer   :: num_array(dr_globalNumProcs)
 integer   :: disp(dr_globalNumProcs), MyPe, rank_minus_one
-integer, dimension(:), allocatable :: QSindex, id_sorted
+integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
@@ -5787,8 +7405,8 @@ integer, dimension(:), allocatable :: QSindex, id_sorted
 
   ! Now actually gather the tags using the variable length array
   ! gather command in MPI.
-  call MPI_Gatherv(new_particles_tags, number_new_particles, MPI_INTEGER, &
-                  new_tags_array, num_array, disp, MPI_INTEGER, &
+  call MPI_Gatherv(new_particles_tags, number_new_particles, MPI_LONG, &
+                  new_tags_array, num_array, disp, MPI_LONG, &
                   0, communicator, ierr)
 
 ! I only need one proc to do this.
@@ -5801,7 +7419,7 @@ allocate(QSindex(nparts))
 allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
-!     id_sorted(p) = int(particles_global(iptag,p))
+!     id_sorted(p) = int(particles_global(iptag,p),8)
 !  enddo
 
   call NewQsort_IN(new_tags_array, QSindex)
@@ -5913,7 +7531,7 @@ FUNCTION remove_particles(tags, nparts)
   double precision, dimension(nparts) :: tags
   integer, dimension(nparts) :: remove_index
   integer :: type_begin, type_end, type_count
-  integer, dimension(:), allocatable :: QSindex, id_sorted
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 #if defined(SINK_PART_TYPE) || defined(ACTIVE_PART_TYPE)
 ! Initialize the remove_index array.
 remove_index = -1
@@ -5929,7 +7547,7 @@ if (type_count .ge. 1) then
     allocate(id_sorted(type_count))
 
     do p = type_begin, type_end
-       id_sorted(p) = int(particles_pointer(iptag,p))
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
     end do
 
     if (type_count .eq. 1) then

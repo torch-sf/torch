@@ -63,6 +63,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     initMass = hydro.get_particle_oldmass(newtags)
     angMom   = hydro.get_particle_ang_mom(newtags) # add angular momentum code -SA 20230301
 
+    # Get SeBa properties from checkpoint - CCC 25/04/2024, 06/11/2024
+    relMass  = hydro.get_particle_rel_mass(newtags)
+    relAge   = hydro.get_particle_rel_age(newtags)
+    COcoreM  = hydro.get_particle_co_corem(newtags)
+    coreM    = hydro.get_particle_corem(newtags)
+    sType    = hydro.get_particle_stype(newtags)
+    radius   = hydro.get_particle_radius(newtags)
+    
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
@@ -73,36 +81,33 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
 
+    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024, 06/11/2024
+    add_star.relative_mass = relMass
+    add_star.relative_age  = relAge
+    add_star.COcore_mass   = COcoreM
+    add_star.core_mass     = coreM
+    add_star.age           = relAge
+
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
-    add_star.stellar_type = 1 | units.stellar_type # ZAMS star
-    add_star.radius = 100 | units.AU # initial collision radius
+    # Set stellar type and radius - CCC 06/11/2024
+    # If restart or user ICs, take values from FLASH, otherwise use sensible guess
+    add_star.stellar_type = sType | units.stellar_type
+    add_star.radius       = radius
+    # For new stars
+    _new_stars = np.where(sType == 0)[0]
+    add_star[_new_stars].stellar_type = 1 | units.stellar_type # ZAMS star
+    # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+    # It must be somewhat realistic in case there is a contact system
+    # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
+    # Use linear MRR for upper mass range
+    # Note that radius now denotes a physical radius and not a collisional radius
+    add_star[_new_stars].radius = (1.01 * (add_star[_new_stars].mass / (1 | units.MSun)) ** 0.57) | units.RSun
     add_star.initial_mass = initMass # for SE/SN uses
+
     #add_star.ang_mom = angMom # add angular mometum code -SA 20230301
     # Removing the line to add ang_mom to the AMUSE particle set 
     # as the amuse particle set doesn't need it and breaks if it's added. -SA 20250226
-# don't need to carry this around because we don't need history
-# just update directly in hydro
-    #if with_lyc:
-#    add_star.nion = 0.0 | units.s**-1 # ionizing flux
-#    add_star.eion = 0.0 | units.erg # ionizing energy *OVER* 13.6 eV
-#    add_star.sigh = 0.0 | units.cm**2 # ionizing cross section.
-    #if with_pe_heat:
-#    add_star.npe   = 0.0 | units.s**-1 # PE photon flux
-#    add_star.epe   = 0.0 | units.erg # PE photon energy (should be around 8 eV)
-#    add_star.sigpe = 0.0 | units.cm**2 # dust cross section per hydrogen atom
-    #if with_wind:
-#    add_star.dm_dt = 0.0 | units.g/units.s
-#    add_star.vterm = 0.0 | units.cm/units.s
-
-    # fast-forward stellar evolution to get current stellar type, because
-    # torch_sf looks for change in stellar type to decide when to deposit SN
-    if add_parts_restart:
-        t_evol = hydro.get_time() - hydro.get_particle_creation_time(newtags)
-        # TODO hardcoded solar metallicity Z=0.02 should be chosen by user.  -AT, 2019oct14
-        _tmp = se.evolve_star(add_star.initial_mass, t_evol, 0.02)
-        se_time, se_mass, se_radius, se_lum, se_temp, se_evol_time, se_type = _tmp
-        add_star.stellar_type = se_type
-
+    
     # only used by ph4... without this, ph4 complains about reused user IDs
     add_star.id = state.stars_next_id + np.arange(num_new_parts)
     state.stars_next_id += num_new_parts
@@ -131,6 +136,9 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     grav.particles.add_particles(add_star)
     tprint("Finished grav.particles.add_particles()")
+   
+    #Add particles to stellar evolution, CCC 10/05/2024
+    se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -148,8 +156,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     tprint("Completed add_particles_to_grav")
     return
 
-
-def remove_particles_outside_bndbox(state, hydro, grav, mult):
+def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
     """
     Remove any particles that have left the simulation.
     WARNING: assumes a box-shaped domain specified by xmin, xmax, etc. in
@@ -185,7 +192,8 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
 
     tprint("Now removing stars.")
     stars_rem = p[outside]
-    grav_rem = stars_rem.copy()
+    grav_rem  = stars_rem.copy()
+    se_rem    = stars_rem.copy()
 
     if len(stars_rem) > 0:
 
@@ -223,21 +231,26 @@ def remove_particles_outside_bndbox(state, hydro, grav, mult):
         # only the stars particle set has a tag attribute.
         t = stars_rem.tag
         t = np.sort(np.array(t).flatten())
+        
+        stars_rem.escape_time = hydro.get_time()
+        state.out_escaped_stars(stars_rem, overwrite)
 
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
+        se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
         else:
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
     tprint("Completed remove_particles_outside_bndbox.")
+        
     return
 
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
-                sample_imf_mass=10000|units.MSun, sum_small=False,
+                sample_imf_mass=10000|units.MSun, sum_small=False, m_small=1.0|units.MSun,
                 sample_imf_bins=10, jet_fraction=0.0,  #Add default value of jet_fraction -SA 20220819
                 minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Add jet mass range -SA 20230728
     """Check hydro for new sinks, queue stars for spawning"""
@@ -266,9 +279,11 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                             num_bins=sample_imf_bins,
                             min_samp_mass=min_imf_mass.value_in(units.MSun),
                             max_samp_mass=max_imf_mass.value_in(units.MSun),
-                            sum_small=sum_small, jet_fraction=jet_fraction,  # Added jet_fraction -SA 20220819
+                            sum_small=sum_small, 
+                            m_small=m_small.value_in(units.MSun),
+                            jet_fraction=jet_fraction,  # Added jet_fraction -SA 20220819
                             minimum_jet_mass=minimum_jet_mass, 
-                            maximum_jet_mass=maximum_jet_mass  #Added jet mass range -SA 20230728
+                            maximum_jet_mass=maximum_jet_mass,  #Added jet mass range -SA 20230728
             )
 
             tprint("... sink tag {}".format(sink_tag), end='')

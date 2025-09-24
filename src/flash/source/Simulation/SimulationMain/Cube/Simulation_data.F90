@@ -57,6 +57,19 @@ module Simulation_data
 !  real, save :: sim_Z, sim_G0, sim_pe_h, sim_cr_h
 !  logical, save :: sim_stratify_heating, sim_constant_heating
 
-end module Simulation_data
+   !! VorAMR stuff
+   logical, save :: use_voramr, use_localRef, refPartCount, center_localRef
+   character(len=255),save :: voramr_source, voramr_input
+   real, save :: localRef_x, localRef_y, localRef_z, localRef_r
+   !! Derefinement outside rectangular region of interest
+   logical, save :: use_deref
+   real, save :: deref_xl, deref_xr, deref_yl, deref_yr, deref_zl, deref_zr
+   integer, save :: deref_lref
+   
+   !! static grav field parameters
+   logical, save :: sim_withStaticGrav
+   real, save :: sim_aParm1, sim_aParm2, sim_aParm3, sim_aParm4
+
+ end module Simulation_data
 
 
