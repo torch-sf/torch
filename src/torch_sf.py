@@ -130,12 +130,12 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     #tprint("Finished pprint.")
 
     state.stars.add_particles(add_star)
-    tprint("Finished stars.add_particles()")
+    #tprint("Finished stars.add_particles()")
     state.stars = state.stars.sorted_by_attribute('tag')
     #tprint("Finished sorted_by_attribute")
 
     grav.particles.add_particles(add_star)
-    tprint("Finished grav.particles.add_particles()")
+    #tprint("Finished grav.particles.add_particles()")
    
     #Add particles to stellar evolution, CCC 10/05/2024
     se.particles.add_particles(add_star)
@@ -153,7 +153,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     # to the gravity code.
     hydro.clear_new_tags()
 
-    tprint("Completed add_particles_to_grav")
+    #tprint("Completed add_particles_to_grav")
     return
 
 def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
