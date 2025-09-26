@@ -15,7 +15,6 @@ from torch_stdout import tprint
 def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
                               max_samp_mass=150.0, sum_small=False, m_small=1.0, jet_fraction=0.0,  #Add jet_fraction parameter -SA 20220819
                               minimum_jet_mass=100|units.MSun, maximum_jet_mass=0.01|units.MSun): #Added jet mass range -SA 20230728
-                              max_samp_mass=150.0, sum_small=False, m_small=1.0):
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
