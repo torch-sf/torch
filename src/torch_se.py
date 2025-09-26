@@ -17,6 +17,7 @@ import math
 from scipy.integrate import quad
 
 from amuse.units import units
+from amuse.datamodel import Particles
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
