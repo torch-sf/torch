@@ -17,7 +17,7 @@ import math
 from scipy.integrate import quad
 
 from amuse.units import units
-from amuse.datamodel import Particles # CCC 24/06/2024, needed to remove merged stars
+from amuse.datamodel import Particles
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
