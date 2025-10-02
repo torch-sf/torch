@@ -106,7 +106,10 @@ D O(v/c) correction terms flag
 PARAMETER rt_ovcterms    BOOLEAN     TRUE
 
 D Flag whether to use VETTAM when there are no sink particles
-PARAMETER noSink_VETTAM    BOOLEAN      TRUE
+PARAMETER noSink_VETTAM    BOOLEAN      FALSE
+
+D Flag whether to use VETTAM when there are no star particles
+PARAMETER noStar_VETTAM    BOOLEAN      FALSE
 
 D Parameters to control frequency of VETTAM (only use rt every dt)
 PARAMETER rt_useeverydt		REAL 		0.0

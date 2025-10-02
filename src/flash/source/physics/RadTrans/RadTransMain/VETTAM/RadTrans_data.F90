@@ -46,7 +46,7 @@ module RadTrans_data
   ! Runtime parameters
   logical, save :: rt_useRadTrans, rt_compute_Dt, rt_update_hydro,rt_debug, &
                   use_hlle_correction, rt_sink_implicit, rt_picard_correction, &
-                  rt_sinkheat, rt_sinkmom, rt_ovcterms, noSink_VETTAM
+                  rt_sinkheat, rt_sinkmom, rt_ovcterms, noSink_VETTAM, noStar_VETTAM
   integer, save :: rt_Dt_type, rt_hydro_type, rt_temp_type
 
   real, save    :: rt_dtFactor, rt_smalle, rt_smallf

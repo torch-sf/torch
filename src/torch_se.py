@@ -15,8 +15,10 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.integrate import quad
 
+
 from amuse.units import constants, units #constants added for tests, CCC 28/04/2023
 from amuse.ext.orbital_elements import * # CCC 03/04/2025
+from amuse.datamodel import Particles
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
