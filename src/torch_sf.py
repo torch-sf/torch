@@ -412,7 +412,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
             else:
                 star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
-                if np.isnan(sink_cs..value_in(units.cm/units.s)):
+                if np.isnan(sink_cs.value_in(units.cm/units.s)):
                     # with the maximum value corresponding to gas at T=100K
                     star.velocity = sink_vel + (np.random.normal(117200.0, size=(nnew,3)) | units.cm/units.s)
                 else:
