@@ -153,7 +153,7 @@ def get_periods(m, pdist='inner'):
     return p
 
 
-def get_mass_ratios(m, p, qdist='field'):
+def get_mass_ratios(m, p, qdist='field', mmin=0.08):
     """
     Sample the mass ratio based on the distributions reported by Moe & di Stefano (2017),
     for the specified mass range, for a given period. For M dwarfs, slopes are from
@@ -255,7 +255,13 @@ def get_mass_ratios(m, p, qdist='field'):
         # < 0.3 MSun M dwarfs
         _mask = np.where(m < 0.3)[0]
         return_q[_mask] = get_q(q, p[_mask], m_range=0) 
-            
+
+        # We can have companions below the hydrogen burning limit
+        # or below the minimum stellar mass in the simulation.
+        # For those stars, set their mass to the minimum mass.
+        _mask = np.where(m*return_q < mmin)[0]
+        return_q[_mask] = np.ones(len(_mask)) * mmin / m[_mask]
+        
         return return_q
     
     q = inv_transform_sampling(p, m)
@@ -416,7 +422,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     primaries      = mass_array[p_IDs]
     singles        = mass_array[s_IDs]
     periods        = get_periods(primaries, pdist=pdist)
-    mass_ratios    = get_mass_ratios(primaries, periods, qdist=qdist)
+    mass_ratios    = get_mass_ratios(primaries, periods, qdist=qdist, mmin=min_mass)
     companions     = primaries * mass_ratios
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
     eccentricities = get_eccentricities(primaries, periods, edist=edist)
