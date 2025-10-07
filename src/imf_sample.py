@@ -13,7 +13,7 @@ from scipy.integrate import quad
 from primordial_binaries import orbits
 
 
-def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1, max_samp_mass=150.0, 
+def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.08, max_samp_mass=150.0, 
                  sum_small=False, m_small=1, binaries=True, mult_frac='field', 
                  pdist='field', qdist='field', edist='field'):
 
@@ -42,8 +42,14 @@ def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.1, max_samp_mass
         masses = collect_small_stars_mass(masses,m_small)
 
     np.random.shuffle(masses)
-    masses, system_masses, positions, velocities = orbits(masses, binaries = binaries, mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist, min_mass=min_samp_mass)
-
+    if binaries:
+        masses, system_masses, positions, velocities = orbits(masses, binaries = binaries, mult_frac=mult_frac,
+                                                              pdist=pdist, qdist=qdist, edist=edist, min_mass=min_samp_mass)
+    else:
+        system_masses = np.copy(masses)
+        positions = np.zeros((len(masses), 3))
+        velocities = np.zeros((len(masses), 3))
+        
     return masses, system_masses, positions, velocities
 
 

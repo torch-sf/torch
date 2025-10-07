@@ -12,19 +12,30 @@ from amuse.ext.orbital_elements import *
 
 def get_multiplicity(m, mult_frac='field'):
     """
-    Return a boolean array, with true for primaries and false for singles
-    - CCC 16/11/2024
+    Function to select primaries and singles
+    args:
+        m: array of masses in MSun
+        mult_frac: mass-dependant multiplicity fraction,
+                   default is 'field'
+    returns:
+        primaries_IDs: indices for primaries
+        singles_IDs: indices for singel stars
     """
     
     def companion_frequency(m):
         """
-        Use a piecewise function to return the companion frequency as a function of primary mass.
-        Between mass ranges, use the average.
+        Use a piecewise function to return the companion frequency 
+        as a function of primary mass. Use the average between 
+        mass ranges.
+        args:
+            m: array of masses in MSun
+        returns:
+            step function for sampling
         """
         mass_ranges = [m < 0.15, 
                        (m >= 0.15) & (m < 0.30), 
                        (m >= 0.30) & (m < 0.60), 
-                       (m >= 0.60) & (m < 0.80), 
+                       (m >= 0.60) & (m < 0.80),
                        (m >= 0.80) & (m < 1.2), 
                        (m >= 1.2) & (m < 2), 
                        (m >= 2) & (m < 5), 
@@ -38,6 +49,10 @@ def get_multiplicity(m, mult_frac='field'):
     def random_fraction(m):
         """
         Get a random value between 0 and 1 with the same shape as the mass array
+        args:
+            m: array of masses in MSun
+        returns:
+            random distribution of the same shape as m
         """
         return np.random.uniform(size=len(m))
 
@@ -55,34 +70,46 @@ def get_multiplicity(m, mult_frac='field'):
 
 def get_periods(m, pdist='inner'):
     """
-    Sample the period based on the distributions reported by Moe & di Stefano (2017),
-    for the specified mass range and period distribution. Choices of mass distributions
-    are 'solar', 'AB', 'mid-B', 'early-B', and 'O'; choices of period distributions are
-    'field' and 'inner'. 
-    For M-dwarfs, the period distributions are derived from the semi-major distributions
-    compiled by Winters et al. 2019, using the mass ratio distributions reported in
-    Offner et al. 2023.
-    in: masses in solar masses (dimensionless), period distribution
-    out: period in days (dimensionless)
-    - CCC 17/11/2024, 12/06/2025
+    Sample the period based on the mass-dependant period distributions 
+    reported by Moe & di Stefano (2017). For M-dwarfs, the period distributions
+    are derived from the semi-major distributions compiled by Winters et al. 2019, 
+    using the mass ratio distributions reported in Offner et al. 2023.
+    args:
+        m: array of masses in MSun
+        pdist: period distribution, possible values are 'field' and 'inner'
+    returns:
+        p: array of orbital periods in days
     """
         
     def pdf(log_p, m_range=-1, pdist=pdist):
+        """
+        Generate the period probability distribution function for a given
+        primary mass range.
+        args:
+            log_p: values of log(period/days) over which the pdf is evaluated
+            m_range: mass range between -5 (solar-type) and -1 (O stars)
+            p_dist: period distribution, possible values are 'field' and 'inner'
+        returns:
+            probabilities: value of the pdf for each log_p value
+        """
         
         log_p_values = [1., 3., 5., 7.]
         
+        # Companion frequencies at log_p = 1, 3, 5, 7 from Moe & di Stefano 2017,
+        # for each primary mass bin
         frequencies = np.array([[0.027, 0.057, 0.095, 0.075], #solar
-                                [0.07, 0.12, 0.13, 0.09], # AB
-                                [0.14, 0.22, 0.20, 0.11], # mid B
-                                [0.19, 0.26, 0.23, 0.13], # early B
-                                [0.29, 0.32, 0.30, 0.18]]) # O
-        
-        # 1./2 leaves the probability unchanged
-        frac_close = np.array([1./2, 1./2, 63./76, 80./84, 1.]) # From close binary frequency
-        
+                                [0.07, 0.12, 0.13, 0.09],     # AB
+                                [0.14, 0.22, 0.20, 0.11],     # mid B
+                                [0.19, 0.26, 0.23, 0.13],     # early B
+                                [0.29, 0.32, 0.30, 0.18]])    # O
+
+        # Generate the pdf
         probabilities = np.interp(log_p, log_p_values, frequencies[m_range]) # Flat beyond bounds
         
         if pdist == 'inner':
+            # Correct the pdf for the inner companion
+            # 1./2 leaves the probabilities unchanged
+            frac_close = np.array([1./2, 1./2, 63./76, 80./84, 1.]) # From close binary frequency
             _inner = np.where(log_p <= 3.7)[0]
             _outer = np.where(log_p > 3.7)[0]
             probabilities[_inner] *= frac_close[m_range]
@@ -90,17 +117,23 @@ def get_periods(m, pdist='inner'):
             
         return probabilities
     
-    def pdf_Mdwarf(log_p, m_range=-1, pdist=pdist):
+    def pdf_Mdwarf(log_p, m_range=-1):
         """
-        Same structure as pdf for M17, but more period values
-        and no inner/outer distinction
+        Generate the period probability distribution function for a given
+        primary mass range for M-dwarfs.
+        args:
+            log_p: values of log(period/days) over which the pdf is evaluated
+            m_range: mass range between 0 (< 0.15 MSun) and 2 (0.3-0.6 MSun)
+        returns:
+            probabilities: value of the pdf for each log_p value
         """
         
         log_p_values = [1., 2., 3., 4., 5., 6., 7.]
         
-        # Derived from Winters et al. 2019, using 1e6 stars and a random seed of 0
-        frequencies = np.array([[0.020,  0.117,  0.308,  0.346,  0.170,  0.035,  0.003], # < 0.15 MSun
-                                [0.053,  0.125,  0.211,  0.245,  0.203,  0.116,  0.047], # 0.15-0.30 MSun
+        # Companion frequencies for log_p = 1, 2, 3, 4, 5, 6, 7, derived from the semi-major
+        # axis distributions of Winters et al. 2019 using 1e6 stars and a random seed of 0
+        frequencies = np.array([[0.020,  0.117,  0.308,  0.346,  0.170,  0.035,  0.003],  # < 0.15 MSun
+                                [0.053,  0.125,  0.211,  0.245,  0.203,  0.116,  0.047],  # 0.15-0.30 MSun
                                 [0.049,  0.106,  0.171,  0.217,  0.212,  0.154,  0.091]]) # 0.30-0.60 MSun
         
         probabilities = np.interp(log_p, log_p_values, frequencies[m_range]) # Flat beyond bounds
@@ -108,13 +141,22 @@ def get_periods(m, pdist='inner'):
         return probabilities
         
     def inv_transform_sampling(m, m_range=-1, pdist=pdist):
+        """
+        Use inverse transform sampling to sample the period pdf for a given mass range.
+        args:
+            m: array of masses in MSun
+            m_range: mass range between -5 and 2
+            p_dist: period distribution, possible values are 'field' and 'inner'
+        returns:
+            return_log_p: array of log(period/days) of the same length as m
+        """
             
         log_p = np.arange(0.2, 7.501, 0.001)
         
         if m_range < 0:
             _pdf = pdf(log_p, m_range, pdist=pdist)
         else:
-            _pdf = pdf_Mdwarf(log_p, m_range, pdist=pdist)
+            _pdf = pdf_Mdwarf(log_p, m_range)
             
         cdf = np.cumsum(_pdf)
         cdf = cdf/cdf[-1] # Normalize the cdf
@@ -158,14 +200,30 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
     Sample the mass ratio based on the distributions reported by Moe & di Stefano (2017),
     for the specified mass range, for a given period. For M dwarfs, slopes are from
     Offner et al. 2023, with the 0.15-0.30 MSun also used below 0.15 MSun.
-    out: mass ratio (dimensionless)
-    - CCC 17/11/2024, 12/06/2025
+    args:
+        m: array of masses in MSun
+        p: array of orbital periods in days
+        q_dist: distribution of mass ratios, only possible choice is 'field'
+        mmin: minimum companion mass
+    returns: 
+        q: array of mass ratios of the same length as m and p
     """
 
     def pdf(q, p, m_range=-1):
+        """
+        Generate the mass ratio probability distribution function for a given
+        period and mass range.
+        args:
+            q: values of the mass ratio q over which the pdf is evaluated
+            p: array of periods in days
+            m_range: mass range between -5 and 2
+        returns:
+            pdfs: probability distribution functions for each of the four period bins
+        """
         
         q_ranges = [q < 0.1, (q >= 0.1) & (q < 0.3), (q >= 0.3) & (q < 0.95), (q >= 0.95) & (q <= 1), q > 1]
-        
+
+        # Power-law exponent gamma for q < 0.3
         gamma_S = np.array([[0.7, 0.7, 0.7, 0.7],
                             [0.1, 0.1, 0.1, 0.1],
                             [0.3, 0.3, 0.3, 0.3],
@@ -173,7 +231,8 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
                             [0.1, -0.2, -1.2, -1.5],
                             [0.1, -0.2, -1.2, -1.5],
                             [0.1, -0.2, -1.2, -1.5]])
-        
+
+        # Power-law exponent gamma for q > 0.3
         gamma_L = np.array([[0.7, 0.7, 0.7, 0.7],
                             [0.1, 0.1, 0.1, 0.1],
                             [-0.5, -0.5, -0.5, -1.1],
@@ -181,7 +240,8 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
                             [-0.5, -1.7, -2.0, -2.0],
                             [-0.5, -1.7, -2.0, -2.0],
                             [-0.5, -1.7, -2.0, -2.0]])
-        
+
+        # Excess twin fraction
         excess_twin = np.array([[0., 0., 0., 0.,],
                                 [0., 0., 0., 0.,],
                                 [0.30, 0.2, 0.1, 0.],
@@ -205,6 +265,14 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
         return pdfs
     
     def inv_transform_sampling(p, m):
+        """
+        Use inverse transform sampling to sample the mass ratio pdf for a given mass and period range.
+        args:
+            p: array of orbital periods in days
+            m: array of masses in MSun
+        returns:
+            return_q: array of mass ratios of the same length as m and p
+        """
             
         q = np.arange(0.1, 1.001, 0.001)
         
@@ -270,11 +338,21 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
 
 
 def get_eccentricities(m, p, edist='field'):
+    """
+    Sample the eccentricity based on the distributions reported by Moe & di Stefano (2017),
+    for the specified mass range, for a given period. 
+    args:
+        m: array of masses in MSun
+        p: array of orbital periods in days
+        e_dist: distribution of eccentricities, only possible choice is 'field'
+    returns: 
+        ecc: array of eccentricities of the same length as m and p
+    """
     
     def ecc_max(p_range=0):
         """
-        Calculate maximum eccentricity for minimum period
-        in the period bin; use same bins as below
+        Calculate the maximum eccentricity for the minimum period in a period bin
+        Equation evaluated at logP=0.55, 0.6, 0.7, 0.85, 1, 1.3, 1.6, 2, 2.5, 3.5, 4.5, 5.5
         """
         e_max = np.array([0.318, 0.368, 0.458, 0.569, 0.658, 0.748, 0.815, 0.864, 0.926, 0.966, 0.993, 0.998, 1])
     
@@ -282,19 +360,27 @@ def get_eccentricities(m, p, edist='field'):
     
     def pdf(ecc_values, p_range=0, m_range=-1):
         """
-        Create a grid with the same log period bins as the M dwarfs
+        Calculate the power law exponent eta of the e^eta distribution for a period bin
         Equation evaluated at logP=0.55, 0.6, 0.7, 0.85, 1, 1.3, 1.6, 2, 2.5, 3.5, 4.5, 5.5
         """
         # Mass ranges: <= 5 MSun and > 5 MSun
         eta = np.array([[-13.4, -6.4, -2.9, -1.4, -0.8, -0.4, -0.178, -0.036, 0.133, 0.25, 0.367, 0.425, 0.46],
                         [-3.1, -1.1, -0.1, 0.329, 0.5, 0.614, 0.678, 0.718, 0.767, 0.8, 0.833, 0.85, 0.86]])
         
-        
         probabilities = ecc_values**eta[m_range][p_range]
             
         return probabilities
         
     def inv_transform_sampling(p, p_range=0, m_range=-1):
+        """
+        Use inverse transform sampling to sample the eccentricity pdf for a given mass and period range.
+        args:
+            p: array of orbital periods in days
+            p_range: period range between 0 and 11
+            m_range: mass range between 0 (< 5 MSun) and 1
+        returns:
+            ecc: array of eccentricities of the same length as m and p
+        """
             
         ecc = np.arange(0.001, 1.001, 0.001)
         emax = ecc_max(p_range)
@@ -394,11 +480,21 @@ def get_eccentricities(m, p, edist='field'):
 
 
 
-def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='field', edist='field', min_mass=0.1):
-
+def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='field', edist='field', min_mass=0.08):
     """
-    Generates binaries from arrays of masses
-    The input array has no units
+    Generate binaries from array of stellar masses.
+    args:
+        mass_array: stellar masses in MSun
+        mult_frac: choice of multiplicity fraction 
+        pdist: choice of period distribution
+        qdist: choice of semi-major axis distribution
+        edist: choice of eccentricity distribution
+        min_mass: minimum companion mass in MSun
+    returns:
+        masses: array of primary masses in MSun
+        system_masses: array of system masses in MSun
+        positions: array of positions relative to the COM, in cm
+        velocities: array of velocities relative to the COM, in cm/s
     """
 
     p_IDs, s_IDs  = get_multiplicity(mass_array, mult_frac=mult_frac)
@@ -427,6 +523,7 @@ def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='f
     semimajor_axes = orbital_period_to_semimajor_axis(periods | units.day, primaries | units.MSun, companions | units.MSun)
     eccentricities = get_eccentricities(primaries, periods, edist=edist)
 
+    # Place the binary at the random time in its orbit, and choose a random orientation
     E = np.random.uniform(-1 * np.pi, np.pi, size=len(primaries))
     true_anomalies                   = true_anomaly_from_eccentric_anomaly(E, eccentricities) | units.rad
     inclinations                     = np.random.uniform(-np.pi / 2, np.pi / 2, size=len(primaries)) | units.rad
