@@ -130,10 +130,7 @@ def initialize_workers():
         grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-        if USER['restart_from_stall']:
-            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
-            remove_merged = True # Use Brooke's routine to remove merged stars then write an output, CCC 06/03/2024
+        grav.parameters.r_out = USER['r_out']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -207,20 +204,12 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        # Get minimum dt from torch_user.py
+        # Get maximum dt from torch_user.py
         dt_max = USER['dt_soft_max']
-        # Recalculate PeTar parameters on the fly, CCC 28/02/23
-        grav.parameters.set_defaults()
-        grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-        if USER['restart_from_stall']:
-            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
-        grav.parameters.begin_time = hy_time
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         if num_stars > 0:
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
-        else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+        else: # Only enforce dt_soft_max if stars are formed
             dt = dt_nbody
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
@@ -371,26 +360,6 @@ def evolve(state, hydro, grav, mult, se):
                         pool.wait()
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
-                            # Timeout condition for PeTar, CCC 17/10/2023
-                            # Wait here, then check if grav is done
-                            timeout = USER['set_timeout']
-                            start = time.time()
-                            while time.time() - start <= timeout:
-                                if pool_table_grav and pool_table_grav[-1] == it:
-                                    break
-                                time.sleep(10) #Check every 10 seconds
-                            else:
-                                if USER['check_for_stall'] == True:
-                                    # Write chk from state_ if stall, CCC 09/03/2023
-                                    state_.force_output(overwrite=USER['overwrite'])
-                                    # Force crash if PeTar stalled, CCC 07/03/2023 & 17/10/2023
-                                    tprint("... PeTar has stalled, exit the simulation")
-                                    hydro.stop() 
-                                    grav.stop()  
-                                    se.stop()
-                                else:
-                                    pass
-
                         elif pool_table_grav and pool_table_grav[-1] == it:
                                 tprint("... grav advanced")
                             

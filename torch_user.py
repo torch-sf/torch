@@ -318,9 +318,6 @@ def user_parameters():
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
-    p['check_for_stall'] = False # use to save and exit if gravity takes longer than hydro
-    p['restart_from_stall'] = False # did PeTar stall and exit? Sets r_out = 100 r_bin for first Torch loop
-    p['remove_merged'] = True # remove merged stars
     
     p['evolve_async'] = True  # evolve hydro (Flash), N-body workers in parallel? (using AMUSE async requests)
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
@@ -340,11 +337,9 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-    p['r_bin'] = 100 | units.au
-    p['r_out'] = 0.03 | units.pc 
-    p['r_stall'] = 1e-3 | units.pc # Pick minimum value from current timestep, CCC 05/11/2023
+    p['r_bin'] = 50 | units.au
+    p['r_out'] = 0.003 | units.pc #Change with below 
     p['dt_soft_max'] = 0.125 | units.kyr
-    p['set_timeout'] = 300 # Set timeout for PeTar to 5 minutes after hydro has finished, CCC 17/10/2023 
 
     # <stellar evolution>
 
@@ -354,6 +349,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['remove_merged'] = True # remove merged stars
 
     # <star particle creation>
 
