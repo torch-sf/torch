@@ -25,21 +25,26 @@ def get_ntasks_from_run_script(name="run.sh"):
     nodes = None
     cores = None
     import os
-    with open(name) as f:
-        for line in f:
-            w = line.split()
-            if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
-                assert cores is None  # throw error if #SBATCH -n occurs >1x
-                cores = int(''.join(char for char in w[1] if char.isdigit()))
-                cores = int(os.getenv("SLURM_NTASKS_PER_NODE"))
-                #print('Requesting ', cores, 'cores on each of')
-            elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
-                assert nodes is None  # throw error if #SBATCH -n occurs >1x
-                nodes =	int(''.join(char for char in w[1] if char.isdigit()))
-                nodes = int(os.getenv("SLURM_JOB_NUM_NODES"))
-                #print(nodes, 'nodes')
-    assert n is None
-    n = nodes*cores
+    # Check for slurm ntasks
+    n = int(os.getenv("SLURM_NTASKS"))
+    if n is None:
+        with open(name) as f:
+            for line in f:
+                w = line.split()
+                if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
+                    assert cores is None  # throw error if #SBATCH -n occurs >1x
+                    cores = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-N'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-n'):
+                    assert n is None
+                    n = int(''.join(char for char in w[1] if char.isdigit()))
+        if n is None:
+            n = nodes*cores
     assert n is not None
     return n
 
@@ -352,7 +357,7 @@ def user_parameters():
 
     # <star particle creation>
 
-    p['binaries'] = True
+    p['binaries'] = False
     #Not used if binaries is false, can leave to default values                                                                
     p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
     p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
