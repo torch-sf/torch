@@ -46,18 +46,8 @@ def get_multiplicity(m, mult_frac='field'):
         
         return np.piecewise(m, mass_ranges, frequencies)
     
-    def random_fraction(m):
-        """
-        Get a random value between 0 and 1 with the same shape as the mass array
-        args:
-            m: array of masses in MSun
-        returns:
-            random distribution of the same shape as m
-        """
-        return np.random.uniform(size=len(m))
-
     frq = companion_frequency(m)
-    rnd = random_fraction(m)
+    rnd = np.random.uniform(size=len(m))
     
     primaries_IDs = np.zeros(len(frq), dtype=bool)
     singles_IDs   = np.zeros(len(frq), dtype=bool)
@@ -192,6 +182,10 @@ def get_periods(m, pdist='inner'):
     _mask = np.where((m >= 0.3) & (m < 0.6))[0]
     p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
 
+    # Verify that all period values are within bounds
+    assert np.min(p) >= 10**0.2
+    assert np.max(p) <= 10**7.5
+    
     return p
 
 
@@ -334,6 +328,11 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
     
     q = inv_transform_sampling(p, m)
 
+    # Verify that all mass ratios and companion masses are within bounds
+    assert np.min(q) >=	0.1
+    assert np.max(q) <=	1
+    assert np.min(m*q) >= mmin
+
     return q
 
 
@@ -475,12 +474,16 @@ def get_eccentricities(m, p, edist='field'):
     # logP > 4.5
     _mask = np.where((m > 5) & (4.5 <= np.log10(p)))[0]
     ecc[_mask] = inv_transform_sampling(p[_mask], p_range=-1, m_range=1)
-        
+
+    # Verify that all eccentricity values are within bounds
+    assert np.min(ecc) >= 0
+    assert np.max(ecc) < 1 # Note that we require e < 1 rather than e <= 1
+    
     return ecc
 
 
 
-def orbits(mass_array, binaries=True, mult_frac='field', pdist='inner', qdist='field', edist='field', min_mass=0.08):
+def orbits(mass_array, mult_frac='field', pdist='inner', qdist='field', edist='field', min_mass=0.08):
     """
     Generate binaries from array of stellar masses.
     args:
