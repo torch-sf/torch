@@ -10,7 +10,7 @@ print("At the top")
 
 from amuse.lab import *
 import numpy as np
-from amuse.community.flash.interface import Flash
+from torch_amuse_flash.interface import Flash
 #from amuse.rfi.channel import AsyncRequestsPool
 from amuse.community.smalln.interface import SmallN
 from amuse.community.kepler.interface import Kepler
