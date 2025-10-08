@@ -302,7 +302,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     return new_sink_ # save original sink list
 
 
-def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
+def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
     """
     Given an initial sampling of the IMF, distribute the stars randomly
     as sinks accrete the required mass to form them.
@@ -410,7 +410,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
                         star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
                     else:
-                        random_pos = sink_rad*np.random.rand()*random_three_vector_for_binaries()
+                        random_pos = sink_rad*np.random.rand()*random_three_vector()
+                        print(random_pos)
                         random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
                         star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
@@ -430,39 +431,20 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
 
     return formed_stars
 
-
 def random_three_vector(n=1):
     """
-    Generates a random 3D unit vector (direction) with a uniform spherical distribution
-    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+    Generates a unit vector by randomly sampling points uniformly
+    distributed on the surface of a sphere with radius 1.
     """
-    three_vector = np.zeros((n,3))
+    if n <=0:
+        raise ValueError('n must be larger than 0')
+    if n == 1:
+        vec = np.random.normal(size=3)
+        return vec/np.sqrt(np.sum(vec**2))
+    else:
+        vec = np.random.normal(size=[n, 3])
+        return vec/np.sqrt(np.sum(vec**2, axis=1))[:,None]
 
-    phi = np.random.uniform(0,np.pi*2,n)
-    costheta = np.random.uniform(-1,1,n)
-
-    theta = np.arccos( costheta )
-    three_vector[:,0] = np.sin( theta) * np.cos( phi )
-    three_vector[:,1] = np.sin( theta) * np.sin( phi )
-    three_vector[:,2] = np.cos( theta )
-    return three_vector
-
-def random_three_vector_for_binaries(n=1):
-    """
-    Generates a random 3D unit vector (direction) with a uniform spherical distribution
-    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
-    """
-    three_vector = np.zeros(3) # Modified by CCC to "unvectorize" it -- is now designed to be used for each formed star individually
-
-    phi = np.random.uniform(0,np.pi*2,n)
-    costheta = np.random.uniform(-1,1,n)
-
-    theta = np.arccos( costheta )
-    three_vector[0] = np.sin( theta) * np.cos( phi )
-    three_vector[1] = np.sin( theta) * np.sin( phi )
-    three_vector[2] = np.cos( theta )
-    return three_vector
-
-
+    
 if __name__ == '__main__':
     pass
