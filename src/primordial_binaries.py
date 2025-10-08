@@ -322,7 +322,8 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
         # or below the minimum stellar mass in the simulation.
         # For those stars, set their mass to the minimum mass.
         _mask = np.where(m*return_q < mmin)[0]
-        return_q[_mask] = np.ones(len(_mask)) * mmin / m[_mask]
+        return_m = np.ones(len(_mask)) * mmin
+        return_q[_mask] = return_m / m[_mask]
         
         return return_q
     
@@ -331,7 +332,7 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
     # Verify that all mass ratios and companion masses are within bounds
     assert np.min(q) >=	0.1
     assert np.max(q) <=	1
-    assert np.min(m*q) >= mmin
+    assert np.allclose(np.min(m*q), mmin)
 
     return q
 
@@ -381,7 +382,7 @@ def get_eccentricities(m, p, edist='field'):
             ecc: array of eccentricities of the same length as m and p
         """
             
-        ecc = np.arange(0.001, 1.001, 0.001)
+        ecc = np.arange(0.001, 1., 0.001)
         emax = ecc_max(p_range)
         
         _pdf = pdf(ecc[ecc <= emax], p_range, m_range)
