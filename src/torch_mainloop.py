@@ -127,7 +127,10 @@ def initialize_workers():
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     elif USER['with_petar']:
-        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
+        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu',
+                     redirection='file',
+                     redirect_stdout_file='petar_worker.out',
+                     redirect_stderr_file='petar_worker.err')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out']
@@ -263,8 +266,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PeTar.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-                        
-            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
             ### ------------------
             ### First bridge kick.
@@ -510,17 +511,11 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            # Recalculate PeTar parameters on the fly, CCC 28/02/23
-            grav.parameters.set_defaults()
-            grav.parameters.epsilon_squared = USER['epsilon']**2.0
-            grav.parameters.r_bin = USER['r_bin']
-            grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-            grav.parameters.begin_time = hy_time
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
             if num_stars > 0:
-                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
-            else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+            else: # Only enforce dt_soft_max if stars are formed
                 dt = dt_nbody
 
         num_stars = hydro.get_number_of_particles()  # loop variable
@@ -529,7 +524,7 @@ def evolve(state, hydro, grav, mult, se):
             # only assert time-sync with PeTar if stars have formed
             if first_star==1:
                 assert abs(hy_time - gr_time) <= (1e4|units.s)
-                print("hydro-grav time = ",hy_time - gr_time)
+                #print("hydro-grav time = ",hy_time - gr_time)
         else:
             assert abs(hy_time - gr_time) <= (1e4|units.s)
         assert num_stars == len(state.stars)
