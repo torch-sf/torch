@@ -17,7 +17,7 @@ from amuse.datamodel import Particles
 from amuse.units import units
 
 from torch_stdout import tprint
-from imf_sample import sample_stars
+from imf_sample import sample_stars, sample_binaries
 
 
 def add_particles_to_grav(state, hydro, grav, mult, se):
@@ -221,7 +221,7 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, 
                 sum_small=False, m_small=1.0|units.MSun,
-                binaries=True, sample_imf_bins=100, mult_frac='field',
+                binaries=False, sample_imf_bins=100, mult_frac='field',
                 pdist='field', qdist='field', edist='field'):
 
     """Check hydro for new sinks, queue stars for spawning"""
@@ -251,18 +251,16 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 state.all_positions[sink_tag]  = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
                 state.all_velocities[sink_tag] = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
                 tprint("... new sink tag {}".format(sink_tag))
-                new_sink_ = True # CCC 27/04/2023, to save original sink list
+                new_sink_ = True # save original sink list
 
             while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
-                                                                                    sample_imf_mass.value_in(units.MSun),
-                                                                                    num_bins=sample_imf_bins,
-                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
-                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                                                                    sum_small=sum_small, m_small=m_small.value_in(units.MSun),
-                                                                                    binaries=binaries, mult_frac=mult_frac, 
-                                                                                    pdist=pdist, qdist=qdist, edist=edist
-                                                                                    )
+                new_masses, new_system_masses, new_positions, new_velocities = sample_binaries(sample_imf_mass.value_in(units.MSun),
+                                                                                               num_bins=sample_imf_bins,
+                                                                                               min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                                                                               max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                                                                               mult_frac=mult_frac, pdist=pdist,
+                                                                                               qdist=qdist, edist=edist
+                                                                                               )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
                 print(" queued {} stars,".format(len(new_masses)), end='')
@@ -281,17 +279,15 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             if sink_tag not in state.all_masses:
                 state.all_masses[sink_tag]     = np.array([])
                 tprint("... new sink tag {}".format(sink_tag))
-                new_sink_ = True # CCC 27/04/2023, to save original sink list
+                new_sink_ = True # save original sink list
 
             while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
-                                                                                    sample_imf_mass.value_in(units.MSun),
-                                                                                    num_bins=sample_imf_bins,
-                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
-                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                                                                    sum_small=sum_small, binaries=binaries,
-                                                                                    mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
-                                                                                    )
+                new_masses = sample_stars(sample_imf_mass.value_in(units.MSun),
+                                          num_bins=sample_imf_bins,
+                                          min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                          max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                          sum_small=sum_small
+                                          )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
                 print(" queued {} stars,".format(len(new_masses)), end='')
@@ -303,7 +299,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
 
     hydro.set_particle_pointers('mass')
     
-    return new_sink_ # CCC 27/04/2023, to save original sink list
+    return new_sink_ # save original sink list
 
 
 def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
