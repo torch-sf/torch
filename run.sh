@@ -1,31 +1,22 @@
-#!/bin/sh
-#SBATCH --job-name=torch-test
-#SBATCH -n 6
-#SBATCH --time=0-01:00:00
+#!/bin/bash
+#SBATCH --job-name=test
+#SBATCH --time=0-0:05:00
+#SBATCH --mail-user=cournoyc@mpa-garching.mpg.de
+#SBATCH --mail-type=NONE
+#SBATCH --output=torch.out
+#SBATCH --error=torch.err
+#SBATCH --ntasks=113
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=p.exclusive
 
-mpiexec --mca orte_base_help_aggregate 0 -n 1 python torch_user.py
+. /u/cournoyc/code/bubble/env.sh
 
-# Some system/hardware-specific call options
+export UCX_LOG_LEVEL=FATAL
 
-# On Rome nodes (on e.g. Snellius) an error can occur in wireup.c when starting a worker,
-# this can be fixed with these options:
-#mpiexec --mca orte_base_help_aggregate 0 -x UCX_ATOMIC_MODE=cpu -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_RC_MLX5_MAX_NUM_EPS=inf -n 1 python torch_user.py
+ulimit -s unlimited
+export OMP_STACKSIZE=128M
+export OMP_NUM_THREADS=8
 
-# Some MPI call options for experimenting
-
-# OpenMPI 4.x or newer defaults to UCX rather than infiniband ports,
-# you may need to override that policy
-#mpiexec  --mca btl_openib_allow_ib 1 -n 1 python torch_user.py
-
-# OpenMPI
-#export OMPI_MCA_mpi_warn_on_fork=0
-#mpirun --mca orte_base_help_aggregate 0 --mca btl_openib_warn_no_device_params_found 0 -n 1 python torch_user.py
-
-# Intel MPI
-#mpiexec.hydra -n 1 python torch_user.py
-#-hostfile ./local_host.txt 
-#srun --mpi=pmi2 -n 1 python torch_user.py
-
-# MVAPICH2
-#mpirun_rsh -np 1 -hostfile ./local_host.txt MV2_SUPPORT_DPM=1 MV2_ON_DEMAND_THRESHOLD=128 MV2_VBUF_TOTAL_SIZE=128 MV2_IBA_EAGER_THRESHOLD=128 python ./torch_user.py
-##-hostfile local_host.txt 
+export UCX_TLS=rc,sm,self #Needed to prevent MPI_Comm_Spawn errors
+mpiexec -x UCX_TLS -n 1 python torch_user.py
+#mpiexec -n 1 python torch_user.py
