@@ -37,40 +37,18 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 # patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
 
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
-#if [[ $* != *-v* ]]
-#then
-#    echo -e "\nInstalling Torch w/o VorAMR.\n"
-#    rm -v ${FLASH_DIR}/source/Simulation/SimulationMain/Cube/pt_initVoronoiPositions.F90
-#else
-#    echo -e "\nInstalling Torch with VorAMR!\n"
-#fi
-#### ----------------------------
-#### Prepare the AMUSE repository
 
-asrc="${TORCH_DIR}/src/amuse" || { echo $errstr; exit 255; }
-adest="${AMUSE_DIR}/src/amuse/community/flash" || { echo $errstr; exit 255; }
+#### --------------------------
+#### Prepare the AMUSE bindings
 
-# to allow python imports
-touch ${adest}/__init__.py || { echo $errstr; exit 255; }
-
-cp -v ${asrc}/base_grid_interface.F90   ${adest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/interface.F90             ${adest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/interface.py              ${adest}/ || { echo $errstr; exit 255; }
-cp -v ${asrc}/Makefile.prototype        ${adest}/Makefile || { echo $errstr; exit 255; }
-
-mkdir -p ${adest}/src
-cp -v ${asrc}/src/*                     ${adest}/src/ || { echo $errstr; exit 255; }
+adest="${TORCH_DIR}/src/amuse"
 
 # Point AMUSE Makefile to FLASH directory via symlink
 # TODO will not work? if user placed FLASH4.6.2/ in ${adest}/src
-echo -n "Linking: "
-ln -sfTv ${FLASH_DIR}                    ${adest}/src/FLASH4.6.2 || { echo $errstr; exit 255; }
-echo "Setting drive_loc in ${adest}/Makefile"
-# "sed -i" doesn't work for BSD sed (e.g. on OS X), use a workaround from
-# https://stackoverflow.com/a/44877280
-sed "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.6.2\/object/" ${adest}/Makefile > ${adest}/Makefile.$$ \
-  && mv "${adest}/Makefile.$$" "${adest}/Makefile" \
-  || { echo $errstr; exit 255; }
+
+echo "Preparing torch-amuse-flash package for installation"
+ln -sfTv ${FLASH_DIR} ${adest}/torch_amuse_flash/src/FLASH4.6.2 || { echo $errstr; exit 255; }
+
 
 #########################
 ## VorAMR-Lite Install ##
@@ -106,4 +84,4 @@ sed "s/^drive_loc\s*=.*/drive_loc = src\/FLASH4.6.2\/object/" ${adest}/Makefile 
 #### -----------
 #### All done!!!
 
-echo "Torch install complete!  Ready to configure and make FLASH and AMUSE."
+echo "Torch install complete!  Ready to configure and make FLASH."
