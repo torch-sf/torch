@@ -128,13 +128,13 @@ def initialize_workers():
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     elif USER['with_petar']:
-        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
+        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu',
+                     redirection='file',
+                     redirect_stdout_file='petar_worker.out',
+                     redirect_stderr_file='petar_worker.err')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-        if USER['restart_from_stall']:
-            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
-            remove_merged = True # Use Brooke's routine to remove merged stars then write an output, CCC 06/03/2024
+        grav.parameters.r_out = USER['r_out']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -208,20 +208,12 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        # Get minimum dt from torch_user.py
+        # Get maximum dt from torch_user.py
         dt_max = USER['dt_soft_max']
-        # Recalculate PeTar parameters on the fly, CCC 28/02/23
-        grav.parameters.set_defaults()
-        grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_bin = USER['r_bin']
-        grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-        if USER['restart_from_stall']:
-            grav.parameters.r_out = USER['r_stall'] # Force this value to restart from a stall, CCC 09/03/2023 & 05/11/2023 for user value
-        grav.parameters.begin_time = hy_time
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
         if num_stars > 0:
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
-        else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+        else: # Only enforce dt_soft_max if stars are formed
             dt = dt_nbody
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
@@ -275,8 +267,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("First stars have formed. Initializing PeTar.")
                     grav.parameters.begin_time = hy_time
                     grav.evolve_model(hy_time)
-                        
-            tprint("Evolving hydro with grav to reach t =", hy_time+dt)
 
             ### ------------------
             ### First bridge kick.
@@ -382,7 +372,8 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        grav.parameters.dt_soft = dt
+                        if USER['with_petar']:
+                            grav.parameters.dt_soft = dt
                         dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
@@ -391,26 +382,6 @@ def evolve(state, hydro, grav, mult, se):
                         pool.wait()
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
-                            # Timeout condition for PeTar, CCC 17/10/2023
-                            # Wait here, then check if grav is done
-                            timeout = USER['set_timeout']
-                            start = time.time()
-                            while time.time() - start <= timeout:
-                                if pool_table_grav and pool_table_grav[-1] == it:
-                                    break
-                                time.sleep(10) #Check every 10 seconds
-                            else:
-                                if USER['check_for_stall'] == True:
-                                    # Write chk from state_ if stall, CCC 09/03/2023
-                                    state_.force_output(overwrite=USER['overwrite'])
-                                    # Force crash if PeTar stalled, CCC 07/03/2023 & 17/10/2023
-                                    tprint("... PeTar has stalled, exit the simulation")
-                                    hydro.stop() 
-                                    grav.stop()  
-                                    se.stop()
-                                else:
-                                    pass
-
                         elif pool_table_grav and pool_table_grav[-1] == it:
                                 tprint("... grav advanced")
                             
@@ -561,17 +532,11 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            # Recalculate PeTar parameters on the fly, CCC 28/02/23
-            grav.parameters.set_defaults()
-            grav.parameters.epsilon_squared = USER['epsilon']**2.0
-            grav.parameters.r_bin = USER['r_bin']
-            grav.parameters.r_out = USER['r_out'] #CCC 25/10/2023
-            grav.parameters.begin_time = hy_time
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
             if num_stars > 0:
-                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr # Keep dt_nbody at dt_max = 1 kyr to match with r_out = 0.1 pc, CCC 26/10/2023
-            else: # Only enforce dt_soft_max if stars are formed, CCC 18/06/2025
+                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+            else: # Only enforce dt_soft_max if stars are formed
                 dt = dt_nbody
 
         num_stars = hydro.get_number_of_particles()  # loop variable
@@ -580,7 +545,7 @@ def evolve(state, hydro, grav, mult, se):
             # only assert time-sync with PeTar if stars have formed
             if first_star==1:
                 assert abs(hy_time - gr_time) <= (1e4|units.s)
-                print("hydro-grav time = ",hy_time - gr_time)
+                #print("hydro-grav time = ",hy_time - gr_time)
         else:
             assert abs(hy_time - gr_time) <= (1e4|units.s)
         assert num_stars == len(state.stars)
@@ -669,8 +634,8 @@ def run_torch(user_initial_conditions, user_parameters):
     # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")
-        leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
-        interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
+        leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+        interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")

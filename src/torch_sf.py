@@ -17,7 +17,7 @@ from amuse.datamodel import Particles
 from amuse.units import units
 
 from torch_stdout import tprint
-from imf_sample import sample_stars
+from imf_sample import sample_stars, sample_binaries
 
 
 def add_particles_to_grav(state, hydro, grav, mult, se):
@@ -221,7 +221,7 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 sample_imf_mass=10000|units.MSun, 
                 sum_small=False, m_small=1.0|units.MSun,
-                binaries=True, sample_imf_bins=100, mult_frac='field',
+                binaries=False, sample_imf_bins=100, mult_frac='field',
                 pdist='field', qdist='field', edist='field'):
 
     """Check hydro for new sinks, queue stars for spawning"""
@@ -251,18 +251,16 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                 state.all_positions[sink_tag]  = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
                 state.all_velocities[sink_tag] = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
                 tprint("... new sink tag {}".format(sink_tag))
-                new_sink_ = True # CCC 27/04/2023, to save original sink list
+                new_sink_ = True # save original sink list
 
             while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
-                                                                                    sample_imf_mass.value_in(units.MSun),
-                                                                                    num_bins=sample_imf_bins,
-                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
-                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                                                                    sum_small=sum_small, m_small=m_small.value_in(units.MSun),
-                                                                                    binaries=binaries, mult_frac=mult_frac, 
-                                                                                    pdist=pdist, qdist=qdist, edist=edist
-                                                                                    )
+                new_masses, new_system_masses, new_positions, new_velocities = sample_binaries(sample_imf_mass.value_in(units.MSun),
+                                                                                               num_bins=sample_imf_bins,
+                                                                                               min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                                                                               max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                                                                               mult_frac=mult_frac, pdist=pdist,
+                                                                                               qdist=qdist, edist=edist
+                                                                                               )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
                 print(" queued {} stars,".format(len(new_masses)), end='')
@@ -281,17 +279,15 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
             if sink_tag not in state.all_masses:
                 state.all_masses[sink_tag]     = np.array([])
                 tprint("... new sink tag {}".format(sink_tag))
-                new_sink_ = True # CCC 27/04/2023, to save original sink list
+                new_sink_ = True # save original sink list
 
             while np.sum(state.all_masses[sink_tag]) | units.MSun <= hydro.get_particle_mass(sink_tag):
-                new_masses, new_system_masses, new_positions, new_velocities = sample_stars(
-                                                                                    sample_imf_mass.value_in(units.MSun),
-                                                                                    num_bins=sample_imf_bins,
-                                                                                    min_samp_mass=min_imf_mass.value_in(units.MSun),
-                                                                                    max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                                                                    sum_small=sum_small, binaries=binaries,
-                                                                                    mult_frac=mult_frac, pdist=pdist, qdist=qdist, edist=edist
-                                                                                    )
+                new_masses = sample_stars(sample_imf_mass.value_in(units.MSun),
+                                          num_bins=sample_imf_bins,
+                                          min_samp_mass=min_imf_mass.value_in(units.MSun),
+                                          max_samp_mass=max_imf_mass.value_in(units.MSun),
+                                          sum_small=sum_small
+                                          )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
                 print(" queued {} stars,".format(len(new_masses)), end='')
@@ -303,10 +299,10 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
 
     hydro.set_particle_pointers('mass')
     
-    return new_sink_ # CCC 27/04/2023, to save original sink list
+    return new_sink_ # save original sink list
 
 
-def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
+def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
     """
     Given an initial sampling of the IMF, distribute the stars randomly
     as sinks accrete the required mass to form them.
@@ -414,7 +410,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
                         star[j].position = sink_pos + random_pos + (spawn_position | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
                     else:
-                        random_pos = sink_rad*np.random.rand()*random_three_vector_for_binaries()
+                        random_pos = sink_rad*np.random.rand()*random_three_vector()
+                        print(random_pos)
                         random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
                         star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
@@ -434,39 +431,20 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=True):
 
     return formed_stars
 
-
 def random_three_vector(n=1):
     """
-    Generates a random 3D unit vector (direction) with a uniform spherical distribution
-    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+    Generates a unit vector by randomly sampling points uniformly
+    distributed on the surface of a sphere with radius 1.
     """
-    three_vector = np.zeros((n,3))
+    if n <=0:
+        raise ValueError('n must be larger than 0')
+    if n == 1:
+        vec = np.random.normal(size=3)
+        return vec/np.sqrt(np.sum(vec**2))
+    else:
+        vec = np.random.normal(size=[n, 3])
+        return vec/np.sqrt(np.sum(vec**2, axis=1))[:,None]
 
-    phi = np.random.uniform(0,np.pi*2,n)
-    costheta = np.random.uniform(-1,1,n)
-
-    theta = np.arccos( costheta )
-    three_vector[:,0] = np.sin( theta) * np.cos( phi )
-    three_vector[:,1] = np.sin( theta) * np.sin( phi )
-    three_vector[:,2] = np.cos( theta )
-    return three_vector
-
-def random_three_vector_for_binaries(n=1):
-    """
-    Generates a random 3D unit vector (direction) with a uniform spherical distribution
-    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
-    """
-    three_vector = np.zeros(3) # Modified by CCC to "unvectorize" it -- is now designed to be used for each formed star individually
-
-    phi = np.random.uniform(0,np.pi*2,n)
-    costheta = np.random.uniform(-1,1,n)
-
-    theta = np.arccos( costheta )
-    three_vector[0] = np.sin( theta) * np.cos( phi )
-    three_vector[1] = np.sin( theta) * np.sin( phi )
-    three_vector[2] = np.cos( theta )
-    return three_vector
-
-
+    
 if __name__ == '__main__':
     pass
