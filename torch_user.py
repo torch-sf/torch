@@ -22,12 +22,29 @@ from torch_mainloop import run_torch
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
     n = None
-    with open(name) as f:
-        for line in f:
-            w = line.split()
-            if len(w) >= 3 and w[0] == '#SBATCH' and w[1] == '-n':
-                assert n is None  # throw error if #SBATCH -n occurs >1x
-                n = int(w[2])
+    nodes = None
+    cores = None
+    import os
+    # Check for slurm ntasks
+    n = int(os.getenv("SLURM_NTASKS"))
+    if n is None:
+        with open(name) as f:
+            for line in f:
+                w = line.split()
+                if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
+                    assert cores is None  # throw error if #SBATCH -n occurs >1x
+                    cores = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-N'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-n'):
+                    assert n is None
+                    n = int(''.join(char for char in w[1] if char.isdigit()))
+        if n is None:
+            n = nodes*cores
     assert n is not None
     return n
 
@@ -322,6 +339,10 @@ def user_parameters():
     p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
 
     # <stellar evolution>
+
+    p['set_wind_properties'] = True
+    p['dmdt'] = 1e-6 | units.MSun / units.yr
+    p['vwind'] = 1000 | units.km / units.s
 
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating

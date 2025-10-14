@@ -37,6 +37,16 @@ E_lyc = 13.6*E_ev  # 13.6 eV
 sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
+def set_wind(dt, state, hydro, with_winds=True, dmdt=None, vwind=None):
+
+    assert dmdt is not None
+    assert vwind is not None
+
+    hydro.set_particle_wind_mass(state.stars.tag, dmdt.as_quantity_in(units.g/units.s))
+    hydro.set_particle_wind_vel(state.stars.tag, vwind.as_quantity_in(units.cm/units.s))
+
+    return dt
+    
 
 def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
