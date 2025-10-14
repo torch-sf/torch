@@ -15,17 +15,12 @@ from __future__ import division, print_function
 import numpy as np
 from scipy.integrate import quad
 
-
-from amuse.units import constants, units #constants added for tests, CCC 28/04/2023
-from amuse.ext.orbital_elements import * # CCC 03/04/2025
+from amuse.units import units, constants
 from amuse.datamodel import Particles
+from amuse.ext.orbital_elements import *
 
 from ionizingflux import ionizing_photon_flux
 from torch_stdout import tprint
-
-# CCC 28/04/2023, temporary, use same convention as for single stars later on
-from amuse.community.seba.interface import SeBa
-from amuse.datamodel import Particles
 
 h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
@@ -112,7 +107,6 @@ def binary_evolution(time, dt, state, hydro, se,
             state.binaries_to_se.copy_attributes([_attribute])
     # Evolve model
     se.evolve_model(time) #Time attached to se.particles.age, which is the "simulation" time
-    tprint('SeBa binaries:', se.binaries.binary_type)
     
     # Pass information back to stars after end of SE loop - CCC 02/08/2024
     for _attribute in se.particles.get_attribute_names_defined_in_store():
@@ -223,7 +217,7 @@ def binary_evolution(time, dt, state, hydro, se,
                     if (_dE > (0 | units.erg)) or (be.binary_type > 2) or (be.semi_major_axis < b.semi_major_axis) \
                     or accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): 
                         
-                        tprint('... Change orbit from BE')
+                        tprint('... change in orbit from BE')
 
                         # Compare to wind mass loss rate - CCC 06/04/2025
                         dm_dt_wind_1, vterm_wind_1 = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
@@ -234,9 +228,7 @@ def binary_evolution(time, dt, state, hydro, se,
                         # If lost mass in excess of wind mass loss rate - CCC 06/04/2025
                         # Wind mass loss rate from SeBa is negative by definition
                         if dm_dt_wind_1 > -1*s.wind_mass_loss_rate or dm_dt_wind_2 > -1*t.wind_mass_loss_rate: 
-                            print(dm_dt_wind_1.value_in(units.MSun/units.yr), s.wind_mass_loss_rate.value_in(units.MSun/units.yr), 
-                                  dm_dt_wind_2.value_in(units.MSun/units.yr), t.wind_mass_loss_rate.value_in(units.MSun/units.yr))
-                            tprint('... Do mass transfer')
+                            tprint('... mass transfer')
                             tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
 
                             # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
@@ -325,8 +317,6 @@ def binary_evolution(time, dt, state, hydro, se,
                         t.position = COM + m2_f*rel_pos[0]
                         s.velocity = COV - m1_f*rel_vel[0]
                         t.velocity = COV + m2_f*rel_vel[0]
-                        
-                        print(orbital_elements[2][j].value_in(units.au), orbital_elements[3][j], be.semi_major_axis.value_in(units.au), be.eccentricity)
                         
                         # Set star to evolved after uMT/CE - CCC 22/11/2024
                         evolved_stars.add_particle(s)
@@ -579,7 +569,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
         # Added by CCC, 27/11/2024
         dm_dt = (prev_mass - se_mass)/dt
         star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
-        tprint('Wind properties:', star_wind.thom_Gam, star_wind.vesc, star_wind.dm_dt)
+        #tprint('Wind properties:', star_wind.thom_Gam, star_wind.vesc, star_wind.dm_dt)
         vterm = star_wind.vterm
 
     # Note that Leitherer and Puls calculations use the old mass
@@ -780,7 +770,6 @@ class PulsStellarWind(object):
 
     def thom_Gam(self):
         self.thom_Gam = 7.66e-5*self.thom_sig/self.mass.value_in(units.MSun)*self.lum.value_in(units.LSun)
-        tprint('Gamma =', self.thom_Gam)
         self.thom_Gam = min(self.thom_Gam, 0.8)
         return
 

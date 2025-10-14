@@ -207,9 +207,10 @@ contains
        ip_low = iand(ipf,1023)       ! content of the last 10 bits
        ip_trunc =    ipf/1024        ! truncation of the last 10 bits
        ! fix for gfortran 9+, based on https://stackoverflow.com/questions/59756525/iand-with-different-kind-parameters-using-new-gfortran-version
-       ip_med = iand(int(ip_trunc, kind(1023)),1023)  ! content of the next 10 bits
        !ip_med = iand(ip_trunc,1023)  ! content of the next 10 bits
+       ip_med = iand(int(ip_trunc, kind(1023)),1023)  ! content of the next 10 bits
        ip_hi  =      ip_trunc/1024   ! content of the high weight 10 bits
+
        ix = 1024*pix2x(ip_hi) + 32*pix2x(ip_med) + pix2x(ip_low)
        iy = 1024*pix2y(ip_hi) + 32*pix2y(ip_med) + pix2y(ip_low)
     else
