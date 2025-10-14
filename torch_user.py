@@ -384,7 +384,6 @@ def user_parameters():
     p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
     p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
     p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.
->>>>>>> binaries-python3
     p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100 | units.MSun
