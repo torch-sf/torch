@@ -16,6 +16,8 @@ DEPFLAGS += $(FORSOCKETS_CFLAGS) $(OPENMP_FFLAGS) $(HDF5_FFLAGS)
 
 FCFLAGS += -fallow-argument-mismatch $(DEPFLAGS)
 
+LDFLAGS += $(HDF5_LDFLAGS)
+
 LDLIBS += -lm $(FORSOCKETS_LIBS) $(HDF5_FLIBS)
 
 
@@ -24,7 +26,7 @@ CODELIB = src/libflash.a
 
 .PHONY: $(CODELIB)
 $(CODELIB):
-	$(MAKE) -C src -j $(CPU_COUNT) all
+	$(MAKE) -C src -j $(CPU_COUNT) all AR=$(AR) RANLIB=$(RANLIB)
 
 
 # Building the workers
