@@ -464,6 +464,7 @@ min_wind_mass = 1.3923e34 # 7 solar masses # 1.5912e34 # 8 solar masses.
 # Mass loading. If on, set a target temperature for the gas.
 # This will be used to set the velocity which will lead to that
 # shock temperature in the hot wind.
+# Note that there is a potential bug in the solid angle calculation if running with mass_load=.false.
 mass_load  = .true.
 var_radius = .false. 
 wind_target_temp = 5e6
