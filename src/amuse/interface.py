@@ -87,6 +87,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
         function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('procID', dtype='i', direction=function.IN)
         function.addParameter('dataSize', dtype='i', direction=function.IN)
         for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
             function.addParameter(x, dtype='d', direction=function.IN)
@@ -466,6 +467,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('axis', dtype='i', direction=function.IN)
         function.addParameter('blockID', dtype='i', direction=function.IN)
+        function.addParameter('procID', dtype='i', direction=function.IN)
         function.addParameter('limits', dtype='i', direction=function.IN)
         function.addParameter('coords', dtype='d', direction=function.OUT)
         function.addParameter('nparts', dtype='i', direction=function.LENGTH)
@@ -1364,7 +1366,7 @@ class Flash(CommonCode):
         # VorAMR addition - SCL
         object.add_method(
             'set_block_state',
-            (object.INDEX, object.INDEX,
+            (object.INDEX, object.INDEX, object.INDEX,
             density, speed, speed, speed, enerInt, potential),
             (object.ERROR_CODE,)
         )
@@ -1481,7 +1483,7 @@ class Flash(CommonCode):
 
         object.add_method(
             'get_1blk_cell_coords',
-            (object.NO_UNIT,object.NO_UNIT,object.NO_UNIT),
+            (object.NO_UNIT,object.NO_UNIT,object.NO_UNIT,object.NO_UNIT),
             (length, object.ERROR_CODE)
         )
 

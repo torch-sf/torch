@@ -592,8 +592,8 @@ def run_torch(user_initial_conditions, user_parameters):
     # After hydro initialize, interpolate data onto grid if using VorAMR.
     if USER['with_voramr']:
         vprint("Interpolating external data to FLASH grid via VorAMR.")
-        leaf_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
-        interpolate_fields(hydro, leaf_blocks, kdtree, cellsPerBlock=USER['cellsPerBlock'])
+        leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+        interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")
