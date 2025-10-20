@@ -5,29 +5,7 @@
 
 geometry    = "cartesian"
 
-#xmin = 0.   #-1.543e19
-#xmax = 7.715e18 # 1.543e19
-#ymin = 0.   #-1.543e19
-#ymax = 7.715e18 # 1.543e19
-#zmin = 0.   #-1.543e19
-#zmax = 7.715e18 # 1.543e19
-
-#xmin = -1.543e14
-#xmax =  1.543e14
-#ymin = -1.543e14
-#ymax =  1.543e14
-#zmin = -1.543e14
-#zmax =  1.543e14
-
-#xmin = -3.086e19
-#xmax =  3.086e19
-#ymin = -3.086e19
-#ymax =  3.086e19
-#zmin = -3.086e19
-#zmax =  3.086e19
-
-# 35 pc
-xmin = -1.079995e20
+xmin = -1.079995e20 # 35 pc
 xmax =  1.079995e20
 ymin = -1.079995e20
 ymax =  1.079995e20
@@ -90,13 +68,13 @@ zr_mg_boundary_type = "outflow"
 #//////////////////////////
 
 basenm           = "radtest_"
-output_directory = "radtest" #"just_grav_test" #
+output_directory = "radtest"
 
 restart         = .false.
 
-checkPointFileNumber = 0  #3 #0 #7 #0
-plotFileNumber       = 0 #451 #0 #317 #0
-particleFileNumber   = 0 #451 #0 #317 #0
+checkPointFileNumber = 0
+plotFileNumber       = 0
+particleFileNumber   = 0
 
 checkpointFileIntervalTime = 3.15e10
 checkpointFileIntervalStep = 100
@@ -134,10 +112,9 @@ plot_var_20 = "gpot"
 plot_var_21 = "bgpt"
 
 dtinit = 1.0e8
-dtmax = 1e13 #1.5e14 #1.0e11
+dtmax = 1e13
 dtmin = 1.0e1
-#tplot  = 1.0e100
-tmax   = 3.1536e13 #3.1536e14 #1 Myr 1e13 #3.469e12 #110,000 yr
+tmax   = 3.1536e13 # 1 Myr
 nend   = 5000000
 dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 1.1 #10.0
@@ -182,9 +159,7 @@ particle_1_z = 0.0
 ###########################
 useSinkParticles          = .true.
 sink_density_thresh       = 1e99 #4.6288411e-17 # for a Jeans mass of 0.1 M_sol
-#sink_accretion_radius     = 1.5625e21
-#sink_softening_radius     = 1.5625e21
-sink_accretion_radius     = 1.2055e17 #1.2055e18
+sink_accretion_radius     = 1.2055e17
 sink_softening_radius     = 1.2055e17
 sink_softening_type_gas   = "spline" #"linear"
 sink_softening_type_sinks = "spline"
