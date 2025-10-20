@@ -563,7 +563,8 @@ print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
                     if (.not. mass_load) then
                         ! Calculate the overlapping solid angle of a square at distance rad from the sphere.
                         ! Calculation from MPIA: http://www.mpia.de/~mathar/public/mathar20051002.pdf
-                        solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/rad2)**2.)))
+                        ! Link is dead as of Aug 2022, new mirror: https://wiki.kern.phys.au.dk/mathar20051002.pdf
+                        solidAngle   = 4.*acos(sqrt((1.+del2/(2.*rad2))/(1.+del2/(2.*rad2)+(del2/4*rad2)**2.)))
                         overlap_frac = overlap_frac*solidAngle
                     end if
                     ! sum all weightings for normalization later
