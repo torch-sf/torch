@@ -110,6 +110,7 @@ particlefileintervalstep   = 0
 
 useCollectiveHDF5  = .false.
 
+# variables in plotfile
 plot_var_1 = "dens"
 plot_var_2 = "pres"
 plot_var_3 = "temp"
@@ -126,9 +127,11 @@ plot_var_13 = "magy"
 plot_var_14 = "magz"
 plot_var_15 = "uvfl"
 plot_var_16 = "fufl"
-plot_var_17 = "magp"
-plot_var_18 = "gpot"
-plot_var_19 = "bgpt"
+plot_var_17 = "auvf"
+plot_var_18 = "afuf"
+plot_var_19 = "magp"
+plot_var_20 = "gpot"
+plot_var_21 = "bgpt"
 
 dtinit = 1.0e8
 dtmax = 1e13 #1.5e14 #1.0e11

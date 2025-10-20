@@ -167,11 +167,11 @@ plot_var_13 = "magy"
 plot_var_14 = "magz"
 plot_var_15 = "uvfl"
 plot_var_16 = "fufl"
-plot_var_15 = "auvf"
-plot_var_16 = "afuf"
-plot_var_17 = "magp"
-plot_var_18 = "gpot"
-plot_var_19 = "bgpt"
+plot_var_17 = "auvf"
+plot_var_18 = "afuf"
+plot_var_19 = "magp"
+plot_var_20 = "gpot"
+plot_var_21 = "bgpt"
 
 
 # ============
