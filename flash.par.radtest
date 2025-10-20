@@ -43,11 +43,6 @@ zr_boundary_type  = "outflow"
 xl_boundary_type  = "outflow"
 xr_boundary_type  = "outflow"
 
-# These are for the BHTree solver!!!
-grav_boundary_type      = "isolated" # "periodic" #
-grav_boundary_type_x    = "isolated" # "periodic" #
-grav_boundary_type_y    = "isolated" # "periodic" #
-grav_boundary_type_z    = "isolated" # "periodic" #
 
 #//////////////////////////
 # Setting for the MG solver.

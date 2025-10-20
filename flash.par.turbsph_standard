@@ -284,10 +284,6 @@ updateGravity   = .true.
 
 # remember to update grid boundary conditions if you change this
 grav_boundary_type      = "isolated"
-# different x,y,z BCs for BHTree only
-grav_boundary_type_x    = "isolated"
-grav_boundary_type_y    = "isolated"
-grav_boundary_type_z    = "isolated"
 
 # ----------------
 # Multigrid solver
