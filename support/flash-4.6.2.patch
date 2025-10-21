@@ -1,0 +1,105 @@
+diff -ruN FLASH4.6.2/bin/setup.py FLASH4.6.2.new/bin/setup.py
+--- FLASH4.6.2/bin/setup.py	2019-10-15 19:49:10.000000000 +0200
++++ FLASH4.6.2.new/bin/setup.py	2025-10-17 12:04:37.931140351 +0200
+@@ -13,8 +13,6 @@
+ 
+ ########################### START SCRIPT ################################
+ def main():
+-    sys.setcheckinterval(10000) # this is not threaded application
+-
+     parseCmd.init()
+     # setup.py is FLASH_HOME/bin/setup.py
+     # FLASH_HOME is the parent of directory having setup.py
+diff -ruN FLASH4.6.2/source/Driver/Driver_abortFlashC.h FLASH4.6.2.new/source/Driver/Driver_abortFlashC.h
+--- FLASH4.6.2/source/Driver/Driver_abortFlashC.h	1970-01-01 01:00:00.000000000 +0100
++++ FLASH4.6.2.new/source/Driver/Driver_abortFlashC.h	2025-10-17 12:24:27.597067288 +0200
+@@ -0,0 +1,7 @@
++#ifndef DRIVER_ABORT_FLASH_H
++#define DRIVER_ABORT_FLASH_H
++
++int Driver_abortFlashC(char* message);
++
++#endif
++
+diff -ruN FLASH4.6.2/source/IO/IOMain/hdf5/io_h5_type.c FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5_type.c
+--- FLASH4.6.2/source/IO/IOMain/hdf5/io_h5_type.c	2019-10-15 19:48:42.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5_type.c	2025-10-17 12:38:30.218875113 +0200
+@@ -1,4 +1,6 @@
+ #include "io_h5_type.h"
++#include "Driver_abortFlashC.h"
++
+ #define N_FLASH_PRIM_TYPES 4
+ 
+ hid_t io_h5_type_hid_primitive(const int flashType)
+diff -ruN FLASH4.6.2/source/IO/IOMain/hdf5/io_h5write_generic_int_arr.c FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5write_generic_int_arr.c
+--- FLASH4.6.2/source/IO/IOMain/hdf5/io_h5write_generic_int_arr.c	2019-10-15 19:48:42.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5write_generic_int_arr.c	2025-10-17 12:45:44.960780000 +0200
+@@ -3,6 +3,8 @@
+ #include "hdf5_flash.h"
+ #include "Flash.h"
+ #include "constants.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ 
+ int Driver_abortFlashC(char* message);
+diff -ruN FLASH4.6.2/source/IO/IOMain/hdf5/io_h5write_generic_real_arr.c FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5write_generic_real_arr.c
+--- FLASH4.6.2/source/IO/IOMain/hdf5/io_h5write_generic_real_arr.c	2019-10-15 19:48:42.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5write_generic_real_arr.c	2025-10-17 12:45:57.541387838 +0200
+@@ -3,6 +3,8 @@
+ #include "hdf5_flash.h"
+ #include "Flash.h"
+ #include "constants.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ 
+ int Driver_abortFlashC(char* message);
+diff -ruN FLASH4.6.2/source/IO/IOMain/hdf5/io_h5_xfer.c FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5_xfer.c
+--- FLASH4.6.2/source/IO/IOMain/hdf5/io_h5_xfer.c	2019-10-15 19:48:42.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/hdf5/io_h5_xfer.c	2025-10-17 12:50:25.204872963 +0200
+@@ -1,4 +1,5 @@
+ #include "io_h5_xfer.h"
++#include "Driver_abortFlashC.h"
+ 
+ int io_h5_xfer(const int myPE, const hid_t fileID, const int xferType,
+ 	       const hid_t hXferList, const char datasetName[],
+diff -ruN FLASH4.6.2/source/IO/IOMain/io_attribute.c FLASH4.6.2.new/source/IO/IOMain/io_attribute.c
+--- FLASH4.6.2/source/IO/IOMain/io_attribute.c	2019-10-15 19:48:40.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/io_attribute.c	2025-10-17 12:39:22.671976768 +0200
+@@ -1,5 +1,6 @@
+ #include "io_intfTypes.h"
+ #include "io_attribute.h"
++#include "Driver_abortFlashC.h"
+ 
+ /*
+    We require the calling code to pass the length of each string
+diff -ruN FLASH4.6.2/source/IO/IOMain/io_create_dataset.c FLASH4.6.2.new/source/IO/IOMain/io_create_dataset.c
+--- FLASH4.6.2/source/IO/IOMain/io_create_dataset.c	2019-10-15 19:48:40.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/io_create_dataset.c	2025-10-17 12:40:25.200557356 +0200
+@@ -1,5 +1,6 @@
+ #include "io_intfTypes.h"
+ #include "io_create_dataset.h"
++#include "Driver_abortFlashC.h"
+ 
+ void FTOC(io_create_dataset)(const int * const pMyPE,
+ 			     const io_fileID_t * const pFileID,
+diff -ruN FLASH4.6.2/source/IO/IOMain/io_mpi_type.c FLASH4.6.2.new/source/IO/IOMain/io_mpi_type.c
+--- FLASH4.6.2/source/IO/IOMain/io_mpi_type.c	2019-10-15 19:48:40.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/io_mpi_type.c	2025-10-17 12:36:18.330027770 +0200
+@@ -1,4 +1,5 @@
+ #include "io_mpi_type.h"
++#include "Driver_abortFlashC.h"
+ 
+ MPI_Datatype io_mpi_type_primitive(const int flashType)
+ {
+diff -ruN FLASH4.6.2/source/IO/IOMain/io_xfer_cont_slab.c FLASH4.6.2.new/source/IO/IOMain/io_xfer_cont_slab.c
+--- FLASH4.6.2/source/IO/IOMain/io_xfer_cont_slab.c	2019-10-15 19:48:40.000000000 +0200
++++ FLASH4.6.2.new/source/IO/IOMain/io_xfer_cont_slab.c	2025-10-17 12:50:38.729812045 +0200
+@@ -1,5 +1,6 @@
+ #include "io_intfTypes.h"
+ #include "io_xfer_cont_slab.h"
++#include "Driver_abortFlashC.h"
+ 
+ /* Write a fully-contiguous section */
+ void FTOC(io_xfer_cont_slab)(const int * const pMyPE,
