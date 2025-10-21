@@ -124,7 +124,6 @@ def stellar_evolution(time, dt, state, hydro, se,
                 inj_mass = 15.0|units.MSun
 
             # Inject energy and mass onto grid
-            # TODO: make sure we exclude direct collapses from SN injections
             # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
             if s.COcore_mass <= 15 | units.MSun:
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
