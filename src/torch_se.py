@@ -40,7 +40,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None, unit_test=None):
+    massloss_method=None, min_feedback_mass=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -104,20 +104,17 @@ def stellar_evolution(time, dt, state, hydro, se,
 
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
-    if unit_test == None:
-        state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
 
     # Indices of active feedback stars to evolve
     active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
     for i, s in zip(active_idx, state.stars[active_idx]):
 
-        if with_sn and went_supernova(s.stellar_type) and s.tag not in remnants:
+        if s.tag in remnants:
+            continue
 
-            if unit_test=="SUPERNOVA_PART1":
-                return 1
-            if unit_test=="SUPERNOVA_PART2":
-                return 0
+        if with_sn and went_supernova(s.stellar_type):
 
             inj_mass = s.mass - se_mass  # minus stellar remnant's mass
             if inj_mass > 15.0|units.MSun:
@@ -128,9 +125,11 @@ def stellar_evolution(time, dt, state, hydro, se,
 
             # Inject energy and mass onto grid
             # TODO: make sure we exclude direct collapses from SN injections
-            _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
-            se_dt = min(se_dt, _tmp)
-            tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+            # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
+            if s.COcore_mass <= 15 | units.MSun:
+                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                se_dt = min(se_dt, _tmp)
+                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
             # implicitly zeros out feedback properties by not setting
 
@@ -152,10 +151,10 @@ def stellar_evolution(time, dt, state, hydro, se,
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
 
-        if unit_test=="SUPERNOVA_PART1":
-            return 0
-        if unit_test=="SUPERNOVA_PART2":
-            return 1
+        # Evolutionary things besides winds could have reduced the stars mass.
+        # CCC 26/04/2024
+        if dm_dt[i]*dt > 0.0|units.MSun:
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
