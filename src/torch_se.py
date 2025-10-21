@@ -120,7 +120,7 @@ def stellar_evolution(time, dt, state, hydro, se,
             if inj_mass > 15.0|units.MSun:
                 # expected upper limit for SeBa tracks; see
                 # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                tprint("... setting maximum SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
                 inj_mass = 15.0|units.MSun
 
             # Inject energy and mass onto grid
