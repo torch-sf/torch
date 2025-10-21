@@ -272,10 +272,21 @@ module avail
 \end{lstlisting}
 
 This will show a long (potentially very long) list of installed packages, or modules.
+
+On some systems, this will only show a few years, e.g. \texttt{2023 2024 2025}. In that
+case, use \texttt{module load 2025} (the latest is usually best) and then try
+\texttt{module avail} again to get the list.
+
 Have a look through the list and see if you can find modules named \texttt{GCC},
 \texttt{HDF5}, \texttt{OpenMPI} (or some other MPI implementation, like \texttt{MPICH}),
 \texttt{make}, and \texttt{Python}. The exact names will vary from
-machine to machine.
+machine to machine. If the list is long, it's better to let the computer search for you
+using e.g. \texttt{module keyword HDF5}.
+
+Often, there are multiple versions of a package available. The codes in Torch (and
+AMUSE) are fairly old, so probably any version will work. If you see different packages
+with names like \texttt{gompi} or \texttt{iimpi}, use the \texttt{gompi} ones, as those
+match GCC and OpenMPI.
 
 You may not need \texttt{make} if it's already available. If the command
 
@@ -285,28 +296,29 @@ make --version
 
 prints some text starting with GNU Make, then you're good to go.
 
-Once you have found the needed module names, you can load the modules, for example
+Once you have found the needed module names, you can load the modules, for example for
+Snellius using the 2025 software stack
 (you'll need to modify the exact module names to suit your machine):
 
 \begin{lstlisting}[language=bash]
-module load GCC
-module load OpenMPI
-module load HDF5
-module load make
-module load Python
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
 \end{lstlisting}
 
 Next, we can make a Python virtual environment. This is a directory, which can go into
 your project directory or wherever you want it.
 
 \begin{lstlisting}[language=bash]
-python3 -m venv /path/to/torch-project/Torch-env
+python3 -m venv /path/to/torch_project/Torch-env
 \end{lstlisting}
 
 We can then activate the environment, and install the Python dependencies:
 
 \begin{lstlisting}[language=bash]
-. /path/to/torch-project/Torch-env/bin/activate
+. /path/to/torch_project/Torch-env/bin/activate
 pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
 \end{lstlisting}
 
@@ -317,13 +329,14 @@ that, create a file named \texttt{Torch.env} in your project directory containin
 module load commands and the activation of the environment, like so:
 
 \begin{lstlisting}[language=bash]
-module load GCC
-module load OpenMPI
-module load HDF5
-module load make
-module load Python
+module load 2025
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
 
-. /path/to/torch-project/Torch-env/bin/activate
+. /path/to/torch_project/Torch-env/bin/activate
 \end{lstlisting}
 
 with appropriate modifications for your site. Now you can activate everything in one
@@ -377,6 +390,7 @@ unpack it, and then set the \texttt{FLASH\_DIR} environment variable so that the
 installer can find it:
 
 \begin{lstlisting}[language=bash]
+cd torch_project
 tar xzf FLASH4.6.2.tar.gz
 export FLASH_DIR=${PWD}/FLASH4.6.2
 \end{lstlisting}
@@ -402,20 +416,37 @@ parts of Torch available:
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 \end{lstlisting}
 
-You will want to add that last line to your \texttt{Torch.env} file too.
+You will want to add the exports of \texttt{TORCH\_DIR} and \texttt{FLASH\_DIR} to your
+\texttt{Torch.env}, as well as the PYTHONPATH, like so:
+
+\begin{lstlisting}[language=bash]
+module load 2025
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
+
+FLASH_DIR=/path/to/FLASH4.6.2
+TORCH_DIR=/path/to/torch
+
+. /path/to/torch_project/Torch-env/bin/activate
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+\end{lstlisting}
 
 With Torch installed into FLASH, we can now go to the FLASH directory and configure it:
 
 \begin{lstlisting}[language=bash]
 cd $FLASH_DIR
-./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars
+./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars \
 +amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
 \end{lstlisting}
 
 The final piece of the puzzle are Torch's AMUSE FLASH bindings. These make it possible
 for the Python parts of Torch to talk to FLASH, including its Torch additions. Check
 that you still have your virtual environment active, and then you can compile and
-install them like this:
+install FLASH and the bindings like this:
 
 \begin{lstlisting}[language=bash]
 cd $TORCH_DIR
@@ -1537,7 +1568,7 @@ cd $TORCH_DIR
 ./install.sh
 \end{lstlisting}
 
-You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH_DIR/sites}, run:
+You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH\_DIR/sites}, run:
 \begin{lstlisting}
 cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
 \end{lstlisting}
