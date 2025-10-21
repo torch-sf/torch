@@ -435,9 +435,6 @@ dust_sputter_temp = 3e5 # See fig 25.4 in Draine's book
 useRadTrans    = T
 rt_rayTrace    = T
 
-# NOTE: useRadTrans and useRadTransfer do distinct things
-useRadTransfer = T
-
 rt_maxHchange = 0.1  # this number shouldn't be doing anything now. -JW
 rt_ion_threshold = 0.1  # this replaces rt_maxHchange
 rt_ion_min = 1e-8
