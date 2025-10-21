@@ -22,24 +22,16 @@ done
 #### ----------------------------
 #### Prepare the FLASH repository
 
-cd ${FLASH_DIR} || { echo $errstr; exit 255; }
+(
+    cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 
-# for FLASH4.5 and earlier only, fixed in FLASH4.6
-# -O prevents wget from writing fname.1, fname.2, etc on successive calls
-# wget -nv http://flash.uchicago.edu/site/flashcode/user_support/FLASH4.5-a.diff -O FLASH4.5-a.diff || { echo $errstr; exit 255; }
-# this will return exit code >0 when patch is skipped over, so cannot exit on
-# error code here, and cannot use "set -e" in this script.
-# patch -p0 -r - --forward < FLASH4.5-a.diff
+    # Patch obsolete Python and C code to work with modern tools
+    patch -p1 --forward <"${TORCH_DIR}/support/flash-4.6.2.patch"
+)
 
-# Patch for parallel HDF5 1.10.x, fixed in FLASH4.6
-# http://flash.uchicago.edu/pipermail/flash-users/2018-May/002626.html
-# wget -nv http://flash.uchicago.edu/pipermail/flash-users/attachments/20180519/fdf3cd9b/attachment.obj -O FLASH4.5_parallelHDF5.diff || { echo $errstr; exit 255; }
-# patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
 
-# Patch obsolete Python and C code to work with modern tools
-patch -p1 --forward <"${TORCH_DIR}/support/flash-4.6.2.patch"
-
-rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
+# Symlink Torch files into FLASH
+./relink.sh || { echo $errstr; exit 255; }
 
 
 #### ----------------------------------------------
