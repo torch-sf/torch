@@ -40,7 +40,7 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For the text problem in cube128 (-7,+7) pc
+# For the test problem in cube128 (-7,+7) pc
 xmax            =  2.1602e+19
 xmin            = -2.1602e+19
 ymax            =  2.1602e+19
