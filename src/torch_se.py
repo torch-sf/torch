@@ -109,7 +109,9 @@ def stellar_evolution(time, dt, state, hydro, se,
     # Indices of active feedback stars to evolve
     active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
-    for i, s in zip(active_idx, state.stars[active_idx]):
+    for i in active_idx:
+
+        s = state.stars[i]
 
         if s.tag in remnants:
             continue
