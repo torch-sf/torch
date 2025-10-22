@@ -38,6 +38,17 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
 
+
+#### ----------------------------------------------
+#### Detect dependencies and set up torch_auto site
+
+echo
+echo "Detecting dependencies and creating FLASH Makefile:"
+mkdir -p "${FLASH_DIR}"/sites/torch_auto
+(cd "${TORCH_DIR}"/support && ./configure) || { echo "Error detecting dependencies"; }
+cp "${TORCH_DIR}"/support/Makefile.h "${FLASH_DIR}"/sites/torch_auto/Makefile.h
+
+
 #### --------------------------
 #### Prepare the AMUSE bindings
 
@@ -46,7 +57,8 @@ adest="${TORCH_DIR}/src/amuse"
 # Point AMUSE Makefile to FLASH directory via symlink
 # TODO will not work? if user placed FLASH4.6.2/ in ${adest}/src
 
-echo "Preparing torch-amuse-flash package for installation"
+echo
+echo "Preparing torch-amuse-flash package for installation:"
 ln -sfTv ${FLASH_DIR} ${adest}/torch_amuse_flash/src/FLASH4.6.2 || { echo $errstr; exit 255; }
 
 
@@ -84,4 +96,5 @@ ln -sfTv ${FLASH_DIR} ${adest}/torch_amuse_flash/src/FLASH4.6.2 || { echo $errst
 #### -----------
 #### All done!!!
 
+echo
 echo "Torch install complete!  Ready to configure and make FLASH."
