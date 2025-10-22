@@ -116,7 +116,7 @@ def stellar_evolution(time, dt, state, hydro, se,
 
         if with_sn and went_supernova(s.stellar_type):
 
-            inj_mass = s.mass - se_mass  # minus stellar remnant's mass
+            inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
             if inj_mass > 15.0|units.MSun:
                 # expected upper limit for SeBa tracks; see
                 # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
