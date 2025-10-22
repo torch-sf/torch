@@ -36,6 +36,9 @@ cd ${FLASH_DIR} || { echo $errstr; exit 255; }
 # wget -nv http://flash.uchicago.edu/pipermail/flash-users/attachments/20180519/fdf3cd9b/attachment.obj -O FLASH4.5_parallelHDF5.diff || { echo $errstr; exit 255; }
 # patch -p0 -r - --forward < FLASH4.5_parallelHDF5.diff
 
+# Patch obsolete Python and C code to work with modern tools
+patch -p1 --forward <"${TORCH_DIR}/support/flash-4.6.2.patch"
+
 rsync -avh "${TORCH_DIR}/src/flash/" "${FLASH_DIR}/." || { echo $errstr; exit 255; }
 
 
