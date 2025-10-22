@@ -117,11 +117,13 @@ You can find a high-level overview of the code in:
     \item Wall 2019, \href{https://www.dropbox.com/s/c0qh1no85y1jnxf/J_Wall-Thesis_final.pdf?dl=0}{Ph.D thesis}
 \end{itemize}
 
-Torch comprises (1) interface code that plugs into both FLASH and AMUSE, and
-(2) a good number of add-on code units for FLASH.
-To use Torch, you install interface code into both FLASH and AMUSE, compile
-FLASH alone, and then compile an AMUSE ``worker'' binary that enables FLASH to
-be called from AMUSE python scripts.
+Torch comprises (1) interface code that connects FLASH to AMUSE,
+(2) a good number of add-on code units for FLASH, and (3) a set of Python scripts
+that connect the codes and drive thes imulation.
+
+To use Torch, you install additional code into FLASH, and then compile FLASH into an
+AMUSE ``worker'' binary that enables FLASH to be called from AMUSE python scripts. You
+then run a Python script to run the simulation.
 
 \begin{figure}[!h]
     \center
@@ -253,6 +255,10 @@ using
 ./setup install framework kepler petar ph4 seba smalln
 \end{lstlisting}
 
+Note that Torch doesn't necessarily use all of these, so if you know which ones you
+want, then you can install only those. At any rate you can return to the AMUSE directory
+later and use \texttt{./setup} to install more codes.
+
 That concludes setting up the environment and the dependencies, so you can scroll past
 the next section (one environment is enough, really!) and continue with installing
 Torch.
@@ -260,10 +266,23 @@ Torch.
 
 \subsubsection{HPC, with virtualenv and modules}
 
+As an alternative to Conda, you can also use a Python virtual environment to install the
+Python dependencies into. Dependencies for the Fortran and C code in Torch will then
+have to be installed in some other way. Linux computers typically have a built-in
+package manager like \texttt{apt} or \texttt{dnf}, while on a Mac Homebrew and MacPorts
+are commonly used. On HPC machines, you typically load the necessary modules.
+
+If you're on a local machine and have one of the above package managers available, then
+you should continue with the instructions below, but skip the loading of modules and
+just make the virtual environment and install the Python dependencies into it. If you
+then continue with installing AMUSE, the AMUSE installer will guide you through
+installing the dependencies using whichever package manager you have available. (Note
+that you won't need everything it suggests, because Torch doesn't use all of AMUSE. You
+can save some disk space by limiting your selection.)
+
 On an HPC cluster or similar environment, the main tools and dependencies are likely
-already installed, and in a way that works well with the machine. It's usually best to
-just use them then. To do that, we need to activate them first using the \texttt{module}
-command.
+already installed and available as modules. To use them, we'll have to activate them
+using the \texttt{module} command.
 
 First, let's see what's installed:
 
@@ -340,8 +359,8 @@ module load Python/3.13.1-GCCcore-14.2.0
 \end{lstlisting}
 
 with appropriate modifications for your site. Now you can activate everything in one
-command using \texttt{. Torch.env} in your project directory (note the period at the
-beginning, it's required).
+command using \texttt{. Torch.env} in your project directory (note the period and the
+space at the beginning, they're required).
 
 
 With the environment set up and activated, we can install AMUSE and most of the codes
@@ -364,14 +383,24 @@ cd amuse-2025.9.0
 \end{lstlisting}
 
 This will produce quite a bit of output, including an overview of installable codes,
-disabled codes and the reasons why, and follow-up instructions. If all went well then
-you should now be able to install the AMUSE packages you need into your virtual
-environment using
+disabled codes and the reasons why, and follow-up instructions.
+
+If you're on a local machine and don't already have the dependencies installed, then
+\texttt{./setup} will give you the required command to install them using your local
+package manager. Note that you probably don't need all the dependencies it suggests
+installing, as that is the complete set and Torch only uses a few of AMUSE's many codes.
+Compilers for C, C++ and Fortran, MPI, HDF5, make and Python should go a long way.
+
+If all went well then you should now be able to install the AMUSE packages you need into
+your virtual environment using
 
 \begin{lstlisting}[language=bash]
 ./setup install framework kepler petar ph4 seba smalln
 \end{lstlisting}
 
+Note that Torch doesn't necessarily use all of these, so if you know which ones you
+want, then you can install only those. At any rate you can return to the AMUSE directory
+later and use \texttt{./setup} to install more codes.
 
 With that, we have a virtual environment that is ready to install Torch into.
 
