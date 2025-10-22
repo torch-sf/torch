@@ -107,16 +107,16 @@ def stellar_evolution(time, dt, state, hydro, se,
     state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
 
     # Indices of active feedback stars to evolve
-    active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
+    #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
-    for i, s in zip(active_idx, state.stars[active_idx]):
+    for i, s in enumerate(state.stars):
 
-        if s.tag in remnants:
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
         if with_sn and went_supernova(s.stellar_type):
 
-            inj_mass = s.mass - se_mass  # minus stellar remnant's mass
+            inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
             if inj_mass > 15.0|units.MSun:
                 # expected upper limit for SeBa tracks; see
                 # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
