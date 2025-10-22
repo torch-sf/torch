@@ -205,6 +205,7 @@ The Torch code includes contributions by:
 * Simon Portegies Zwart
 * Steven Rieder
 * Aaron Tran
+* Lourens Veen
 * Joshua Wall
 * Maite Wilhelm
 
