@@ -107,13 +107,11 @@ def stellar_evolution(time, dt, state, hydro, se,
     state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
 
     # Indices of active feedback stars to evolve
-    active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
+    #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
-    for i in active_idx:
+    for i, s in enumerate(state.stars):
 
-        s = state.stars[i]
-
-        if s.tag in remnants:
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
         if with_sn and went_supernova(s.stellar_type):
