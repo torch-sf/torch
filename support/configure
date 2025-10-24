@@ -648,6 +648,9 @@ ac_header_c_list=
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 LIB_HYPRE
+PETSC_LIBS
+PETSC_LDFLAGS
+PETSC_CFLAGS
 OPENMP_FCFLAGS
 MPI_FCLIBS
 MPI_FCFLAGS
@@ -6229,6 +6232,185 @@ printf "%s\n" "#define HAVE_HDF5 1" >>confdefs.h
 
     fi
 fi
+
+
+
+    torch_petsc_ge_major="3"
+    torch_petsc_ge_minor="19"
+    torch_petsc_ge_subminor="0"
+    torch_petsc_ge_version="3.19.0"
+
+    torch_petsc_lt_major="3"
+    torch_petsc_lt_minor="20"
+    torch_petsc_lt_subminor="0"
+    torch_petsc_lt_version="3.20.0"
+
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc" >&5
+printf %s "checking for PETSc... " >&6; }
+
+    if test -n "${PETSC_DIR}"
+then :
+
+                if test -f "${PETSC_DIR}/include/petscversion.h"
+then :
+
+            torch_petsc_found="yes"
+            torch_petsc_cflags="-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include"
+            torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib"
+
+else $as_nop
+
+                        if test -f "${PETSC_DIR}/include/petsc/petscversion.h"
+then :
+
+                torch_petsc_found="yes"
+                torch_petsc_cflags="-I${PETSC_DIR}/include/petsc"
+                torch_petsc_ldflags="-L${PETSC_DIR}/lib"
+
+fi
+
+fi
+
+else $as_nop
+
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+            #include "petscversion.h"
+
+            int main() {}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+            torch_petsc_found="yes"
+            torch_petsc_cflags=""
+            torch_petsc_ldflags=""
+
+else $as_nop
+
+                        if test -f /usr/include/petsc/petscversion.h
+then :
+
+                torch_petsc_found="yes"
+                torch_petsc_cflags="-I/usr/include/petsc"
+                torch_petsc_ldflags=""
+
+else $as_nop
+
+                torch_petsc_found="no"
+                torch_petsc_cflags=""
+                torch_petsc_ldflags=""
+
+fi
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+fi
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $torch_petsc_found" >&5
+printf "%s\n" "$torch_petsc_found" >&6; }
+
+
+    torch_petsc_save_CFLAGS="$CFLAGS"
+    CFLAGS="$torch_petsc_cflags ${CFLAGS}"
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc >=$torch_petsc_ge_version" >&5
+printf %s "checking for PETSc >=$torch_petsc_ge_version... " >&6; }
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #include "petscversion.h"
+
+        int main() {
+
+        #if PETSC_VERSION_LT($torch_petsc_ge_major, $torch_petsc_ge_minor, $torch_petsc_ge_subminor)
+            ERROR
+        #endif
+        }
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+        torch_petsc_too_old=no
+
+else $as_nop
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        torch_petsc_too_old=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc <$torch_petsc_lt_version" >&5
+printf %s "checking for PETSc <$torch_petsc_lt_version... " >&6; }
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #include "petscversion.h"
+
+        int main() {
+
+        #if PETSC_VERSION_GE($torch_petsc_lt_major, $torch_petsc_lt_minor, $torch_petsc_lt_subminor)
+            ERROR
+        #endif
+        }
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+        torch_petsc_too_new=no
+
+else $as_nop
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        torch_petsc_too_new=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+    CFLAGS="$torch_petsc_save_CFLAGS"
+
+    ac_ext=${ac_fc_srcext-f}
+ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
+ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_fc_compiler_gnu
+
+
+    if test $torch_petsc_too_old = "no" && test $torch_petsc_too_new = "no"
+then :
+
+        PETSC_FOUND=yes
+        PETSC_CFLAGS="$torch_petsc_cflags"
+        PETSC_LDFLAGS="$torch_petsc_ldflags"
+        PETSC_LIBS='-lpetsc'
+
+fi
+
+
+
+
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for HYPRE_SStructGridDestroy in -lHYPRE" >&5
 printf %s "checking for HYPRE_SStructGridDestroy in -lHYPRE... " >&6; }
