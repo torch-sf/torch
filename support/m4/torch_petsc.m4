@@ -37,12 +37,14 @@ AC_DEFUN([TORCH_PETSC], [
         dnl Source build, in-tree and out-of-tree
         AS_IF([test -f "${PETSC_DIR}/include/petscversion.h"], [
             torch_petsc_found="yes"
+            torch_petsc_location=", at ${PETSC_DIR}/${PETSC_ARCH}"
             torch_petsc_cflags="-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include"
             torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib"
         ], [
             dnl apt on Debian/Ubuntu with PETSC_DIR set to /usr
             AS_IF([test -f "${PETSC_DIR}/include/petsc/petscversion.h"], [
                 torch_petsc_found="yes"
+                torch_petsc_location=", at ${PETSC_DIR}"
                 torch_petsc_cflags="-I${PETSC_DIR}/include/petsc"
                 torch_petsc_ldflags="-L${PETSC_DIR}/lib"
             ])
@@ -55,73 +57,109 @@ AC_DEFUN([TORCH_PETSC], [
             int main() {}
         ]])], [
             torch_petsc_found="yes"
+            torch_petsc_location=", in the environment"
             torch_petsc_cflags=""
             torch_petsc_ldflags=""
         ], [
             dnl apt on Debian/Ubuntu puts it here
             AS_IF([test -f /usr/include/petsc/petscversion.h], [
                 torch_petsc_found="yes"
+                torch_petsc_location=", at /usr/include"
                 torch_petsc_cflags="-I/usr/include/petsc"
                 torch_petsc_ldflags=""
             ], [
                 torch_petsc_found="no"
+                torch_petsc_location=""
                 torch_petsc_cflags=""
                 torch_petsc_ldflags=""
             ])
         ])
     ])
 
+    AC_MSG_RESULT([${torch_petsc_found}${torch_petsc_location}])
+
+    dnl Verify that we can also link
+
+    AC_MSG_CHECKING([whether we can link with PETSc])
+
+    torch_petsc_save_cflags="$CFLAGS"
+    torch_petsc_save_ldflags="$LDFLAGS"
+    torch_petsc_save_libs="$LIBS"
+
+    CFLAGS="$CFLAGS $torch_petsc_cflags"
+    LDFLAGS="$LDFLAGS $torch_petsc_ldflags"
+    LIBS="$LIBS -lpetsc"
+
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
+        #include "petscversion.h"
+
+        int main() {}
+    ]])], [], [
+        torch_petsc_found="no"
+    ])
+
+    LIBS="$torch_petsc_save_libs"
+    LDFLAGS="$torch_petsc_save_ldflags"
+    CFLAGS="$torch_petsc_save_cflags"
+
     AC_MSG_RESULT([$torch_petsc_found])
 
 
-    torch_petsc_save_CFLAGS="$CFLAGS"
-    CFLAGS="$torch_petsc_cflags ${CFLAGS}"
+    AS_IF([test "$torch_petsc_found" = "yes"], [
+
+        dnl Check version lower bound
+
+        torch_petsc_save_CFLAGS="$CFLAGS"
+        CFLAGS="$torch_petsc_cflags ${CFLAGS}"
+
+        AC_MSG_CHECKING([for PETSc >=$torch_petsc_ge_version])
+
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+            #include "petscversion.h"
+
+            int main() {
+
+            #if PETSC_VERSION_LT($torch_petsc_ge_major, $torch_petsc_ge_minor, $torch_petsc_ge_subminor)
+                ERROR
+            #endif
+            }
+        ]])], [
+            AC_MSG_RESULT([yes])
+            torch_petsc_too_old=no
+        ], [
+            AC_MSG_RESULT([no])
+            torch_petsc_too_old=yes
+        ])
 
 
-    AC_MSG_CHECKING([for PETSc >=$torch_petsc_ge_version])
+        dnl Check version upper bound
 
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-        #include "petscversion.h"
+        AC_MSG_CHECKING([for PETSc <$torch_petsc_lt_version])
 
-        int main() {
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+            #include "petscversion.h"
 
-        #if PETSC_VERSION_LT($torch_petsc_ge_major, $torch_petsc_ge_minor, $torch_petsc_ge_subminor)
-            ERROR
-        #endif
-        }
-    ]])], [
-        AC_MSG_RESULT([yes])
-        torch_petsc_too_old=no
-    ], [
-        AC_MSG_RESULT([no])
-        torch_petsc_too_old=yes
+            int main() {
+
+            #if PETSC_VERSION_GE($torch_petsc_lt_major, $torch_petsc_lt_minor, $torch_petsc_lt_subminor)
+                ERROR
+            #endif
+            }
+        ]])], [
+            AC_MSG_RESULT([yes])
+            torch_petsc_too_new=no
+        ], [
+            AC_MSG_RESULT([no])
+            torch_petsc_too_new=yes
+        ])
+
+        CFLAGS="$torch_petsc_save_CFLAGS"
+
     ])
-
-
-    AC_MSG_CHECKING([for PETSc <$torch_petsc_lt_version])
-
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-        #include "petscversion.h"
-
-        int main() {
-
-        #if PETSC_VERSION_GE($torch_petsc_lt_major, $torch_petsc_lt_minor, $torch_petsc_lt_subminor)
-            ERROR
-        #endif
-        }
-    ]])], [
-        AC_MSG_RESULT([yes])
-        torch_petsc_too_new=no
-    ], [
-        AC_MSG_RESULT([no])
-        torch_petsc_too_new=yes
-    ])
-
-    CFLAGS="$torch_petsc_save_CFLAGS"
 
     AC_LANG_POP([C])
 
-    AS_IF([test $torch_petsc_too_old = "no" && test $torch_petsc_too_new = "no"], [
+    AS_IF([test "$torch_petsc_too_old" = "no" && test "$torch_petsc_too_new" = "no"], [
         PETSC_FOUND=yes
         PETSC_CFLAGS="$torch_petsc_cflags"
         PETSC_LDFLAGS="$torch_petsc_ldflags"

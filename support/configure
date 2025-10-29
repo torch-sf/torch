@@ -6262,6 +6262,7 @@ then :
 then :
 
             torch_petsc_found="yes"
+            torch_petsc_location=", at ${PETSC_DIR}/${PETSC_ARCH}"
             torch_petsc_cflags="-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include"
             torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib"
 
@@ -6271,6 +6272,7 @@ else $as_nop
 then :
 
                 torch_petsc_found="yes"
+                torch_petsc_location=", at ${PETSC_DIR}"
                 torch_petsc_cflags="-I${PETSC_DIR}/include/petsc"
                 torch_petsc_ldflags="-L${PETSC_DIR}/lib"
 
@@ -6292,6 +6294,7 @@ if ac_fn_c_try_compile "$LINENO"
 then :
 
             torch_petsc_found="yes"
+            torch_petsc_location=", in the environment"
             torch_petsc_cflags=""
             torch_petsc_ldflags=""
 
@@ -6301,12 +6304,14 @@ else $as_nop
 then :
 
                 torch_petsc_found="yes"
+                torch_petsc_location=", at /usr/include"
                 torch_petsc_cflags="-I/usr/include/petsc"
                 torch_petsc_ldflags=""
 
 else $as_nop
 
                 torch_petsc_found="no"
+                torch_petsc_location=""
                 torch_petsc_cflags=""
                 torch_petsc_ldflags=""
 
@@ -6317,80 +6322,126 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 fi
 
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${torch_petsc_found}${torch_petsc_location}" >&5
+printf "%s\n" "${torch_petsc_found}${torch_petsc_location}" >&6; }
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether we can link with PETSc" >&5
+printf %s "checking whether we can link with PETSc... " >&6; }
+
+    torch_petsc_save_cflags="$CFLAGS"
+    torch_petsc_save_ldflags="$LDFLAGS"
+    torch_petsc_save_libs="$LIBS"
+
+    CFLAGS="$CFLAGS $torch_petsc_cflags"
+    LDFLAGS="$LDFLAGS $torch_petsc_ldflags"
+    LIBS="$LIBS -lpetsc"
+
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #include "petscversion.h"
+
+        int main() {}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+
+else $as_nop
+
+        torch_petsc_found="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+    LIBS="$torch_petsc_save_libs"
+    LDFLAGS="$torch_petsc_save_ldflags"
+    CFLAGS="$torch_petsc_save_cflags"
+
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $torch_petsc_found" >&5
 printf "%s\n" "$torch_petsc_found" >&6; }
 
 
-    torch_petsc_save_CFLAGS="$CFLAGS"
-    CFLAGS="$torch_petsc_cflags ${CFLAGS}"
+    if test "$torch_petsc_found" = "yes"
+then :
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc >=$torch_petsc_ge_version" >&5
+
+        torch_petsc_save_CFLAGS="$CFLAGS"
+        CFLAGS="$torch_petsc_cflags ${CFLAGS}"
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc >=$torch_petsc_ge_version" >&5
 printf %s "checking for PETSc >=$torch_petsc_ge_version... " >&6; }
 
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-        #include "petscversion.h"
+            #include "petscversion.h"
 
-        int main() {
+            int main() {
 
-        #if PETSC_VERSION_LT($torch_petsc_ge_major, $torch_petsc_ge_minor, $torch_petsc_ge_subminor)
-            ERROR
-        #endif
-        }
+            #if PETSC_VERSION_LT($torch_petsc_ge_major, $torch_petsc_ge_minor, $torch_petsc_ge_subminor)
+                ERROR
+            #endif
+            }
 
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"
 then :
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-        torch_petsc_too_old=no
+            torch_petsc_too_old=no
 
 else $as_nop
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        torch_petsc_too_old=yes
+            torch_petsc_too_old=yes
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc <$torch_petsc_lt_version" >&5
+
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for PETSc <$torch_petsc_lt_version" >&5
 printf %s "checking for PETSc <$torch_petsc_lt_version... " >&6; }
 
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-        #include "petscversion.h"
+            #include "petscversion.h"
 
-        int main() {
+            int main() {
 
-        #if PETSC_VERSION_GE($torch_petsc_lt_major, $torch_petsc_lt_minor, $torch_petsc_lt_subminor)
-            ERROR
-        #endif
-        }
+            #if PETSC_VERSION_GE($torch_petsc_lt_major, $torch_petsc_lt_minor, $torch_petsc_lt_subminor)
+                ERROR
+            #endif
+            }
 
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"
 then :
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-        torch_petsc_too_new=no
+            torch_petsc_too_new=no
 
 else $as_nop
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        torch_petsc_too_new=yes
+            torch_petsc_too_new=yes
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
-    CFLAGS="$torch_petsc_save_CFLAGS"
+        CFLAGS="$torch_petsc_save_CFLAGS"
+
+
+fi
 
     ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
@@ -6398,7 +6449,7 @@ ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
 
 
-    if test $torch_petsc_too_old = "no" && test $torch_petsc_too_new = "no"
+    if test "$torch_petsc_too_old" = "no" && test "$torch_petsc_too_new" = "no"
 then :
 
         PETSC_FOUND=yes
