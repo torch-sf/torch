@@ -51,7 +51,7 @@ import numpy as np
 np.set_printoptions(precision=3)
 
 from amuse.lab import *
-from amuse.community.flash.interface import Flash
+from torch_amuse_flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
 from amuse.community.petar.interface import Petar

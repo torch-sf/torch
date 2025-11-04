@@ -4,13 +4,11 @@
 ### Joshua Wall
 ### Drexel University
 
-from __future__ import division, print_function
-
-print("At the top")
+print "At the top"
 
 from amuse.lab import *
 import numpy as np
-from amuse.community.flash.interface import Flash
+from torch_amuse_flash.interface import Flash
 #from amuse.rfi.channel import AsyncRequestsPool
 from amuse.community.smalln.interface import SmallN
 from amuse.community.kepler.interface import Kepler
@@ -24,9 +22,8 @@ import ionizingflux as ion
 from scipy.integrate import *
 import glob
 import pickle
-import os
 
-print("After imports.")
+print "After imports."
 
 np.set_printoptions(precision=3)
 
@@ -53,7 +50,7 @@ class Timer(object):
         self.secs = self.end - self.start
         self.msecs = self.secs * 1000  # millisecs
         if self.verbose:
-            print('elapsed time: %f ms' % self.msecs)
+            print 'elapsed time: %f ms' % self.msecs
 
 
 class logfile:
@@ -86,18 +83,9 @@ def lum_wl_cs(l, l_max, T):
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
 
-    # suppress numpy "RuntimeWarning: overflow encountered in exp"
-    # which occurs for some, but not all, numpy builds
-    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
-    # exp(...) overflow to +inf is harmless for l > 1e-50
-    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
-        return 0
-
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0)
 
     return L
-
-
 # Function to determine the number count of photons at a particular wavelength, temperature and cross section.
 # Uses the standard blackbody curve and incorporates the cross section as a function of wavelength.
 def lum_wl_cs_per_ph(l, l_max, T):
@@ -105,13 +93,6 @@ def lum_wl_cs_per_ph(l, l_max, T):
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-
-    # suppress numpy "RuntimeWarning: overflow encountered in exp"
-    # which occurs for some, but not all, numpy builds
-    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
-    # exp(...) overflow to +inf is harmless for l > 1e-50
-    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
-        return 0
 
     L = (2.0*h*(c**2.0)/(l**5.0)) * (l/l_max)**3.0 / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
 
@@ -126,18 +107,9 @@ def lum_wl(l, l_max, T):
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
 
-    # suppress numpy "RuntimeWarning: overflow encountered in exp"
-    # which occurs for some, but not all, numpy builds
-    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
-    # exp(...) overflow to +inf is harmless for l > 1e-50
-    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
-        return 0
-
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0)
 
     return L
-
-
 # Function to determine the number count of photons at a particular wavelength and temp.
 # Uses the standard blackbody curve.
 def lum_wl_per_ph(l, l_max, T):
@@ -145,13 +117,6 @@ def lum_wl_per_ph(l, l_max, T):
     h = 6.6261e-27 # Plank's constant
     c = 2.9979e10  # Speed of light
     k = 1.3807e-16 # Boltzman constant
-
-    # suppress numpy "RuntimeWarning: overflow encountered in exp"
-    # which occurs for some, but not all, numpy builds
-    # (see, e.g., https://github.com/numpy/numpy/issues/11117).
-    # exp(...) overflow to +inf is harmless for l > 1e-50
-    if h*c/(l*k*T) > 709.7:  # e^709.7 ~ 1.7e+308 is just below overflow
-        return 0
 
     L = (2.0*h*(c**2.0)/(l**5.0)) / (np.exp(h*c/(l*k*T)) - 1.0) / (h*c/l)
 
@@ -162,45 +127,43 @@ def lum_wl_per_ph(l, l_max, T):
 def load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart):
 
     global all_masses
-    global first_call_for_stars
-    global old_sink_tags
     # If this is a restart, shouldn't we load the random number state?
-
-    rstatefile =  output_dir+'/rnd_state{:04d}.pickle'.format(chknum)
-    massesfile = output_dir+'/all_masses{:04d}.pickle'.format(chknum)
-
-    refresh_rand_seed_on_restart = (refresh_rand_seed_on_restart or
-                                    not os.path.isfile(rstatefile) or
-                                    not os.path.isfile(massesfile))
 
     if (restart and not refresh_rand_seed_on_restart):
 
-            print(rstatefile)
-            with open(rstatefile, 'rb') as f:
+            #try:
+            #current_chpt_file = glob.glob(output_dir+'/*_chk_*')
+            #current_chpt_file.sort()
+            #current_chpt_file = current_chpt_file[-1][-4:]
+            current_chpt_file = chknum
+
+            rstatefile =  output_dir+'/rnd_state'+current_chpt_file+'.pickle'
+            print rstatefile
+            with open(rstatefile, 'r') as f:
                 rnd_state = pickle.load(f)
             np.random.set_state(rnd_state)
-            print("Random state set with file # "+rstatefile)
+            print "Random state set with file # "+rstatefile
 
-            print(massesfile)
-            with open(massesfile, 'rb') as f:
+            massesfile = output_dir+'/all_masses'+current_chpt_file+'.pickle'
+            print massesfile
+            with open(massesfile, 'r') as f:
                 all_masses = pickle.load(f)
-            print("Loaded all_masses dictionary from file # "+massesfile)
-            print("all_masses =", all_masses)
-
-            hydro.set_particle_pointers('sink')
-            num_sinks     = hydro.get_number_of_particles()
-            if (num_sinks > 0): old_sink_tags = hydro.get_particle_tags(list(range(1,num_sinks+1)))
-            hydro.set_particle_pointers('mass')
-
-            first_call_for_stars = False
+            print "Loaded all_masses dictionary from file # "+massesfile
+            print "all_masses =", all_masses
 
 
-    else: print("WARNING: Refreshing random state with a new seed. Pray to the R-N-Gesus.")
+            #except:
+            #    print "WARNING! We tried to load random state for restart but it failed."
+
+    else: print "WARNING: Refreshing random state with a new seed."
 
 
 
 def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
 
+    global first_call_for_stars
+    global all_masses
+    global old_sink_tags
     global mult_grav
 
     # How to add stars.id from multiples test?!
@@ -212,19 +175,25 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
 
         num_new_parts = hydro.get_number_of_new_tags()
 
-        print("[add_particles_to_grav]: Number of new tags =", num_new_parts)
+        print "[add_particles_to_grav]: Number of new tags =", num_new_parts
 
         if (num_new_parts == 0):
 
-            print("Assuming this is a restart, since Flash reports no new particles!")
-            print("Fetching number of particles total as number of new particles for grav.")
+            print "Assuming this is a restart, since Flash reports no new particles!"
+            print "Fetching number of particles total as number of new particles for grav."
             num_new_parts = hydro.get_number_of_particles()
-            newtags = hydro.get_particle_tags(list(range(1,num_new_parts+1)))
+            newtags = hydro.get_particle_tags(range(1,num_new_parts+1))
             add_parts_restart = True
 
+            hydro.set_particle_pointers('sink')
+            num_sinks     = hydro.get_number_of_particles()
+            if (num_sinks > 0): old_sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))
+            hydro.set_particle_pointers('mass')
+
+            first_call_for_stars = False
         else:
 
-            newtags = hydro.get_new_tags(list(range(1,num_new_parts+1)))
+            newtags = hydro.get_new_tags(range(1,num_new_parts+1))
 
 
     # Sort the new tags here because sorting is currently broken in Fortran... (fix later?)
@@ -237,41 +206,63 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     mass     = hydro.get_particle_mass(newtags)
     initMass = hydro.get_particle_oldmass(newtags)
     age      = hydro.get_time() - hydro.get_particle_creation_time(newtags)
-
     add_star = Particles(num_new_parts)             # Make new particles for grav code.
     keys     = add_star.key                         # Get the new keys for tags_keys.
 
-    # Add the properties from hydro to
-    # the new particles. This will be added to
-    # stars and the grav code.
-    add_star.mass= mass
-    add_star.age = age
-    add_star.x   = position[:,0]
-    add_star.y   = position[:,1]
-    add_star.z   = position[:,2]
-    add_star.vx  = velocity[:,0]
-    add_star.vy  = velocity[:,1]
-    add_star.vz  = velocity[:,2]
-    add_star.tag = newtags
-    add_star.stellar_type = 1 | units.stellar_type # Start life as a ZAMS star.
-    add_star.radius = 100 | units.AU # set all the stars initial collision radius.
+    #print "tags =", newtags
+    #print "pos =", position
+    #print "vel =", velocity
+    #print "mass =", mass
+    #print "initMass =", initMass
+    #print "age =", age
 
-    add_star.initial_mass = initMass # record the initial mass of the star for SE/SN uses.
+    for kk in range(num_new_parts):       # Add the properties from hydro to
+                                          # the new particles. This will be added to
+        add_star[kk].mass= mass[kk]       # stars and the grav code.
+        add_star[kk].age = age[kk]
+        add_star[kk].x   = position[kk][0]
+        add_star[kk].y   = position[kk][1]
+        add_star[kk].z   = position[kk][2]
+        add_star[kk].vx  = velocity[kk][0]
+        add_star[kk].vy  = velocity[kk][1]
+        add_star[kk].vz  = velocity[kk][2]
+        add_star[kk].tag = newtags[kk]
+        add_star[kk].stellar_type = 1 |units.stellar_type # Start life as a ZAMS star.
+        add_star[kk].radius = 100 | units.AU # set all the stars initial collision radius.
+        if (initMass[kk].value_in(units.MSun) <= 0.001):
+            add_star[kk].initial_mass = mass[kk] # record the initial mass of the star for SE/SN uses.
+            hydro.set_particle_oldmass(newtags[kk], mass[kk])
+        else:
+            add_star[kk].initial_mass = initMass[kk] # record the initial mass of the star for SE/SN uses.
+        stars_current_id_num += 1
+        add_star[kk].id = stars_current_id_num
 
-    # initMass == 0.0 MSun means we forgot to set initMass in hydro, whenever
-    # we spawned these stars.  This breaks SeBa.
-    # Below code fixes via manual one-off edit.  Do NOT enable by default,
-    # because initMass == 0 is an error that should not pass silently.
-    #sel = (initMass <= 0.001 | units.MSun)
-    #add_star.initial_mass[sel] = mass[sel]
+        if (debug_aptg):
+            print "New star:"
+            print "pos  =", add_star[kk].position.in_(units.cm)
+            print "vel  =", add_star[kk].velocity.in_(units.km/units.s)
+            print "mass =", add_star[kk].mass.in_(units.MSun)
+            print "age  =", add_star[kk].age.in_(units.Myr)
+            print "rad  =", add_star[kk].radius.in_(units.AU)
+            print "type =", add_star[kk].stellar_type
+            print "tag  =", add_star[kk].tag
+            print "id   =", add_star[kk].id
+    # Initialize radiation parameters to zero if this
+    # is a radiation run.
 
-    add_star.id = stars_current_id_num + np.arange(num_new_parts)
-    stars_current_id_num += num_new_parts
+        if (use_radiation):
 
-    if (use_radiation):
-        add_star.nion = 0.0 # ionizing flux
-        add_star.eion = 0.0 # ionizing energy *OVER* 13.6 eV
-        add_star.sigh = 0.0 # ionizing cross section.
+            add_star[kk].nion = 0.0 # ionizing flux
+            add_star[kk].eion = 0.0 #eion #0.0 # ionizing energy *OVER* 13.6 eV
+            add_star[kk].sigh = 0.0 #sigh #0.0 # ionizing cross section.
+
+    #print "Hydro code pos/vel/mass:"
+    #print position
+    #print velocity
+    #print mass
+
+    #print "Does the new tag match the new entry in tags?"
+    #print newtags, tags[ind]
 
     if (np.shape(tags_keys)[0] == 0):
 
@@ -300,7 +291,7 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     # Sort the stars to be in the same order as the tags.
     stars = stars.sorted_by_attribute('tag')
 
-    #print "Stars.id =", stars.id
+    print "Stars.id =", stars.id
 
     # Okay, I think I finally sorted this out. stars.sorted_by_attribute
     # returns a particle set, so it is okay to use this to set things like
@@ -383,7 +374,7 @@ def add_particles_to_grav(tags_keys, stars, tree_exists, newtags=None):
     # to the gravity code.
     hydro.clear_new_tags()
 
-    print("hydro.clear_new_tags called, num new particles is ", hydro.get_number_of_new_tags())
+    print "hydro.clear_new_tags called, num new particles is ", hydro.get_number_of_new_tags()
 
     if (add_star.mass.value_in(units.MSun).any() > min_mass.value_in(units.MSun)):
         hydro.new_source_flag(True)
@@ -427,25 +418,25 @@ def reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys):
     # First remove all particles from hydro.
 
     hydro.set_particle_pointers('mass')
-    print("Before reinitializing tags_keys and stars.tags, they look like:")
-    print(tags_keys[:,0].astype(int))
-    print(stars.tag.astype(int))
+    print "Before reinitializing tags_keys and stars.tags, they look like:"
+    print tags_keys[:,0].astype(int)
+    print stars.tag.astype(int)
 
-    print("Hydro now reporting", hydro.get_number_of_particles(), "number of particles", \
-          "before removal.")
+    print "Hydro now reporting", hydro.get_number_of_particles(), "number of particles", \
+          "before removal."
 
     hydro.remove_all_particles()
 
     # Did it work?
 
-    print("Hydro now reporting", hydro.get_number_of_particles(), "number of particles", \
-          "after removal.")
+    print "Hydro now reporting", hydro.get_number_of_particles(), "number of particles", \
+          "after removal."
 
     # Now add all the particles back to hydro. Note I'm going to do
     # this with a loop (one at a time) so I definitely get the proper
     # new tag for each star that is in stars in correct order.
 
-    print(len(tags_keys[:,0]))
+    print len(tags_keys[:,0])
 
     t_hy = hydro.get_time()
     for i, star in enumerate(stars):
@@ -462,7 +453,7 @@ def reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys):
 
     # Now that we sorted out the hydro stuff, lets sort out the particles
     # in the N body code and stars so both are sorted by tag.
-    print(len(tags_keys[:,0]))
+    print len(tags_keys[:,0])
     # Sort tags_keys so that we always have the tags in order.
     #tags_keys = tags_keys[tags_keys[:,0].argsort()]
     tags_keys.sort(axis=0)
@@ -479,11 +470,39 @@ def reinitialize_all_particles_from_stars(stars, hydro, grav, tags_keys):
     grav.particles.add_particles(stars)
     #if (with_ph4): grav.commit_particles() #ph4 is tempermental.
 
-    print("After reinitializing tags_keys and stars.tags, they look like:")
-    print(tags_keys[:,0].astype(int))
-    print(stars.tag.astype(int))
+    print "After reinitializing tags_keys and stars.tags, they look like:"
+    print tags_keys[:,0].astype(int)
+    print stars.tag.astype(int)
 
     # Done!
+    return
+
+def update_psetA_from_psetB(setA, setB, debug=False):
+    '''
+    Updates the properties of particle set setA from the properties of setB,
+    assuming they share common keys and are NOT in the same order.
+    It updates mass, position and velocity.
+    '''
+    if (debug): print "In call to update_psetA_from_psetB."
+    numBcycled = 0
+    numAupdated = 0
+    for p in setB:
+        numBcycled += 1
+        A_ind = np.where(setA.key == p.key)[0]
+        if (len(A_ind)>1): print "Warning, found more than one key in set A that matches this key from set B!"
+        if (len(A_ind)<1): print "Warning, did not find this key from set B in set A!"
+        if (len(A_ind)==1):
+            numAupdated += 1
+            setA[A_ind].mass = p.mass
+            setA[A_ind].x = p.x
+            setA[A_ind].y = p.y
+            setA[A_ind].z = p.z
+            setA[A_ind].vx = p.vx
+            setA[A_ind].vy = p.vy
+            setA[A_ind].vz = p.vz
+
+    if (debug): print "Cycled", numBcycled, "in setB."
+    if (debug): print "Found", numAupdated, "in setA"
     return
 
 def kick_grid(hydro, lim, tree, eps, dt):
@@ -516,7 +535,7 @@ def kick_grid(hydro, lim, tree, eps, dt):
     all_grids = hydro.get_number_of_grids()
     leaf_grids = np.zeros((all_grids*lim3))
     block_array = np.zeros((all_grids*lim3))
-    [leaf_grids, block_array, num_leafs] = hydro.get_leaf_indices(list(range(all_grids)))
+    [leaf_grids, block_array, num_leafs] = hydro.get_leaf_indices(range(all_grids))
     #print num_leafs
     numblks=num_leafs[0]
     # Note we can only pass 1-d flattened arrays using the AMUSE interface,
@@ -604,7 +623,7 @@ def bridge_kick(hydro, stars, eps, dt, time_in_hydro):
     #gaccel = hydro.get_gravity_at_point(0.0 | units.m, loc[:,0], loc[:,1], loc[:,2])
     gaccel = hydro.get_accel_gas_on_particles(0.0 | units.m, loc[:,0], loc[:,1], loc[:,2])
 
-    print("Got gravity at star locations.")
+    print "Got gravity at star locations."
     #print gaccel
     #print "Before kick star vel = "
     #print stars.velocity
@@ -618,14 +637,14 @@ def bridge_kick(hydro, stars, eps, dt, time_in_hydro):
 
     ### Update gravity code with kicked velocity.
 
-    print("Stars kicked.")
+    print "Stars kicked."
     #print stars.velocity
 
     #print "Grav vel before update."
     #print grav.particles.velocity
     stars_to_grav.copy()
 
-    print("Grav updated.")
+    print "Grav updated."
     #print grav.particles.velocity
 
     hydro.set_particle_velocity(tags_keys[:,0], grav.particles.vx, grav.particles.vy, grav.particles.vz)
@@ -636,7 +655,7 @@ def bridge_kick(hydro, stars, eps, dt, time_in_hydro):
         hydro.kick_grid(0.5*dt)
     time_in_hydro = time_in_hydro + grid_kick_timer.secs
     #hydro_timer = hydro_timer + grid_kick_timer.secs
-    print("Grid kicked.")
+    print "Grid kicked."
 
 def bridge_kick2(hydro, stars, eps, dt, time_in_hydro, kick_number):
 
@@ -654,7 +673,7 @@ def bridge_kick2(hydro, stars, eps, dt, time_in_hydro, kick_number):
     # Note this function gets the gravity AND kicks the velocities of the gas.
     hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)
 
-    print("Grid kicked.")
+    print "Grid kicked."
 
     #loc = grav.particles.position
 
@@ -687,32 +706,32 @@ def bridge_kick2(hydro, stars, eps, dt, time_in_hydro, kick_number):
     vel = hydro.get_particle_velocity(tags_keys[:,0])
     stars.velocity = vel
 
-    print("Stars kicked.")
+    print "Stars kicked."
     #print stars.velocity
     return
 
 
 def stellar_properties(stellar_mass = 1.0|units.MSun, metallicity = 0.02):
-    print("Starting SSE.")
+    print "Starting SSE."
     #stellar_evolution = SSE()
     stellar_evolution = SeBa(redirection = "none")
     #print "Refresh memory."
     #stellar_evolution.refresh_memory()
-    print("Setting metallicity.")
+    print "Setting metallicity."
     stellar_evolution.parameters.metallicity = metallicity
-    print("Making particle.")
+    print "Making particle."
     star = Particle()
-    print("Setting mass.")
+    print "Setting mass."
     star.mass = stellar_mass
-    print("Adding star to stellar evo code.")
+    print "Adding star to stellar evo code."
     star = stellar_evolution.particles.add_particle(star)
-    print("Doing stellar evolution.")
+    print "Doing stellar evolution."
     stellar_evolution.evolve_model(1.0|units.yr)
-    print("Saving values.")
+    print "Saving values."
     radius = stellar_evolution.particles.radius[0] #star.radius
     temperature = stellar_evolution.particles.temperature[0] #star.temperature
     luminosity = stellar_evolution.particles.luminosity[0] #star.luminosity
-    print("Stopping SSE.")
+    print "Stopping SSE."
     stellar_evolution.stop()
     #print "Clean up code."
     #stellar_evolution.cleanup_code()
@@ -733,11 +752,11 @@ def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False,
         n=n+1
 
         if (fractal):
-            print("Making star cluster using fractal model.")
+            print "Making star cluster using fractal model."
             cluster = new_kroupa_mass_distribution(nm_part, mass_max = (100.0 |units.MSun))
             cluster = new_fractal_cluster_model(masses=cluster,convert_nbody=convert, do_scale=False, virial_ratio=5.0)
         else:
-            print("Making star cluster using plummer model.")
+            print "Making star cluster using plummer model."
             cluster = new_plummer_sphere(nm_part, convert_nbody=convert, do_scale=False)
 
         if (equal_mass):
@@ -756,8 +775,8 @@ def make_cluster(conv_cluster, nm_part, bndbox, fractal=False, equal_mass=False,
 
             stars_out=False
 
-    print("This took", n, "runs.")
-    print(cluster.mass[np.where(cluster.mass.value_in(units.MSun) > 7.0)].value_in(units.MSun))
+    print "This took", n, "runs."
+    print cluster.mass[np.where(cluster.mass.value_in(units.MSun) > 7.0)].value_in(units.MSun)
 
     return cluster
 
@@ -782,16 +801,15 @@ def make_cluster_in_hydro(cluster, initial_x=0.0 | units.cm, initial_y=0.0 | uni
 
     x = cluster.x + initial_x; y = cluster.y + initial_y; z = cluster.z + initial_z
 
-    print("Are stars outside the bndbox?")
+    print "Are stars outside the bndbox?"
 
-    print(np.where(np.any(x>bndbox)), np.where(np.any(y>bndbox)), np.where(np.any(z>bndbox)))
+    print np.where(np.any(x>bndbox)), np.where(np.any(y>bndbox)), np.where(np.any(z>bndbox))
 
     tag = hydro.add_particles(x,y,z)
-    print("Length of tag =", len(tag))
-    print("tag =", tag)
+    print "Length of tag =", len(tag)
+    print "tag =", tag
     hydro.set_particle_velocity(tag, cluster.vx, cluster.vy, cluster.vz)
     hydro.set_particle_mass(tag, cluster.mass)
-    hydro.set_particle_oldmass(tag, cluster.mass)
     #print hydro.get_particle_mass(tag)
 
     #hydro.particles_gather()
@@ -802,7 +820,7 @@ def test_tags(tk, check_tags=None):
 
     check_passed = True
     if (check_tags is None):
-        print("Checking tags_keys for any repeated tags.")
+        print "Checking tags_keys for any repeated tags."
         tag_ind = 0
 
         for tag in tk[:,0]:
@@ -811,28 +829,28 @@ def test_tags(tk, check_tags=None):
             masked_tag.mask[tag_ind] = True
 
             if ((np.equal(tag, masked_tag)).any()):
-                print(int(tag), masked_tag[np.where(np.equal(tag,masked_tag))].astype(int))
+                print int(tag), masked_tag[np.where(np.equal(tag,masked_tag))].astype(int)
                 check_passed = False
                 break
             tag_ind += 1
 
     else:
-        print("Checking tags_keys for the following tags:")
+        print "Checking tags_keys for the following tags:"
         #print check_tags
         tags_from_tk = tk[:,0]
         for tag in check_tags:
 
             if ((np.equal(tag, tags_from_tk)).any()):
-                print(int(tag), tags_from_tk[np.where(np.equal(tag,tags_from_tk))].astype(int))
+                print int(tag), tags_from_tk[np.where(np.equal(tag,tags_from_tk))].astype(int)
                 check_passed = False
                 break
 
     if (not check_passed):
 
-        print("Repeated tag found!")
-        print("Did you restart with a different number of processors? This breaks the tags \
-               which are assigned by processor id.")
-        print(tk.astype(int))
+        print "Repeated tag found!"
+        print "Did you restart with a different number of processors? This breaks the tags \
+               which are assigned by processor id."
+        print tk.astype(int)
         sys.stdout.flush()
         sys.exit()
 
@@ -847,7 +865,7 @@ def kroupa(m,a):
     elif (0.5 <= m):
         k = a*(0.08*0.5)*m**(-2.3)
     else:
-        print("Invalid mass range!")
+        print "Invalid mass range!"
         k=0
     return k
 
@@ -860,32 +878,9 @@ def mkroupa(m,a):
     elif (0.5 <= m):
         k = m*a*(0.08*0.5)*m**(-2.3)
     else:
-        print("Invalid mass range!")
+        print "Invalid mass range!"
         k=0
     return k
-
-def m_max_star(m_max_clust):
-    # The max stellar mass for sampling the "normal" IMF
-    # calculated from Weidner et. al. 2013 eqn 1,
-    # based on the integrated galatic IMF of Weidner and Kroupa 2004.
-
-    # m_max_clust is the maximum cluster mass
-    # and should figure in losses due to jets and other
-    # feedback. Generally, I just assume a SFE of 0.5.
-
-    a0 = -0.66
-    a1 =  1.08
-    a2 = -0.15
-    a3 = 0.0084
-
-    Lmclust = np.log10(m_max_clust)
-
-    if (m_max_clust <= 2.5E5):
-        m_max = a0 + a1*Lmclust + a2*Lmclust**2. + a3*Lmclust**3.0
-    else:
-        m_max = np.log10(150.0)
-
-    return 10**m_max
 
 #def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
     #'''Return a poisson random sampling from the Kroupa IMF of sink total
@@ -1064,7 +1059,7 @@ def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):
 
     n_stars = np.random.poisson(lam=lam)
 
-    print("Mass from N stars ~", np.sum(n_stars*mass_per_bin))
+    print "Mass from N stars ~", np.sum(n_stars*mass_per_bin)
 
 
     return n_stars, binsL, lam, norm #frac_per_bin
@@ -1107,13 +1102,13 @@ def collect_small_stars_mass(all_samp_masses):
 
     return all_samp_masses
 
-def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, max_samp_mass=150.0, eff=1.0, sum_small=False):
+def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, max_samp_mass=150.0, eff=1.0, sum_small=True):
 
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(eff*sample_imf_mass.value_in(units.MSun),
                                                 min_samp_mass, max_samp_mass, num_bins)
 
-    print(bins)
+    print bins
 
     # Now use that to sample the IMF.
     masses = np.zeros(n_stars.sum())
@@ -1121,8 +1116,8 @@ def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, m
     counter = 0
     for i,n in enumerate(n_stars):
 
-        print("Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1])
-        print("counter =", counter)
+        print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]
+        print "counter =", counter
         counter = 0
         for j in range(n):
 
@@ -1137,23 +1132,21 @@ def get_stellar_mass_sampling(sample_imf_mass, num_bins=10, min_samp_mass=1.0, m
             k+=1
             counter+=1
 
-    print("Just got a new sampling of the IMF from", min_samp_mass, "to", max_samp_mass, ".")
-    print("Masses          =", masses)
-    print("Number of stars =", len(masses))
-    print("Total mass      =", masses.sum())
-    print("Max mass        =", masses.max())
+    print "Masses =", masses
+    print "Number of stars =", len(masses)
+    print "Total mass =", masses.sum()
 
     # Sum all stars < 1 MSun into stars > 1 MSun.
     if (sum_small): masses = collect_small_stars_mass(masses)
 
 
-    print("masses before shuffle.")
-    print(masses)
+    print "masses before shuffle."
+    print masses
 
     np.random.shuffle(masses)
 
-    print("masses after shuffle.")
-    print(masses)
+    print "masses after shuffle."
+    print masses
 
     return masses
 
@@ -1171,15 +1164,15 @@ def make_stars_from_sinks(hydro, min_imf_mass):
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
 
-    print("Num sinks =", num_sinks)
+    print "Num sinks =", num_sinks
 
     if (num_sinks < 1):
         hydro.set_particle_pointers('mass')
         return
 
-    sink_tags = hydro.get_particle_tags(list(range(1,num_sinks+1)))
+    sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))
     sink_tags.sort()
-    print("sink_tags = ", sink_tags)
+    print "sink_tags = ", sink_tags
     sink_masses = hydro.get_particle_mass(sink_tags)
     total_sink_mass = sink_masses.sum()
 
@@ -1189,9 +1182,9 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
     eff_total_sink_mass = eff*total_sink_mass
 
-    print("sink masses", sink_masses.as_quantity_in(units.MSun))
+    print "sink masses", sink_masses.as_quantity_in(units.MSun)
 
-    print("total sink mass", total_sink_mass.as_quantity_in(units.MSun))
+    print "total sink mass", total_sink_mass.as_quantity_in(units.MSun)
 
     if (eff_total_sink_mass.value_in(units.MSun) > min_imf_mass):
 
@@ -1224,10 +1217,10 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
         np.random.shuffle(sink_ind) # Randomize them.
 
-        print(sink_ind)
-        print(sink_masses[sink_ind[0]])
-        print((sink_masses[sink_ind[0]]).value_in(units.MSun))
-        print(sink_masses[sink_ind[0]].value_in(units.MSun))
+        print sink_ind
+        print sink_masses[sink_ind[0]]
+        print (sink_masses[sink_ind[0]]).value_in(units.MSun)
+        print sink_masses[sink_ind[0]].value_in(units.MSun)
 
 
         num_bins = 10 #50
@@ -1240,7 +1233,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
         # Poisson sample over the sink mass, obtaining the number of stars
         # in each mass bin.
             #print "sink position =", sink_positions
-            print("sink position s =", sink_positions[sink_ind[s]])
+            print "sink position s =", sink_positions[sink_ind[s]]
             [n_stars, bins, lam] = sample_stars_poisson(eff*sink_masses[sink_ind[s]].value_in(units.MSun), 1.0, 150.0, num_bins)
 
             if (np.sum(n_stars) == 0): continue
@@ -1294,8 +1287,8 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             all_stars_mass = np.sum(all_masses)
             remaining_mass = sink_masses[sink_ind[s]].value_in(units.MSun) - all_stars_mass
 
-            print("Sum of all masses", all_stars_mass)
-            print("remaining mass", remaining_mass)
+            print "Sum of all masses", all_stars_mass
+            print "remaining mass", remaining_mass
 
             # If we pulled too much mass, we'll delete stars until its correct.
             #if (remaining_mass < 0.0):
@@ -1344,7 +1337,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                 if (use_ang_mom):
                     hydro.set_particle_ang_mom(sink_tags[sink_ind[s1]], sink_ang_mom[sink_ind[s1]][0], sink_ang_mom[sink_ind[s1]][1], sink_ang_mom[sink_ind[s1]][2])
 
-            print("After removal total stars mass", all_stars_mass)
+            print "After removal total stars mass", all_stars_mass
 
             if (all_stars_mass <= 0.0): continue
 
@@ -1353,8 +1346,8 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             new_stars = Particles(n_stars)
             new_stars.mass = all_masses | units.MSun
 
-            print("Total number of stars made =", n_stars)
-            print("Star masses =", new_stars.mass)
+            print "Total number of stars made =", n_stars
+            print "Star masses =", new_stars.mass
             #for st in range(len(all_masses)):
 
                 #print (random_three_vector()*(np.random.rand())**(1.0/3.0)*sink_rad).in_(units.cm) + sink_positions[sink_ind[s]]
@@ -1364,11 +1357,11 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
             # Singular isothermal spherical distribution.
             stars_rvec = (random_three_vector(n_stars)[:,:]*(np.random.rand(n_stars))[:,None]*sink_rad)
-            print("stars_rvec=", stars_rvec)
+            print "stars_rvec=", stars_rvec
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
-            print("rx, ry, rz =", rx, ry, rz)
+            print "rx, ry, rz =", rx, ry, rz
             r2           = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_stars[:].position = np.add(stars_rvec.value_in(units.cm),sink_positions[sink_ind[s]].value_in(units.cm)) | units.cm
 
@@ -1394,9 +1387,9 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             new_stars[:].vy = sink_vel[sink_ind[s]][1].as_quantity_in(units.cm / units.s)
             new_stars[:].vz = sink_vel[sink_ind[s]][2].as_quantity_in(units.cm / units.s)
 
-            print("new stars vx = ", new_stars[:].vx)
-            print("new stars vy = ", new_stars[:].vy)
-            print("new stars vz = ", new_stars[:].vz)
+            print "new stars vx = ", new_stars[:].vx
+            print "new stars vy = ", new_stars[:].vy
+            print "new stars vz = ", new_stars[:].vz
 
             #new_stars[:].vx = 0.0 | units.cm / units.s
             #new_stars[:].vy = 0.0 | units.cm / units.s
@@ -1424,16 +1417,16 @@ def make_stars_from_sinks(hydro, min_imf_mass):
             if (use_ang_mom):
                 sum_mr2 = (np.sum(new_stars[:].mass.in_(units.g) * r2)).as_quantity_in(units.g*units.cm**2.0)
 
-                print("Stellar inertia =", sum_mr2)
+                print "Stellar inertia =", sum_mr2
                 mass_ratio = (np.sum(new_stars.mass.value_in(units.g)) / sink_masses[sink_ind[s]].value_in(units.g))
 
-                print("sink ang mom =", sink_ang_mom[sink_ind[s]] * mass_ratio)
+                print "sink ang mom =", sink_ang_mom[sink_ind[s]] * mass_ratio
                 sink_ang_mag = (sink_ang_mom[sink_ind[s]].norm()).as_quantity_in(units.cm**2.0*units.g/units.s)
-                print("mag of ang mom =", sink_ang_mag)
+                print "mag of ang mom =", sink_ang_mag
 
                 omega = (sink_ang_mom[sink_ind[s]] * mass_ratio / sum_mr2).as_quantity_in(units.s**-1)
 
-                print("omega =", omega)
+                print "omega =", omega
 
             # Now add the velocity from r (x) omega to the velocity of each star.
 
@@ -1460,11 +1453,11 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                                          - (ry).in_(units.cm)
                                          *(-new_stars[:].vx + sink_vel[sink_ind[s]][0]).in_(units.cm/units.s)))).as_quantity_in(units.cm**2.0*units.g/units.s)
 
-                print("lx, ly, lz =", lx, ly, lz)
+                print "lx, ly, lz =", lx, ly, lz
 
                 star_ang_mag = (np.sqrt(lx**2.0 + ly**2.0 + lz**2.0)).as_quantity_in(units.cm**2.0*units.g/units.s)
 
-                print("Star total ang momentum from sink = ", star_ang_mag)
+                print "Star total ang momentum from sink = ", star_ang_mag
 
                 #ang_norm_factor = star_ang_mag / sink_ang_mag
                 #lx = lx*ang_norm_factor
@@ -1472,24 +1465,24 @@ def make_stars_from_sinks(hydro, min_imf_mass):
                 #lz = lz*ang_norm_factor
                 #star_ang_mag = (np.sqrt(lx**2.0 + ly**2.0 + lz**2.0)).as_quantity_in(units.cm**2.0*units.g/units.s)
 
-                print("Star total ang momentum from sink = ", star_ang_mag)
+                print "Star total ang momentum from sink = ", star_ang_mag
 
-                print("Before removing ang mom, sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]]))
+                print "Before removing ang mom, sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]])
 
             # Don't forget to remove this angular momentum from the sink particle!
 
                 hydro.set_particle_ang_mom(sink_tags[sink_ind[s]], sink_ang_mom[sink_ind[s]][0]-lx, sink_ang_mom[sink_ind[s]][1]-ly, sink_ang_mom[sink_ind[s]][2]-lz)
 
-                print("Now sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]]))
+                print "Now sink ang mom =", hydro.get_sink_ang_mom(sink_tags[sink_ind[s]])
 
 
                 #print "After adding angular momentum star 0 has velocity="
 
                 #print new_stars[0].velocity
 
-            print("new stars vx = ", new_stars[:].vx)
-            print("new stars vy = ", new_stars[:].vy)
-            print("new stars vz = ", new_stars[:].vz)
+            print "new stars vx = ", new_stars[:].vx
+            print "new stars vy = ", new_stars[:].vy
+            print "new stars vz = ", new_stars[:].vz
 
             # Switch to massive particles to set properties.
             hydro.set_particle_pointers('mass')
@@ -1498,11 +1491,11 @@ def make_stars_from_sinks(hydro, min_imf_mass):
 
             new_star_tags = hydro.add_particles(new_stars.x,new_stars.y,new_stars.z)
 
-            print("new_star_tags =", new_star_tags)
+            print "new_star_tags =", new_star_tags
 
             new_star_tags.sort()
 
-            print("new_star_tags =", new_star_tags)
+            print "new_star_tags =", new_star_tags
 
             hydro.set_particle_mass(new_star_tags, new_stars.mass)
             hydro.set_particle_velocity(new_star_tags,new_stars.vx,new_stars.vy,new_stars.vz)
@@ -1531,8 +1524,7 @@ def make_stars_from_sinks(hydro, min_imf_mass):
     return formed_stars
 
 
-def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10000 | units.MSun,
-                           local_sfe=1.0, sum_small=False):
+def make_stars_from_sinks2(hydro, min_imf_mass, sample_imf_mass=10000 | units.MSun):
 
     # Given an initial sampling of the IMF, distribute the stars randomly
     # as sinks accrete the required mass to form them.
@@ -1546,7 +1538,7 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
 
     if (first_call_for_stars == True):
 
-        print("Initializing all_masses and old_sink_tags arrays.")
+        print "Initializing all_masses and old_sink_tags arrays."
         all_masses = {} # emtpy dict. get_stellar_mass_sampling(sample_imf_mass)
 
         #star_ind = {} #0
@@ -1564,17 +1556,17 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
 
-    print("Num sinks =", num_sinks)
+    print "Num sinks =", num_sinks
 
     if (num_sinks < 1):
         hydro.set_particle_pointers('mass')
         return (formed_stars, formed_massive_star)
 
-    sink_tags = hydro.get_particle_tags(list(range(1,num_sinks+1)))
+    sink_tags = hydro.get_particle_tags(range(1,num_sinks+1))
     sink_tags.sort()
-    print("sink_tags = ", sink_tags)
-    print("len sink tags =", len(sink_tags))
-    print("len old_sink_tags =", len(old_sink_tags))
+    print "sink_tags = ", sink_tags
+    print "len sink tags =", len(sink_tags)
+    print "len old_sink_tags =", len(old_sink_tags)
 
     if (len(sink_tags) > len(old_sink_tags)):
         # Then we need to make a new list of star masses.
@@ -1593,10 +1585,8 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
             # Make a new list of star masses for each using a dictionary.
             # Sample down to the low side of the Kroupa IMF.
             all_masses.update({new_tag:get_stellar_mass_sampling(sample_imf_mass,
-                                num_bins=10,
-                                min_samp_mass=min_imf_mass.value_in(units.MSun),
-                                max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                eff=local_sfe, sum_small=sum_small)})
+                                num_bins=10, min_samp_mass=0.001, max_samp_mass=150.0,
+                                eff=1.0, sum_small=False)})
             # Instead of keeping up with the index, we could just pop / delete
             # the star from the list once we use it...
             #star_ind[new_tag]   = 0
@@ -1608,59 +1598,57 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
         old_sink_tags = sink_tags
 
     sink_masses = hydro.get_particle_mass(sink_tags)
-    print("sink_masses", sink_masses.as_quantity_in(units.MSun))
+    print "sink_masses", sink_masses.as_quantity_in(units.MSun)
     #print "star_ind", star_ind
-    print("all_masses", all_masses)
+    print "all_masses", all_masses
 
     # Check the mass in each sink and if enough to make stars
     # then make some.
 
     for s,sink_mass in enumerate(sink_masses.value_in(units.MSun)):
-        print("current star up for assignment:", \
+        print "current star up for assignment:", \
               all_masses[sink_tags[s]][0], \
-              "for sink with mass:", sink_mass)
-
-        while np.sum(all_masses[sink_tags[s]]) < sink_mass:
-            # Sink wants to spawn more stars than available in queue.
-            print("restock, remaining queue mass:", np.sum(all_masses[sink_tags[s]]))
-            restock = get_stellar_mass_sampling(
-                        sample_imf_mass,
-                        num_bins=10,
-                        min_samp_mass=min_imf_mass.value_in(units.MSun),
-                        max_samp_mass=max_imf_mass.value_in(units.MSun),
-                        eff=local_sfe,
-                        sum_small=sum_small
-            )
-            all_masses[sink_tags[s]] = np.concatenate((all_masses[sink_tags[s]], restock))
-            print("done restocking, new queue mass:", np.sum(all_masses[sink_tags[s]]))
-
-        csum = np.cumsum(all_masses[sink_tags[s]])
-        i = np.searchsorted(csum, sink_mass, side='left')
-        assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
-        spawn_masses = all_masses[sink_tags[s]][:i]  # all stars eligible to be spawned
-        nnew = len(spawn_masses)  # convenience
-
+              "for sink with mass:", sink_mass
         # Does this sink have enough mass to make a star? If so, party on.
-        if nnew > 0:
+        while(sink_mass > all_masses[sink_tags[s]][0]):
 
             sink_position      = hydro.get_particle_position(sink_tags[s])
-            sink_vel           = hydro.get_particle_velocity(sink_tags[s])
-            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s])
+            sink_vel           = hydro.get_particle_velocity(sink_tags[s]).value_in(units.cm/units.s)
+            sink_cs            = hydro.get_sink_mean_cs(sink_tags[s]).value_in(units.cm/units.s)
 
-            new_star = Particles(nnew)
-            new_star.mass = spawn_masses | units.MSun
-            new_star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
+            print "Sink vel =", sink_vel
+            print "Sink mean gas sound speed =", sink_cs
+
+            # Check before pop.
+            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
+            new_star_mass     = all_masses[sink_tags[s]][0]
+            all_masses[sink_tags[s]] = np.delete(all_masses[sink_tags[s]],0)
+            # Check new_star_mass
+            #print "new_star_mass =", new_star_mass
+            # Check that it deleted properly.
+            #print "all_masses[sink_tags[s],[0]]=", all_masses[sink_tags[s]][0]
+
+            new_star          = Particles(1)
+            new_star.mass     = new_star_mass  | units.MSun
+            new_star.velocity = np.random.uniform(sink_vel, np.ones(3)*sink_cs) | units.cm/units.s
+
+            sink_mass         = sink_mass  - new_star_mass
 
             # Singular isothermal spherical distribution.
-            stars_rvec = random_three_vector(nnew)*np.random.rand(nnew,1)*sink_rad
+            stars_rvec = (random_three_vector(1)[:,:]*(np.random.rand(1))[:,None]*sink_rad)
+            #print "stars_rvec=", stars_rvec
             rx = stars_rvec[:,0]
             ry = stars_rvec[:,1]
             rz = stars_rvec[:,2]
+            #print "rx, ry, rz =", rx, ry, rz
             r2 = (rx**2.0 + ry**2.0 + rz**2.0).in_(units.cm**2.0)
             new_star.position = np.add(stars_rvec.value_in(units.cm),sink_position.value_in(units.cm)) | units.cm
 
+            #print "new star position =", new_star.position.as_quantity_in(units.parsec)
+            #print "new star velocity =", new_star.velocity.as_quantity_in(units.km/units.s)
+            #print "new star mass =" , new_star.mass.as_quantity_in(units.MSun)
+
             # Remove the mass from the sink.
-            sink_mass = sink_mass - np.sum(spawn_masses)
             hydro.set_particle_mass(sink_tags[s], (sink_mass | units.MSun))
 
             # Make the new star particle.
@@ -1672,13 +1660,9 @@ def make_stars_from_sinks2(hydro, min_imf_mass, max_imf_mass, sample_imf_mass=10
             # Switch back to sinks to continue the loop.
             hydro.set_particle_pointers('sink')
 
-            # Delete stars from queue
-            all_masses[sink_tags[s]] = all_masses[sink_tags[s]][nnew:]
-
             # Tell the main code we made a star.
-            formed_stars = True
-            if np.any(spawn_masses > min_mass.value_in(units.MSun)):
-                formed_massive_star = True
+            if (formed_stars == False): formed_stars = True
+            if (new_star_mass > min_mass.value_in(units.MSun)): formed_massive_star = True
 
     # Last thing is to ensure we are pointing back at massive particles.
     hydro.set_particle_pointers('mass')
@@ -1703,397 +1687,18 @@ def random_three_vector(n=1):
     three_vector[:,2] = np.cos( theta )
     return three_vector
 
-def remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiples, tags_keys, bndbox, debug=True):
-
-    ### Remove any particles that have left the simulation.
-
-    #print "Grav pos", grav.particles.x.value_in(units.cm), \
-    #                  grav.particles.y.value_in(units.cm), \
-    #                  grav.particles.z.value_in(units.cm), \
-    #                  bndbox.value_in(units.cm), \
-    #                  bndbox.value_in(units.cm)
-
-    stars_removed = False
-    rem_index = 0
-    num_particles = len(stars)
-
-    if (num_particles > 0):
-       # rem_index = np.where(np.abs(grav.particles.x.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
-        if (debug_remove):
-            print(np.abs(grav.particles.x.value_in(units.cm)).max())
-            print("grav x remove", np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            if (with_multiples): print("multiples.stars x remove", np.where(np.greater_equal(np.abs(mult_grav.stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("stars x remove", np.where(np.greater_equal(np.abs(stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("hydro x remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,0]).value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-        rem_index = np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
-        #rem_index = np.where(np.greater_equal(np.abs(stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        if (debug_remove): print("x rem index=", rem_index)
-        grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
-        star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
-        if (debug_remove): print("grav x rem index=", grav_rem_index)
-        if (debug_remove): print("star x rem index=", star_rem_index)
-        if (debug_remove): print("x key =", rem_key)
-    else:
-        rem_index = np.empty(0)
-        rem_key   = np.empty(0)
-    if (debug_remove): print("Remove index = ", rem_index)
-    if (debug_remove): print("Remove position x =", grav.particles.x[rem_index])
-    #if (debug_remove): print "Remove position x =", stars.x[rem_index]
-    rem_size = rem_index.size
-    if (debug_remove): print("Remove index size = ", rem_size)
-    rem_tag = []
-    grav_rem_part = Particles()
-    stars_rem_part = Particles()
-
-    if (rem_size > 0):
-        if (debug_remove): print("Remove position x from key =", grav.particles.x[grav_rem_index])
-
-        stars_removed = True
-        print("About to try and remove", len(rem_index), "from grav.")
-        print("Currently", len(grav.particles), "particles in grav.")
-        #for iii in np.nditer(rem_index):
-        #    #rem_part.add_particle(stars[iii])
-        #    grav_rem_part.add_particle(grav.particles[iii])
-        #    if grav.particles[iii] in stars:
-        #        if (debug_remove):
-        #            print "Found this grav particle in stars."
-        #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
-        #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
-        #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
-        #             stars[np.where(stars==grav.particles[iii])], "in stars."
-        #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
-        #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
-        #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
-        grav_rem_part.add_particles(grav.particles[grav_rem_index])
-
-        for st in grav_rem_part:
-
-            if st in stars:
-                st_index = np.where(stars.key == st.key)[0]
-                stars_rem_part.add_particles(stars[st_index])
-
-            if (with_multiples):
-                print("Trying to look in multiples for this star.")
-                # Cycle through the leaves and check if this particular star
-                # is a multiple root particle.
-                #st_grav = st.as_particle_in_set(grav.particles)
-                #for root, tree in mult_grav.root_to_tree.iteritems():
-                    #leaves = tree.get_leafs_subset()
-                    #if st in leaves:
-                if st in mult_grav.root_to_tree:
-                    print("Found it in multiples as a root particle.")
-                    tree = mult_grav.root_to_tree[st]
-                    leaves = tree.get_leafs_subset()
-                    #if (debug_multiples):
-                    print("Removing", len(leaves), "particles that are multiples by deleting the root of the tree.")
-                    #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
-                    for leaf in leaves:
-                        stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
-                    #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
-                    #rem_tag.append(stars[np.where(stars==leaves)].tag)
-                    if (debug_remove):
-                        print("Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part.")
-                        #print "rem_tag is now", rem_tag
-                    sys.stdout.flush()
-                    # Note only the stars particle set has a tag attribute.
-                    # Also all leaves exist in stars and hydro while all roots
-                    # exist in grav.
-                    #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
-                    #stars.remove_particles(leaves.as_particle_in_set(stars))
-                    #grav.particles.remove_particles(st)
-                    del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
-                    #rem_part.remove_particles(st)
-                    #rem_size -= 1
-
-        rem_tag.append(stars_rem_part.tag)
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-
-        rem_tag = np.array(rem_tag).flatten()
-        rem_tag.sort()
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-        grav.particles.remove_particles(grav_rem_part)
-        mult_grav._inmemory_particles.remove_particles(grav_rem_part)
-        hydro.remove_particles(rem_tag)
-        stars.remove_particles(stars_rem_part)
-        for rt in rem_tag:
-            # new local variable does not affect global "tags_keys",
-            # so must return to caller to update global version.
-            tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-
-        num_particles = len(stars)
-        #if (with_se):
-            #se.particles.remove_particles(rem_part)
-        if (debug_remove): print("Now ", len(grav.particles), "particles in grav.")
-        if (debug_remove): print("Now",  len(stars), "particles in stars.")
-        if (debug_remove): print("and", hydro.get_number_of_particles(), "particles in hydro.")
-        if (with_multiples and debug_remove):
-            print("Now ", len(mult_grav.root_to_tree), "multiples in multiples.")
-            print("Now ", len(mult_grav.stars), "leaves in multiples.")
-
-
-    if (num_particles > 0):
-        #rem_index = np.where(np.abs(grav.particles.y.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
-        if (debug_remove):
-            print(np.abs(grav.particles.y.value_in(units.cm)).max())
-            print("grav y remove", np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            if (with_multiples): print("multiples.stars y remove", np.where(np.greater_equal(np.abs(mult_grav.stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("stars y remove", np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("hydro y remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,1]).value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-        #print "y remove",  np.where(np.abs(grav.particles.y.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
-        rem_index = np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        #rem_index = np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
-        #rem_index = np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        if (debug_remove): print("y rem index=", rem_index)
-        grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
-        star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
-        if (debug_remove): print("grav y rem index=", grav_rem_index)
-        if (debug_remove): print("star y rem index=", star_rem_index)
-        if (debug_remove): print("y key =", rem_key)
-    else:
-        rem_index = np.empty(0)
-        rem_key   = np.empty(0)
-    if (debug_remove): print("Remove index = ", rem_index)
-    if (debug_remove): print("Remove position y =", grav.particles.y[rem_index])
-    #if (debug_remove): print "Remove position y =", stars.y[rem_index]
-    rem_size = rem_index.size
-    if (debug_remove): print("Remove index size = ", rem_size)
-    rem_tag = []
-    grav_rem_part = Particles()
-    stars_rem_part = Particles()
-
-    if (rem_size > 0):
-        if (debug_remove): print("Remove position y from key =", grav.particles.y[grav_rem_index])
-
-        stars_removed = True
-        print("About to try and remove", len(rem_index), "from grav.")
-        print("Currently", len(grav.particles), "particles in grav.")
-        #for iii in np.nditer(rem_index):
-        #    #rem_part.add_particle(stars[iii])
-        #    grav_rem_part.add_particle(grav.particles[iii])
-        #    if grav.particles[iii] in stars:
-        #        if (debug_remove):
-        #            print "Found this grav particle in stars."
-        #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
-        #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
-        #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
-        #             stars[np.where(stars==grav.particles[iii])], "in stars."
-        #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
-        #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
-        #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
-        grav_rem_part.add_particles(grav.particles[grav_rem_index])
-
-        for st in grav_rem_part:
-
-            if st in stars:
-                st_index = np.where(stars.key == st.key)[0]
-                stars_rem_part.add_particles(stars[st_index])
-
-            if (with_multiples):
-                print("Trying to look in multiples for this star.")
-                # Cycle through the leaves and check if this particular star
-                # is a multiple root particle.
-                #st_grav = st.as_particle_in_set(grav.particles)
-                #for root, tree in mult_grav.root_to_tree.iteritems():
-                    #leaves = tree.get_leafs_subset()
-                    #if st in leaves:
-                if st in mult_grav.root_to_tree:
-                    print("Found it in multiples as a root particle.")
-                    tree = mult_grav.root_to_tree[st]
-                    leaves = tree.get_leafs_subset()
-                    #if (debug_multiples):
-                    print("Removing", len(leaves), "particles that are multiples by deleting the root of the tree.")
-                    #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
-                    for leaf in leaves:
-                        stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
-                    #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
-                    #rem_tag.append(stars[np.where(stars==leaves)].tag)
-                    if (debug_remove):
-                        print("Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part.")
-                        #print "rem_tag is now", rem_tag
-                    sys.stdout.flush()
-                    # Note only the stars particle set has a tag attribute.
-                    # Also all leaves exist in stars and hydro while all roots
-                    # exist in grav.
-                    #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
-                    #stars.remove_particles(leaves.as_particle_in_set(stars))
-                    #grav.particles.remove_particles(st)
-                    del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
-                    #rem_part.remove_particles(st)
-                    #rem_size -= 1
-
-        rem_tag.append(stars_rem_part.tag)
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-
-        rem_tag = np.array(rem_tag).flatten()
-        rem_tag.sort()
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-        grav.particles.remove_particles(grav_rem_part)
-        mult_grav._inmemory_particles.remove_particles(grav_rem_part)
-        hydro.remove_particles(rem_tag)
-        stars.remove_particles(stars_rem_part)
-        for rt in rem_tag:
-            # new local variable does not affect global "tags_keys",
-            # so must return to caller to update global version.
-            tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-
-        num_particles = len(stars)
-        #if (with_se):
-            #se.particles.remove_particles(rem_part)
-        if (debug_remove): print("Now ", len(grav.particles), "particles in grav.")
-        if (debug_remove): print("Now",  len(stars), "particles in stars.")
-        if (debug_remove): print("and", hydro.get_number_of_particles(), "particles in hydro.")
-        if (with_multiples and debug_remove):
-            print("Now ", len(mult_grav.root_to_tree), "multiples in multiples.root_to_tree.")
-            print("Now ", len(mult_grav.stars), "leaves in multiples.")
-
-
-    if (num_particles > 0):
-        #rem_index = np.where(np.abs(grav.particles.z.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
-        if (debug_remove):
-            print(np.abs(grav.particles.z.value_in(units.cm)).max())
-            print("grav z remove", np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            if (with_multiples): print("multiples.stars z remove", np.where(np.greater_equal(np.abs(mult_grav.stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("stars z remove", np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-            print("hydro z remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,2]).value_in(units.cm)), bndbox.value_in(units.cm)))[0])
-        #print "z remove",  np.where(np.abs(grav.particles.z.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
-        rem_index = np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        #rem_index = np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
-        #rem_index = np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
-        if (debug_remove): print("z rem index=", rem_index)
-        grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
-        star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
-        if (debug_remove): print("grav z rem index=", grav_rem_index)
-        if (debug_remove): print("star z rem index=", star_rem_index)
-        if (debug_remove): print("z key =", rem_key)
-    else:
-        rem_index = np.empty(0)
-        rem_key   = np.empty(0)
-    if (debug_remove): print("Remove index = ", rem_index)
-    if (debug_remove): print("Remove position z =", grav.particles.z[rem_index])
-    #if (debug_remove): print "Remove position z =", stars.z[rem_index]
-    rem_size = rem_index.size
-    if (debug_remove): print("Remove index size = ", rem_size)
-    rem_tag = []
-    grav_rem_part = Particles()
-    stars_rem_part = Particles()
-
-    if (rem_size > 0):
-        if (debug_remove): print("Remove position z from key =", grav.particles.z[grav_rem_index])
-
-        stars_removed = True
-        print("About to try and remove", len(rem_index), "from grav.")
-        print("Currently", len(grav.particles), "particles in grav.")
-        #for iii in np.nditer(rem_index):
-        #    #rem_part.add_particle(stars[iii])
-        #    grav_rem_part.add_particle(grav.particles[iii])
-        #    if grav.particles[iii] in stars:
-        #        if (debug_remove):
-        #            print "Found this grav particle in stars."
-        #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
-        #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
-        #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
-        #             stars[np.where(stars==grav.particles[iii])], "in stars."
-        #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
-        #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
-        #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
-        grav_rem_part.add_particles(grav.particles[grav_rem_index])
-
-        for st in grav_rem_part:
-
-            if st in stars:
-                st_index = np.where(stars.key == st.key)[0]
-                stars_rem_part.add_particles(stars[st_index])
-
-            if (with_multiples):
-                print("Trying to look in multiples for this star.")
-                # Cycle through the leaves and check if this particular star
-                # is a multiple root particle.
-                #st_grav = st.as_particle_in_set(grav.particles)
-                #for root, tree in mult_grav.root_to_tree.iteritems():
-                    #leaves = tree.get_leafs_subset()
-                    #if st in leaves:
-                if st in mult_grav.root_to_tree:
-                    print("Found it in multiples as a root particle.")
-                    tree = mult_grav.root_to_tree[st]
-                    leaves = tree.get_leafs_subset()
-                    #if (debug_multiples):
-                    print("Removing", len(leaves), "particles that are multiples by deleting the root of the tree.")
-                    #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
-                    for leaf in leaves:
-                        stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
-                    #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
-                    #rem_tag.append(stars[np.where(stars==leaves)].tag)
-                    if (debug_remove):
-                        print("Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part.")
-                        #print "rem_tag is now", rem_tag
-                    sys.stdout.flush()
-                    # Note only the stars particle set has a tag attribute.
-                    # Also all leaves exist in stars and hydro while all roots
-                    # exist in grav.
-                    #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
-                    #stars.remove_particles(leaves.as_particle_in_set(stars))
-                    #grav.particles.remove_particles(st)
-                    del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
-                    #rem_part.remove_particles(st)
-                    #rem_size -= 1
-
-        rem_tag.append(stars_rem_part.tag)
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-
-        rem_tag = np.array(rem_tag).flatten()
-        rem_tag.sort()
-        if (debug_remove): print("Tags for removal are now", rem_tag)
-        grav.particles.remove_particles(grav_rem_part)
-        mult_grav._inmemory_particles.remove_particles(grav_rem_part)
-        hydro.remove_particles(rem_tag)
-        stars.remove_particles(stars_rem_part)
-        for rt in rem_tag:
-            # new local variable does not affect global "tags_keys",
-            # so must return to caller to update global version.
-            tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
-
-        num_particles = len(stars)
-        #if (with_se):
-            #se.particles.remove_particles(rem_part)
-        if (debug_remove): print("Now ", len(grav.particles), "particles in grav.")
-        if (debug_remove): print("Now",  len(stars), "particles in stars.")
-        if (debug_remove): print("and", hydro.get_number_of_particles(), "particles in hydro.")
-        if (with_multiples and debug_remove):
-            print("Now ", len(mult_grav.root_to_tree), "multiples in multiples.")
-            print("Now ", len(mult_grav.stars), "leaves in multiples.")
-
-        # Sync stars to the particles in grav.
-        if (with_multiples):
-            grav.particles.synchronize_to(mult_grav._inmemory_particles)
-            #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
-        else:
-            grav.particles.synchronize_to(stars)
-
-    return tags_keys, stars_removed, num_particles
-
-
-def check_sanity(hydro, grav, stars, min_pos_diff = 1.0e-4 | units.AU ,
+def check_sanity(hydro, grav, stars = None, min_pos_diff = 1.0e-4 | units.AU ,
                               min_vel_diff = 1.0e-2 | units.km / units.s,
                               min_mass_diff = 0.01 | units.MSun,
                               kill=True, with_multiples=False):
 
-    print("Num in grav = ", len(grav.particles))
+    print "Num in grav = ", len(grav.particles)
     if (with_multiples):
-         print("Num in multiples._inmemory_particles = ", len(mult_grav._inmemory_particles))
-         print("Num in multiples.stars = ", len(mult_grav.stars))
-         print("Num in multiples.root_to_tree = ", len(mult_grav.root_to_tree))
-    print("Num in hydro = ", hydro.get_number_of_particles())
-    print("Num in stars = ", len(stars))
-
-    if (with_multiples):
-        print("Grav id =", grav.particles.index_in_code)
-        print("Mult mem id =", mult_grav._inmemory_particles.id)
-        print("Multiples stars id =", mult_grav.stars.id)
-        print("Stars id =", stars.id)
-    print("Stars tags = ", stars.tag)
+         print "Num in multiples._inmemory_particles = ", len(mult_grav._inmemory_particles)
+         print "Num in multiples.stars = ", len(mult_grav.stars)
+         print "Num in multiples.root_to_tree = ", len(mult_grav.root_to_tree)
+    print "Num in hydro = ", hydro.get_number_of_particles()
+    print "Num in stars = ", len(stars)
 
     if (with_multiples):
         pos_diff     = (hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.m)
@@ -2108,26 +1713,26 @@ def check_sanity(hydro, grav, stars, min_pos_diff = 1.0e-4 | units.AU ,
         mass_diff    = hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun) - grav.particles.mass.in_(units.MSun)
 
     pos_diff_max = np.abs(pos_diff.value_in(units.cm)).max() | units.cm
-    print("Max Position diff = ")
-    print(pos_diff_max.in_(units.AU))
+    print "Max Position diff = "
+    print pos_diff_max.in_(units.AU)
 
     vel_diff_max = np.abs(vel_diff.value_in(units.cm*(units.s**-1))).max() | units.cm/units.s
-    print("Max Velocity diff = ")
-    print(vel_diff_max.in_(units.km/units.s))
+    print "Max Velocity diff = "
+    print vel_diff_max.in_(units.km/units.s)
 
     mass_diff_max =  np.abs(mass_diff.value_in(units.MSun)).max() | units.MSun
-    print("Max Mass diff = ")
-    print(mass_diff_max.in_(units.MSun))
+    print "Max Mass diff = "
+    print mass_diff_max.in_(units.MSun)
 
     repeat_pos = False
     if (with_multiples):
-        print("Checking stars for repeat position.")
+        print "Checking stars for repeat position."
         repeat_pos = check_repeat_position(stars)
-        print("Checking mult.stars for repeat position.")
+        print "Checking mult.stars for repeat position."
         repeat_pos = repeat_pos or check_repeat_position(mult_grav.stars)
-        print("Grav id =", grav.particles.index_in_code)
-        print("Mult mem id =", mult_grav._inmemory_particles.id)
-        print("Multiples stars id =", mult_grav.stars.id)
+        print "Grav id =", grav.particles.index_in_code
+        print "Mult mem id =", mult_grav._inmemory_particles.id
+        print "Multiples stars id =", mult_grav.stars.id
     if (repeat_pos): sys.exit()
 
     if (kill):
@@ -2135,33 +1740,33 @@ def check_sanity(hydro, grav, stars, min_pos_diff = 1.0e-4 | units.AU ,
             or vel_diff_max.value_in(units.cm*(units.s**-1)) > min_vel_diff.value_in(units.cm*(units.s**-1))
             or mass_diff_max.value_in(units.MSun) > min_mass_diff.value_in(units.MSun)):
 
-            print("hydro pos")
-            print(hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.AU))
-            print("grav pos")
+            print "hydro pos"
+            print hydro.get_particle_position(tags_keys[:,0]).as_quantity_in(units.AU)
+            print "grav pos"
             if (with_multiples):
-                print(stars.position.as_quantity_in(units.AU))
+                print stars.position.as_quantity_in(units.AU)
             else:
-                print(grav.particles.position.as_quantity_in(units.AU))
-            print("hydro vel")
-            print(hydro.get_particle_velocity(tags_keys[:,0]).as_quantity_in(units.km*units.s**(-1)))
-            print("grav vel")
+                print grav.particles.position.as_quantity_in(units.AU)
+            print "hydro vel"
+            print hydro.get_particle_velocity(tags_keys[:,0]).as_quantity_in(units.km*units.s**(-1))
+            print "grav vel"
             if (with_multiples):
-                print(stars.velocity.as_quantity_in(units.km*units.s**(-1)))
+                print stars.velocity.as_quantity_in(units.km*units.s**(-1))
             else:
-                print(grav.particles.velocity.as_quantity_in(units.km*units.s**(-1)))
-            print("hydro mass")
-            print(hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun))
-            print("grav mass")
+                print grav.particles.velocity.as_quantity_in(units.km*units.s**(-1))
+            print "hydro mass"
+            print hydro.get_particle_mass(tags_keys[:,0]).in_(units.MSun)
+            print "grav mass"
             if (with_multiples):
-                print(stars.mass.in_(units.MSun))
+                print stars.mass.in_(units.MSun)
             else:
-                print(grav.particles.mass.in_(units.MSun))
+                print grav.particles.mass.in_(units.MSun)
 
 
-            print("Difference in position or velocity greater than tolerance. Stopping code now.")
-            print(pos_diff.in_(units.AU))
-            print(vel_diff.in_(units.km/units.s))
-            print(mass_diff.in_(units.MSun))
+            print "Difference in position or velocity greater than tolerance. Stopping code now."
+            print pos_diff.in_(units.AU)
+            print vel_diff.in_(units.km/units.s)
+            print mass_diff.in_(units.MSun)
             sys.exit()
     return
 
@@ -2169,18 +1774,18 @@ def check_repeat_position(stars):
     repeat_pos     = False
     x,c= np.unique(stars.x.number, return_counts=True)
     if (np.any(c>1)):
-        print(c[np.where(c>1)[0]], "repeated x position found in stars.")
-        print("Pos =", stars.x[np.where(stars.x.number==x[np.where(c>1)[0]])[0]])
+        print c[np.where(c>1)[0]], "repeated x position found in stars."
+        print "Pos =", stars.x[np.where(stars.x.number==x[np.where(c>1)[0]])[0]]
         repeat_pos=True
     x,c= np.unique(stars.y.number, return_counts=True)
     if (np.any(c>1)):
-        print(c[np.where(c>1)[0]], "repeated y position found in stars.")
-        print("Pos =", stars.y[np.where(stars.y.number==x[np.where(c>1)[0]])[0]])
+        print c[np.where(c>1)[0]], "repeated y position found in stars."
+        print "Pos =", stars.y[np.where(stars.y.number==x[np.where(c>1)[0]])[0]]
         repeat_pos=True
     x,c= np.unique(stars.z.number, return_counts=True)
     if (np.any(c>1)):
-        print(c[np.where(c>1)[0]], "repeated z position found in stars.")
-        print("Pos =", stars.z[np.where(stars.z.number==x[np.where(c>1)[0]])[0]])
+        print c[np.where(c>1)[0]], "repeated z position found in stars."
+        print "Pos =", stars.z[np.where(stars.z.number==x[np.where(c>1)[0]])[0]]
         repeat_pos=True
 
     return repeat_pos
@@ -2195,15 +1800,15 @@ def oldvnew_position(stars, oldstars):
 
     repeat_pos = x_check.any()
     if (repeat_pos):
-        print("Repeated x position found at:", stars.x[x_check])
+        print "Repeated x position found at:", stars.x[x_check]
         repeat_pos_any=True
     repeat_pos = y_check.any()
     if (repeat_pos):
-        print("Repeated y position found at:", stars.y[y_check])
+        print "Repeated y position found at:", stars.y[y_check]
         repeat_pos_any=True
     repeat_pos = z_check.any()
     if (repeat_pos):
-        print("Repeated z position found at:", stars.z[z_check])
+        print "Repeated z position found at:", stars.z[z_check]
         repeat_pos_any=True
 
     return repeat_pos_any
@@ -2211,7 +1816,7 @@ def oldvnew_position(stars, oldstars):
 def check_stellar_type(stars):
 
     for star in stars:
-        print("Star mass, type=", star.mass.in_(units.MSun), star.stellar_type, star.stellar_type.value_in(units.stellar_type))
+        print "Star mass, type=", star.mass.in_(units.MSun), star.stellar_type, star.stellar_type.value_in(units.stellar_type)
     return
 
 class stellar_wind(object):
@@ -2330,9 +1935,9 @@ def get_np_from_run_script():
         for i, line in enumerate(f):
             words = line.split()
             if (len(words) >= 3 and words[0] == '#SBATCH' and words[1] == '-n'):
-                np = int(words[2])
+                np = words[2]
                 break
-    if (np == -1): print("WARNING! No proper number of procs found!")
+    if (np == -1): print "WARNING! No proper number of procs found!"
     return np
 
 def get_restart_and_chk_num():
@@ -2342,16 +1947,12 @@ def get_restart_and_chk_num():
         for i, line in enumerate(f):
             words = line.split()
             if (len(words) > 1):
-                if (words[0].lower() == 'restart'):
-                    if (words[2].lower() == '.true.'): restart = True
-                if (words[0].lower() == 'checkpointfilenumber'):
+                if (words[0] == 'restart'):
+                    if (words[2] == '.true.'): restart = True
+                if (words[0] == 'checkPointFileNumber'):
                     chknum = words[2]
-                if (words[0].lower() == 'plotfilenumber'):
-                    pltnum = words[2]
-                if (words[0].lower() == 'basenm'):
-                    basename = words[2].strip("\"")
 
-    return restart, int(chknum), int(pltnum), basename
+    return restart, chknum
 
 ###############################################
 ###             Multiples module            ###
@@ -2372,37 +1973,37 @@ def stop_smalln():
 
 def initialize_multiples(stars, grav, conv, mult_debug_level=1, kep=None, new_smalln=None):
 
-    print("Starting multiples codes.")
+    print "Starting multiples codes."
     #id = np.arange(len(stars)) # Moved to add_particles_to_grav
     #stars.id = id+1
     grav.parameters.epsilon_squared = 0.0 | units.cm**2.0
-    print("Gravity epsilon set to zero.")
+    print "Gravity epsilon set to zero."
     stopping_condition = grav.stopping_conditions.collision_detection
     stopping_condition.enable()
-    print("Stopping condition enabled.")
+    print "Stopping condition enabled."
 
     #init_smalln(conv)
 
     if (kep == None):
-        print("Starting Kepler.")
+        print "Starting Kepler."
         kep = Kepler(unit_converter=conv)
-        print("Initializing Kepler.")
+        print "Initializing Kepler."
         kep.initialize_code()
 
-    print("Starting multiples.")
+    print "Starting multiples."
     multiples_code = multiples.Multiples(grav, new_smalln, kep,
                                          constants.G)
 
     multiples_code.global_debug = mult_debug_level
 
     multiples_code.neighbor_veto               = True
-    multiples_code.check_tidal_perturbation    = False # Default: False. True: outputs diagnostics for highest perturbers. - SCL,2021oct5
+    multiples_code.check_tidal_perturbation    = True
     multiples_code.neighbor_perturbation_limit = 0.05
     multiples_code.wide_perturbation_limit     = 0.08
-    print("Setting up channels between stars and multiples.")
+    print "Setting up channels between stars and multiples."
     mult_to_stars = multiples_code.stars.new_channel_to(stars)
     stars_to_mult = stars.new_channel_to(multiples_code.stars)
-    print("Multiples initialized.")
+    print "Multiples initialized."
     return multiples_code, mult_to_stars, stars_to_mult
 
 def cleanup_multiples(multiples_code, kep_code):
@@ -2417,7 +2018,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
                              eps = 15.0 | units.RSun,
                              with_ph4 = True, tree_exists = False,
                              with_multiples = False):
-    print("Starting gravity code.")
+    print "Starting gravity code."
 
 ### NOTE! Trying to use the generic unit converter here after I saw this on the AMUSE website
 ### amusecode.org/doc/reference/quantities_and_units.html
@@ -2427,7 +2028,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
         grav.parameters.set_defaults()
         grav.parameters.timestep_parameter=0.14  # Timestep accuracy for PH4
         grav.parameters.force_sync=1 # Force the code to end exactly at the specified time.
-#grav.parameters.epsilon_squared = (6.8359e14 | units.cm)**2.0
+        print "ph4 started."
     else:
         grav = Hermite(convert, number_of_workers=num_grav_workers)
         #, debugger="gdb-remote", debugger_port=4343)
@@ -2437,6 +2038,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
         #grav.parameters.stopping_conditions_number_of_steps = 999999999
         #grav.parameters.stopping_conditions_minimum_internal_energy = -1e99 | units.m**2 * units.s**-2
         #grav.parameters.stopping_conditions_maximum_internal_energy =  1e99 | units.m**2 * units.s**-2
+        print "Hermite started."
 
 # N-body softening radius is the actual radius of a large massive star here.
     if (with_multiples):
@@ -2456,7 +2058,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
             grav.parameters.begin_time=start_time
             grav.evolve_model(start_time)
 
-
+        print "Set grav start time."
     # Make a particle set to pass information back and forth
     # between Flash and the gravity code as well as do the bridge kicks.
     if (stars is None):
@@ -2465,7 +2067,7 @@ def initialize_gravity_codes(convert, stars = None, start_time = None,
         stars = stars
     stars_to_grav = stars.new_channel_to(grav.particles)
     grav_to_stars = grav.particles.new_channel_to(stars)
-
+    print "Setup grav channels."
     #if (tree_exists):
     #    stars_to_tree = stars.new_channel_to(tree.particles)
 
@@ -2488,164 +2090,31 @@ def cleanup_gravity_codes(grav, tree_exists=False, with_multiples=False):
     return
 
 
-def update_psetA_from_psetB(setA, setB, debug=False):
-    '''
-    Updates the properties of particle set setA from the properties of setB,
-    assuming they share common keys and are NOT in the same order.
-    It updates mass, position and velocity.
-    '''
-    if (debug): print("In call to update_psetA_from_psetB.")
-    numBcycled = 0
-    numAupdated = 0
-    for p in setB:
-        numBcycled += 1
-        A_ind = np.where(setA.key == p.key)[0]
-        if   (len(A_ind)>1): print("Warning, found more than one key in set A that matches this key from set B!")
-        elif (len(A_ind)<1): print("Warning, did not find this key from set B in set A!")
-        elif (len(A_ind)==1):
-            numAupdated += 1
-            setA[A_ind].mass = p.mass
-            setA[A_ind].position = p.position
-            setA[A_ind].velocity = p.velocity
-            #setA[A_ind].x = p.x
-            #setA[A_ind].y = p.y
-            #setA[A_ind].z = p.z
-            #setA[A_ind].vx = p.vx
-            #setA[A_ind].vy = p.vy
-            #setA[A_ind].vz = p.vz
-
-    if (debug): print("Cycled", numBcycled, "in setB.")
-    if (debug): print("Found", numAupdated, "in setA")
-    return
-
 def update_roots_from_leaves(mult_grav, grav):
 
     '''
     Update the center of mass particles from
-    the leaves properties (in all codes!).
+    the leaves properties.
     '''
-    for root, tree in mult_grav.root_to_tree.items():
-        root_particle = root.as_particle_in_set(mult_grav._inmemory_particles)
+    for root, tree in mult_grav.root_to_tree.iteritems():
         leaves = tree.get_leafs_subset()
         com     = 0.0
         com_vel = 0.0
 
         for leaf in leaves:
-            com += (leaf.mass.value_in(units.g)*leaf.position.value_in(units.cm))
-            com_vel += (leaf.mass.value_in(units.g)*leaf.velocity.value_in(units.cm/units.s))
-        com     = (com/(leaves.mass.sum()).value_in(units.g)) | units.cm
-        com_vel = (com_vel/(leaves.mass.sum()).value_in(units.g)) | units.cm/units.s
-        msum    = leaves.mass.sum()
-        # Update the root particle in multiples.
-        root_particle.mass     = msum
-        root_particle.position = com
-        root_particle.velocity = com_vel
-        # Also update the tree.particle thing (top of the tree in the dictionary in multiples).
-        tree.particle.mass     = msum
-        tree.particle.position = com
-        tree.particle.velocity = com_vel
-        # To be consistent the same particle in the N body code must also be updated!
-        grav_particle = root.as_particle_in_set(grav.particles)
-        grav_particle.mass     = msum
-        grav_particle.position = com
-        grav_particle.velocity = com_vel
+            com += (leaf.mass.value_in(units.MSun)*leaf.position.value_in(units.cm))
+            com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
+        com = (com/(leaves.mass.sum()).value_in(units.MSun)) | units.cm
+        com_vel = (com_vel/(leaves.mass.sum()).value_in(units.MSun)) | units.km/units.s
+        root.mass = leaves.mass.sum()
+        root.position = com
+        root.velocity = com_vel
+        # to be consistent the same particle in the N body code must also be updated!
+        root.as_particle_in_set(grav.particles).mass = root.mass
+        root.as_particle_in_set(grav.particles).position = root.position
+        root.as_particle_in_set(grav.particles).velocity = root.velocity
 
     return
-
-def check_root_and_leaves(mult_grav, grav, stars, kill=True):
-
-    print("In check_root_and_leaves.")
-    for star in stars:
-        for root, tree in mult_grav.root_to_tree.items():
-            root_particle = root.as_particle_in_set(mult_grav._inmemory_particles)
-            grav_particle = root.as_particle_in_set(grav.particles)
-            leaves = tree.get_leafs_subset()
-            if star in leaves:
-                mult_ind         = np.where(mult_grav.stars.id == star.id)[0]
-                mult_star        = mult_grav.stars[mult_ind]
-                same_spot = mult_star.x.value_in(units.cm) == star.x.value_in(units.cm)
-
-                if (not same_spot):
-                    print("Star id   =", star.id)
-                    print("Mult id   =", mult_star.id)
-                    print("Root id   =", root_particle.id)
-                    print("Grav id   =", grav_particle.index_in_code)
-                    print("Leaf id   =", leaves.id)
-                    print("Star age  =", star.age)
-                    print("Star mass =", star.mass.in_(units.MSun))
-                    print("Mult mass =", mult_star.mass.in_(units.MSun))
-                    print("Leaf mass =", leaves.mass.in_(units.MSun))
-                    print("Root mass =", root_particle.mass.in_(units.MSun))
-                    print("Tree mass =", tree.particle.mass.in_(units.MSun))
-                    print("Grav mass =", grav_particle.mass.in_(units.MSun))
-                    print("Star pos  =", star.position.in_(units.cm))
-                    print("Mult pos  =", mult_star.position.in_(units.cm))
-                    print("Leaf pos  =", leaves.position.in_(units.cm))
-                    print("Root pos  =", root_particle.position.in_(units.cm))
-                    print("Tree pos  =", tree.particle.position.in_(units.cm))
-                    print("Grav pos  =", grav_particle.position.in_(units.cm))
-                    print("Star vel  =", star.velocity.in_(units.km/units.s))
-                    print("Mult vel  =", mult_star.velocity.in_(units.km/units.s))
-                    print("Leaf vel  =", leaves.velocity.in_(units.km/units.s))
-                    print("Root vel  =", root_particle.velocity.in_(units.km/units.s))
-                    print("Tree vel  =", tree.particle.velocity.in_(units.km/units.s))
-                    print("Grav vel  =", grav_particle.velocity.in_(units.km/units.s))
-                    sys.stdout.flush()
-
-                    if (kill):
-                        print("Mult_star and star are not in the same spot. Exiting!")
-                        sys.exit()
-
-    return
-
-def update_stars_from_leaves(mult_grav, grav, stars):
-
-    local_debug = False
-    print("In update_stars_from_leaves.")
-    for star in stars:
-        for root, tree in mult_grav.root_to_tree.items():
-            root_particle = root.as_particle_in_set(mult_grav._inmemory_particles)
-            grav_particle = root.as_particle_in_set(grav.particles)
-            leaves = tree.get_leafs_subset()
-            for leaf in leaves:
-                if (star == leaf):
-                    star.position = leaf.position
-                    star.velocity = leaf.velocity
-                    star.mass     = leaf.mass
-                    if (local_debug):
-                        print("Star id   =", star.id)
-                        print("Root id   =", root_particle.id)
-                        print("Grav id   =", grav_particle.index_in_code)
-                        print("Leaf id   =", leaves.id)
-                        print("Star age  =", star.age)
-                        print("Star mass =", star.mass.in_(units.MSun))
-                        print("Leaf mass =", leaves.mass.in_(units.MSun))
-                        print("Root mass =", root_particle.mass.in_(units.MSun))
-                        print("Grav mass =", grav_particle.mass.in_(units.MSun))
-                        print("Star pos  =", star.position.in_(units.cm))
-                        print("Leaf pos  =", leaves.position.in_(units.cm))
-                        print("Root pos  =", root_particle.position.in_(units.cm))
-                        print("Grav pos  =", grav_particle.position.in_(units.cm))
-                        print("Star vel  =", star.velocity.in_(units.km/units.s))
-                        print("Leaf vel  =", leaves.velocity.in_(units.km/units.s))
-                        print("Root vel  =", root_particle.velocity.in_(units.km/units.s))
-                        print("Grav vel  =", grav_particle.velocity.in_(units.km/units.s))
-                        sys.stdout.flush()
-
-    return
-
-# Write out pickles with the current random number state and the
-# dictionary with all the future stars in it.
-def write_rnd_and_mass_pickles(all_masses, output_dir, pklnum):
-    print("Writing all_masses{:04d}.pickle".format(pklnum))
-    with open(output_dir+'/all_masses{:04d}.pickle'.format(pklnum), 'wb') as f:
-        pickle.dump(all_masses, f)
-    print("Writing rnd_state{:04d}.pickle".format(pklnum))
-    rnd_state = np.random.get_state()
-    with open(output_dir+'/rnd_state{:04d}.pickle'.format(pklnum), 'wb') as f:
-        pickle.dump(rnd_state, f)
-    return
-
 
 #def main():
 
@@ -2680,7 +2149,7 @@ cloud_dens = 1.0e-18 | units.g*units.cm**-3
 #cloud_mass = 4.0/3.0*np.pi*cloud_dens*cloud_rad**3.0
 #cloud_mass = 1.0e3 | units.MSun
 cloud_mass = 1000.0 | units.MSun
-print(cloud_mass)
+print cloud_mass
 #total_mass = 1.1 | units.MSun
 #bndbox = 6.0047e18 | units.cm # For Peters et al.
 #bndbox = 1.5428388e+19 | units.cm  # For Richard's cloud model.
@@ -2704,16 +2173,8 @@ eion = 2.0 | units.eV #6.0 | units.eV
 sigh = 6.3e-18 | units.cm**2.0
 # Metallicity
 z = 0.02
-# Minimum mass of stars to turn on feedback.
+# Minimum mass of stars to turn on ionization.
 min_mass = 7.0 | units.MSun #4.0 | units.MSun
-
-# Min and max star formation masses. Max from IGIMF restrictions figuring 0.5 SFE.
-cluster_formation_eff = 1.0
-min_sf_mass = 0.08 | units.MSun
-max_sf_mass = m_max_star(cluster_formation_eff*cloud_mass.value_in(units.MSun)) | units.MSun
-
-print("Min IMF star mass=", min_sf_mass)
-print("Max IMF star mass=", max_sf_mass)
 
 h = 6.6261e-27 # Plank's constant
 c = 2.9979e10  # Speed of light
@@ -2740,39 +2201,29 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 # Number of processors for each code.
 ##########################
-default_hy_procs = 2
+default_hy_procs = 4
 num_grav_workers = 1
 
 try:
-    num_hy_workers= get_np_from_run_script() - num_grav_workers - 4
-    # hydro + ph4 + 4 threads for amuse, smallN, kepler, seba
+    num_hy_workers= int(get_np_from_run_script()) - num_grav_workers - 4
 except:
-    print("WARNING: Setting num_hy_workers from script failed. Defaulting to {} procs.".format(default_hy_procs))
+    print "WARNING: Setting num_hy_workers from script failed. Defaulting to {} procs.".format(default_hy_procs)
     num_hy_workers = default_hy_procs
 
-print("Number of hydro procs = ", num_hy_workers)
-print("Number of Nbody procs = ", num_grav_workers)
+print "Number of hydro procs = ", num_hy_workers
+print "Number of Nbody procs = ", num_grav_workers
 
 ##########################
 
 # Debugging flags.
 ##########################
-insane      = False
-type_insane = False
-debug_aptg  = False
-debug_se    = False
-debug_remove = False
+insane      = False #True
+type_insane = False #True
+debug_aptg  = False #True
+debug_se    = True
+debug_remove = False #True
 debug_multiples = False
 mult_debug_level = 1
-
-# Check if any tags are repeats in the tags_keys array.
-# All tags should be unique!
-test_unique_tags = False
-
-# Record particle sets to file.
-write_psets = False
-pdir = "./psets"
-
 # Print timer summary every step?
 profile = True
 
@@ -2781,104 +2232,82 @@ profile = True
 start_with_cluster     = False #True
 read_cluster_from_file = True
 nm_part=10
-start_with_star = False #True #
+start_with_star = True #False
+
 stars_current_id_num = 0
 
 # Runtime parameters.
 ##########################
-with_bridge = True
+
 no_sinks    = False
 tree_exists = False
-with_ph4    = True #False
-with_multiples = True #False
+with_ph4    = False
+with_multiples = False
 
 use_radiation   = True
-pe_heat         = True
+pe_heat         = False #True
 
 with_se         = True
-with_sn         = True
+with_sn         = False #True
 do_sn_once      = False #True
 
 with_winds      = True
 with_massloss   = True
-massloss_method = 'puls'
+#massloss_method = 'puls'
+massloss_method = 'test'
+
+if (with_massloss): print "massloss_method=", massloss_method
 
 min_pos_diff = 0.01*3.086e16 #| units.m #((0.01*3.085e16) | units.m)
 min_vel_diff = 1e3 # | units.m/units.s
 
-nxb = 16  # cells per block from FLASH setup call
+# Check if any tags are repeats in the tags_keys array.
+# All tags should be unique!
+test_unique_tags = False #True
+
+# Record particle sets to file.
+write_psets = False
+pdir = "./psets"
+
+min_imf_mass = 50.0
+dtinit = 1.0e8 | units.s #(tcross/100.0).as_quantity_in(units.s)
+dtmax = 1.0e13 | units.s
 
 # N-body softening radius is the actual radius of a large massive star here.
 eps = 15.0 | units.RSun
 
-stars = None
-hydro_time = None
+print "Starting smallN."
+#init_smalln(convert)
 
-if (not with_bridge): print("WARNING NO GRAVITY BRIDGE.")
-if (not use_radiation): print("WARNING NO RADIATION.")
-if (not with_winds): print("WARNING NO WINDS.")
+print "Starting Kepler."
+#kep = Kepler(unit_converter=convert)
+print "Initializing Kepler."
+#kep.initialize_code()
 
-sys.stdout.flush()
-print("Starting smallN.")
-init_smalln(convert)
-sys.stdout.flush()
+print "Starting stellar evolution code."
 
-print("Starting Kepler.")
-sys.stdout.flush()
-kep = Kepler(unit_converter=convert)
-print("Initializing Kepler.")
-sys.stdout.flush()
-kep.initialize_code()
-sys.stdout.flush()
-
-print("Starting stellar evolution code.")
-sys.stdout.flush()
 if (with_se):
 #    #se = SSE()
     se = SeBa()
     se.initialize_code()
 #else:
 #    se = SeBa()
-sys.stdout.flush()
 
-stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
-         convert, stars = stars, start_time = hydro_time,
-         num_grav_workers = num_grav_workers,
-         eps = eps,
-         with_ph4 = with_ph4,
-         with_multiples = with_multiples)
-print("Gravity code initialized.")
-sys.stdout.flush()
 
-print("Starting hydro code.")
-sys.stdout.flush()
+print "Starting hydro code."
+
 hydro = Flash(unit_converter = convert2, number_of_workers=num_hy_workers, redirection='none')
-print("Hydro code initialized.")
-sys.stdout.flush()
 
-hydro.initialize_code()
-print("hydro.initialize_code() called.")
-sys.stdout.flush()
-
-### Get the simulation end time, current AMUSE step and
-### current simulation time from Flash (in case of restart).
-
-tmax = hydro.get_end_time()
-t = hydro.get_time()
-hydro_time = t
+logname = "profiler"+`num_hy_workers`+".log"
 
 bndbox = hydro.get_runtime_parameter('xmax') | units.cm
-print('bndbox = ', bndbox)
 
-if (with_ph4):
-    grav.parameters.begin_time=hydro_time
-    grav.parameters.sync_time=hydro_time
-    grav.parameters.force_sync=1
-else:
-    grav.parameters.begin_time=hydro_time
-    grav.evolve_model(hydro_time)
+print 'bndbox = ', bndbox
 
-logname = "profiler"+str(num_hy_workers)+".log"
+max_ref  = hydro.get_max_refinement()
+sink_rad = 2.5*(2.0*bndbox)/(8.0*2.0**(float(max_ref)-1.0))
+smallest_dx = (2.0*bndbox)/(8.0*2.0**(float(max_ref)-1.0))
+
 ### Add the star particles to both codes.
 
 #grav.particles.add_particles(stars)
@@ -2894,7 +2323,7 @@ if (start_with_cluster):
 
     if (read_cluster_from_file):
 
-        print("Reading initial cluster from file.")
+        print "Reading initial cluster from file."
 
         initial_cluster = read_set_from_file('stars.hdf5', 'hdf5')
 
@@ -2913,9 +2342,9 @@ if (start_with_cluster):
                                        fractal=True ,equal_mass=False,
                                        eq_mass=20.0 | units.MSun)
 
-        print("Writing initial cluster to file.")
+        print "Writing initial cluster to file."
         write_set_to_file(initial_cluster, 'starting_cluster.hdf5', 'hdf5')
-        print("Done.")
+        print "Done."
 
     #num_sub_clusters = 3
 
@@ -2928,7 +2357,7 @@ if (start_with_cluster):
 
     # Now lets distribute the stars as subclusters at several locations.
 
-    print("Setting up initial cluster in hydro.")
+    print "Setting up initial cluster in hydro."
     make_cluster_in_hydro(initial_cluster)
     #make_cluster_in_hydro(initial_cluster[num_sub_stars:num_sub_stars*2], initial_x=posx2)
     #make_cluster_in_hydro(initial_cluster[num_sub_stars*2:])
@@ -2944,6 +2373,8 @@ if (start_with_star):
     vy = 0.0 | units.km/units.s
     vz = 0.0 | units.km/units.s
     m  = 30. | units.MSun
+
+    print x
 
     make_single_star_in_hydro(x = x, y = y, z = z,
                               mass = m, initMass = m, age = 0.0 | units.Myr,
@@ -2965,44 +2396,47 @@ i = 0                  # Step number for bridge.
 tags_keys = np.empty(0)# Tags (ID in Flash) and keys (ID in AMUSE) for all particles.
 first_loop = True
 made_stars = False
+gridChanged = True
+new_chpt_file = '-1'
+old_chpt_file = '-1'
 
-max_ref  = hydro.get_max_refinement()
-sink_rad = 2.5*(2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
-smallest_dx = (2.0*bndbox)/(nxb*2.0**(float(max_ref)-1.0))
 
-'''
+### Get the simulation end time, current AMUSE step and
+### current simulation time from Flash (in case of restart).
+
+tmax = hydro.get_end_time()
+t = hydro.get_time()
+hydro_time = t
+
 stars = None
+
 stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
          convert, stars = stars, start_time = hydro_time,
          num_grav_workers = num_grav_workers,
          eps = eps,
          with_ph4 = with_ph4,
          with_multiples = with_multiples)
-print "Gravity code initialized."
-grav.initialize_code()
-print "grav.initialize_code() called."
-'''
+
+print "Grav initialized."
+#grav.initialize_code()
+
 # This should be automated!
-restart,chknum,pltnum,basename = get_restart_and_chk_num()
+restart,chknum = get_restart_and_chk_num()
+chknum = str(chknum).zfill(4)
 refresh_rand_seed_on_restart = False #True
 
-if (refresh_rand_seed_on_restart):
-    print("WARNING WARNING WARNING! Resetting the rand seed!!!!!!!!!!")
-
 output_dir = hydro.get_output_dir()
+#current_chpt_file = max(glob.glob(output_dir+'/*_chk_????'),'0000')
+#current_chpt_file = glob.glob(output_dir+'/*_chk_*')
+#current_chpt_file.sort()
+#current_chpt_file = current_chpt_file[-1][-4:]
+current_chpt_file = chknum
 
-print("Writing output files to: ", output_dir)
+print "Writing output files to: ", output_dir
 
-print("Is this a restart?", restart)
-print("We are assuming the checkpointfilenumber =", chknum)
-load_rnd_state_files(restart, chknum, refresh_rand_seed_on_restart)
-
-if (not restart):
-    write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
-
-# After FLASH inits (whether restart or not), it increments
-# io_checkpointFileNumber for the /next/ file write.
-chknum = hydro.IO_num('chk')
+print "Is this a restart?", restart
+print "We are assuming the checkpointfilenumber =", chknum
+load_rnd_state_files(restart, chknum,refresh_rand_seed_on_restart)
 
 # This is used if you change the number of processors on restart!
 # Or if you need to clear out tracers or some other thing.
@@ -3013,26 +2447,15 @@ clear_particles_on_restart = False #True
 
 tff = (np.sqrt(3.0*np.pi/(32.0*units.constants.G*cloud_dens))).as_quantity_in(units.s)
 
-print("Hydro dynamical time in secs: %3.3e s" % (tff).value_in(units.s))
-print((tff/100.0).as_quantity_in(units.yr))
-print("Currently setting initial dt artbitrarily high so that dt = hydro dt.")
-dtinit = 1.0e10 | units.s #(tcross/100.0).as_quantity_in(units.s)
-dtmax = 1.0e13 | units.s
+print "Hydro dynamical time in secs: %3.3e s" % (tff).value_in(units.s)
+print (tff/100.0).as_quantity_in(units.yr)
+print "Currently setting initial dt artbitrarily high so that dt = hydro dt."
+
 dt = dtinit
-print("dt in secs: %3.3e s" % dt.value_in(units.s))
-print("End time in secs: %3.3e s" %tmax.value_in(units.s))
+print "dt in secs: %3.3e s" % dt.value_in(units.s)
+print "End time in secs: %3.3e s" %tmax.value_in(units.s)
 
 first_step = True
-gridChanged = True
-if restart:
-    if start_with_star or start_with_cluster:
-        print("WARNING: restart AND adding new particles, so recomputing grav accel")
-    else:
-        # restarts: don't re-compute grav accel during very 1st bridge kick
-        #   because we can read it from file. this matches normal bridge loop
-        #   logic and is necessary for bitwise agreement between
-        #   ab initio vs. restart simulation -ATr,2020 Jul 29
-        gridChanged = False
 
 i = int(t/dt)
 
@@ -3043,7 +2466,7 @@ time_in_hydro = 0.0
 time_in_grav  = 0.0
 
 log = logfile(filename=logname)
-log.write("Number of hydro threads = "+str(num_hy_workers))
+log.write("Number of hydro threads = "+`num_hy_workers`)
 log.write("Step\t Tot time\t \t Hyd time\t \t Grav time\t \t Script time")
 
 hydro.set_particle_pointers('mass')
@@ -3060,25 +2483,16 @@ try:
         ### Have to write a proper routine to get timestep from hydro.
             #print "Checking dt. Current dt is :", dt
             hy_dt = hydro.get_timestep()
-            print("Current hydro dt is: {:.2E}".format(hy_dt.value_in(units.s)))
+            print "Current hydro dt is: ", hy_dt
             #dt = min(dtinit, (2.5*hy_dt),(tmax-t))
-            print("dt is = ", "{:.2e}".format(dt.value_in(units.s)))
+            print "dt is = ", "{:.2e}".format(dt.value_in(units.s))
             if (first_step):
                 dt = dtinit
                 # Check for existing particles in case of restart.
                 check_particles = hydro.get_number_of_particles()
                 if (check_particles > 0):
                     first_particle = True
-
-                    # If this is a restart, FLASH may still have all the
-                    # particles mis-sorted in the particles array. Lets check
-                    # for this.
-                    print("Entering check_particles loop, check_particles=", check_particles)
-                    hydro.particles_sort()
-                    check_particles = hydro.get_number_of_particles()
-                    print("After sorting check_particles=", check_particles)
-
-                    print("Evolving grav to current hydro time.")
+                    print "Evolving grav to current hydro time."
                     hydro_time = hydro.get_time()
 
                     #stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
@@ -3096,42 +2510,42 @@ try:
                     #    else:
                     #        grav.evolve_model(hydro_time)
                     grav_time = grav.get_time()
-                    print("Hydro time:", hydro_time)
-                    print("Grav time:", grav_time)
+                    print "Hydro time:", hydro_time
+                    print "Grav time:", grav_time
                     tags_keys, stars = add_particles_to_grav(tags_keys, stars, tree_exists)
                     num_particles = check_particles
                     if (with_multiples):
                         mult_grav, mult_to_stars, stars_to_mult = initialize_multiples(stars, grav, convert,
                                                                   mult_debug_level=mult_debug_level, kep=kep, new_smalln=new_smalln)
-                        print("Gravity softening radius**2 =", grav.parameters.epsilon_squared)
+                        print "Gravity softening radius**2 =", grav.parameters.epsilon_squared
                     #if (with_se): se = SeBa()
                     if (not refresh_rand_seed_on_restart): first_call_for_stars = False
                 first_step = False
             else:
-                dt = min(dtmax, 1.5*hy_dt, (tmax-t), 2.0*dt_old)
+                dt = min(dtmax, 0.99*hy_dt, (tmax-t), 1.5*dt_old)
             #dt = 2.0*hy_dt
 
-            print("dt is now :", "{:.2e}".format(dt.value_in(units.s)))
+            print "dt is now :", "{:.2e}".format(dt.value_in(units.s))
             dt_old = dt
             t_old  = t
             #t = t + dt
 
-            print("Starting step ", i)
-            print("Number of stars = ", num_particles)
-            print("Num in grav = ", len(grav.particles))
+            print "Starting step ", i
+            print "Number of stars = ", num_particles
+            print "Num in grav = ", len(grav.particles)
             if (mult_grav is not None):
-                 print("Num in multiples.stars = ", len(mult_grav.stars))
-                 print("Num in multiples.root_to_tree = ", len(mult_grav.root_to_tree))
-            print("Num in hydro = ", hydro.get_number_of_particles())
+                 print "Num in multiples.stars = ", len(mult_grav.stars)
+                 print "Num in multiples.root_to_tree = ", len(mult_grav.root_to_tree)
+            print "Num in hydro = ", hydro.get_number_of_particles()
             sys.stdout.flush()
             #sys.exit()
 
             #if (tree_exists):
             #    print "Num in tree = ", len(tree.particles)
 
-            made_stars,made_massive_star = make_stars_from_sinks2(hydro, min_sf_mass, max_sf_mass)
+            made_stars,made_massive_star = make_stars_from_sinks2(hydro, min_imf_mass)
             sys.stdout.flush()
-            print("Did we make stars?", made_stars)
+            print "Did we make stars?", made_stars
 
             if (made_stars):
 
@@ -3151,16 +2565,16 @@ try:
 
                 check_particles = hydro.get_number_of_particles()
 
-                print("Number of stars =", check_particles)
+                print "Number of stars =", check_particles
 
                 if check_particles != 0:
 
                     with Timer(verbose=True) as loop_timer:
                         first_particle = True
-                        print("We got our first star!")
+                        print "We got our first star!"
                         #print "Setting its mass = 90 MSun FOR THIS TEST CASE!!!"
 
-                        print("Current simulation time:", t)
+                        print "Current simulation time:", t
                         hydro_time = hydro.get_time()
 
                         #stars, mult_grav, grav, stars_to_grav, grav_to_stars = initialize_gravity_codes(
@@ -3170,36 +2584,37 @@ try:
                              #with_ph4 = with_ph4,
                              #with_multiples = False)
 
-                        print("Evolving grav to current hydro time.")
-                        with Timer(verbose=True) as grav_timer:
-                            if (with_ph4):
-                                grav.parameters.begin_time=hydro_time
-                                grav.parameters.sync_time=hydro_time
-                                grav.parameters.force_sync=1
-                            else:
-                                grav.parameters.begin_time=hydro_time
-                                grav.evolve_model(hydro_time)
-
                         grav_time  = grav.get_time()
-                        print("Hydro time:", hydro_time)
-                        print("Grav time:", grav_time)
+                        print "Hydro time:", hydro_time
+                        print "Grav time:", grav_time
 
-                        print("Num particles in grav:", len(grav.particles))
+                    # Try to evolve grav to the current time.
+                        #print "Evolving grav to current hydro time."
+                        #with Timer(verbose=True) as grav_timer:
+                        #    #hydro_time = hydro.get_time()
+                        #    if (with_ph4):
+                        #        grav.parameters.begin_time=hydro_time
+                        #        grav.parameters.sync_time=hydro_time
+                        #        grav.parameters.force_sync=1
+                        #    else:
+                        #        grav.evolve_model(hydro_time)
+
+                        print "Num particles in grav:", len(grav.particles)
 
                         tags_keys, stars = add_particles_to_grav(tags_keys, stars, tree_exists)
                         if (with_multiples):
                             mult_grav, mult_to_stars, stars_to_mult = initialize_multiples(stars, grav, convert,
                                                                       mult_debug_level=mult_debug_level, kep=kep, new_smalln=new_smalln)
-                            print("Gravity softening radius**2 =", grav.parameters.epsilon_squared)
+                            print "Gravity softening radius**2 =", grav.parameters.epsilon_squared
                         #if (with_se): se = SeBa()
                         if (test_unique_tags):
 
                             test_tags(tags_keys)
 
-                        print("Num particles in grav:", len(grav.particles))
+                        print "Num particles in grav:", len(grav.particles)
 
                         if (tree_exists):
-                            print("Num particles in tree:", len(tree.particles))
+                            print "Num particles in tree:", len(tree.particles)
 
                         num_particles = check_particles
 
@@ -3214,7 +2629,7 @@ try:
                             if (with_multiples):
                                 check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                             else:
-                                check_sanity(hydro, grav, stars)
+                                check_sanity(hydro, grav)
 
                         #if (with_ph4):
                         #    grav.parameters.begin_time=hydro_time
@@ -3225,11 +2640,11 @@ try:
                             #grav.parameters.begin_time=hydro_time # For Hermite.
                             #grav.set_begin_time(hydro_time)
                         #    pass
-                        print("Current simulation time:", t)
+                        print "Current simulation time:", t
                         hydro_time = hydro.get_time()
                         grav_time  = grav.get_time()
-                        print("Hydro time:", hydro_time)
-                        print("Grav time:", grav_time)
+                        print "Hydro time:", hydro_time
+                        print "Grav time:", grav_time
 
 
                     # Lets just try to evolve it before we add any particles above ^^^^
@@ -3260,45 +2675,51 @@ try:
                             fracKin = -1.0 #0.22734 #1.0
                             inj_mass = (5.*1.989e33) | units.g
 
-                            print("BOOOOOOOMMMMMMM!")
+                            print "BOOOOOOOMMMMMMM!"
                             dt = hydro.energy_injection(tot_e, fracKin, inj_mass, inj_x, inj_y, inj_z)
-                            print("Timestep after SN is =", dt)
+                            print "Timestep after SN is =", dt
                             t = t_old + dt
-                            print("Now evolving until t =", t)
+                            print "Now evolving until t =", t
                             do_sn_once = False
                             hydro.write_chpt()
-                        print("I'm about to evolve hydro without evolving grav for :" , dt, "to evolve to t =", t)
+                        print "I'm about to evolve hydro without evolving grav for :" , dt, "to evolve to t =", t
 
                         with Timer(verbose=True) as hydro_timer:
                             hydro.evolve_model(t) # Can't use i*dt if dt can get smaller each timestep.
 
                         if (first_step): first_step = False
-
-
                     # Note that if you are trying to output on nstep, Flash
                     # assumes this is checked during the Driver_evolveFlash loop
                     # and this won't output files properly. It will work
                     # properly if you use output time parameters, however.
-                        hy_pltnum = hydro.IO_out('pltpart')
-                        hy_chknum = hydro.IO_out('chk')
+                        #hydro.IO_out('all')
+                        hydro.IO_out('pltpart')
+                        hydro.IO_out('chk')
 
-                        # If a checkpoint file was written,
-                        # then store the list of stars up for creation.
-                        if (hy_chknum != chknum):  # allow for possibility of rolling chk
-                            write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
-                            chknum = hy_chknum
+                        # Check if a checkpoint file was written,
+                        # if yes, then store the list of stars up for
+                        # creation.
 
-                        # wrote plt file
-                        if (hy_pltnum > pltnum):
-                            pltnum = hy_pltnum
-                        elif (hy_pltnum < pltnum):
-                            raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, pltnum))
+                        new_chpt_file = glob.glob(output_dir+'/*_chk_*')
+                        new_chpt_file.sort()
+                        new_chpt_file = new_chpt_file[-1][-4:]
 
-                    print("Current simulation time:", t)
+                        #print "new_chk, old_chk =", new_chpt_file, old_chpt_file
+                        if (new_chpt_file > old_chpt_file):
+                            print "Writing out all masses to all_masses.pickle"
+                            with open(output_dir+'/all_masses'+new_chpt_file+'.pickle', 'wb') as f:
+                                pickle.dump(all_masses, f)
+                            old_chpt_file = new_chpt_file
+                            print "Writing out random state to rnd_state.pickle"
+                            rnd_state = np.random.get_state()
+                            with open(output_dir+'/rnd_state'+new_chpt_file+'.pickle', 'wb') as f:
+                                pickle.dump(rnd_state, f)
+
+                    print "Current simulation time:", t
                     hydro_time = hydro.get_time()
                     grav_time  = grav.get_time()
-                    print("Hydro time:", hydro_time)
-                    print("Grav time:", grav_time)
+                    print "Hydro time:", hydro_time
+                    print "Grav time:", grav_time
 
                     #hydro.make_stars(made_stars)
 
@@ -3307,11 +2728,11 @@ try:
                     #time_in_grav  = time_in_grav + grav_timer.secs
                     total_time    = total_time + loop_timer.secs
 
-                    print("Total time in Flash = %f s" %time_in_hydro)
-                    print("Total time in N-body = %f s" %time_in_grav)
-                    print("Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro))
+                    print "Total time in Flash = %f s" %time_in_hydro
+                    print "Total time in N-body = %f s" %time_in_grav
+                    print "Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro)
 
-                    log.write(str(i)+"\t \t"+"{0:.2e}".format(total_time)+
+                    log.write(`i`+"\t \t"+"{0:.2e}".format(total_time)+
                       "\t \t"+"{0:.2e}".format(time_in_hydro)+
                       "\t \t" +"{0:.2e}".format(time_in_grav)
                       + "\t \t" + "{0:.2e}".format(total_time - time_in_grav - time_in_hydro))
@@ -3326,14 +2747,13 @@ try:
 
             with Timer(verbose=True) as loop_timer:
 
-                print("Starting the gravity bridge.")
+                print "Starting the gravity bridge."
 
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
                 #if (write_psets):
@@ -3376,8 +2796,8 @@ try:
                     #    print "Using star_age instead of stars.age array."
                     #stars.age = star_age
 
-                    print("Doing stellar evolution.")
-                    if (debug_se): print("min star age = ", star_age.min())
+                    print "Doing stellar evolution."
+                    if (debug_se): print "min star age = ", star_age.min()
 
                     #print "Number of particles reported before SE stuff =", num_particles
 
@@ -3388,14 +2808,14 @@ try:
                         #if (stars.age[part].value_in(units.yr) < 1.0): stars.age[part] = 1.0 | units.yr
                         #star_radius, star_temp, star_lum = stellar_properties(star_mass.in_(units.MSun),z)
                         if (debug_se):
-                            print("this star initial mass before seba =", stars.initial_mass[part].in_(units.MSun))
-                            print("this star mass before seba =", stars.mass[part].in_(units.MSun))
-                            print("this star type before seba =", stars.stellar_type[part], stars.stellar_type[part].value_in(units.stellar_type))
-                            print("this star age =", star_age[part].value_in(units.Myr))
+                            print "this star initial mass before seba =", stars.initial_mass[part].in_(units.MSun)
+                            print "this star mass before seba =", stars.mass[part].in_(units.MSun)
+                            print "this star type before seba =", stars.stellar_type[part], stars.stellar_type[part].value_in(units.stellar_type)
+                            print "this star age =", star_age[part].value_in(units.Myr)
 
                         # Do stellar evolution unless I already went SN, in which case skip me.
                         if (13 <=  stars.stellar_type[part].value_in(units.stellar_type) <= 15):
-                            print("Skipping this star that already went SN, current stellar type =", stars.stellar_type[part])
+                            print "Skipping this star that already went SN, current stellar type =", stars.stellar_type[part]
                             continue
                         else:
                             # Note here we want to use the SE code on the initial mass of the star, not the current mass.
@@ -3404,15 +2824,15 @@ try:
                             star_type[part] = st_type
                             #stars.stellar_type[part] = st_type
                         if (debug_se):
-                            print("this star mass after seba =", st_mass)
-                            print("this star type after seba =", st_type, st_type.value_in(units.stellar_type))
-                            print("this star evolve time in seba =", star_age[part].value_in(units.Myr), st_evol_time)
-                            print("this star temp after seba =", star_temp)
-                            print("this star lum after seba =", star_lum)
+                            print "this star mass after seba =", st_mass
+                            print "this star type after seba =", st_type, st_type.value_in(units.stellar_type)
+                            print "this star evolve time in seba =", star_age[part].value_in(units.Myr), st_evol_time
+                            print "this star temp after seba =", star_temp
+                            print "this star lum after seba =", star_lum
 
                         if (with_massloss and (massloss_method == 'seba' or st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun))):
-                            if (debug_se): print("using seba method")
-                            dm_dt[part] = ((stars.mass[part]-st_mass)/dt).in_(units.g / units.s)
+                            if (debug_se): print "using seba method"
+                            dm_dt[part] = ((stars.mass[part]-st_mass)/st_time).in_(units.g / units.s)
                             # If below the mass cutoff for feedback, no wind present.
                             if (st_mass.value_in(units.MSun) < min_mass.value_in(units.MSun)):
                                 vterm[part] = 0.0 | units.km/units.s
@@ -3424,7 +2844,7 @@ try:
                         # Shouldn't Lietherer and Puls calculations use the old mass (stars[part].mass)?
                         elif (with_massloss and massloss_method == 'leit'):
                             # From Leitherer et. al. 1992.
-                            if (debug_se): print("using Leither method")
+                            if (debug_se): print "using Leither method"
                             dm_dt[part] = 10**(-24.06 + 2.45 * np.log10(star_lum.value_in(units.LSun))
                                         -1.10*np.log10(stars[part].mass.value_in(units.MSun))
                                         + 1.31*np.log10(star_temp.value_in(units.K))) | units.MSun/units.yr
@@ -3433,24 +2853,26 @@ try:
                                         + 0.64*np.log10(star_temp.value_in(units.K))) | units.km/units.s
                         elif (with_massloss and massloss_method == 'puls'):
                             # Kudritzki and Puls winds, see Kudritzki & Puls 2000, Markova & Puls 2004, 2008 and Vink 2000
-                            if (debug_se): print("using Kudritzki method")
+                            if (debug_se): print "using Kudritzki method"
                             star_wind   = stellar_wind(star_temp, stars[part].mass, star_lum, star_radius)
                             dm_dt[part] = star_wind.dm_dt.as_quantity_in(units.g / units.s)
                             vterm[part] = star_wind.vterm.as_quantity_in(units.cm / units.s)
                         elif (with_massloss and (massloss_method == 'test')):
-                            if (debug_se): print("using constant wind mass loss and velocity from Weaver.")
+                            if (debug_se): print "using constant wind mass loss and velocity from Weaver."
                             dm_dt[part] = 1e-6 | units.MSun / units.yr
                             vterm[part] = 2e3 | units.km / units.s
                         else:
-                            if (debug_se): print("error: no method selected")
+                            if (debug_se): print "error: no method selected"
                             dm_dt[part] = 0.0 | units.g / units.s
                             vterm[part] = 0.0 | units.cm / units.s
+                            st_time, st_mass, star_radius, star_lum, star_temp, st_evol_time, st_type = se.evolve_star(stars.initial_mass[part], 0.001 | units.yr, 0.02)
+                            star_type[part] = st_type
 
                         # If with energy injection, check to see if anything went supernova. If so, inject 10^51 ergs of
                         # energy into the grid
 
                         if (13 <=  st_type.value_in(units.stellar_type) <= 15):
-                            print("A star just went SN on you. Should be calling that SN code now!")
+                            print "A star just went SN on you. Should be calling that SN code now!"
 
                         if (with_sn):
 
@@ -3463,11 +2885,11 @@ try:
                                 fracKin = -1.0 #0.22734 #1.0
                                 inj_mass = (5.*1.989e33) | units.g
 
-                                print("BOOOOOOOMMMMMMM!")
+                                print "BOOOOOOOMMMMMMM!"
                                 dt = hydro.energy_injection(tot_e, fracKin, inj_mass, inj_x, inj_y, inj_z)
-                                print("Timestep after SN is =", dt)
+                                print "Timestep after SN is =", dt
                                 #t = t_old + dt
-                                print("Now evolving until t =", t+dt)
+                                print "Now evolving until t =", t+dt
                                 do_sn_once = False
                                 #hydro.IO_out('pltpart')
 
@@ -3479,7 +2901,7 @@ try:
 
                                 if (13 <=  st_type.value_in(units.stellar_type) <= 15):
 
-                                    print("Going supernova at", stars.x[part], stars.y[part], stars.z[part])
+                                    print "Going supernova at", stars.x[part], stars.y[part], stars.z[part]
 
                                     inj_x = stars.x[part]
                                     inj_y = stars.y[part]
@@ -3489,17 +2911,16 @@ try:
                                     # Here the injected mass is the current mass minus the remnant mass.
                                     inj_mass = (star_mass[part] - st_mass).in_(units.g)
                                     #inj_mass = (stars.mass[part] - st_mass).in_(units.g)
-                                    if (inj_mass.value_in(units.MSun) > 15.0):
-                                        # expected upper limit for SeBa tracks; see
-                                        # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                                        print("[bridge:SN]: WARNING! SN MASS {:g} > 15 MSun!".format(inj_mass.value_in(units.MSun)))
-                                        inj_mass = 15.0 | units.MSun
-                                    print("Injection mass is", inj_mass.in_(units.MSun))
+                                    # This should never be more than 10 solar masses though.
+                                    if (inj_mass.value_in(units.MSun) > 10.0):
+                                        print "[bridge:SN]: WARNING! SN MASS > 10 MSun!"
+                                        inj_mass = 10.0 | units.MSun
+                                    print "Injection mass is", inj_mass.in_(units.MSun)
 
                                     dt =  min(dt.value_in(units.s), hydro.energy_injection(tot_e, fracKin, inj_mass, inj_x, inj_y, inj_z).value_in(units.s)) | units.s
-                                    print("Timestep after SN is =", dt)
+                                    print "Timestep after SN is =", dt
                                     #t = t_old + dt
-                                    print("Now evolving until t =", t + dt)
+                                    print "Now evolving until t =", t + dt
 
                                     # Set proper mass for remnant (SeBa does fine for this).
                                     star_mass[part] = st_mass
@@ -3531,7 +2952,7 @@ try:
 
                         if ((star_mass[part].in_(units.MSun) >= min_mass) and not (13 <=  st_type.value_in(units.stellar_type) <= 15)):
 
-                            print("Found massive star, star mass =", star_mass[part].in_(units.MSun))
+                            print "Found massive star, star mass =", star_mass[part].in_(units.MSun)
 
                             part_inds.append(part)
 
@@ -3569,8 +2990,6 @@ try:
                                 #print sig
                                 eion[part] = (avg_E | units.eV) - (13.6 |units.eV) #2.0 | units.eV #6.0 | units.eV
                                 sigh[part] = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
-                                # Calculate total number of photons from stellar surface with stellar radius.
-                                # Since flux is interpolated from OSTAR2002, no extra factor of pi needed.
                                 nphot[part] = (flux*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
 
@@ -3607,99 +3026,78 @@ try:
                                     epe[part] = avg_E | units.eV # should be around 8 eV
                                     #sigh = sig | units.cm**2.0 #6.3e-18 | units.cm**2.0
                                     # Calculate total number of photons from stellar surface with stellar radius.
-                                    # Extra factor of pi from solid angle integration of blackbody curve.
-                                    npe[part] = (np.pi*(per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
+                                    npe[part] = ((per_ph | units.cm**-2*units.s**-1)*4*np.pi*star_radius**2.0).as_quantity_in(units.s**-1.0) #5e48 | units.s**(-1.0)
 
-                        if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
-                            # Note other evolutionary things besides winds could have reduced the stars mass.
-                            star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
+
+                        if (with_massloss):
+                            if ((dm_dt[part]*dt).value_in(units.MSun) > 0.0):
+                                if (st_type.value_in(units.stellar_type) == 1):
+                                    star_mass[part] = ((stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
+                                # Note other evolutionary things besides winds could have reduced the stars mass.
+                                else:
+                                    star_mass[part] = min(st_mass.value_in(units.MSun), (stars.mass[part] - dm_dt[part]*dt).value_in(units.MSun)) | units.MSun
+                            else:
+                                star_mass[part] = st_mass
                         else:
-                            star_mass[part] = st_mass
+                            star_mass[part] = stars.mass[part]
 
                         if (with_multiples):
                             # Cycle through the leaves and check if this particular star
                             # is in the leaves in multiples.
-                            for root, tree in mult_grav.root_to_tree.items():
+                            for root, tree in mult_grav.root_to_tree.iteritems():
                                 leaves = tree.get_leafs_subset()
                                 if stars[part] in leaves:
                                     if (debug_multiples and debug_se):
-                                        print("Star evolve time =", stars.age[part])
-                                        print("Before update from stars to multiples leaves.")
-                                        print("Stars mass =", stars[part].mass.in_(units.MSun))
-                                        print("SE returned mass =", star_mass[part].in_(units.MSun))
-                                        print("Leaf mass =", leaves.mass.in_(units.MSun))
-                                        print("Root mass =", root.mass.in_(units.MSun))
-                                        print("Star pos =", stars[part].position.in_(units.cm))
-                                        print("Leaf pos =", leaves.position.in_(units.cm))
-                                        print("Root pos =", root.position.in_(units.cm))
-                                        print("Star vel =", stars[part].velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
+                                        print "Star evolve time =", stars.age[part]
+                                        print "Before update from stars to multiples leaves."
+                                        print "Stars mass =", stars[part].mass.in_(units.MSun)
+                                        print "SE returned mass =", star_mass[part].in_(units.MSun)
+                                        print "Leaf mass =", leaves.mass.in_(units.MSun)
+                                        print "Root mass =", root.mass.in_(units.MSun)
                                         sys.stdout.flush()
                                     # If yes, then set the mass of the star to the updated to the new mass from
                                     # the SE code. This should be possible by using the as_particle_in_set(leaves)
                                     # method on the stars particle. We'll check with print statements.
                                     stars[part].as_particle_in_set(leaves).mass = star_mass[part]
+                                    # If the leaf mass changed, so does the com particle's properties.
+                                    update_roots_from_leaves(mult_grav, grav) # If works, move outside se loop!
 
                                     if (debug_multiples and debug_se):
-                                        print("After update from stars to multiples leaves.")
-                                        print("Stars mass =", stars[part].mass.in_(units.MSun))
-                                        print("SE returned mass =", star_mass[part].in_(units.MSun))
-                                        print("Leaf mass =", leaves.mass.in_(units.MSun))
-                                        print("Root mass =", root.mass.in_(units.MSun))
-                                        print("Star pos =", stars[part].position.in_(units.cm))
-                                        print("Leaf pos =", leaves.position.in_(units.cm))
-                                        print("Root pos =", root.position.in_(units.cm))
-                                        print("Star vel =", stars[part].velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
+                                        print "After update from stars to multiples leaves."
+                                        print "Stars mass =", stars[part].mass.in_(units.MSun)
+                                        print "SE returned mass =", star_mass[part].in_(units.MSun)
+                                        print "Leaf mass =", leaves.mass.in_(units.MSun)
+                                        print "Root mass =", root.mass.in_(units.MSun)
                                         sys.stdout.flush()
-                                        # Don't forget at the end of this we need to update the masses
-                                        # in multiples and the gravity code using the proper root mass
-                                        # if that didn't happen automatically.
+                                    # Don't forget at the end of this we need to update the masses
+                                    # in multiples and the gravity code using the proper root mass
+                                    # if that didn't happen automatically.
 
-                    # If the leaf mass changed, so does the com particle's properties.
-                    if (with_multiples):
-                        update_roots_from_leaves(mult_grav, grav)
-                        if (debug_multiples):
-                            # Now check the changed particles.
-                            check_root_and_leaves(mult_grav, grav, stars)
-                            if (debug_se):
-                                for st, st_mass in zip(stars, star_mass):  # reusing st_mass...
-                                    for root, tree in mult_grav.root_to_tree.items():
-                                        leaves = tree.get_leafs_subset()
-                                        if st in leaves:
-                                            print("Star evolve time =", st.age)
-                                            print("After update from multiples leaves to root.")
-                                            print("Stars mass =", st.mass.in_(units.MSun))  # beware st.mass != st_mass
-                                            print("SE returned mass =", st_mass.in_(units.MSun))
-                                            print("Leaf mass =", leaves.mass.in_(units.MSun))
-                                            print("Root mass =", root.mass.in_(units.MSun))
-                                            print("Star pos =", st.position.in_(units.cm))
-                                            print("Leaf pos =", leaves.position.in_(units.cm))
-                                            print("Root pos =", root.position.in_(units.cm))
-                                            print("Star vel =", st.velocity.in_(units.km/units.s))
-                                            print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                            print("Root vel =", root.velocity.in_(units.km/units.s))
-                                            sys.stdout.flush()
-
+                                    #stars_to_mult.copy()
+                                    #if (debug_multiples):
+                                    #    print "After stars_to_mult.copy()."
+                                    #    print "Stars mass =", stars[part].mass.in_(units.MSun)
+                                    #    print "SE returned mass =", star_mass[part].in_(units.MSun)
+                                    #    print "Leaf mass =", leaves.mass.in_(units.MSun)
+                                    #    print "Root mass =", root.mass.in_(units.MSun)
+                                    #    sys.stdout.flush()
                     # Are there any massive stars?
 
                     if not (part_inds==[]):
 
                         if (use_radiation):
 
-                            print(tags_keys[part_inds,0])
-                            print("Stellar Mass and N photons=", star_mass[part_inds], nphot[part_inds])
-                            print("Eion (eV), SigH=", eion[part_inds], sigh[part_inds])
+                            print  tags_keys[part_inds,0]
+                            print "Stellar Mass and N photons=", star_mass[part_inds], nphot[part_inds]
+                            print "Eion (eV), SigH=", eion[part_inds], sigh[part_inds]
                             hydro.set_particle_nion(tags_keys[part_inds,0], nphot[part_inds])
                             hydro.set_particle_eion(tags_keys[part_inds,0], eion[part_inds].as_quantity_in(units.erg))
                             hydro.set_particle_sigh(tags_keys[part_inds,0], sigh[part_inds])
 
 
                         if (pe_heat):
-                            print("Npe photons=", npe[part_inds])
-                            print("Eion PE (eV), SigD=", epe[part_inds], sigpe[part_inds])
+                            print "Npe photons=", npe[part_inds]
+                            print "Eion PE (eV), SigD=", epe[part_inds], sigpe[part_inds]
                             hydro.set_particle_npep(tags_keys[part_inds,0], npe[part_inds])
 
                             # Set average energy of PE photon
@@ -3710,59 +3108,57 @@ try:
 
                         if (with_winds): # and (star_mass.in_(units.MSun) >= 10.0 | units.MSun)):
 
-                            #print "Setting wind with dm_dt =", dm_dt[np.where(dm_dt.value_in(units.MSun / units.yr) > 0.0)].in_(units.MSun / units.yr)
-                            #print "Setting wind velocity =", vterm[np.where(vterm.value_in(units.km / units.s) > 0.0)].in_(units.km / units.s)
+                            print "Setting wind with dm_dt =", dm_dt[np.where(dm_dt.value_in(units.MSun / units.yr) > 0.0)].in_(units.MSun / units.yr)
+                            print "Setting wind velocity =", vterm[np.where(vterm.value_in(units.km / units.s) > 0.0)].in_(units.km / units.s)
                             hydro.set_particle_wind_mass(tags_keys[part_inds,0], dm_dt[part_inds])
                             hydro.set_particle_wind_vel(tags_keys[part_inds,0], vterm[part_inds])
                             #print "mass loss should be ", dm_dt[part_inds].in_(units.MSun/units.s)*dt.in_(units.s), "for star of mass ", stars.mass[part_inds]
 
-                    #if (made_massive_star):
-                        #print "Massive star made, checking if dt should be reduced. Current dt is", dt
-                        #dt = min(dt.value_in(units.s), 0.3*smallest_dx.value_in(units.cm)/np.max(vterm.value_in(units.cm/units.s))) | units.s
-                        #print "dt now is", dt
+                #if (made_massive_star):
+                    #print "Massive star made, checking if dt should be reduced. Current dt is", dt
+                    #dt = min(dt.value_in(units.s), 0.3*smallest_dx.value_in(units.cm)/np.max(vterm.value_in(units.cm/units.s))) | units.s
+                    #print "dt now is", dt
 
-                    # Remove any mass loss due to winds and update to this
-                    # mass. Note this assumes steps are relatively small
-                    # in the mass loss rate of stars, so that graviationally
-                    # we can use the mass after all the wind mass loss
-                    # has occcured. Otherwise we'd have to average
-                    # mass loss and keep up with old and new masses and
-                    # it just gets ugly.
-                    stars.mass = star_mass # - dm_dt*dt
-                    stars.age  = stars.age + dt
-                    stars.stellar_type = star_type
-                    #print "new star mass = ", stars.mass
+                # Remove any mass loss due to winds and update to this
+                # mass. Note this assumes steps are relatively small
+                # in the mass loss rate of stars, so that graviationally
+                # we can use the mass after all the wind mass loss
+                # has occcured. Otherwise we'd have to average
+                # mass loss and keep up with old and new masses and
+                # it just gets ugly.
+                stars.mass = star_mass # - dm_dt*dt
+                stars.age  = stars.age + dt
+                stars.stellar_type = star_type
+                #print "new star mass = ", stars.mass
 
-                    # Note when using the multiples module we can't copy stars to grav
-                    # because the stars are all the particles (including leaves) and only
-                    # the roots are in grav.
-                    # Instead we should modify the values in multiples directly such that:
-                    # 1. Leaves have updated mass
-                    # 2. Roots have updated mass and velocity.
-                    # 3. We then need to update the radii of all the particles (to update the root radii).
-                    # 4. We then copy from multiples roots to grav code.
+                # Note when using the multiples module we can't copy stars to grav
+                # because the stars are all the particles (including leaves) and only
+                # the roots are in grav.
+                # Instead we should modify the values in multiples directly such that:
+                # 1. Leaves have updated mass
+                # 2. Roots have updated mass and velocity.
+                # 3. We then need to update the radii of all the particles (to update the root radii).
+                # 4. We then copy from multiples roots to grav code.
 
+                if (with_multiples):
+                    mult_grav.channel_from_memory_to_code.copy()
+                    mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+                else:
+                    stars_to_grav.copy()
+                #stars_to_grav.copy_attributes(["mass"])
+                hydro.set_particle_mass(tags_keys[:,0], stars.mass)
+
+                if (insane):
                     if (with_multiples):
-                        pass
-                        #mult_grav.channel_from_memory_to_code.copy()
-                        #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+                        check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        stars_to_grav.copy()
-                    #stars_to_grav.copy_attributes(["mass"])
-                    hydro.set_particle_mass(tags_keys[:,0], stars.mass)
-
-                    if (insane):
-                        if (with_multiples):
-                            check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
-                            check_root_and_leaves(mult_grav, grav, stars)
-                        else:
-                            check_sanity(hydro, grav, stars)
-                    if (type_insane): check_stellar_type(stars)
+                        check_sanity(hydro, grav)
+                if (type_insane): check_stellar_type(stars)
 
 
                 # Set the bridge timestep.
                 t = t + dt
-                print("I'm about to evolve hydro and grav for :" , dt, "to evolve to t =", t)
+                print "I'm about to evolve hydro and grav for :" , dt, "to evolve to t =", t
 
                 #if (np.abs(hydro.get_particle_mass(tags_keys[:,0]).value_in(units.MSun) - grav.particles.mass.value_in(units.MSun)).any() > 1.0):
 
@@ -3778,7 +3174,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
                 #print "Saving hydro positions"
@@ -3786,101 +3182,80 @@ try:
 
                 #print "Before first kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
-                if (with_bridge):
+                print "First kick."
 
-                    print("First kick.")
-                    step = 1
-                    if (gridChanged):
-                        step = 2
-                        gridChanged = False
+                step = 1
 
-                    bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
+                if (gridChanged):
 
-                    #print "Grav vel before update."
-                    #print grav.particles.velocity
+                    step = 2
+                    gridChanged = False
 
-                    if (with_multiples):
-                        # First copy updated velocities from stars to grav for
-                        # all particles in grav that are also in stars
-                        # (i.e. things that are leaves in grav and stars).
-                        stars_to_grav.copy_attributes(["vx", "vy", "vz"])
-                        mult_grav.channel_from_code_to_memory.copy()
-                        # Now check for any particle that is not in grav (that is
-                        # a leaf in multiples but replaced by a root particle in grav).
-                        # Update the velocity of the leaves with that in stars and copy
-                        # this over to grav.
-                        for st in stars:
-                            # Cycle through the leaves and check if this particular star
-                            # is in the leaves in multiples.
-                            for root, tree in mult_grav.root_to_tree.items():
-                                leaves = tree.get_leafs_subset()
-                                if st in leaves:
-                                    if (debug_multiples):
-                                        print("After kick 1.")
-                                        print("Star vel =", st.velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
-                                        sys.stdout.flush()
-                                    # If yes, then set the mass of the star to the updated to the new mass from
-                                    # the SE code. This should be possible by using the as_particle_in_set(leaves)
-                                    # method on the stars particle. We'll check with print statements.
-                                    st.as_particle_in_set(leaves).velocity = st.velocity
-                                    #com_vel = 0.0
-                                    #for leaf in leaves:
-                                    #    com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
-                                    #com_vel = (com_vel/(leaves.mass.sum()).value_in(units.MSun)) | units.km/units.s
-                                    #root.velocity = com_vel
-                                    #root.velocity = (np.array([l.mass*l.velocity for l in leaves]).sum()/leaves.mass.sum()).in_(units.km/units.s)
-                                    #root.velocity = (leaves.mass[:,np.newaxis]*leaves.velocity)/leaves.mass.sum()
-                                    if (debug_multiples):
-                                        print("After kick 1.")
-                                        print("Star vel =", st.velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
-                                        sys.stdout.flush()
-                                    # Don't forget at the end of this we need to update the velocity
-                                    # in multiples and the gravity code using the proper root mass
-                                    # if that didn't happen automatically.
+                bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
 
-                        # Update pset shouldn't be needed now that we use update_roots_from_leaves and the above code.
-                        #if (debug_multiples):
-                        #    "Trying using update_pset."
-                        #update_psetA_from_psetB(mult_grav.stars, stars)
+                #print "Grav vel before update."
+                #print grav.particles.velocity
 
-                        update_roots_from_leaves(mult_grav, grav)
-                        if (debug_multiples):
-                            print("First kick after update_roots_from_leaves.")
-                            check_root_and_leaves(mult_grav, grav, stars)
-                            for st in stars:
-                                # Cycle through the leaves and check if this particular star
-                                # is in the leaves in multiples.
-                                for root, tree in mult_grav.root_to_tree.items():
-                                    leaves = tree.get_leafs_subset()
-                                    if st in leaves:
-                                        if (debug_multiples):
-                                            print("Star vel =", st.velocity.in_(units.km/units.s))
-                                            print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                            print("Root vel =", root.velocity.in_(units.km/units.s))
-                                            sys.stdout.flush()
-                        #mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
-                        #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
-                    else:
-                        stars_to_grav.copy_attributes(["vx", "vy", "vz"])
-                        #stars_to_grav.copy()
+                if (with_multiples):
+                    # First copy updated velocities from stars to grav for
+                    # all particles in grav that are also in stars.
+                    stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+                    mult_grav.channel_from_code_to_memory.copy()
+                    # Now check for any particle that is not in grav (that is
+                    # a leaf in multiples but replaced by a root particle in grav).
+                    # Update the velocity of the leaves with that in stars and copy
+                    # this over to grav.
+                    for st in stars:
+                        # Cycle through the leaves and check if this particular star
+                        # is in the leaves in multiples.
+                        for root, tree in mult_grav.root_to_tree.iteritems():
+                            leaves = tree.get_leafs_subset()
+                            if st in leaves:
+                                #if (debug_multiples):
+                                    #print "Star vel =", st.velocity.in_(units.km/units.s)
+                                    #print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
+                                    #print "Root vel =", root.velocity.in_(units.km/units.s)
+                                    #sys.stdout.flush()
+                                # If yes, then set the mass of the star to the updated to the new mass from
+                                # the SE code. This should be possible by using the as_particle_in_set(leaves)
+                                # method on the stars particle. We'll check with print statements.
+                                st.as_particle_in_set(leaves).velocity = st.velocity
+                                #com_vel = 0.0
+                                #for leaf in leaves:
+                                #    com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
+                                #com_vel = (com_vel/(leaves.mass.sum()).value_in(units.MSun)) | units.km/units.s
+                                #root.velocity = com_vel
+                                #root.velocity = (np.array([l.mass*l.velocity for l in leaves]).sum()/leaves.mass.sum()).in_(units.km/units.s)
+                                #root.velocity = (leaves.mass[:,np.newaxis]*leaves.velocity)/leaves.mass.sum()
+                                #if (debug_multiples):
+                                    #print "Star vel =", st.velocity.in_(units.km/units.s)
+                                    #print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
+                                    #print "Root vel =", root.velocity.in_(units.km/units.s)
+                                    #sys.stdout.flush()
+                                # Don't forget at the end of this we need to update the velocity
+                                # in multiples and the gravity code using the proper root mass
+                                # if that didn't happen automatically.
 
-                    print("Grav updated.")
-                    #print grav.particles.velocity
+                    update_roots_from_leaves(mult_grav, grav)
+                    mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
+                    mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+                else:
+                    stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+                    #stars_to_grav.copy()
 
-                    #print "After first kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
+                print "Grav updated."
+                #print grav.particles.velocity
 
-                    #print "Checking hydro positions"
-                    #print old_pos - hydro.get_particle_position(tags_keys[:,0]).in_(units.m)
+                #print "After first kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
+
+                #print "Checking hydro positions"
+                #print old_pos - hydro.get_particle_position(tags_keys[:,0]).in_(units.m)
 
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
             ### Get the location of the particles so that we can get the
@@ -3950,19 +3325,19 @@ try:
                     #print "Masses not equal before evolve, stopping code."
                     #sys.exit()
 
-                #if (with_multiples and insane):
-                #    print "Storing the original stars and mult_grav.star."
-                #    oldstars = stars.copy_to_new_particles()
-                #    oldmultstars = mult_grav.stars.copy_to_new_particles()
+                if (with_multiples and insane):
+                    print "Storing the original stars and mult_grav.star."
+                    oldstars = stars.copy_to_new_particles()
+                    oldmultstars = mult_grav.stars.copy_to_new_particles()
 
-                #    print "Checking originals vs originals for repeats (should ALL be repeats!)"
-                #    oldvnew_position(stars, oldstars)
-                #    oldvnew_position(mult_grav.stars, oldmultstars)
+                    print "Checking originals vs originals for repeats (should ALL be repeats!)"
+                    oldvnew_position(stars, oldstars)
+                    oldvnew_position(mult_grav.stars, oldmultstars)
 
 
             ### Evolve models.
 
-                print("Evolving models.")
+                print "Evolving models."
 
             #    request1 = hydro.evolve_model.async(t)
             #    request2 = grav.evolve_model.async(t)
@@ -3980,12 +3355,16 @@ try:
             #    pool.wait()
 
             #    pool.waitall()
-                print("Before evolve, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s))
-                print("Before evolve, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s))
-                if (with_multiples and insane):
-                    print("Before evolve, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s))
+                print "Before evolve, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s)
+                print "Before evolve, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
+                if (with_multiples):
+                    print "Before evolve, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s)
 
-                print("Calling grav.")
+                if (write_psets):
+                    stars.dt = dt
+                    write_set_to_file(stars, pdir+'/stars'+`i`+'.amuse')
+
+                print "Calling grav."
                 with Timer(verbose=True) as grav_timer:
                     if (with_multiples):
                         mult_grav.evolve_model(t)
@@ -3995,15 +3374,15 @@ try:
                 grav_evolve_time = grav.get_time()
 
                 if (t > grav_evolve_time):
-                    print("WARNING: grav didn't evolve properly. Try again?")
-                    print("Calling grav.")
+                    print "WARNING: grav didn't evolve properly. Try again?"
+                    print "Calling grav."
                     with Timer(verbose=True) as grav_timer:
                         if (with_multiples):
                             mult_grav.evolve_model(t)
                         else:
                             grav.evolve_model(t)
 
-                print("Calling hydro.")
+                print "Calling hydro."
                 with Timer(verbose=True) as hydro_timer:
                     hydro.evolve_model(t)
 
@@ -4016,8 +3395,8 @@ try:
 
                 if (time_diff > 1e4):
 
-                    print("Warning: Grav is behind Hydro by:", time_diff)
-                    print("Trying again to evolve Grav to Hydro time.")
+                    print "Warning: Grav is behind Hydro by:", time_diff
+                    print "Trying again to evolve Grav to Hydro time."
                     with Timer(verbose=True) as grav_timer:
                         if (with_multiples):
                             mult_grav.evolve_model(hydro_time)
@@ -4030,99 +3409,33 @@ try:
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, kill=False, with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars, kill=False)
                     else:
-                        check_sanity(hydro, grav, stars, kill=False)
+                        check_sanity(hydro, grav, kill=False)
 
-                print("After evolve / before update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s))
-                print("After evolve / before update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s))
+                print "After evolve / before update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s)
+                print "After evolve / before update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
                 if (with_multiples):
-                    print("After evolve / before update, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s))
-
-
-                if (with_multiples):
-                    if (debug_multiples):
-                        print("###########################")
-                        print("Before grav_to_stars")
-                        print("###########################")
-                        check_root_and_leaves(mult_grav, grav, stars, kill=False)
-                # Always call this now, followed by updating any stars that
-                # from leaves in multiples if they are present.
-                grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
+                    print "After evolve / before update, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s)
 
                 ### Update the positions and velocities in stars from gravity.
                 #grav_to_stars.copy()
-
                 if (with_multiples):
-                    ### Lets force updating (again) from the grav to the
-                    ### _inmemory_particles just to be sure.
-                    #mult_grav.channel_from_code_to_memory.copy()
-
-                    if (debug_multiples):
-                        print("###########################")
-                        print("Before update_leaves_pos_vel")
-                        print("###########################")
-                        check_root_and_leaves(mult_grav, grav, stars, kill=False)
-                    mult_grav.update_leaves_pos_vel()
-
-                    if (debug_multiples):
-                        print("###########################")
-                        print("Before any update to stars.")
-                        print("###########################")
-                        check_root_and_leaves(mult_grav, grav, stars, kill=False)
-
-                    mult_grav.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], stars)
-                    if (debug_multiples):
-                        print("###########################")
-                        print("After copy_values_of_attributes.")
-                        print("###########################")
-                        check_root_and_leaves(mult_grav, grav, stars, kill=True)
-
-
-                    #update_stars_from_leaves(mult_grav, grav, stars)
-                    #if (debug_multiples):
-                    #    print "###########################"
-                    #    print "After update_stars_from_leaves"
-                    #    print "###########################"
-                    #    check_root_and_leaves(mult_grav, grav, stars, kill=False)
-
                     #mult_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
-                    #update_psetA_from_psetB(stars,mult_grav.stars,debug=True)
-                    #if (debug_multiples):
-                    #    print "###########################"
-                    #    print "After update_psetA_from_psetB."
-                    #    print "###########################"
-                    #    check_root_and_leaves(mult_grav, grav, stars, kill=False)
-
-
-                    #mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
-                    #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+                    #mult_grav.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], stars)
+                    update_psetA_from_psetB(stars,mult_grav.stars,debug=True)
+                    mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
+                    mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
                 else:
                     grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
 
-                # Lets look for differences in the particle positions or velocities
-                # in the two codes.
-
-                if (insane):
-                    if (with_multiples):
-                        check_sanity(hydro, mult_grav, stars, kill=False,  with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars)
-                    else:
-                        check_sanity(hydro, grav, stars)
-                if (type_insane): check_stellar_type(stars)
-
-                if (test_unique_tags):
-                    test_tags(tags_keys)
-
-                print("After evolve / after update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s))
-                print("After evolve / after update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s))
+                print "After evolve / after update, max star velocity = ", stars.velocity.norm().max().in_(units.km/units.s)
+                print "After evolve / after update, max grav velocity = ", grav.particles.velocity.norm().max().in_(units.km/units.s)
                 if (with_multiples):
-                    print("After evolve / after update, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s))
-                    #if (insane):
-                    #    #check_root_and_leaves(mult_grav, grav, stars)
-                    #    #print "Checking new stars against originals (should be different)."
-                    #    #oldvnew_position(stars, oldstars)
-                    #    #oldvnew_position(mult_grav.stars, oldmultstars)
+                    print "After evolve / after update, max multiples.stars velocity = ", mult_grav.stars.velocity.norm().max().in_(units.km/units.s)
+                    if (insane):
+                        print "Checking new stars against originals (should be different)."
+                        oldvnew_position(stars, oldstars)
+                        oldvnew_position(mult_grav.stars, oldmultstars)
 
             #   Calculate the change in position and velocity of sinks in hydro
             #   that was due to accretion. Note the comparison must be made
@@ -4208,7 +3521,7 @@ try:
                     test_tags(tags_keys)
 
 
-                    print("Num particles in grav:", len(grav.particles))
+                    print "Num particles in grav:", len(grav.particles)
 
                     #num_particles = check_particles
 
@@ -4219,7 +3532,7 @@ try:
 
             ### Check: Are the particles in sync across the two codes?
 
-                if (tags_keys[:,0].all() == hydro.get_particle_tags(list(range(1,num_particles+1))).all() and
+                if (tags_keys[:,0].all() == hydro.get_particle_tags(range(1,num_particles+1)).all() and
                     tags_keys[:,1].all() == grav.particles.key.all()):
 
                     pass
@@ -4227,11 +3540,11 @@ try:
 
                 else:
 
-                    print("Particles out of sync! Stopping!")
-                    print("hydro tags")
-                    print(hydro.get_particle_tags(list(range(1,num_particles+1))))
-                    print("tags tags")
-                    print(tags_keys[:,0])
+                    print "Particles out of sync! Stopping!"
+                    print "hydro tags"
+                    print hydro.get_particle_tags(range(1,num_particles+1))
+                    print "tags tags"
+                    print tags_keys[:,0]
                     sys.stdout.flush()
                     sys.exit()
 
@@ -4242,27 +3555,380 @@ try:
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
                 if (test_unique_tags):
                     test_tags(tags_keys)
 
                 # Remove any particles that have left the simulation domain.
-                tags_keys, stars_removed, num_particles  = remove_particles_outside_bndbox(hydro, stars, grav, mult_grav, with_multiples, tags_keys, bndbox, debug=True)
+                #stars_removed = remove_particles_outside_bndbox(hydro, grav, stars, tags_keys, bndbox, debug=True)
 
-                # Sync stars to the particles in grav.
-                if (with_multiples):
-                    grav.particles.synchronize_to(mult_grav._inmemory_particles)
-                    #mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+            ### Remove any particles that have left the simulation.
+
+                #print "Grav pos", grav.particles.x.value_in(units.cm), \
+                #                  grav.particles.y.value_in(units.cm), \
+                #                  grav.particles.z.value_in(units.cm), \
+                #                  bndbox.value_in(units.cm), \
+                #                  bndbox.value_in(units.cm)
+
+                stars_removed = False
+                rem_index = 0
+                num_particles = len(stars)
+
+                if (num_particles > 0):
+                   # rem_index = np.where(np.abs(grav.particles.x.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
+                    if (debug_remove):
+                        print np.abs(grav.particles.x.value_in(units.cm)).max()
+                        print "grav x remove", np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        if (with_multiples): print "multiples.stars x remove", np.where(np.greater_equal(np.abs(mult_grav.stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "stars x remove", np.where(np.greater_equal(np.abs(stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "hydro x remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,0]).value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    rem_index = np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
+                    #rem_index = np.where(np.greater_equal(np.abs(stars.x.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    if (debug_remove): print "x rem index=", rem_index
+                    grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
+                    star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
+                    if (debug_remove): print "grav x rem index=", grav_rem_index
+                    if (debug_remove): print "star x rem index=", star_rem_index
+                    if (debug_remove): print "x key =", rem_key
                 else:
-                    grav.particles.synchronize_to(stars)
+                    rem_index = np.empty(0)
+                    rem_key   = np.empty(0)
+                if (debug_remove): print "Remove index = ", rem_index
+                if (debug_remove): print "Remove position x =", grav.particles.x[rem_index]
+                #if (debug_remove): print "Remove position x =", stars.x[rem_index]
+                rem_size = rem_index.size
+                if (debug_remove): print "Remove index size = ", rem_size
+                rem_tag = []
+                grav_rem_part = Particles()
+                stars_rem_part = Particles()
+
+                if (rem_size > 0):
+                    if (debug_remove): print "Remove position x from key =", grav.particles.x[grav_rem_index]
+
+                    stars_removed = True
+                    print "About to try and remove", len(rem_index), "from grav."
+                    print "Currently", len(grav.particles), "particles in grav."
+                    #for iii in np.nditer(rem_index):
+                    #    #rem_part.add_particle(stars[iii])
+                    #    grav_rem_part.add_particle(grav.particles[iii])
+                    #    if grav.particles[iii] in stars:
+                    #        if (debug_remove):
+                    #            print "Found this grav particle in stars."
+                    #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
+                    #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
+                    #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
+                    #             stars[np.where(stars==grav.particles[iii])], "in stars."
+                    #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
+                    #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
+                    #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
+                    grav_rem_part.add_particles(grav.particles[grav_rem_index])
+
+                    for st in grav_rem_part:
+
+                        if st in stars:
+                            st_index = np.where(stars.key == st.key)[0]
+                            stars_rem_part.add_particles(stars[st_index])
+
+                        if (with_multiples):
+                            print "Trying to look in multiples for this star."
+                            # Cycle through the leaves and check if this particular star
+                            # is a multiple root particle.
+                            #st_grav = st.as_particle_in_set(grav.particles)
+                            #for root, tree in mult_grav.root_to_tree.iteritems():
+                                #leaves = tree.get_leafs_subset()
+                                #if st in leaves:
+                            if st in mult_grav.root_to_tree:
+                                print "Found it in multiples as a root particle."
+                                tree = mult_grav.root_to_tree[st]
+                                leaves = tree.get_leafs_subset()
+                                #if (debug_multiples):
+                                print "Removing", len(leaves), "particles that are multiples by deleting the root of the tree."
+                                #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
+                                for leaf in leaves:
+                                    stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
+                                #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
+                                #rem_tag.append(stars[np.where(stars==leaves)].tag)
+                                if (debug_remove):
+                                    print "Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part."
+                                    #print "rem_tag is now", rem_tag
+                                sys.stdout.flush()
+                                # Note only the stars particle set has a tag attribute.
+                                # Also all leaves exist in stars and hydro while all roots
+                                # exist in grav.
+                                #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
+                                #stars.remove_particles(leaves.as_particle_in_set(stars))
+                                #grav.particles.remove_particles(st)
+                                del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
+                                #rem_part.remove_particles(st)
+                                #rem_size -= 1
+
+                    rem_tag.append(stars_rem_part.tag)
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+
+                    rem_tag = np.array(rem_tag).flatten()
+                    rem_tag.sort()
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+                    grav.particles.remove_particles(grav_rem_part)
+                    mult_grav._inmemory_particles.remove_particles(grav_rem_part)
+                    hydro.remove_particles(rem_tag)
+                    stars.remove_particles(stars_rem_part)
+                    for rt in rem_tag:
+                        tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
+
+                    num_particles = len(stars)
+                    #if (with_se):
+                        #se.particles.remove_particles(rem_part)
+                    if (debug_remove): print "Now ", len(grav.particles), "particles in grav."
+                    if (debug_remove): print "Now",  len(stars), "particles in stars."
+                    if (debug_remove): print "and", hydro.get_number_of_particles(), "particles in hydro."
+                    if (with_multiples and debug_remove):
+                        "Now ", len(mult_grav.root_to_tree), "multiples in multiples."
+                        "Now ", len(mult_grav.stars), "leaves in multiples."
 
 
-                if (test_unique_tags):
-                    test_tags(tags_keys)
+                if (num_particles > 0):
+                    #rem_index = np.where(np.abs(grav.particles.y.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
+                    if (debug_remove):
+                        print np.abs(grav.particles.y.value_in(units.cm)).max()
+                        print "grav y remove", np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        if (with_multiples): print "multiples.stars y remove", np.where(np.greater_equal(np.abs(mult_grav.stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "stars y remove", np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "hydro y remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,1]).value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    #print "y remove",  np.where(np.abs(grav.particles.y.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
+                    rem_index = np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    #rem_index = np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
+                    #rem_index = np.where(np.greater_equal(np.abs(stars.y.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    if (debug_remove): print "y rem index=", rem_index
+                    grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
+                    star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
+                    if (debug_remove): print "grav y rem index=", grav_rem_index
+                    if (debug_remove): print "star y rem index=", star_rem_index
+                    if (debug_remove): print "y key =", rem_key
+                else:
+                    rem_index = np.empty(0)
+                    rem_key   = np.empty(0)
+                if (debug_remove): print "Remove index = ", rem_index
+                if (debug_remove): print "Remove position y =", grav.particles.y[rem_index]
+                #if (debug_remove): print "Remove position y =", stars.y[rem_index]
+                rem_size = rem_index.size
+                if (debug_remove): print "Remove index size = ", rem_size
+                rem_tag = []
+                grav_rem_part = Particles()
+                stars_rem_part = Particles()
+
+                if (rem_size > 0):
+                    if (debug_remove): print "Remove position y from key =", grav.particles.y[grav_rem_index]
+
+                    stars_removed = True
+                    print "About to try and remove", len(rem_index), "from grav."
+                    print "Currently", len(grav.particles), "particles in grav."
+                    #for iii in np.nditer(rem_index):
+                    #    #rem_part.add_particle(stars[iii])
+                    #    grav_rem_part.add_particle(grav.particles[iii])
+                    #    if grav.particles[iii] in stars:
+                    #        if (debug_remove):
+                    #            print "Found this grav particle in stars."
+                    #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
+                    #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
+                    #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
+                    #             stars[np.where(stars==grav.particles[iii])], "in stars."
+                    #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
+                    #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
+                    #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
+                    grav_rem_part.add_particles(grav.particles[grav_rem_index])
+
+                    for st in grav_rem_part:
+
+                        if st in stars:
+                            st_index = np.where(stars.key == st.key)[0]
+                            stars_rem_part.add_particles(stars[st_index])
+
+                        if (with_multiples):
+                            print "Trying to look in multiples for this star."
+                            # Cycle through the leaves and check if this particular star
+                            # is a multiple root particle.
+                            #st_grav = st.as_particle_in_set(grav.particles)
+                            #for root, tree in mult_grav.root_to_tree.iteritems():
+                                #leaves = tree.get_leafs_subset()
+                                #if st in leaves:
+                            if st in mult_grav.root_to_tree:
+                                print "Found it in multiples as a root particle."
+                                tree = mult_grav.root_to_tree[st]
+                                leaves = tree.get_leafs_subset()
+                                #if (debug_multiples):
+                                print "Removing", len(leaves), "particles that are multiples by deleting the root of the tree."
+                                #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
+                                for leaf in leaves:
+                                    stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
+                                #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
+                                #rem_tag.append(stars[np.where(stars==leaves)].tag)
+                                if (debug_remove):
+                                    print "Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part."
+                                    #print "rem_tag is now", rem_tag
+                                sys.stdout.flush()
+                                # Note only the stars particle set has a tag attribute.
+                                # Also all leaves exist in stars and hydro while all roots
+                                # exist in grav.
+                                #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
+                                #stars.remove_particles(leaves.as_particle_in_set(stars))
+                                #grav.particles.remove_particles(st)
+                                del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
+                                #rem_part.remove_particles(st)
+                                #rem_size -= 1
+
+                    rem_tag.append(stars_rem_part.tag)
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+
+                    rem_tag = np.array(rem_tag).flatten()
+                    rem_tag.sort()
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+                    grav.particles.remove_particles(grav_rem_part)
+                    mult_grav._inmemory_particles.remove_particles(grav_rem_part)
+                    hydro.remove_particles(rem_tag)
+                    stars.remove_particles(stars_rem_part)
+                    for rt in rem_tag:
+                        tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
+
+                    num_particles = len(stars)
+                    #if (with_se):
+                        #se.particles.remove_particles(rem_part)
+                    if (debug_remove): print "Now ", len(grav.particles), "particles in grav."
+                    if (debug_remove): print "Now",  len(stars), "particles in stars."
+                    if (debug_remove): print "and", hydro.get_number_of_particles(), "particles in hydro."
+                    if (with_multiples and debug_remove):
+                        "Now ", len(mult_grav.root_to_tree), "multiples in multiples.root_to_tree."
+                        "Now ", len(mult_grav.stars), "leaves in multiples."
+
+
+                if (num_particles > 0):
+                    #rem_index = np.where(np.abs(grav.particles.z.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
+                    if (debug_remove):
+                        print np.abs(grav.particles.z.value_in(units.cm)).max()
+                        print "grav z remove", np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        if (with_multiples): print "multiples.stars z remove", np.where(np.greater_equal(np.abs(mult_grav.stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "stars z remove", np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                        print "hydro z remove", np.where(np.greater_equal(np.abs((hydro.get_particle_position(tags_keys[:,0])[:,2]).value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    #print "z remove",  np.where(np.abs(grav.particles.z.value_in(units.cm)) > bndbox.value_in(units.cm))[0]
+                    rem_index = np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    #rem_index = np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    rem_key   = grav.particles.key[np.where(np.greater_equal(np.abs(grav.particles.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]]
+                    #rem_index = np.where(np.greater_equal(np.abs(stars.z.value_in(units.cm)), bndbox.value_in(units.cm)))[0]
+                    if (debug_remove): print "z rem index=", rem_index
+                    grav_rem_index = np.array([np.where(grav.particles.key == x)[0] for x in rem_key]).flatten()
+                    star_rem_index = np.array([np.where(stars.key == x)[0] for x in rem_key]).flatten()
+                    if (debug_remove): print "grav z rem index=", grav_rem_index
+                    if (debug_remove): print "star z rem index=", star_rem_index
+                    if (debug_remove): print "z key =", rem_key
+                else:
+                    rem_index = np.empty(0)
+                    rem_key   = np.empty(0)
+                if (debug_remove): print "Remove index = ", rem_index
+                if (debug_remove): print "Remove position z =", grav.particles.z[rem_index]
+                #if (debug_remove): print "Remove position z =", stars.z[rem_index]
+                rem_size = rem_index.size
+                if (debug_remove): print "Remove index size = ", rem_size
+                rem_tag = []
+                grav_rem_part = Particles()
+                stars_rem_part = Particles()
+
+                if (rem_size > 0):
+                    if (debug_remove): print "Remove position z from key =", grav.particles.z[grav_rem_index]
+
+                    stars_removed = True
+                    print "About to try and remove", len(rem_index), "from grav."
+                    print "Currently", len(grav.particles), "particles in grav."
+                    #for iii in np.nditer(rem_index):
+                    #    #rem_part.add_particle(stars[iii])
+                    #    grav_rem_part.add_particle(grav.particles[iii])
+                    #    if grav.particles[iii] in stars:
+                    #        if (debug_remove):
+                    #            print "Found this grav particle in stars."
+                    #            #print "Its", grav.particles.get_all_indices_in_store()[iii], "in grav and", \
+                    #            # stars.get_indices_of_keys([grav.particles.key[iii]]), "in stars."
+                    #            print "Its", grav.particles[np.where(grav.particles==grav.particles[iii])], "in grav and", \
+                    #             stars[np.where(stars==grav.particles[iii])], "in stars."
+                    #        stars_rem_part.add_particles(stars[np.where(stars==grav.particles[iii])])
+                    #        #stars_rem_part.add_particle(stars[stars.get_indices_of_keys([grav.particles.key[iii]])])
+                    #if (debug_remove): print "Added", stars[np.where(stars==stars_rem_part)], "to stars_rem_part."
+                    grav_rem_part.add_particles(grav.particles[grav_rem_index])
+
+                    for st in grav_rem_part:
+
+                        if st in stars:
+                            st_index = np.where(stars.key == st.key)[0]
+                            stars_rem_part.add_particles(stars[st_index])
+
+                        if (with_multiples):
+                            print "Trying to look in multiples for this star."
+                            # Cycle through the leaves and check if this particular star
+                            # is a multiple root particle.
+                            #st_grav = st.as_particle_in_set(grav.particles)
+                            #for root, tree in mult_grav.root_to_tree.iteritems():
+                                #leaves = tree.get_leafs_subset()
+                                #if st in leaves:
+                            if st in mult_grav.root_to_tree:
+                                print "Found it in multiples as a root particle."
+                                tree = mult_grav.root_to_tree[st]
+                                leaves = tree.get_leafs_subset()
+                                #if (debug_multiples):
+                                print "Removing", len(leaves), "particles that are multiples by deleting the root of the tree."
+                                #stars_rem_part.add_particles(stars[stars.get_indices_of_keys(leaves.key)])
+                                for leaf in leaves:
+                                    stars_rem_part.add_particles(stars[np.where(stars.key==leaf.key)[0]])
+                                #rem_tag.append(stars[stars.get_indices_of_keys(leaves.key)].tag)
+                                #rem_tag.append(stars[np.where(stars==leaves)].tag)
+                                if (debug_remove):
+                                    print "Added", len(stars_rem_part.get_all_indices_in_store()), "to stars_rem_part."
+                                    #print "rem_tag is now", rem_tag
+                                sys.stdout.flush()
+                                # Note only the stars particle set has a tag attribute.
+                                # Also all leaves exist in stars and hydro while all roots
+                                # exist in grav.
+                                #hydro.remove_particles(leaves.as_particle_in_set(stars).tag)
+                                #stars.remove_particles(leaves.as_particle_in_set(stars))
+                                #grav.particles.remove_particles(st)
+                                del mult_grav.root_to_tree[st.as_particle_in_set(mult_grav._inmemory_particles)]
+                                #rem_part.remove_particles(st)
+                                #rem_size -= 1
+
+                    rem_tag.append(stars_rem_part.tag)
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+
+                    rem_tag = np.array(rem_tag).flatten()
+                    rem_tag.sort()
+                    if (debug_remove): print "Tags for removal are now", rem_tag
+                    grav.particles.remove_particles(grav_rem_part)
+                    mult_grav._inmemory_particles.remove_particles(grav_rem_part)
+                    hydro.remove_particles(rem_tag)
+                    stars.remove_particles(stars_rem_part)
+                    for rt in rem_tag:
+                        tags_keys = tags_keys[~(tags_keys[:,0]==rt),:]
+
+                    num_particles = len(stars)
+                    #if (with_se):
+                        #se.particles.remove_particles(rem_part)
+                    if (debug_remove): print "Now ", len(grav.particles), "particles in grav."
+                    if (debug_remove): print "Now",  len(stars), "particles in stars."
+                    if (debug_remove): print "and", hydro.get_number_of_particles(), "particles in hydro."
+                    if (with_multiples and debug_remove):
+                        "Now ", len(mult_grav.root_to_tree), "multiples in multiples."
+                        "Now ", len(mult_grav.stars), "leaves in multiples."
+
+                    # Sync stars to the particles in grav.
+                    if (with_multiples):
+                        grav.particles.synchronize_to(mult_grav._inmemory_particles)
+                        mult_grav.channel_from_code_to_memory.copy_attribute("index_in_code", "id")
+                    else:
+                        grav.particles.synchronize_to(stars)
+
+
+                    if (test_unique_tags):
+                        test_tags(tags_keys)
 
                 # If stars were removed, resort particles and check if we need to return to hydro only.
                 # NOTE: I think this is important to include here and not in the actual particle removal
@@ -4276,14 +3942,14 @@ try:
                 # But also note, I do think we should still sort at the end, because it sets all the particle
                 # info in pt_typeInfo array correctly. - JW
 
-                hydro.particles_sort()
-                print("Hydro particles sort called.")
-                print("Now ", len(grav.particles), "particles in grav.")
-                print("and", hydro.get_number_of_particles(), "particles in hydro.")
-                print("and", num_particles, "particles in stars.")
                 if (stars_removed):
+                    hydro.particles_sort()
+                    print "Hydro particles sort called."
+                    print "Now ", len(grav.particles), "particles in grav."
+                    print "and", hydro.get_number_of_particles(), "particles in hydro."
+                    print "and", num_particles, "particles in stars."
                     if (num_particles == 0):
-                        print("No particles left! Going back to hydro only!")
+                        print "No particles left! Going back to hydro only!"
                         first_particle = False
                         continue
 
@@ -4298,7 +3964,7 @@ try:
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
                 #if (np.abs(pos_diff.value_in(units.m)).any() > min_pos_diff or np.abs(vel_diff.value_in(units.m*(units.s**-1))).any() > min_vel_diff):
@@ -4308,84 +3974,63 @@ try:
 
                 #print "Before second kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
-                if (with_bridge):
+                print "Second kick."
 
-                    print("Second kick.")
-                    step = 2
-                    bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
+                step = 2
 
-                    #print "Grav vel before update."
-                    #print grav.particles.velocity
+                bridge_kick2(hydro, stars, eps, dt, time_in_hydro, step)
 
-                    if (with_multiples):
-                        # First copy updated velocities from stars to grav for
-                        # all particles in grav that are also in stars.
-                        stars_to_grav.copy_attributes(["vx", "vy", "vz"])
-                        mult_grav.channel_from_code_to_memory.copy()
-                        # Now check for any particle that is not in grav (that is
-                        # a leaf in multiples but replaced by a root particle in grav).
-                        # Update the velocity of the leaves with that in stars and copy
-                        # this over to grav.
-                        for st in stars:
-                            # Cycle through the leaves and check if this particular star
-                            # is in the leaves in multiples.
-                            for root, tree in mult_grav.root_to_tree.items():
-                                leaves = tree.get_leafs_subset()
-                                if st in leaves:
-                                    if (debug_multiples):
-                                        print("After kick 2.")
-                                        print("Star vel =", st.velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
-                                        sys.stdout.flush()
-                                    # If yes, then set the mass of the star to the updated to the new mass from
-                                    # the SE code. This should be possible by using the as_particle_in_set(leaves)
-                                    # method on the stars particle. We'll check with print statements.
-                                    st.as_particle_in_set(leaves).velocity = st.velocity
-                                    #com_vel = 0.0
-                                    #for leaf in leaves:
-                                    #    com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
-                                    #com_vel = (com_vel/(leaves.mass.sum()).value_in(units.MSun)) | units.km/units.s
-                                    #root.velocity = com_vel
-                                    #root.velocity = (np.array([l.mass*l.velocity for l in leaves]).sum()/leaves.mass.sum()).in_(units.km/units.s)
-                                    #root.velocity = (leaves.mass[:,np.newaxis]*leaves.velocity)/leaves.mass.sum()
-                                    if (debug_multiples):
-                                        print("After kick 2.")
-                                        print("Star vel =", st.velocity.in_(units.km/units.s))
-                                        print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                        print("Root vel =", root.velocity.in_(units.km/units.s))
-                                        sys.stdout.flush()
-                                    # Don't forget at the end of this we need to update the velocity
-                                    # in multiples and the gravity code using the proper root mass
-                                    # if that didn't happen automatically.
+                #print "Grav vel before update."
+                #print grav.particles.velocity
 
-                        # Update pset shouldn't be needed now that we use update_roots_from_leaves and the above code.
-                        #if (debug_multiples):
-                        #    "Trying using update_pset."
-                        #update_psetA_from_psetB(mult_grav.stars, stars)
+                if (with_multiples):
+                    # First copy updated velocities from stars to grav for
+                    # all particles in grav that are also in stars.
+                    stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+                    mult_grav.channel_from_code_to_memory.copy()
+                    # Now check for any particle that is not in grav (that is
+                    # a leaf in multiples but replaced by a root particle in grav).
+                    # Update the velocity of the leaves with that in stars and copy
+                    # this over to grav.
+                    for st in stars:
+                        # Cycle through the leaves and check if this particular star
+                        # is in the leaves in multiples.
+                        for root, tree in mult_grav.root_to_tree.iteritems():
+                            leaves = tree.get_leafs_subset()
+                            if st in leaves:
+                                #if (debug_multiples):
+                                    #print "Star vel =", st.velocity.in_(units.km/units.s)
+                                    #print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
+                                    #print "Root vel =", root.velocity.in_(units.km/units.s)
+                                    #sys.stdout.flush()
+                                # If yes, then set the mass of the star to the updated to the new mass from
+                                # the SE code. This should be possible by using the as_particle_in_set(leaves)
+                                # method on the stars particle. We'll check with print statements.
+                                st.as_particle_in_set(leaves).velocity = st.velocity
+                                #com_vel = 0.0
+                                #for leaf in leaves:
+                                #    com_vel += (leaf.mass.value_in(units.MSun)*leaf.velocity.value_in(units.km/units.s))
+                                #com_vel = (com_vel/(leaves.mass.sum()).value_in(units.MSun)) | units.km/units.s
+                                #root.velocity = com_vel
+                                #root.velocity = (np.array([l.mass*l.velocity for l in leaves]).sum()/leaves.mass.sum()).in_(units.km/units.s)
+                                #root.velocity = (leaves.mass[:,np.newaxis]*leaves.velocity)/leaves.mass.sum()
+                                #if (debug_multiples):
+                                    #print "Star vel =", st.velocity.in_(units.km/units.s)
+                                    #print "Leaf vel =", leaves.velocity.in_(units.km/units.s)
+                                    #print "Root vel =", root.velocity.in_(units.km/units.s)
+                                    #sys.stdout.flush()
+                                # Don't forget at the end of this we need to update the velocity
+                                # in multiples and the gravity code using the proper root mass
+                                # if that didn't happen automatically.
 
-                        update_roots_from_leaves(mult_grav, grav)
-                        if (debug_multiples):
-                            check_root_and_leaves(mult_grav, grav, stars)
-                            print("Second kick after update_roots_from_leaves.")
-                            for st in stars:
-                                # Cycle through the leaves and check if this particular star
-                                # is in the leaves in multiples.
-                                for root, tree in mult_grav.root_to_tree.items():
-                                    leaves = tree.get_leafs_subset()
-                                    if st in leaves:
-                                        if (debug_multiples):
-                                            print("Star vel =", st.velocity.in_(units.km/units.s))
-                                            print("Leaf vel =", leaves.velocity.in_(units.km/units.s))
-                                            print("Root vel =", root.velocity.in_(units.km/units.s))
-                                            sys.stdout.flush()
-                        #mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
-                    else:
-                        stars_to_grav.copy_attributes(["vx", "vy", "vz"])
-                        #stars_to_grav.copy()
+                    update_roots_from_leaves(mult_grav, grav)
+                    mult_grav.channel_from_memory_to_code.copy() # Now copy from the memory of multiples to grav.
+                else:
+                    stars_to_grav.copy_attributes(["vx", "vy", "vz"])
+                    #stars_to_grav.copy()
 
-                    print("Grav updated.")
-                    #print grav.particles.velocity
+                print "Grav updated."
+                #print grav.particles.velocity
 
                 #print "After second kick, max star velocity = ", np.sqrt((stars.vx**2.0 + stars.vy**2.0 + stars.vz**2.0).value_in(units.km**2.0/units.s**2.0)).max() | units.km / units.s
 
@@ -4395,53 +4040,72 @@ try:
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
-                        check_root_and_leaves(mult_grav, grav, stars)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
 
-                ### Check if output files need to be written.
+            ### Check if output files need to be written.
+                if (insane):
+                    if (with_multiples):
+                        check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
+                    else:
+                        check_sanity(hydro, grav)
+                if (type_insane): check_stellar_type(stars)
 
-                print("Checking for plot.")
 
-                hy_pltnum = hydro.IO_out('pltpart')
-                hy_chknum = hydro.IO_out('chk')
+                print "Checking for plot."
 
-                # If a checkpoint file was written,
-                # then store the list of stars up for creation.
-                if (hy_chknum != chknum):  # allow for possibility of rolling chk
-                    write_rnd_and_mass_pickles(all_masses, output_dir, chknum)
-                    chknum = hy_chknum  # must increment after write
+                # Check if a checkpoint file was written,
+                # if yes, then store the list of stars up for
+                # creation.
 
-                # wrote plt file
-                if (hy_pltnum > pltnum):
-                    if (write_psets):
-                        stars.dt = dt
-                        write_set_to_file(stars, pdir+'/stars{:04d}.amuse'.format(pltnum), overwrite_file=True)
-                        multstars = mult_grav.stars.copy_to_new_particles()
-                        write_set_to_file(multstars, pdir+'/mult{:04d}.amuse'.format(pltnum), overwrite_file=True)
-                    pltnum = hy_pltnum  # must increment after write
-                elif (hy_pltnum < pltnum):
-                    raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, pltnum))
+                hydro.IO_out('pltpart')
+                hydro.IO_out('chk')
 
+                #new_chpt_file = max(glob.glob(output_dir+'/*_chk_????'),'0000')
+                #print "new_chk, old_chk =", new_chpt_file, current_chpt_file
+                #if (new_chpt_file > current_chpt_file):
+                    #print "Writing out all masses to all_masses.pickle"
+                    #with open(output_dir+'/all_masses'+new_chpt_file[-4:]+'.pickle', 'wb') as f:
+                        #pickle.dump(all_masses, f)
+                    #current_chpt_file = new_chpt_file
+
+                    #rnd_state = np.random.get_state()
+                    #with open(output_dir+'/rnd_state.pickle', 'wb') as f:
+                        #pickle.dump(rnd_state, f)
+
+                new_chpt_file = glob.glob(output_dir+'/*_chk_*')
+                new_chpt_file.sort()
+                new_chpt_file = new_chpt_file[-1][-4:]
+
+                #print "new_chk, old_chk =", new_chpt_file, old_chpt_file
+                if (new_chpt_file > old_chpt_file):
+                    print "Writing out all masses to all_masses.pickle"
+                    with open(output_dir+'/all_masses'+new_chpt_file+'.pickle', 'wb') as f:
+                        pickle.dump(all_masses, f)
+                    old_chpt_file = new_chpt_file
+                    print "Writing out random state to rnd_state.pickle"
+                    rnd_state = np.random.get_state()
+                    with open(output_dir+'/rnd_state'+new_chpt_file+'.pickle', 'wb') as f:
+                        pickle.dump(rnd_state, f)
 
                 if (insane):
                     if (with_multiples):
                         check_sanity(hydro, mult_grav, stars, with_multiples=with_multiples)
                     else:
-                        check_sanity(hydro, grav, stars)
+                        check_sanity(hydro, grav)
                 if (type_insane): check_stellar_type(stars)
 
-                print("Current simulation time:", t)
+                print "Current simulation time:", t
                 hydro_time = hydro.get_time()
                 grav_time  = grav.get_time()
-                print("Hydro time", hydro_time)
-                print("Grav time:", grav_time)
+                print "Hydro time", hydro_time
+                print "Grav time:", grav_time
 
                 time_diff = (hydro_time - grav_time).value_in(units.s)
 
-                print("Hydro time between initial hydro and grav bridge:", time_diff)
+                print "Hydro time between initial hydro and grav bridge:", time_diff
 
                 if (first_loop): first_loop=False
 
@@ -4452,9 +4116,9 @@ try:
             time_in_grav  = time_in_grav + grav_timer.secs
             total_time    = total_time + loop_timer.secs
 
-            print("Total time in Flash = %f s" %time_in_hydro)
-            print("Total time in N-body = %f s" %time_in_grav)
-            print("Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro))
+            print "Total time in Flash = %f s" %time_in_hydro
+            print "Total time in N-body = %f s" %time_in_grav
+            print "Total time in AMUSE = %f s" %(total_time - time_in_grav - time_in_hydro)
 
 
         #    if (tree_exists):
@@ -4474,14 +4138,14 @@ try:
         #            print "Num in hydro = ", hydro.get_number_of_particles()
         #            sys.exit()
 
-            log.write(str(i)+"\t \t"+"{0:.2e}".format(total_time)+
+            log.write(`i`+"\t \t"+"{0:.2e}".format(total_time)+
                       "\t \t"+"{0:.2e}".format(time_in_hydro)+
                       "\t \t" +"{0:.2e}".format(time_in_grav)
                       + "\t \t" + "{0:.2e}".format(total_time - time_in_grav - time_in_hydro))
 
             if (np.abs(time_diff) > 1e4):
 
-                print("Time difference b/t hydro and n-body larger than 1e4, exiting.")
+                print "Time difference b/t hydro and n-body larger than 1e4, exiting."
                 break
 
                 hydro.timer_summary()

@@ -1,6 +1,6 @@
 from amuse.lab import *
 
-from amuse.community.flash.interface import Flash
+from torch_amuse_flash.interface import Flash
 from voramr.kdtree import (
     read_hdf5,
     build_kdtree,
