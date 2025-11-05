@@ -5557,7 +5557,7 @@ then :
             torch_petsc_found="yes"
             torch_petsc_location=", at ${PETSC_DIR}/${PETSC_ARCH}"
             torch_petsc_cflags="-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include"
-            torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib"
+                        torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib -Wl,-rpath=${PETSC_DIR}/${PETSC_ARCH}/lib"
 
 else $as_nop
 

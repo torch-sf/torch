@@ -39,7 +39,8 @@ AC_DEFUN([TORCH_PETSC], [
             torch_petsc_found="yes"
             torch_petsc_location=", at ${PETSC_DIR}/${PETSC_ARCH}"
             torch_petsc_cflags="-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include"
-            torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib"
+            dnl rpath-link in this case, because LD_LIBRARY_PATH is probably not set
+            torch_petsc_ldflags="-L${PETSC_DIR}/${PETSC_ARCH}/lib -Wl,-rpath=${PETSC_DIR}/${PETSC_ARCH}/lib"
         ], [
             dnl apt on Debian/Ubuntu with PETSC_DIR set to /usr
             AS_IF([test -f "${PETSC_DIR}/include/petsc/petscversion.h"], [
