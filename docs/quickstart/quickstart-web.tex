@@ -483,6 +483,11 @@ cd $TORCH_DIR
 make -C src/amuse/torch_amuse_flash develop-torch-amuse-flash
 \end{lstlisting}
 
+Note that if you are rebuilding Torch after changes to the FLASH wrappers, to avoid compilation errors, you should first run:
+
+\begin{lstlisting}[language=bash]
+make -C src/amuse/torch_amuse_flash distclean
+\end{lstlisting}
 
 With that, your environment should contain a working Torch installation. Time to give
 it a try!
