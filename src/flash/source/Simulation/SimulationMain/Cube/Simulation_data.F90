@@ -33,6 +33,12 @@ module Simulation_data
   real, allocatable, save :: sim_densArr(:,:,:), sim_presArr(:,:,:)
   real, allocatable, save :: sim_gpotArr(:,:,:), sim_velxArr(:,:,:)
   real, allocatable, save :: sim_velyArr(:,:,:), sim_velzArr(:,:,:)
+  
+#ifdef ELEMENTS
+  !! Arrays and variables for elements.
+  integer, save :: sim_nelements
+  real, allocatable, save :: sim_elemArr(:,:,:,:)
+#endif
 
 ! single fluid stuff
 

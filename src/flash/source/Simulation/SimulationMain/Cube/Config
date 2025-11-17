@@ -79,3 +79,24 @@ PARAMETER sim_aParm2        REAL 0.0
 PARAMETER sim_aParm3        REAL 0.0
 PARAMETER sim_aParm4        REAL 0.0
 PARAMETER sim_withStaticGrav    BOOLEAN     False
+
+#### Include passive scalars to track enrichment
+USESETUPVARS withElements
+IF withElements
+# Flag telling FLASH to include element tracers. 
+PPDEFINE ELEMENTS
+# Number of elements
+PARAMETER sim_nelements INTEGER 2
+
+# Tracer fields as mass scalars.
+MASS_SCALAR E001
+MASS_SCALAR E002
+
+# Equvalent to tracer fields but for particles.
+PARTICLEPROP E001 REAL
+PARTICLEPROP E002 REAL
+
+# Yields (mass/time) to be injected with feedback.
+PARTICLEPROP Y001 REAL
+PARTICLEPROP Y002 REAL
+ENDIF

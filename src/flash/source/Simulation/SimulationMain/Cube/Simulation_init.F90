@@ -123,6 +123,18 @@ subroutine Simulation_init()
   if (sim_myPE.EQ.MASTER_PE) then
      if (use_deref) call Logfile_stamp('derefining outside region of interest', "[Simulation_init]")
   endif
+  
+#ifdef ELEMENTS
+  call RuntimeParameters_get('nelements', sim_nelements)
+  
+! Check for consistent setup.
+  if (NMASS_SCALARS .ne. sim_nelements) then
+    if (sim_myPE .eq. MASTER_PE) then
+      print*, "Number of mass scalars is not consitent with sim_nelements: NMASS_SCALARS, sim_nelements = ", NMASS_SCALARS, sim_nelements
+    end if
+    call Driver_abortFlash("Inconsitency between number of elements and mass scalars. Check flash.par and Simulation Config.")
+  endif
+#endif
 
   sim_abar = 1.0 + sim_abundM*sim_metal
 
@@ -147,15 +159,26 @@ subroutine Simulation_init()
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velyArr")
   allocate(sim_velzArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velzArr")
+  
+#ifdef ELEMENTS
+  allocate(sim_elemArr(NMASS_SCALARS, sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
+  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_elemArr")
+#endif
 
   if (sim_myPE .eq. MASTER_PE) then
     do i = 1,sim_nCD(IAXIS)
       do j = 1,sim_nCD(JAXIS)
         do k = 1,sim_nCD(KAXIS)
+#ifdef ELEMENTS
+          read(55,*) ii,jj,kk, sim_densArr(i,j,k), sim_presArr(i,j,k), &
+          & sim_velxArr(i,j,k), sim_velyArr(i,j,k), sim_velzArr(i,j,k), &
+          & sim_gpotArr(i,j,k), sim_elemArr(:,i,j,k)
+#else
           read(55,*) ii,jj,kk, sim_densArr(i,j,k), sim_presArr(i,j,k), &
           & sim_velxArr(i,j,k), sim_velyArr(i,j,k), sim_velzArr(i,j,k), &
           & sim_gpotArr(i,j,k)
           !print *, i,ii, j, jj, k, kk, sim_densArr(i,j,k), sim_presArr(i,j,k), sim_gpotArr(i,j,k)
+#endif
         enddo
 !        read(55,*)
       enddo
@@ -176,6 +199,10 @@ subroutine Simulation_init()
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
   call MPI_Bcast(sim_velzArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS), &
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
+#ifdef ELEMENTS
+  call MPI_Bcast(sim_elemArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS)*NMASS_SCALARS, &
+  & FLASH_REAL, MASTER_PE, sim_comm, istat)
+#endif
 
 
 end subroutine Simulation_init
