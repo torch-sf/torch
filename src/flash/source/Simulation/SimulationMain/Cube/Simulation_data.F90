@@ -20,6 +20,7 @@ module Simulation_data
 
   implicit none
 #include "constants.h"
+#include "Flash.h"
 
   !! *** Runtime Parameters *** !!
   character(len=255),save :: sim_cubeFile
