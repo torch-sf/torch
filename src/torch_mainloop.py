@@ -308,7 +308,7 @@ def evolve(state, hydro, grav, mult, se):
 
             if USER['with_se']:
                 
-                if USER['with_be']:
+                if USER['with_be'] and num_stars > 1:
                     # update both stars set and hydro properties
                     # CCC 28/04/2023
                     tprint("Do stellar and binary evolution")
