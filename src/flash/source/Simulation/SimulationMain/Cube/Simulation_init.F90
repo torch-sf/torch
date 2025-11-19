@@ -125,7 +125,7 @@ subroutine Simulation_init()
   endif
   
 #ifdef ELEMENTS
-  call RuntimeParameters_get('nelements', sim_nelements)
+  call RuntimeParameters_get('sim_nelements', sim_nelements)
   
 ! Check for consistent setup.
   if (NMASS_SCALARS .ne. sim_nelements) then
