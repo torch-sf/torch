@@ -342,6 +342,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+            # Check if this sink is an external particle. If so, adjust the stars creation time and then delete the sink. 
+            hydro.set_particle_pointers('sink')
+            if hydro.get_particle_extr(sink_tag) == 1:
+                star_create_time = hydro.get_particle_creation_time(sink_tag)
+                hydro.remove_particle(sink_tag)
+                hydro.set_particle_pointers('mass')
+                hydro.set_particle_creation_time(star_tag, star_create_time)
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')

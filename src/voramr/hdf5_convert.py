@@ -11,6 +11,7 @@ import numpy as np
 from amuse.datamodel import Particles
 from amuse.units import units
 from voramr.voramr_stdout import vprint
+from torch_param import FlashPar
 
 def extract_data(file_name, apply_consts=True):
     #pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
@@ -30,19 +31,21 @@ def extract_data(file_name, apply_consts=True):
     coords = np.array([c[:,0], c[:,1], c[:,2]]).T
     vels = np.array([v[:,0], v[:,1], v[:,2]]).T
 
+    sim_time = f["/Header"].attrs['Time']
     #Extract star dataset
     sds = f['PartType4']
     c = sds['Coordinates'][:]*length*(1./hubble)
     sm = sds['Masses'][:]*mass*(1./hubble)
+    smassive = sds['MassiveStarMass'][:] # units in solar masses
     im = sds['GFM_InitialMass'][:]*mass*(1./hubble)
     v = sds['Velocities'][:]*velocity
-    a = sds['GFM_StellarFormationTime'][:]
+    a = (sim_time - sds['GFM_StellarFormationTime'][:])*length/velocity/hubble
     smet = sds['GFM_Metallicity'][:]
 
     scoords = np.array([c[:,0], c[:,1], c[:,2]]).T
     svels = np.array([v[:,0], v[:,1], v[:,2]]).T
     f.close()
-    return coords, vels, d, m, ie, gpot, scoords, svels, sm, im, a, smet
+    return coords, vels, d, m, ie, gpot, scoords, svels, sm, im, a, smet, smassive
 
 def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=False):
     #pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
@@ -82,7 +85,7 @@ def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=Fal
     return coords_cor, vels_cor, scoords_cor, svels_cor
 
 def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
-                         scoords, svels, smass, sinitmass, sfmtime, smetal,
+                         scoords, svels, smass, sinitmass, sage, smetal,
                          use_localRef=False, local_ref=[0.0,0.0,0.0], recenter_coords=False):
     # Write all gas data to file to be included in interpolation kdtree regardless if we
     # are refining on a region of interest. Include all field values.
@@ -207,6 +210,64 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
 
     vprint("Wrote FLASH refinement gas and stars to", output_filename)
     f.close()
+
+def make_background_sinks(scoords, svels, smass, sinitmass, sage, smet, smassive, age_cut=5.0|units.Myr, apply_roi=True):
+    """
+    Make sink particles in Torch from the already formed young star particles in Arepo sims.
+    We only form the star particles that are young and have a massive star particle inside.
+    Initializes sinks in the hydro worker using amuse functions. 
+
+    Inputs: star coordinates and velocities in the Torch simulation reference frame (i.e. after
+    running rescale_coords_vels), star masses, star initial masses, stellar formation time,
+    stellar metallicity, and the amount of mass in massive stars in the stellar particle, age 
+    limit of young stars to include as sinks, boolean that determines whether to only include stars
+    inside the region of interest defined by the derefinement region.
+
+    Outputs: none. 
+
+    """
+
+    x = scoords[:,0] | units.cm
+    y = scoords[:,1] | units.cm
+    z = scoords[:,2] | units.cm
+    vx = svels[:,0] | units.cm/units.s
+    vy = svels[:,1] | units.cm/units.s
+    vz = svels[:,2] | units.cm/units.s
+    m = smass | units.g
+    massive = smassive | units.MSun
+    age = sage | units.s 
+
+    sink_filter = [True]*len(x)
+
+    # step one: check that these stars are in the derefinement region as described in the flash.par.
+    if apply_roi:
+        flashp = FlashPar("flash.par")
+        deref_xl = flashp['deref_xl'] | units.cm
+        deref_xr = flashp['deref_xr'] | units.cm
+        deref_yl = flashp['deref_yl'] | units.cm
+        deref_yr = flashp['deref_yr'] | units.cm
+        deref_zl = flashp['deref_zl'] | units.cm
+        deref_zr = flashp['deref_zr'] | units.cm
+
+        sink_filter = (
+            (x > deref_xl) & (x < deref_xr) &
+            (y > deref_yl) & (y < deref_yr) &
+            (z > deref_zl) & (z < deref_zr)
+        )
+
+    # step two: apply age cut and massive star mass cut
+    sink_filter = sink_filter & (smassive > 8.0 | units.MSun) & (age<age_cut)
+
+    # step three: make the sinks in flash. 
+    hydro.set_particle_pointers('sink')
+    sink_tags = hydro.make_sink(sink_tag, x[sink_filter], y[sink_filter], z[sink_filter])
+    hydro.set_particle_velocity(sink_tag, vx[sink_filter], vy[sink_filter], vz[sink_filter])
+    hydro.set_particle_mass(sink_tag, m[sink_filter])
+    hydro.set_particle_extr(sink_tag, [1]*len(m))
+    hydro.set_particle_creation_time(sink_tag, -age[sink_filter])
+    hydro.set_particle_pointers('mass')
+
+    return None
 
 def write_voramr_data_to_txt_file(voramr_txt_filename, coords, use_localRef=False, local_ref=[0.0,0.0,0.0]):
     # Meant to provide a way to get away from serial hdf5 read in FLASH.

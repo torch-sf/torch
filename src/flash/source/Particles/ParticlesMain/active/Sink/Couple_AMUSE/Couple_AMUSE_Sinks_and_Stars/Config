@@ -10,6 +10,10 @@ REQUIRES Particles/ParticlesMapping/meshWeighting/MapToMesh
 REQUIRES flashUtilities/sorting/quicksort
 REQUIRES Particles/ParticlesMain/active/massive
 
+D Whether this sink is external to the simulation or formed in-situ.
+D For including star particles from other simulations in Torch.
+PARTICLEPROP EXTR REAL
+
 D Mean gas sound speed around a sink.
 PARTICLEPROP CSGM REAL
 

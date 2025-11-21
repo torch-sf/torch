@@ -75,6 +75,7 @@ from voramr.hdf5_convert import (
     extract_data,
     rescale_coords_vels,
     write_corrected_file,
+    make_background_sinks,
     write_voramr_data_to_txt_file
 )
 from voramr.kdtree import (
@@ -548,13 +549,13 @@ def run_torch(user_initial_conditions, user_parameters):
         tprint("Initializing with VorAMR.")
         if USER['convert_file']:
             vprint("Converting  provided hdf5 file.")
-            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sfmtime, smet = extract_data(USER['source_file'],
+            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sage, smet, smassive = extract_data(USER['source_file'],
                                                                 apply_consts=True)
             coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
                                                                                scoords, svels,
                                                                                use_com_coords=False)
             write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
-                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet,
+                                 scoords_cor, svels_cor, smass, sinitmass, sage, smet,
                                  USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
 
             #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
@@ -594,6 +595,7 @@ def run_torch(user_initial_conditions, user_parameters):
         vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
+        make_background_sinks(scoords, svels, smass, sinitmass, sage, smet, smassive)
         vprint("Done interpolating. VorAMR complete.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")

@@ -682,6 +682,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
             function.addParameter(x, dtype='d', direction=function.IN)
         function.addParameter('tags', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.addParameter('creation_time',dtype='d',direction=function.IN)
         function.result_type = 'i'
         return function
 
@@ -705,6 +706,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
     def set_starting_local_tag_numbers():
         function = LegacyFunctionSpecification()
         function.result_type='i'
+        return function
+
+    @legacy_function
+    def set_particle_extr():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('extr', dtype='i', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
         return function
 
     @legacy_function
@@ -964,6 +975,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('sigh', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_extr():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('extr', dtype='i', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
@@ -1695,6 +1716,12 @@ class Flash(CommonCode):
         )
 
         object.add_method(
+            'get_particle_extr',
+            (object.INDEX),
+            (extr, object.ERROR_CODE)
+        )
+
+        object.add_method(
             'get_particle_mass',
             (object.INDEX),
             (mass, object.ERROR_CODE)
@@ -1770,6 +1797,12 @@ class Flash(CommonCode):
             'get_particle_sigh',
             (object.INDEX),
             (length*length, object.ERROR_CODE)
+        )
+
+        object.add_method(
+            'set_particle_extr',
+            (object.INDEX, extr),
+            (object.ERROR_CODE)
         )
 
         object.add_method(
@@ -2146,7 +2179,9 @@ class Flash(CommonCode):
                     'set_starting_local_tag_numbers',
                     'get_particle_creation_time',
                     'set_particle_creation_time',
+                    'get_particle_extr',
                     'get_particle_mass',
+                    'set_particle_extr',
                     'set_particle_mass',
                     'get_particle_oldmass',
                     'set_particle_oldmass',

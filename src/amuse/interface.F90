@@ -2467,6 +2467,80 @@ end if
 get_particle_acceleration_array=0
 END FUNCTION
 
+FUNCTION get_particle_extr(tags,extr,nparts)
+
+  integer :: nparts, MyPe
+  integer :: get_particle_extr, i, j, p, oldj, ierr, counter
+  double precision, dimension(nparts) :: tags
+  integer, dimension(nparts) :: extr
+  integer :: type_begin, type_end, type_count, offset
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+extr = 0
+
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    ! Offset for particles location in particles array possibly not starting at
+    ! first index.
+    offset = 0
+    if (type_begin /= 1) offset = type_begin - 1
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+
+        if (j .ne. -1) then
+            extr(i) = particles_pointer(EXTR_PART_PROP, QSindex(j))
+
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+            extr(i) = 0
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+else
+
+    extr = 0
+
+endif
+
+call MPI_AllReduce(MPI_IN_PLACE, extr, nparts, MPI_INTEGER, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#endif
+get_particle_extr=0
+END FUNCTION
+
 FUNCTION get_particle_mass(tags,mass,nparts)
 
   integer :: nparts, MyPe
@@ -4545,6 +4619,66 @@ deallocate(id_sorted)
 
 #endif
 set_particle_velocity=0
+END FUNCTION
+
+FUNCTION set_particle_extr(tags,extr, nparts)
+
+  integer :: nparts
+  double precision :: tags(nparts)
+  integer :: extr(nparts)
+  integer :: set_particle_extr, i, p, j, myProc, local_index, oldj
+  integer*8 :: local_tag
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
+
+call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+if (type_count .ge. 1) then
+
+! Sort by particle tag. Note that input array should also be
+! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+       id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+        QSindex = 1
+    else
+        call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+    ! If found, set particle attribute accordingly.
+    ! Note that since the inputs are sorted by tag, the last tag found
+    ! becomes the new lower bound for the next search.
+
+        if (j .ne. -1) then
+            particles_pointer(EXTR_PART_PROP, QSindex(j)) = extr(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+            j = oldj
+        end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+endif
+#endif
+set_particle_extr=0
 END FUNCTION
 
 FUNCTION set_particle_mass(tags,mass, nparts)
@@ -7036,10 +7170,11 @@ make_sink=0
 END FUNCTION
 
 ! Add massive/active type particles, not sinks. - JW
-FUNCTION add_particles(x, y, z, tags, nparts)
+FUNCTION add_particles(x, y, z, tags, nparts, creation_time)
 
 integer :: nparts, n_created
 real*8, dimension(nparts)   :: x, y, z, tags, local_tags
+real*8, optional, dimension(nparts) :: creation_time
 real*8, dimension(NPART_PROPS, nparts) :: part_copy
 integer, dimension(MAXBLOCKS, NPART_TYPES) :: particlesPerBlk
 real*8   :: time(nparts)
@@ -7062,7 +7197,7 @@ local_tags = 0.0
 call get_particle_type_bounds(part_type, type_begin, type_end, init_num_parts)
 
 
-    call Particles_addNew(nparts, x, y, z, n_created, local_tags, ptype_in=real(ACTIVE_PART_TYPE,8))
+    call Particles_addNew(nparts, x, y, z, n_created, local_tags, ptype_in=real(ACTIVE_PART_TYPE,8), create_time=creation_time)
 
 call Particles_moveAndSort(.true.)
 
