@@ -161,10 +161,12 @@ def binary_evolution(time, dt, state, hydro, se,
                     tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
                     inj_mass = 15.0|units.MSun
 
-                # inject energy and mass onto grid
-                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
-                se_dt = min(se_dt, _tmp)
-                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                # Inject energy and mass onto grid                         
+                # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN          
+                if s.COcore_mass <= 15 | units.MSun:
+                    _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                    se_dt = min(se_dt, _tmp)
+                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
                 # implicitly zeros out feedback properties by not setting
 
@@ -187,11 +189,13 @@ def binary_evolution(time, dt, state, hydro, se,
                     tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
                     inj_mass = 15.0|units.MSun
 
-                # inject energy and mass onto grid
-                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), t.x, t.y, t.z)
-                se_dt = min(se_dt, _tmp)
-                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(t.x, t.y, t.z, inj_mass.value_in(units.MSun), s.tag))
-
+                # Inject energy and mass onto grid                                                                                                                                                             
+                # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN                                                                                                       
+                if t.COcore_mass <= 15 | units.MSun:
+                    _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), t.x, t.y, t.z)
+                    se_dt = min(se_dt, _tmp)
+                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(t.x, t.y, t.z, inj_mass.value_in(units.MSun), t.tag))
+                
                 # implicitly zeros out feedback properties by not setting
 
                 # Update velocity from kick velocity - CCC 06/04/2025
@@ -486,7 +490,6 @@ def stellar_evolution(time, dt, state, hydro, se,
     # Indices of active feedback stars to evolve
     #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
->>>>>>> origin/develop
     for i, s in enumerate(state.stars):
 
         if s.tag in remnants or s.initial_mass < min_feedback_mass:
