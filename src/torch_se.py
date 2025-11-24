@@ -151,7 +151,7 @@ def binary_evolution(time, dt, state, hydro, se,
 
         if s.initial_mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(s.stellar_type): # Do not check if in binary for SN - CCC 29/10/2024
+            if with_sn and went_supernova_from_kick(s, state.stars): # Do not check if in binary for SN - CCC 29/10/2024
 
                 inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
                 
@@ -179,7 +179,7 @@ def binary_evolution(time, dt, state, hydro, se,
                 evolved_stars.add_particle(s)
                 
             # Check if companion went supernova - CCC 15/04/2025
-            if in_binary and with_sn and went_supernova(t.stellar_type):
+            if in_binary and with_sn and went_supernova_from_kick(t, state.stars):
                 
                 inj_mass = old_mass[k] - t.mass  # minus stellar remnant's mass
                 
@@ -676,6 +676,17 @@ def went_supernova(stellar_type):
     """
     types = stellar_type.value_in(units.stellar_type)
     return (types >= 13) & (types <= 15)
+
+def went_supernova_from_kick(star, stars):
+    """                                                                                               
+    Determines whether a SeBa star has undergone supernova or not, based on whether or not the
+    natal kick is set for the star. Used to avoid superfluous SNe from e.g. CEE with BE.
+    """
+    kick_set = False
+    if 'natal_kick_x' in stars.get_attribute_names_defined_in_store():
+        if star.natal_kick_x != (0 | units.km/units.s):
+            kick_set = True
+    return kick_set
 
 # Used to check for common envelope or unstable mass transfer
 # This type of mass loss is triggered if >1% of the stars' mass was lost
