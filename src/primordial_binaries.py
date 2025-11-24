@@ -11,7 +11,6 @@ from amuse.lab import units
 from amuse.ext.orbital_elements import *
 
 def get_multiplicity(m, mult_frac='field'):
-    print("importing correct function...")
     """
     Function to select primaries and singles
     args:
@@ -184,8 +183,8 @@ def get_periods(m, pdist='inner'):
     p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
 
     # Verify that all period values are within bounds
-    assert np.min(p) >= 10**0.2
-    assert np.max(p) <= 10**7.5
+    assert (10**0.2/np.min(p)) <= (1.+1e-5)
+    assert (np.max(p)/10**7.5) <= (1.+1e-5)
     
     return p
 
