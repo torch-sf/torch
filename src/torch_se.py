@@ -468,6 +468,10 @@ def stellar_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
     
+    # make list of remnant stars so we don't explode them again
+    remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
+
+    # CCC 26/04/2024
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
@@ -475,47 +479,54 @@ def stellar_evolution(time, dt, state, hydro, se,
     se.evolve_model(time)
     state.se_to_stars.copy()
 
+    # Reset the stars' age after the SE step, as the SeBa age is reset to 0
+    # at each restart - CCC 22/11/2024
+    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+
+    # Indices of active feedback stars to evolve
+    #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
+    # Loop only over active stars while retaining the correct indexing for total star array
+>>>>>>> origin/develop
     for i, s in enumerate(state.stars):
 
-        if went_supernova(s.stellar_type):
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
-        if s.mass >= min_feedback_mass:
+        if with_sn and went_supernova(s.stellar_type):
 
-            if with_sn and went_supernova(s.stellar_type):
+            inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
+            if inj_mass > 15.0|units.MSun:
+                # expected upper limit for SeBa tracks; see
+                # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                tprint("... setting maximum SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                inj_mass = 15.0|units.MSun
 
-                inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
-                
-                if inj_mass > 15.0|units.MSun:
-                    # expected upper limit for SeBa tracks; see
-                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
-                    inj_mass = 15.0|units.MSun
-
-                # inject energy and mass onto grid
+            # Inject energy and mass onto grid
+            # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
+            if s.COcore_mass <= 15 | units.MSun:
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
-                # implicitly zeros out feedback properties by not setting
+            # implicitly zeros out feedback properties by not setting
 
-            else:
+        else:
 
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds:
-                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                              massloss_method=massloss_method)
-                    dm_dt[i] = _tmp[0]
-                    vterm[i] = _tmp[1]
+            if with_lyc:
+                _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                eion[i] = _tmp[0]
+                nion[i] = _tmp[1]
+                sigh[i] = _tmp[2]
+            if with_pe_heat:
+                _tmp = compute_epe_npe(s.temperature, s.radius)
+                epe[i] = _tmp[0]
+                npe[i] = _tmp[1]
+                sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+            if with_winds:
+                _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                          massloss_method=massloss_method)
+                dm_dt[i] = _tmp[0]
+                vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
         if dm_dt[i]*dt > 0.0|units.MSun:
@@ -656,7 +667,12 @@ def compute_epe_npe(se_temp, se_radius):
 
 
 def went_supernova(stellar_type):
-    return 13 <= stellar_type.value_in(units.stellar_type) <= 15
+    """                                                                                               
+    Determines whether a SeBa star has went supernova or not. Types 13-15 are neutron star, black hole,                                                                                                   
+    and disintegrated. This function returns an array or scalar based on input type.                                                                                                      
+    """
+    types = stellar_type.value_in(units.stellar_type)
+    return (types >= 13) & (types <= 15)
 
 # Used to check for common envelope or unstable mass transfer
 # This type of mass loss is triggered if >1% of the stars' mass was lost
@@ -678,7 +694,6 @@ def high_dm_dt(new_mass, old_mass, dt):
 def accreted_mass(new_mass, old_mass):
     dm = (old_mass - new_mass)/old_mass
     return dm < 0
-
 
 def lum_wl_cs(l, l_max, T):
     """

@@ -117,11 +117,13 @@ You can find a high-level overview of the code in:
     \item Wall 2019, \href{https://www.dropbox.com/s/c0qh1no85y1jnxf/J_Wall-Thesis_final.pdf?dl=0}{Ph.D thesis}
 \end{itemize}
 
-Torch comprises (1) interface code that plugs into both FLASH and AMUSE, and
-(2) a good number of add-on code units for FLASH.
-To use Torch, you install interface code into both FLASH and AMUSE, compile
-FLASH alone, and then compile an AMUSE ``worker'' binary that enables FLASH to
-be called from AMUSE python scripts.
+Torch comprises (1) interface code that connects FLASH to AMUSE,
+(2) a good number of add-on code units for FLASH, and (3) a set of Python scripts
+that connect the codes and drive thes imulation.
+
+To use Torch, you install additional code into FLASH, and then compile FLASH into an
+AMUSE ``worker'' binary that enables FLASH to be called from AMUSE python scripts. You
+then run a Python script to run the simulation.
 
 \begin{figure}[!h]
     \center
@@ -142,255 +144,376 @@ Torch has many moving parts.  You'll likely have to adjust the procedure below
 for your personal setup.  In any case, don't despair!  Torch has been
 successfully built and run on a variety of systems.
 
-We assume that you're using (1) the bash shell, and (2) conda for Python
+We assume that you're using (1) the bash shell, and (2) conda or a virtualenv for Python
 package management.  But, the setup procedure should work for any shell and
 Python package manager with some adjustments.
 
-% -------------
-% Prerequisites
-% -------------
-\subsection{Prerequisites}
+% --------
+% Overview
+% --------
 
-\begin{itemize}
-\item FLASH 4.6.2: \url{http://flash.uchicago.edu/site/flashcode}
-\item AMUSE: \url{https://github.com/amusecode/amuse}
-\item Torch: \url{https://bitbucket.org/torch-sf/torch}
-\item Python 3.X (below setup assumes Conda)
-\item MPI
-\item HDF5
-\item git, wget
-\end{itemize}
+\subsection{Overview}
 
-To download FLASH, you'll need to register, which takes a few days.
+Torch consists of a collection of Fortran files that extend the FLASH MHD code, bindings
+for AMUSE for that extended FLASH, and a set of Python scripts that use AMUSE to run a
+simulation combining the extended FLASH with the other codes.
 
-To download AMUSE, do:
-\begin{lstlisting}[language=bash]
-cd your/code/directory
-git clone https://github.com/amusecode/amuse.git
-\end{lstlisting}
-If you have a previously installed version of AMUSE, make sure that it is more recent than \textbf{Feb 28, 2025}.
-
-To download Torch:
-\begin{lstlisting}[language=bash]
-cd your/code/directory
-git clone https://bitbucket.org/torch-sf/torch.git
-\end{lstlisting}
-
-MPI and HDF5 may be pre-installed if you are using a cluster.  If not, you will
-have to install these packages from source.  Be sure to use the same compiler
-set that you will use for the rest of this Torch build.
-
-Torch is known to work with OpenMPI 2.x, 3.x, and 4.x; HDF5 1.8.x and 1.10.x.
-
-\texttt{git} and \texttt{wget}, if not already provided by your system, can be
-installed in your custom conda environment (see next section) with
-\texttt{conda install git wget}.
+Installing Torch therefore entails 1) creating an environment and installing the
+dependencies, including AMUSE, 2) installing Torch, with its extended FLASH and Python
+parts, and 3) installing the FLASH AMUSE bindings to tie it all together.
 
 % -----------
 % Environment
 % -----------
-\subsection{Environment setup (Josh thesis Appendix A.1)}
 
-Start a new shell session.  You may want to check your \texttt{.bashrc} for any
+\subsection{Environment}
+
+First, start a new shell session. You may want to check your \texttt{.bashrc} for any
 old MPI or HDF5 configuration that could conflict with Torch setup -- module
 load commands, environment variable exports, et cetera -- and comment them out.
 
-Load MPI and HDF5 into your environment.  If you're using shared cluster builds, do something like:
+Next, it is probably a good idea to make a project directory in which you can
+download and install all the pieces:
+
 \begin{lstlisting}[language=bash]
-module load OpenMPI/x.y.z/blah  # for clusters with lmod
-module load HDF5/x.y.z/blah
+mkdir torch_project
 \end{lstlisting}
 
-Else, if you built MPI or HDF5 from scratch, set your environment manually.
-You can check what environment variables might be needed by calling
-\texttt{module show} on existing HDF5 or MPI builds on your cluster.
-An example for one cluster is below:
-\begin{lstlisting}[language=bash]
-export MPI_HOME=/path/to/openmpi-x.y.z
-export MPI_RUN=/path/to/openmpi-x.y.z/bin/mpirun
-export PATH=$MPI_HOME/bin:$PATH
-export MANPATH=$MPI_HOME/share/man:$MANPATH
-export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
-export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
-export CPATH=$MPI_HOME/include:$CPATH
+You can call it something different or arrange the files differently if you want. In
+particular if you're on an HPC cluster with a limited amount of space available in your
+home directory, then you'll want to use another location instead, for example a scratch
+directory. The documentation for the machine should tell you what is available. You'll
+need about 2GB for the base installation, plus space for model output which can also
+easily grow to multiple gigabytes.
 
-export HDF5_HOME=/path/to/hdf5-x.y.z
-export HDF5DIR=/path/to/hdf5-x.y.z/lib
-export HDF5INCLUDE=/path/to/hdf5-x.y.z/include
-export HDF5LIB="hdf5_fortran -lhdf5"
-export PATH=${HDF5_HOME}/bin:$PATH
-export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
-export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
-export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
-export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
-export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+Next, we'll need an environment to install the Python bits into, and possibly the native
+tools and dependencies as well. There are two options here. If you're on an HPC machine,
+then you'll probably want to use native tools and dependencies, and a Python virtual
+environment for the Python bits. On a local machine, you can do that as well, or use
+conda instead to get everything contained in a single environment. Both options are
+described here.
+
+\subsubsection{Local, with conda}
+
+We'll assume here that you already have conda installed and available. If not, we
+recommend installing the miniforge distribution from
+\url{https://github.com/conda-forge/miniforge}.
+
+First, we'll create and activate a new conda environment, and set it to use conda-forge:
+
+\begin{lstlisting}[language=bash]
+conda create -n Torch
+conda activate Torch
 \end{lstlisting}
 
-Setup a clean, isolated Python environment for AMUSE:
+Note that AMUSE is designed to work with the conda-forge package channel. Conda-forge
+contains a very large variety of scientific and other packages, so you'll find
+everything you need for Torch as well as other tools you may want to use.
+
+Mixing conda channels is not recommended, as it leads to package incompatibilities, long
+waits for the solver to try to deal with incongruent sets of packages when installing,
+and hard to diagnose issues. So we strongly recommend sticking with conda-forge only.
+Miniforge will do that by default.
+
+If you open a new shell, then the environment needs to be reactivated using the
+\texttt{conda activate Torch} command before you do anything else.
+
+Once we have a conda environment, we can install the prerequisites inside of it, once
+again making sure our packages come from conda-forge (some versions of conda can be a
+bit stubborn on this):
+
 \begin{lstlisting}[language=bash]
-mkdir {your/conda_env/directory}
-conda create --prefix {your/conda_env/directory}/{env_name} python=3
-source activate {your/conda_env/directory}/{env_name}  # give absolute path so conda can find your env
+conda install -c conda-forge --override-channels pip wheel c-compiler cxx-compiler
+fortran-compiler \ 'gfortran<14' python coreutils patch curl make openmpi hdf5 zlib
+'docutils>=0.6' 'mpi4py>=1.1.0' \ 'numpy>=1.2.2' 'h5py>=1.1.0' scipy astropy jupyter pandas seaborn matplotlib yt
 \end{lstlisting}
 
-Install some Python packages required by AMUSE:
+AMUSE is not yet available directly from conda-forge, so we'll have to install it from
+source. First, we need to download and unpack it (into our project directory):
+
 \begin{lstlisting}[language=bash]
-conda install ipython matplotlib numpy scipy docutils gsl gmp h5py mpfr nose
-conda clean --all
-pip install --no-cache-dir mpi4py
+curl -L -O "https://github.com/amusecode/amuse/archive/refs/tags/v2025.9.0.tar.gz"
+tar xzf v2025.9.0.tar.gz
 \end{lstlisting}
 
-% -------------
-% Install Torch
-% -------------
-\subsection{Install Torch}
+AMUSE has had a major upgrade to its installer recently, so be sure to get v2025.9.0 or
+a later version, older ones won't work.
 
-Declare the following environment variables:
+Next, we can move into the newly created AMUSE source directory, and run the installer:
+
 \begin{lstlisting}[language=bash]
-export AMUSE_DIR=/path/to/amuse
-export FLASH_DIR=/path/to/FLASH4.6.2
-export TORCH_DIR=/path/to/torch
+cd amuse-2025.9.0
+./setup
 \end{lstlisting}
 
-Then, cd to the \texttt{torch} repo and do:
+This will produce quite a bit of output, including an overview of installable codes,
+disabled codes and the reasons why, and follow-up instructions. If all went well then
+you should now be able to install the AMUSE packages you need into your conda environment
+using
+
 \begin{lstlisting}[language=bash]
+./setup install framework kepler petar ph4 seba smalln
+\end{lstlisting}
+
+Note that Torch doesn't necessarily use all of these, so if you know which ones you
+want, then you can install only those. At any rate you can return to the AMUSE directory
+later and use \texttt{./setup} to install more codes.
+
+That concludes setting up the environment and the dependencies, so you can scroll past
+the next section (one environment is enough, really!) and continue with installing
+Torch.
+
+
+\subsubsection{HPC, with virtualenv and modules}
+
+As an alternative to Conda, you can also use a Python virtual environment to install the
+Python dependencies into. Dependencies for the Fortran and C code in Torch will then
+have to be installed in some other way. Linux computers typically have a built-in
+package manager like \texttt{apt} or \texttt{dnf}, while on a Mac Homebrew and MacPorts
+are commonly used. On HPC machines, you typically load the necessary modules.
+
+If you're on a local machine and have one of the above package managers available, then
+you should continue with the instructions below, but skip the loading of modules and
+just make the virtual environment and install the Python dependencies into it. If you
+then continue with installing AMUSE, the AMUSE installer will guide you through
+installing the dependencies using whichever package manager you have available. (Note
+that you won't need everything it suggests, because Torch doesn't use all of AMUSE. You
+can save some disk space by limiting your selection.)
+
+On an HPC cluster or similar environment, the main tools and dependencies are likely
+already installed and available as modules. To use them, we'll have to activate them
+using the \texttt{module} command.
+
+First, let's see what's installed:
+
+\begin{lstlisting}[language=bash]
+module avail
+\end{lstlisting}
+
+This will show a long (potentially very long) list of installed packages, or modules.
+
+On some systems, this will only show a few years, e.g. \texttt{2023 2024 2025}. In that
+case, use \texttt{module load 2025} (the latest is usually best) and then try
+\texttt{module avail} again to get the list.
+
+Have a look through the list and see if you can find modules named \texttt{GCC},
+\texttt{HDF5}, \texttt{OpenMPI} (or some other MPI implementation, like \texttt{MPICH}),
+\texttt{make}, and \texttt{Python}. The exact names will vary from
+machine to machine. If the list is long, it's better to let the computer search for you
+using e.g. \texttt{module keyword HDF5}.
+
+Often, there are multiple versions of a package available. The codes in Torch (and
+AMUSE) are fairly old, so probably any version will work. If you see different packages
+with names like \texttt{gompi} or \texttt{iimpi}, use the \texttt{gompi} ones, as those
+match GCC and OpenMPI.
+
+You may not need \texttt{make} if it's already available. If the command
+
+\begin{lstlisting}[language=bash]
+make --version
+\end{lstlisting}
+
+prints some text starting with GNU Make, then you're good to go.
+
+Once you have found the needed module names, you can load the modules, for example for
+Snellius using the 2025 software stack
+(you'll need to modify the exact module names to suit your machine):
+
+\begin{lstlisting}[language=bash]
+module load 2025
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
+\end{lstlisting}
+
+Next, we can make a Python virtual environment. This is a directory, which can go into
+your project directory or wherever you want it.
+
+\begin{lstlisting}[language=bash]
+python3 -m venv /path/to/torch_project/Torch-env
+\end{lstlisting}
+
+We can then activate the environment, and install the Python dependencies:
+
+\begin{lstlisting}[language=bash]
+. /path/to/torch_project/Torch-env/bin/activate
+pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
+\end{lstlisting}
+
+
+At this point, it's probably convenient to create a file you can load that will activate
+the modules and the virtual environment whenever you want to work with Torch. To do
+that, create a file named \texttt{Torch.env} in your project directory containing the
+module load commands and the activation of the environment, like so:
+
+\begin{lstlisting}[language=bash]
+module load 2025
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
+
+. /path/to/torch_project/Torch-env/bin/activate
+\end{lstlisting}
+
+with appropriate modifications for your site. Now you can activate everything in one
+command using \texttt{. Torch.env} in your project directory (note the period and the
+space at the beginning, they're required).
+
+
+With the environment set up and activated, we can install AMUSE and most of the codes
+that Torch uses into it. First, we need to download and unpack it (into our project
+directory):
+
+\begin{lstlisting}[language=bash]
+curl -L -O "https://github.com/amusecode/amuse/archive/refs/tags/v2025.9.0.tar.gz"
+tar xzf v2025.9.0.tar.gz
+\end{lstlisting}
+
+AMUSE has had a major upgrade to its installer recently, so be sure to get v2025.9.0 or
+a later version, older ones won't work.
+
+Next, we can move into the newly created AMUSE source directory, and run the installer:
+
+\begin{lstlisting}[language=bash]
+cd amuse-2025.9.0
+./setup
+\end{lstlisting}
+
+This will produce quite a bit of output, including an overview of installable codes,
+disabled codes and the reasons why, and follow-up instructions.
+
+If you're on a local machine and don't already have the dependencies installed, then
+\texttt{./setup} will give you the required command to install them using your local
+package manager. Note that you probably don't need all the dependencies it suggests
+installing, as that is the complete set and Torch only uses a few of AMUSE's many codes.
+Compilers for C, C++ and Fortran, MPI, HDF5, make and Python should go a long way.
+
+If all went well then you should now be able to install the AMUSE packages you need into
+your virtual environment using
+
+\begin{lstlisting}[language=bash]
+./setup install framework kepler petar ph4 seba smalln
+\end{lstlisting}
+
+Note that Torch doesn't necessarily use all of these, so if you know which ones you
+want, then you can install only those. At any rate you can return to the AMUSE directory
+later and use \texttt{./setup} to install more codes.
+
+With that, we have a virtual environment that is ready to install Torch into.
+
+% ----------------
+% Installing Torch
+% ----------------
+
+\subsection{Installing Torch}
+
+The first step to installing Torch is to get a copy of FLASH. To do that, you need to
+register, which may take a few days, and then download FLASH 4.6.2. The FLASH homepage
+(\url{http://flash.uchicago.edu/site/flashcode}) will show you how.
+
+Once you have a \texttt{FLASH4.6.2.tar.gz} file in your project directory, you need to
+unpack it, and then set the \texttt{FLASH\_DIR} environment variable so that the Torch
+installer can find it:
+
+\begin{lstlisting}[language=bash]
+cd torch_project
+tar xzf FLASH4.6.2.tar.gz
+export FLASH_DIR=${PWD}/FLASH4.6.2
+\end{lstlisting}
+
+Next, we can download Torch, and set \texttt{TORCH\_DIR}:
+
+\begin{lstlisting}[language=bash]
+git clone https://bitbucket.org/torch-sf/torch.git
+export TORCH_DIR=${PWD}/torch
+\end{lstlisting}
+
+Then we can move into the Torch directory, and run its installer:
+
+\begin{lstlisting}[language=bash]
+cd ${TORCH_DIR}
 ./install.sh
 \end{lstlisting}
-This will copy interface files from \texttt{torch} to both the AMUSE and FLASH
-repos.
 
-% -----------
-% Build FLASH
-% -----------
-\subsection{Build FLASH (Josh thesis Appendix A.2 + FLASH docs)}
-\label{sec:build_flash}
+This will add the Fortran parts of Torch to FLASH. Next, we need to make the Python
+parts of Torch available:
 
-Let's \texttt{cd} to the FLASH4.6.2 directory and setup a turbulent sphere
-collapse problem.
-
-First, create a \texttt{Makefile.h} in \texttt{FLASH4.6.2/sites/mysitedir}.
-We recommend that you fork an example file from \texttt{sites/Prototypes}.
-You may have done this already while traversing the FLASH manual's quick start.
-
-If you used the example \texttt{Makefile.h} for the Netherlands supercomputer
-Cartesius in Josh's thesis, you may need to (1) remove
-\texttt{-march=core-avx2} flags throughout, and/or (2) remove
-\texttt{-lhdf5\_fortran} from the \texttt{LIB\_HDF5} variable declaration.
-
-You will also need to add the following flags to \texttt{FFLAGS\_OPT}:
-\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
-to your HDF5 install.
-
-Then, issue the setup command (update ``mysitedir''):
 \begin{lstlisting}[language=bash]
-./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars +amuseWind +enerinj \
-    +supportPPMupwind +pm4dev -maxblocks=100 +cube16 \
-    --site={mysitedir}
-\end{lstlisting}
-
-%Alternatively, you can add your machine to \texttt{FLASH4.6.2/sites/Aliases} in
-%the form ``\texttt{mysitedir  myhostname}'', where \texttt{myhostname} is given
-%by the shell command \texttt{hostname --fqdn}.
-
-Compile FLASH.  The \texttt{flash4} binary is not needed for the AMUSE/FLASH
-bridge, but compiling FLASH alone helps to catch errors and save time in the
-AMUSE compile step.
-\begin{lstlisting}[language=bash]
-cd object
-make -j
-\end{lstlisting}
-
-% ------------------------------------
-% Link AMUSE, Torch as Python packages
-% ------------------------------------
-\subsection{Install AMUSE and Torch as Python packages}
-Run the following commands:
-\begin{lstlisting}[language=bash]
-cd $AMUSE_DIR
-pip install -e .
-cd $TORCH_DIR
-pip install -e .
-\end{lstlisting}
-The flag \texttt{-e} installs both AMUSE and Torch modules in
-\href{https://setuptools.pypa.io/en/latest/userguide/development_mode.html}{development mode},
-so that any changes you make to your AMUSE and Torch directories are
-immediately visible to your Python installation; Python imports will take the
-module directly from your git-cloned directories.
-An alternative to the \texttt{pip install} procedure is to set the PYTHONPATH
-environment variable manually, like so:
-\begin{lstlisting}[language=bash]
-export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/test
-export PYTHONPATH=$PYTHONPATH:$AMUSE_DIR/src
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 \end{lstlisting}
 
-% ------------------------
-% Configure and make AMUSE
-% ------------------------
-\subsection{Configure AMUSE (Josh thesis Appendix A.3 + AMUSE docs)}
+You will want to add the exports of \texttt{TORCH\_DIR} and \texttt{FLASH\_DIR} to your
+\texttt{Torch.env}, as well as the PYTHONPATH, like so:
 
-Now, \texttt{cd} to the AMUSE repository.  You can follow the AMUSE docs up to
-the \texttt{make} step, but take a look at these notes for extra information.
-
-If you used a local conda environment following this guide, you may
-need to tell \texttt{configure} where HDF5, FFTW, GMP, MPFR, and GSL reside.
-
-Here is an example \texttt{configure} call for the Netherlands supercomputer
-Cartesius (early 2019):
 \begin{lstlisting}[language=bash]
-./configure \
-    --with-fftw=/hpc/eb/RedHatEnterpriseServer7/FFTW/3.3.8-gompi-2018b \
-    --with-hdf5=/hpc/sw/hdf5-1.8.12-intel-seq \
-    --with-gmp={your/conda_env/directory}/{env_name} \
-    --with-mpfr={your/conda_env/directory}/{env_name} \
-    --with-gsl-prefix={your/conda_env/directory}/{env_name}
+module load 2025
+module load GCC/14.2.0
+module load OpenMPI/5.0.7-GCC-14.2.0
+module load HDF5/1.14.6-gompi-2025a
+module load make/4.4.1-GCCcore-14.2.0
+module load Python/3.13.1-GCCcore-14.2.0
+
+FLASH_DIR=/path/to/FLASH4.6.2
+TORCH_DIR=/path/to/torch
+
+. /path/to/torch_project/Torch-env/bin/activate
+
+export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 \end{lstlisting}
 
-Library path errors are rather common at this step.  FFTW and NetCDF library
-errors are OK, but HDF5 library and/or header errors are not OK.
-The STDOUT from a successful configure build should include something like:
+With Torch installed into FLASH, we can now go to the FLASH directory and configure it:
+
 \begin{lstlisting}[language=bash]
-checking Using provided HDF5 C wrapper... /path/to/bin/h5pcc
-checking for HDF5 type... parallel
-checking for HDF5 libraries... yes (version 1.10.5)
-checking for hdf5.h... yes
-checking for H5Fcreate in -lhdf5... yes
-checking for main in -lhdf5_hl... yes
-checking for matching HDF5 Fortran wrapper... /path/to/bin/h5pfc
+cd $FLASH_DIR
+./setup Cube -auto -3d +amuseUSM +amuseMG +rayPE +HandCnew +amuseSinksAndStars \
++amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
 \end{lstlisting}
-See Section~\ref{sec:help-amuse} for more troubleshooting suggestions.
 
-You may need to manually edit the files:
-\begin{verbatim}
-    config.mk
-    src/amuse/community/flash/Makefile
-\end{verbatim}
-to select the correct compilers and libraries.
+The final piece of the puzzle are Torch's AMUSE FLASH bindings. These make it possible
+for the Python parts of Torch to talk to FLASH, including its Torch additions. Check
+that you still have your virtual environment active, and then you can compile and
+install FLASH and the bindings like this:
 
-You will need to add the following flags to \texttt{FCFLAGS} in both \texttt{config.mk}
-and \texttt{src/amuse/community/flash/Makefile}:
-\texttt{-I\$HDF5\_INC -L\$HDF5\_LIB -lhdf5\_fortran}, with the linkers pointing
-to your HDF5 install.
-
-Now, you can make the AMUSE \texttt{flash\_worker}, which is basically an
-AMUSE-hooked replacement for the normal \texttt{flash4} executable.
-The standard \texttt{make} takes ~10--20 minutes and builds all the codes
-included in AMUSE.  To request only the codes needed for Torch, do:
-% Present as separate steps, rather than make-ing all together,
-% so that user can clearly see which builds failed or succeeded.
 \begin{lstlisting}[language=bash]
-make framework
-make flash.code
-make kepler.code
-make petar.code
-make ph4.code
-make seba.code
-make smalln.code
+cd $TORCH_DIR
+make -C src/amuse/torch_amuse_flash develop-torch-amuse-flash
 \end{lstlisting}
-A successful make will create \texttt{flash\_worker} in
-\texttt{src/amuse/community/flash/}.
-%If the configure and/or Make fails, the STDOUT from configure and the
-%\texttt{config.log} file should show some informative error messages.
+
+
+With that, your environment should contain a working Torch installation. Time to give
+it a try!
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%
+% \begin{lstlisting}[language=bash]
+% export MPI_HOME=/path/to/openmpi-x.y.z
+% export MPI_RUN=/path/to/openmpi-x.y.z/bin/mpirun
+% export PATH=$MPI_HOME/bin:$PATH
+% export MANPATH=$MPI_HOME/share/man:$MANPATH
+% export LD_RUN_PATH=$MPI_HOME/lib:$LD_RUN_PATH
+% export LD_LIBRARY_PATH=$MPI_HOME/lib:$LD_LIBRARY_PATH
+% export CPATH=$MPI_HOME/include:$CPATH
+%
+% export HDF5_HOME=/path/to/hdf5-x.y.z
+% export HDF5DIR=/path/to/hdf5-x.y.z/lib
+% export HDF5INCLUDE=/path/to/hdf5-x.y.z/include
+% export HDF5LIB="hdf5_fortran -lhdf5"
+% export PATH=${HDF5_HOME}/bin:$PATH
+% export LD_LIBRARY_PATH=${HDF5_HOME}/lib:$LD_LIBRARY_PATH
+% export LD_RUN_PATH=${HDF5_HOME}/lib:$LD_RUN_PATH
+% export LIBRARY_PATH=${HDF5_HOME}/lib:$LIBRARY_PATH
+% export C_INCLUDE_PATH=${HDF5_HOME}/include:$C_INCLUDE_PATH
+% export CPLUS_INCLUDE_PATH=${HDF5_HOME}/include:$CPLUS_INCLUDE_PATH
+% \end{lstlisting}
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % --------------------
 % Run Torch simulation
@@ -1487,7 +1610,7 @@ cd $TORCH_DIR
 ./install.sh
 \end{lstlisting}
 
-You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH_DIR/sites}, run:
+You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH\_DIR/sites}, run:
 \begin{lstlisting}
 cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
 \end{lstlisting}

@@ -16,6 +16,6 @@ module Particles_rayData
 !-------------------------------------------------------------------------------
 
 ! if no raytracing module is included
-  logical, save :: useRadTransfer = .false.
+  logical, save :: useRadTransfer = .true.
 
 end module Particles_rayData
