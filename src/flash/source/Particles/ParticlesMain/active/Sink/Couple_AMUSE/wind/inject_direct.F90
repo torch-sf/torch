@@ -35,7 +35,11 @@
 
 
 
+#ifdef ELEMENTS
+subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectElementIn, twind, dt, bgDens)
+#else
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
+#endif
 
 !#define DEBUG
 #define DEBUG_ENERGY
@@ -62,6 +66,10 @@ use Particles_windData, ONLY: min_wind_dt, ref_radius, mass_load, add_therm_e, &
 use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
 use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
+
+#ifdef ELEMENTS
+use Particles_windData, ONLY: wind_yields, mass_load_yields, ism_loading
+#endif
 
 #include "Flash.h"
 #include "constants.h"
@@ -165,6 +173,11 @@ logical  :: calcBgDens
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
+#ifdef ELEMENTS
+real(dp),dimension(NMASS_SCALARS) :: injectElement
+real(dp),dimension(NMASS_SCALARS) :: oldElem, dElem, newElem
+integer :: ielem
+#endif
 
 ! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
 if ((injectMassIn .le. tiny(0.0_dp)) .or. (injectVelocityIn .le. tiny(0.0_dp))) then
@@ -187,6 +200,11 @@ if (first_call) then
     call RuntimeParameters_get("perturb_std_dev", perturb_std_dev)
     call RuntimeParameters_get("use_wind_compute_dt", use_wind_compute_dt)
     call Grid_getMinCellSize(delta(1))
+#ifdef ELEMENTS
+    call RuntimeParameters_get("wind_yields", wind_yields)
+    call RuntimeParameters_get("mass_load_yields", mass_load_yields)
+    call RuntimeParameters_get("ism_loading", ism_loading)
+#endif
     delta=delta(1)
     
     ! If we are setting ref_radius to -1, this means we want to
@@ -242,6 +260,19 @@ deltaKinE    = 0.0
 
 injectMass = injectMassIn
 injectVelocity = injectVelocityIn
+
+#ifdef ELEMENTS
+ism_mass = 0.0d0
+injectElement = injectElementIn
+! Sanity checks
+if (wind_yields) then
+   do ielem = 1, NMASS_SCALARS
+      if (injectElement(ielem).GT.injectMass) print*, "Injecting more element than available mass", ielem, &
+         & injectElement(ielem),injectMass
+      if (injectElement(ielem).LE.0.0) print*, "Injecting zero or negative amount of element", ielem, injectElement(ielem)
+   enddo
+endif
+#endif
 
 call Grid_getMinCellSize(delta(1))
 delta=delta(1)
@@ -429,6 +460,21 @@ if (mass_load) then
         injectMass       = injectMassIn*(1.0d0+mass_load_factor)
     endif
 end if
+
+#ifdef ELEMENTS
+! Mass loading yields is tricky. We must make a choice about where the
+! additional mass comes from. Either it is part of the wind (ism_loading=false),
+! or it is swept up mass in the surrounding of the star (ism_loading=true).
+! This choise determines the element abundances of the mass that is swept up.
+if (wind_yields .and. mass_load_yields) then
+    if (ism_loading) then
+        ! To be multiplied by ISM metallicity
+        ism_mass = injectMassIn*mass_load_factor
+    else
+        injectElement = injectElementIn*(1.0d0+mass_load_factor)
+    endif
+endif
+#endif
 
 #ifdef DEBUG_ENERGY
 if (gr_meshMe == 0) then
@@ -713,6 +759,28 @@ if (iHaveInjectBlk) then
                       totP    = injVel * dDens + oldVel * oldDens
                       newVel  = totP / newDens
                       
+#ifdef ELEMENTS
+                      if (wind_yields) then
+                          ! Compute the metal density of material which is added to cell.
+                          do ielem = 1, NMASS_SCALARS
+                            if(mass_load_yields.AND.ism_loading) then
+                               ! ism_mass is the additional mass due to mass loading if applied.
+                               ! ism loading implies additional mass is from swept-up material (old metallicity)
+                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k) &
+                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
+                            else
+                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
+                            endif
+                            if (wind_yields) then
+                              dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                            else
+                              dElem(ielem) = 0.0
+                            endif
+                            newElem(ielem) = oldElem(ielem) + dElem(ielem)
+                          enddo
+                      endif
+#endif
+
                       ! How much mass are we really putting in? - JW
                       sumMass = sumMass + dDens*dVol
                       initialKE = 0.5_dp*sum(oldVel**2.0_dp) ! Per particle per unit mass, KE/M = KE / (N * mu * m_H).
@@ -793,7 +861,15 @@ if (iHaveInjectBlk) then
                       solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
                       solndata(DENS_VAR, i, j, k) = newDens
 
-		      
+#ifdef ELEMENTS
+                      if (wind_yields) then
+                          ! Update scalar field to new metallicity after wind mass injection
+                          do ielem = 1, NMASS_SCALARS
+                              solndata(MASS_SCALARS_BEGIN+(ielem-1), i, j, k) = newElem(ielem)/newDens
+                          enddo
+                      endif
+#endif
+
 		              if (addKinE .gt. largestKE) largestKE = addKinE*dVol
 		              if (addThermE .gt. largestTE) largestTE = addThermE*dVol
 		      
@@ -882,6 +958,28 @@ if (iHaveInjectBlk) then
                       oldE    = oldDens * sum(oldVel**2)
                       oldP    = oldDens * sqrt(sum(oldVel**2))
 
+#ifdef ELEMENTS
+                      if (wind_yields) then
+                          ! Compute the metal density of material which is added to cell.
+                          do ielem = 1, NMASS_SCALARS
+                            if(mass_load_yields.AND.ism_loading) then
+                               ! ism_mass is the additional mass due to mass loading if applied.
+                               ! ism loading implies additional mass is from swept-up material (old metallicity)
+                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k) &
+                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
+                            else
+                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
+                            endif
+                            if (wind_yields) then
+                              dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                            else
+                              dElem(ielem) = 0.0
+                            endif
+                            newElem(ielem) = oldElem(ielem) + dElem(ielem)
+                          enddo
+                      endif
+#endif
+
                       ! Same as above, but conserving kinetic energy
 
                       newVelSq = oldDens/newDens * sign(oldVel**2,oldVel) &
@@ -891,7 +989,16 @@ if (iHaveInjectBlk) then
                       solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
                       solndata(DENS_VAR, i, j, k) = newDens
                       solndata(ENER_VAR, i, j, k) =  0.5_dp*sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k)
-                      
+
+#ifdef ELEMENTS
+                      if (wind_yields) then
+                          ! Update scalar field to new metallicity after wind mass injection
+                          do ielem = 1, NMASS_SCALARS
+                            solndata(MASS_SCALARS_BEGIN+(ielem-1), i, j, k) = newElem(ielem)/newDens
+                          enddo
+                      endif
+#endif
+
                       newE = newDens * sum(newVel**2)
                       newP = newDens * sqrt(sum(newVel**2))
                       !globalDeltaE = globalDeltaE + 0.5 * (newE - oldE)*dVol

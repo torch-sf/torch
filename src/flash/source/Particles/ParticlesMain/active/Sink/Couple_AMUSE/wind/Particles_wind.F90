@@ -279,9 +279,11 @@ do p=1, w_num
 #endif
 
   call Timers_start("inject_direct_call")
-
+#ifdef ELEMENTS
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), yields, twind, dt, bgdy(p))
+#else
   call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
-
+#endif
   call Timers_stop("inject_direct_call")
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
