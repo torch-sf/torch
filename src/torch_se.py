@@ -40,7 +40,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None):
+    massloss_method=None, min_feedback_mass=None, with_yields=False):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -87,6 +87,8 @@ def stellar_evolution(time, dt, state, hydro, se,
     npe     = np.zeros(len(state.stars)) | units.s**-1
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
+    if with_yields:
+        dy_dt = np.zeros([len(state.stars), 2]) | units.g / units.s
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
@@ -150,6 +152,10 @@ def stellar_evolution(time, dt, state, hydro, se,
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
 
+                if with_yields:
+                    wind_yields = np.array([1.0, 0.0])
+                    dy_dt[i] = dm_dt[i]*wind_yields
+
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
@@ -169,6 +175,11 @@ def stellar_evolution(time, dt, state, hydro, se,
 
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+
+    if with_yields:
+        for ielem in range(2):
+            hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
+            hydro.set_particle_elem_dydt(state.stars.tag, dy_dt[:,ielem].as_quantity_in(units.g/units.s))
 
     # Set SeBa properties for checkpoint - CCC 26/04/2024, 06/11/2024
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)

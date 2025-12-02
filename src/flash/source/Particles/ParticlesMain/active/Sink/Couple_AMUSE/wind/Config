@@ -71,11 +71,8 @@ PARAMETER perturb_velocity BOOLEAN  FALSE
 # With what standard deviation would you like to perturb it by?
 PARAMETER perturb_std_dev  REAL     0.05
 
-USESETUPVARS withElements
-IF withElements
 # Flag for adding yields to the wind.
 PARAMETER wind_yields       BOOLEAN FALSE
 PARAMETER mass_load_yields  BOOLEAN FALSE
 # Use metallicity to ISM for mass loading.
 PARAMETER ism_loading       BOOLEAN FALSE
-ENDIF

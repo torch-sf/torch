@@ -125,6 +125,7 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['with_yields'] = True
 
     # <star particle creation>
 

@@ -282,7 +282,7 @@ do p=1, w_num
 #ifdef ELEMENTS
   call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), yields, twind, dt, bgdy(p))
 #else
-  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), 0.0, twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
 #endif
   call Timers_stop("inject_direct_call")
 

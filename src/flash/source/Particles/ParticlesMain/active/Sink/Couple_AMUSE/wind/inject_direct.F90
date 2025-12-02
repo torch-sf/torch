@@ -35,14 +35,12 @@
 
 
 
-#ifdef ELEMENTS
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectElementIn, twind, dt, bgDens)
-#else
-subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
-#endif
 
 !#define DEBUG
 #define DEBUG_ENERGY
+#include "Flash.h"
+#include "constants.h"
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
@@ -70,9 +68,6 @@ use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
 #ifdef ELEMENTS
 use Particles_windData, ONLY: wind_yields, mass_load_yields, ism_loading
 #endif
-
-#include "Flash.h"
-#include "constants.h"
 
 implicit none
 
@@ -174,9 +169,13 @@ logical  :: calcBgDens
 !logical  :: hostCell
 
 #ifdef ELEMENTS
+real(dp), intent(in)              :: injectElementIn(NMASS_SCALARS)
 real(dp),dimension(NMASS_SCALARS) :: injectElement
 real(dp),dimension(NMASS_SCALARS) :: oldElem, dElem, newElem
-integer :: ielem
+real(dp) :: ism_mass
+integer  :: ielem
+#else
+real(dp), intent(in)              :: injectElementIn
 #endif
 
 ! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
