@@ -30,26 +30,43 @@ echo "Relinking Torch Fortran files into FLASH..."
 
 # Link Torch files into the FLASH directory
 # Existing files will be renamed and replaced by a link
+# Existing links will be replaced unless they point into TORCH_DIR already
 while IFS= read -r -d $'\0' file <&3; do
     source="$(realpath "${file}")"
     target="${FLASH_DIR}/${file#${TORCH_DIR}/src/flash/}"
     mkdir -p "$(dirname "${target}")"
-    if [ ! -L "${target}" ] ; then
-        if [ -e "${target}" ] ; then
-            mv "${target}" "${target}.replaced-by-torch"
+    if [ -L "${target}" ] ; then
+        link_target=$(readlink -n "${target}")
+        if [ ${link_target#${TORCH_DIR}/src/flash/} = ${link_target} ] ; then
+            # link does not point into TORCH_DIR
+            rm "${target}"
         fi
+    fi
+
+    if [ -f "${target}" ] ; then
+        mv "${target}" "${target}.replaced-by-torch"
+    fi
+
+    if [ ! -e "${target}" ] ; then
         ln -s "${source}" "${target}"
     fi
 done 3< <(find "${TORCH_DIR}"/src/flash -type f -print0)
 
 
 # Restore original FLASH file if the Torch version no longer exists
-while IFS= read -r -d $'\0' file <&3; do
-    backup="$(realpath "${file}")"
-    link="${backup%.replaced-by-torch}"
-    if [ ! -e "${link}" ] ; then
-        rm -f "${link}"
-        mv "${backup}" "${link}"
+# Also removes the symlink if there was no original file
+while IFS= read -r -d $'\0' link <&3; do
+    link_target=$(readlink -n "${link}")
+    if printf '%s' "${link_target}" | grep '/' 2>&1 >/dev/null ; then
+        if [ "${link_target#${TORCH_DIR}/src/flash/}" = "${link_target}" ] ; then
+            # This link points outside the FLASH tree, so was added by us
+            # FLASH has some internal symlinks, which we don't touch
+            rm "${link}"
+            backup_file="${link}.replaced-by-torch"
+            if [ -f "${backup_file}" ] ; then
+                mv "${backup_file}" "${link}"
+            fi
+        fi
     fi
-done 3< <(find "${FLASH_DIR}" -name '*.replaced-by-torch' -print0)
+done 3< <(find "${FLASH_DIR}" -type l -print0)
 
