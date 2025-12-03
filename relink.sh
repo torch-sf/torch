@@ -25,7 +25,7 @@ if [ ! -d "${FLASH_DIR}/source/flashUtilities" ] ; then
     exit 1
 fi
 
-# macOS fix: printf does work unless GNU
+# macOS fix: printf does not work for macOS
 if find --version >/dev/null 2>&1 ; then
     FIND_CMD='find "${TORCH_DIR}/src/flash" -type f -printf "%P\0"'
     BACKUP_FIND='find "${FLASH_DIR}" -name "*.replaced-by-torch" -printf "%P\0"'
