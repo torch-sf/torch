@@ -20,6 +20,8 @@
 
 module Particles_windData
 
+#include "Flash.h"
+
   implicit none
 
   real*8, save :: min_wind_dt      = 1d99
