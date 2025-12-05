@@ -196,6 +196,9 @@ def evolve(state, hydro, grav, mult, se):
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
+    # Save initial time for stellar evolution
+    se_restart_time = hydro.get_time()
+    tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
@@ -329,7 +332,8 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("Do stellar evolution")
                     # update both stars set and hydro properties
                     se_dt = stellar_evolution(
-                        hy_time+dt, dt, state, hydro, se,
+                        hy_time+dt, dt, se_restart_time,
+                        state, hydro, se,
                         with_lyc          = USER['with_lyc'],
                         with_pe_heat      = USER['with_pe_heat'],
                         with_winds        = USER['with_winds'],

@@ -421,7 +421,7 @@ def binary_evolution(time, dt, state, hydro, se,
     return se_dt
 
 
-def stellar_evolution(time, dt, state, hydro, se,
+def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
                       massloss_method=None, min_feedback_mass=None):
     """
@@ -438,7 +438,7 @@ def stellar_evolution(time, dt, state, hydro, se,
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
     # age at each bridge step would introduce error.  (2) Multiple ways to
     # query star age may not agree exactly.
-    #state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = (time - dt) - min(hydro.get_particle_creation_time(state.stars.tag))
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -475,28 +475,28 @@ def stellar_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
-    # Time since star formation, to use for stellar evolution
-    se_time = time - min(hydro.get_particle_creation_time(state.stars.tag))
-    #tprint('Time since SF:', se_time.value_in(units.Myr), 'Myr')
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
     
     # make list of remnant stars so we don't explode them again
     remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
 
-    #tprint('Relative age before SE:', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
-    #tprint('Age before SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
+    tprint('Relative age before SE:', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
+    tprint('Age before SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
     # CCC 26/04/2024
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
     state.stars_to_se.copy() # CCC 25/07/2024
     se.evolve_model(se_time)
+    #se.particles.evolve_for(dt) #se_time, dt
     state.se_to_stars.copy()
-    #tprint('Relative age after SE:', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
-    #tprint('Age after SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
+    tprint('Relative age after SE over', dt.value_in(units.Myr), ':', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
+    tprint('Age after SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
     
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
-    #state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
     # Indices of active feedback stars to evolve
     #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
