@@ -38,7 +38,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def binary_evolution(time, dt, state, hydro, se,
+def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                      with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
                      massloss_method=None, min_feedback_mass=None, CE_method='wind', CE_alpha=1):
     """
@@ -47,16 +47,6 @@ def binary_evolution(time, dt, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-
-    # We call SeBa on indiv stars, but get/set hydro star props in bulk.
-
-    # Always recompute star's age from hydro time and particle creation time.
-    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
-    # age at each bridge step would introduce error.  (2) Multiple ways to
-    # query star age may not agree exactly.
-
-    # Age not used explicitly for SE - CCC 02/08/2024
-    #state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -98,8 +88,8 @@ def binary_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
-    # Time since star formation, to use for stellar evolution                                                                                                                                                  
-    se_time = time - min(hydro.get_particle_creation_time(state.stars.tag))
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
     
     # Pass information to SE
     # Check for new systems, important for binaries - CCC 02/08/2024
@@ -115,6 +105,9 @@ def binary_evolution(time, dt, state, hydro, se,
     for _attribute in se.particles.get_attribute_names_defined_in_store():
         if _attribute in state.stars.get_attribute_names_defined_in_store():
             state.se_to_stars.copy_attributes([_attribute])
+
+    # Reset the stars' age after the SE step
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
     # Turn off wind if mass increased - CCC 11/09/2024 
     # Keep a list of stars for which feedback was calculated - CCC 25/10/2024
@@ -431,15 +424,6 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     assert massloss_method is not None
     assert min_feedback_mass is not None
     
-    # We call SeBa on all stars at once but loop through stars for feedback
-    # TO DO: Edit to loop only through feedback stars (see bitbucket) - CCC 04/11/2023
-
-    # Always recompute star's age from hydro time and particle creation time.
-    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
-    # age at each bridge step would introduce error.  (2) Multiple ways to
-    # query star age may not agree exactly.
-    state.stars.age = (time - dt) - min(hydro.get_particle_creation_time(state.stars.tag))
-    
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
     _attributes = state.stars.get_attribute_names_defined_in_store()
@@ -481,8 +465,6 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     # make list of remnant stars so we don't explode them again
     remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
 
-    tprint('Relative age before SE:', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
-    tprint('Age before SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
     # CCC 26/04/2024
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
@@ -491,15 +473,11 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     se.evolve_model(se_time)
     #se.particles.evolve_for(dt) #se_time, dt
     state.se_to_stars.copy()
-    tprint('Relative age after SE over', dt.value_in(units.Myr), ':', np.min(state.stars.relative_age.value_in(units.Myr)), np.max(state.stars.relative_age.value_in(units.Myr)), 'Myr')
-    tprint('Age after SE:', np.min(state.stars.age.value_in(units.Myr)), np.max(state.stars.age.value_in(units.Myr)), 'Myr')
     
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
     state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
-    # Indices of active feedback stars to evolve
-    #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
     # Loop only over active stars while retaining the correct indexing for total star array
     for i, s in enumerate(state.stars):
 

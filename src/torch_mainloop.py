@@ -309,16 +309,20 @@ def evolve(state, hydro, grav, mult, se):
             ### Stellar evolution.
             ### ------------------
 
+            if (USER['with_be'] or USER['binaries']) and num_stars > 1:
+                # Also identify binaries at runtime if no BE
+                tprint("Identify binaries")
+                state.binaries = state.binaries_from_stars()
+
             if USER['with_se']:
                 
                 if USER['with_be'] and num_stars > 1:
                     # update both stars set and hydro properties
                     # CCC 28/04/2023
                     tprint("Do stellar and binary evolution")
-                    # Check for binaries, CCC 25/07/2024
-                    state.binaries = state.binaries_from_stars()
                     se_dt = binary_evolution(
-                        hy_time+dt, dt, state, hydro, se,
+                        hy_time+dt, dt, se_restart_time,
+                        state, hydro, se,
                         with_lyc          = USER['with_lyc'],
                         with_pe_heat      = USER['with_pe_heat'],
                         with_winds        = USER['with_winds'],
