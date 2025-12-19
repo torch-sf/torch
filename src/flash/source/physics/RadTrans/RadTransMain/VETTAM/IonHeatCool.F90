@@ -50,7 +50,7 @@ subroutine IonHeatCool(nblk, blklst, dt, pass)
   use Driver_interface, ONLY : Driver_abortFlash
   use Diffuse_interface, ONLY: Diffuse_solveScalar, Diffuse_fluxLimiter
 
-  use RadTrans_data, ONLY: rt_useRadTrans
+  use RadTrans_data, ONLY: rt_useRadTrans, use_uv_bkgd, uv_bkgd_ion_rate, uv_bkgd_heat_rate
   use Eos_interface, ONLY: Eos_wrapped
   use Timers_interface, ONLY: Timers_start, Timers_stop
   use Driver_data, ONLY: dr_simTime, dr_globalcomm, dr_globalMe, dr_nStep
@@ -82,6 +82,7 @@ subroutine IonHeatCool(nblk, blklst, dt, pass)
 !  solndata
   real, pointer, dimension(:,:,:,:) :: solnData, solnDataCtr
   real, allocatable, dimension(:)   :: xCoord, yCoord, zCoord
+  real, allocatable,dimension(:)          :: dx, dy, dz
   integer                           :: xSizeCoord, ySizeCoord, zSizeCoord
   integer, dimension(2,MDIM)        :: blkLimits, blkLimitsGC
   logical                           :: getGuardCells = .true.
@@ -278,6 +279,12 @@ do while ((dt-total_timestep) .gt. (1d-6*dt))
               phih = phih + he_crIonRate*(max(he_crIonNH,approx_column_dens(dens, numdens, temp)) / he_crIonNH)**(-he_crIonExp)
             end if
           end if
+
+! Add background UV ionization and heating rate
+          if (use_uv_bkgd .and. .not. fully_ionized) then
+                  phih = phih + uv_bkgd_ion_rate
+                  ephen = ephen + uv_bkgd_heat_rate/(dens*del(IAXIS)*del(JAXIS)*del(KAXIS)) ! convert to erg/(g s)
+          endif
 
 ! Use this to estimate the radiation transport timestep. Figure 10 % change in ionization is the floor.
           ! (# of neutral H - # of ionizations / s * dt)  / # of neutral H 

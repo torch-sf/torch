@@ -42,8 +42,9 @@ def read_hdf5(file_path):
     vely = velocity_set[:,1]
     velz = velocity_set[:,2]
     gpot = np.array(f["PartType0"]["Potential"]) 
+    xion = np.array(f["PartType0"]["IonizationFraction"]) 
 
-    field_set = np.stack((density_set, intEner_set, velx, vely, velz, gpot), axis=-1)
+    field_set = np.stack((density_set, intEner_set, velx, vely, velz, gpot, xion), axis=-1)
 
     return coords, field_set
 

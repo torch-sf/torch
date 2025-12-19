@@ -89,7 +89,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('blockID', dtype='i', direction=function.IN)
         function.addParameter('procID', dtype='i', direction=function.IN)
         function.addParameter('dataSize', dtype='i', direction=function.IN)
-        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot']:
+        for x in ['rho', 'vx', 'vy', 'vz', 'eint', 'gpot', 'xion']:
             function.addParameter(x, dtype='d', direction=function.IN)
         function.result_type='int32'
         return function
@@ -682,7 +682,6 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
             function.addParameter(x, dtype='d', direction=function.IN)
         function.addParameter('tags', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
-        function.addParameter('creation_time',dtype='d',direction=function.IN)
         function.result_type = 'i'
         return function
 
@@ -797,7 +796,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-    
+
     @legacy_function
     def set_particle_stype():
         function = LegacyFunctionSpecification()
@@ -807,7 +806,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-    
+
     @legacy_function
     def set_particle_radius():
         function = LegacyFunctionSpecification()
@@ -947,8 +946,8 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-    
-    
+
+
     @legacy_function
     def get_particle_stype():
         function = LegacyFunctionSpecification()
@@ -958,7 +957,7 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-    
+
     @legacy_function
     def get_particle_radius():
         function = LegacyFunctionSpecification()
@@ -1388,7 +1387,7 @@ class Flash(CommonCode):
         object.add_method(
             'set_block_state',
             (object.INDEX, object.INDEX, object.INDEX,
-            density, speed, speed, speed, enerInt, potential),
+            density, speed, speed, speed, enerInt, potential, object.NO_UNIT),
             (object.ERROR_CODE,)
         )
 
@@ -1718,7 +1717,7 @@ class Flash(CommonCode):
         object.add_method(
             'get_particle_extr',
             (object.INDEX),
-            (extr, object.ERROR_CODE)
+            (object.NO_UNIT, object.ERROR_CODE)
         )
 
         object.add_method(
@@ -1756,40 +1755,40 @@ class Flash(CommonCode):
             (object.INDEX),
             (mass*length**2.0*(time**-2.0), object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_rel_mass',
-            (object.INDEX), 
+            (object.INDEX),
             (mass, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_rel_age',
-            (object.INDEX), 
+            (object.INDEX),
             (time, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_corem',
-            (object.INDEX), 
+            (object.INDEX),
             (mass, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_co_corem',
-            (object.INDEX), 
+            (object.INDEX),
             (mass, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_stype',
-            (object.INDEX), 
+            (object.INDEX),
             (object.NO_UNIT, object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'get_particle_radius',
-            (object.INDEX), 
+            (object.INDEX),
             (length, object.ERROR_CODE)
         )
 
@@ -1801,7 +1800,7 @@ class Flash(CommonCode):
 
         object.add_method(
             'set_particle_extr',
-            (object.INDEX, extr),
+            (object.INDEX, object.NO_UNIT),
             (object.ERROR_CODE)
         )
 
@@ -1828,40 +1827,40 @@ class Flash(CommonCode):
             (object.INDEX, mass*length**2.0*(time**-2.0)),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_rel_mass',
             (object.INDEX, mass),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_rel_age',
             (object.INDEX, time),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_corem',
             (object.INDEX, mass),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_co_corem',
             (object.INDEX, mass),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_stype',
-            (object.INDEX, object.NO_UNIT), 
+            (object.INDEX, object.NO_UNIT),
             (object.ERROR_CODE)
         )
-        
+
         object.add_method(
             'set_particle_radius',
-            (object.INDEX, length), 
+            (object.INDEX, length),
             (object.ERROR_CODE)
         )
 
@@ -2022,7 +2021,7 @@ class Flash(CommonCode):
 
         definition.add_getter('get_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
         definition.add_setter('set_grid_state', names=('rho', 'rhovx','rhovy','rhovz','energy'))
-        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot')) # VorAMR addition - SCL
+        definition.add_setter('set_block_state', names=('rho', 'vx', 'vy', 'vz', 'energy', 'gpot', 'xion')) # VorAMR addition - SCL
         definition.add_getter('get_grid_density', names=('rho',))
         definition.add_setter('set_grid_density', names=('rho',))
 

@@ -7170,11 +7170,10 @@ make_sink=0
 END FUNCTION
 
 ! Add massive/active type particles, not sinks. - JW
-FUNCTION add_particles(x, y, z, tags, nparts, creation_time)
+FUNCTION add_particles(x, y, z, tags, nparts)
 
 integer :: nparts, n_created
 real*8, dimension(nparts)   :: x, y, z, tags, local_tags
-real*8, optional, dimension(nparts) :: creation_time
 real*8, dimension(NPART_PROPS, nparts) :: part_copy
 integer, dimension(MAXBLOCKS, NPART_TYPES) :: particlesPerBlk
 real*8   :: time(nparts)
@@ -7197,7 +7196,7 @@ local_tags = 0.0
 call get_particle_type_bounds(part_type, type_begin, type_end, init_num_parts)
 
 
-    call Particles_addNew(nparts, x, y, z, n_created, local_tags, ptype_in=real(ACTIVE_PART_TYPE,8), create_time=creation_time)
+    call Particles_addNew(nparts, x, y, z, n_created, local_tags, ptype_in=real(ACTIVE_PART_TYPE,8))
 
 call Particles_moveAndSort(.true.)
 

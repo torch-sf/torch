@@ -148,12 +148,13 @@ def interpolate_fields(hydro, leaf_grids, proc_blocks, kdtree, nprocs, cellsPerB
             vy = interp[:,:,:,3].flatten(order='F')	| units.cm/units.s
             vz = interp[:,:,:,4].flatten(order='F') | units.cm/units.s
             gpot = interp[:,:,:,5].flatten(order='F') | (units.cm**2)/(units.s**2)
+            xion = interp[:,:,:,6].flatten(order='F') 
             
             dataSize = cellsPerBlock
             
             # Feed field data to FLASH.
             #Fortran can properly populate its NxNxN matrices when given a 1xN^3 matrix
-            hydro.set_block_state(curr_blk_id, procID, dataSize, rho, vx, vy, vz, eint, gpot)
+            hydro.set_block_state(curr_blk_id, procID, dataSize, rho, vx, vy, vz, eint, gpot, xion)
         disp += num_leaf_blks
         procID += 1
     #vprint("Done setting blocks. Total blocks: ", leaf)
@@ -168,10 +169,10 @@ def run_flash(user_initial_conditions, user_parameters):
     USER = user_parameters()
 
     if(USER['convert_file']):
-        coords, vels, dens, mass, eint, gpot = extract_data(USER['source_file'],
+        coords, vels, dens, mass, eint, gpot, xion = extract_data(USER['source_file'],
                                                       apply_consts=True)
         coords_cor, vels_cor = rescale_coords_vels(coords, vels, mass, use_com_coords=False)
-        write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot)
+        write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot, xion)
         
         coords, field_set = read_hdf5(USER['input_file'])
     else:

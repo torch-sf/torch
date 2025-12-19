@@ -122,6 +122,11 @@ module RadTrans_data
   ! Global communicator for all processes
   integer, save :: rt_globalComm
 
+  ! Uniform background UV ionization and heating. 
+  logical, save :: use_uv_bkgd 
+  real, save :: uv_bkgd_ion_rate
+  real, save :: uv_bkgd_heat_rate
+
   ! Structure that holds context information on the current operation,
   ! for debugging
   type(RadTrans_dbgContext_t),save,target :: rt_dbgContext

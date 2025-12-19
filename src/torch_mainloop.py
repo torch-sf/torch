@@ -549,24 +549,19 @@ def run_torch(user_initial_conditions, user_parameters):
         tprint("Initializing with VorAMR.")
         if USER['convert_file']:
             vprint("Converting  provided hdf5 file.")
-            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sage, smet, smassive = extract_data(USER['source_file'],
+            coords, vels, dens, mass, eint, gpot, xion, scoords, svels, smass, sinitmass, sage, smet, smassive = extract_data(USER['source_file'],
                                                                 apply_consts=True)
             coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
                                                                                scoords, svels,
                                                                                use_com_coords=False)
-            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
+            scoords, svels = write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot, xion,
                                  scoords_cor, svels_cor, smass, sinitmass, sage, smet,
                                  USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
 
-            #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
             coords, field_set = read_hdf5("interp-data.hdf5")
         else:
             vprint("Using unconverted source file.")
             coords, field_set = read_hdf5(USER['source_file'])
-
-        # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
-        #vprint('About to call write_voramr_data_to_txt_file')
-        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['use_localRef'], USER['local_ref'])
 
         vprint("Building field interpolator.")
         kdtree = build_kdtree(coords, field_set)
@@ -595,15 +590,19 @@ def run_torch(user_initial_conditions, user_parameters):
         vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
-        make_background_sinks(scoords, svels, smass, sinitmass, sage, smet, smassive)
-        vprint("Done interpolating. VorAMR complete.")
+        vprint("Done interpolating. Making background sinks.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")
 
     state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
-    
+
     if not state.restart:
         user_initial_conditions(state, hydro)
+        if USER['with_voramr']:
+            make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, smassive, sink_rad=USER['sink_rad'],
+                                  num_bins=USER['sample_imf_bins'], min_samp_mass=USER['min_imf_mass'], 
+                                  max_samp_mass=USER['max_imf_mass'], sum_small=USER['sum_small'], m_small=USER['m_small'])
+            vprint("Done making background sinks. VorAMR complete.")
     elif state.restart and USER['restart_with_user_ics']:
         # massage the hydro particle structures so that particles from user ICs
         # look like they came from restart checkpoint file.

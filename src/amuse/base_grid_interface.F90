@@ -365,10 +365,10 @@ END FUNCTION set_grid_state
 !!! New block-by-block grid setter for VorAMR.
 !!! - SCL
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot)
+FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot, xion)
   INTEGER :: blockID, procID
   INTEGER :: dataSize
-  DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot
+  DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot, xion
   INTEGER :: set_block_state !beginCount, set_block_state
   INTEGER,dimension(3) :: startPos, dataDims
 
@@ -394,6 +394,10 @@ FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot)
                       startPos, eint, dataDims)
   call Grid_putBlkData(blockID, CENTER, GPOT_VAR, INTERIOR, &
                       startPos, gpot, dataDims)
+  call Grid_putBlkData(blockID, CENTER, IHP_SPEC, INTERIOR, &
+                      startPos, xion, dataDims)
+  call Grid_putBlkData(blockID, CENTER, IHA_SPEC, INTERIOR, &
+                      startPos, 1.0-xion, dataDims)
 
   endif
 

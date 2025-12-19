@@ -13,7 +13,8 @@ FC      = $(MPIFC)
 
 # Temporary: breaks on gcc7, long-term fix is to check compiler version.
 # Short-term fix to demo pull request + work on rusty/graham. -ATr,2022aug18
-#FCFLAGS += -fallow-argument-mismatch
+FCFLAGS += -fallow-argument-mismatch -I${HDF5INCLUDE} -L${HDF5DIR} -lhdf5 -lhdf5_fortran \
+             -I${PETSC_PATH}/include -I${PETSC_PATH2}/include -L${PETSC_PATH}/lib -lpetsc
 
 LDFLAGS  += -lm $(MUSE_LD_FLAGS)
 
@@ -23,7 +24,7 @@ CODELIB = src/libflash.a
 
 #drive_loc = ./src/FLASH4.2.2/object
 #drive_loc = ./src/FLASH4.4-mod/object
-drive_loc = ./src/flash4.2.2-rad/object
+drive_loc = src/FLASH4.6.2/object
 
 #flash_obj =  $(drive_loc)/Driver_interface.o $(drive_loc)/Driver_evolveFlash.o $(drive_loc)/Driver_initParallel.o $(drive_loc)/Driver_initFlash.o
 allflash_obj =  $(wildcard $(drive_loc)/*.o)
@@ -52,7 +53,7 @@ worker_code.f90: interface.py
 	$(CODE_GENERATOR) --type=f90 interface.py FlashInterface -o $@
 
 flash_worker: worker_code.f90 $(CODELIB) $(OBJS)
-	$(MPIFC) $(FCFLAGS) $(FS_FLAGS) $< $(OBJS)  $(FS_LIBS) -o $@ $(flash_obj) $(HDF5_LIBS)
+	$(MPIFC) $(FCFLAGS) $(FS_FLAGS) $< $(OBJS)  $(FS_LIBS) -o $@ $(flash_obj) $(HDF5_LIBS) -L${PETSC_PATH}/lib -lpetsc
 
 %.o: %.F90
 	$(FC) $(FCFLAGS) -I$(drive_loc) -c -o $@ $<

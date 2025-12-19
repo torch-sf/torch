@@ -48,6 +48,11 @@ subroutine RadTrans_init()
   !Torch stuff 
   call rt_init
 
+  ! Uniform UV background
+  call RuntimeParameters_get("use_uv_bkgd", use_uv_bkgd)
+  call RuntimeParameters_get("uv_bkgd_ion_rate", uv_bkgd_ion_rate)
+  call RuntimeParameters_get("uv_bkgd_heat_rate", uv_bkgd_heat_rate)
+
   !Flag for HLLE Correction (see Jiang et al 2013)
   call RuntimeParameters_get("rt_hlle_correction",use_hlle_correction)
 

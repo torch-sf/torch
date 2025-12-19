@@ -12,6 +12,8 @@ from amuse.datamodel import Particles
 from amuse.units import units
 from voramr.voramr_stdout import vprint
 from torch_param import FlashPar
+from imf_sample import sample_stellar_mass
+from torch_sf import random_three_vector
 
 def extract_data(file_name, apply_consts=True):
     #pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
@@ -27,6 +29,7 @@ def extract_data(file_name, apply_consts=True):
     ie = ds['InternalEnergy'][:]*velocity**2
     v = ds['Velocities'][:]*velocity
     gpot = ds['Potential'][:]*velocity**2
+    xion = 1.0-ds['NeutralHydrogenAbundance'][:]
     
     coords = np.array([c[:,0], c[:,1], c[:,2]]).T
     vels = np.array([v[:,0], v[:,1], v[:,2]]).T
@@ -39,13 +42,16 @@ def extract_data(file_name, apply_consts=True):
     smassive = sds['MassiveStarMass'][:] # units in solar masses
     im = sds['GFM_InitialMass'][:]*mass*(1./hubble)
     v = sds['Velocities'][:]*velocity
+    formtime = sds['GFM_StellarFormationTime'][:]
+    vprint('sim time and max formtime raw', sim_time, max(formtime))
     a = (sim_time - sds['GFM_StellarFormationTime'][:])*length/velocity/hubble
+    vprint('max converted age in seconds', max(a))
     smet = sds['GFM_Metallicity'][:]
 
     scoords = np.array([c[:,0], c[:,1], c[:,2]]).T
     svels = np.array([v[:,0], v[:,1], v[:,2]]).T
     f.close()
-    return coords, vels, d, m, ie, gpot, scoords, svels, sm, im, a, smet, smassive
+    return coords, vels, d, m, ie, gpot, xion, scoords, svels, sm, im, a, smet, smassive
 
 def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=False):
     #pctocm, kmtocm, msuntog, scale0, scale1  = 1, 1, 1, 1, 1
@@ -84,7 +90,7 @@ def rescale_coords_vels(coords, vels, masses, scoords, svels, use_com_coords=Fal
     svels_cor = svels - np.array([vx_cor, vy_cor, vz_cor]).reshape(1,3)
     return coords_cor, vels_cor, scoords_cor, svels_cor
 
-def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
+def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot, xion,
                          scoords, svels, smass, sinitmass, sage, smetal,
                          use_localRef=False, local_ref=[0.0,0.0,0.0], recenter_coords=False):
     # Write all gas data to file to be included in interpolation kdtree regardless if we
@@ -93,31 +99,28 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     f = h5py.File("interp-data.hdf5", 'w') 
     group = f.create_group('PartType0')
     coords_i = coords.copy()
+    scoords_i = scoords.copy()
     if (local_ref and recenter_coords):
         # Only want to limit what we write to interpolation file if we are rescaling coords,
         # since then we are presumably zooming in on ROI and do not need to interp
         # to full computational domain.
-        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
+        locx, locy, locz, locvx, locvy, locvz, locr = local_ref
+        loc_pos = [locx, locy, locz]
+        loc_vel = [locvx, locvy, locvz]
         diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
         ind = np.where(diffr < locr)
         # Set particle coord array to be only those within ROI.
         #print(coords*3.24078e-19,coords.shape)
-        coords_i = coords.copy()[ind]
+        coords_i = coords.copy()[ind] - loc_pos
         #print(coords*3.24078e-19,coords.shape)
-        vels = vels[ind]
+        vels = vels[ind] - loc_vel
         masses = masses[ind]
-        vprint("Shifting coordinates and velocities of interpolation file for recentered local refinement")
-        # RESCALING SCOORDS AND SVELS FOR ROI NOT IMPLEMENTED YET - SCL 04/15/23
-        coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords_i, vels, masses, scoords, svels, use_com_coords=False)
-        coords_i = coords_cor
-        #print(coords*3.24078e-19, coords.shape)
-        #for c in coords:
-        #    print(c)
-        #print(a)
-        vels = vels_cor
+        scoords = scoords - loc_pos
+        svels = svels - loc_vel
         dens = dens[ind]
         ie = ie[ind]
         gpot = gpot[ind]
+        xion = xion[ind]
     vprint("{} particles saved to interp-data.hdf5".format(len(coords)))
     dset = group.create_dataset('Coordinates', data=coords_i, dtype='d')
     dset = group.create_dataset('Velocities', data=vels, dtype='d')
@@ -125,6 +128,7 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     dset = group.create_dataset('Masses', data=masses, dtype='d')
     dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
     dset = group.create_dataset('Potential', data=gpot, dtype='d')
+    dset = group.create_dataset('IonizationFraction', data=xion, dtype='d')
     f.close()
     #vprint("Wrote all gas field values to", "kdtree-"+output_filename)
     vprint("Wrote all gas field values to", "interp-data.hdf5")
@@ -133,85 +137,13 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot,
     # Recreate gas dataset
     #group = f.create_group('PartType0')
     
-    if(use_localRef):
-        vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Opening",output_filename)
-        # open file to fill with region-of-interest gas only --> FLASH refinement
-        # therefore only need coordinate data, commented out all other field values
-        # to reduce file size.
-        f = h5py.File(output_filename, 'w')
-        group = f.create_group('PartType0')
-        
-        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
-        vprint("locx = ", local_ref[0])
-        vprint("locy = ", local_ref[1])
-        vprint("locz = ", local_ref[2])
-        vprint("locr = ", local_ref[3])
-
-        #diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
-        #ind = np.where(diffr < locr)
-        # Set particle coord array to be only those within ROI.
-        #coords = coords[ind] 
-        #vprint("INDICIES < locr:", ind)
-        #vprint("coords shape: ", coords.shape)
-
-        # New addition 04/18/23 extracting particles inside cube of side 2/sqrt(2)*locr centered at loc{x,y,z}
-        # From https://stackoverflow.com/questions/42352622/finding-points-within-a-bounding-box-with-numpy
-        vprint("Creating new mask for particles in bounding cube of side 2*locr/sqrt(2)")
-        sqrt2 = np.sqrt(2)
-        bound_x = np.logical_and(coords[:, 0] > locx-locr/sqrt2, coords[:, 0] < locx+locr/sqrt2)
-        bound_y = np.logical_and(coords[:, 1] > locy-locr/sqrt2, coords[:, 1] < locy+locr/sqrt2)
-        bound_z = np.logical_and(coords[:, 2] > locz-locr/sqrt2, coords[:, 2] < locz+locr/sqrt2)
-        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
-        coords = coords[bb_filter]
-        vprint("len boundx:", len(np.where(bound_x==True)[0]))
-        vprint("len boundy:", len(np.where(bound_y==True)[0]))
-        vprint("len boundz:", len(np.where(bound_z==True)[0]))
-        vprint("len boundx and boundy:", len(np.where(np.logical_and(bound_x, bound_y) == True)[0]))
-        vprint("INDICIES < locr:", len(np.where(bb_filter==True)[0]))
-        vprint("coords shape: ", coords.shape)
-
-        if (recenter_coords):
-            x_cor = (coords[:,0].max()+coords[:,0].min())/2
-            y_cor = (coords[:,1].max()+coords[:,1].min())/2
-            z_cor = (coords[:,2].max()+coords[:,2].min())/2
-            coords = coords - np.array([x_cor, y_cor, z_cor]).reshape(1,3)
-        dset = group.create_dataset('Coordinates', data=coords, dtype='d')
-        #dset = group.create_dataset('Velocities', data=vels[ind], dtype='d')
-        #dset = group.create_dataset('Density', data=dens[ind], dtype='d')
-        #dset = group.create_dataset('Masses', data=masses[ind], dtype='d')
-        #dset = group.create_dataset('InternalEnergy', data=ie[ind], dtype='d')
-        #dset = group.create_dataset('Potential', data=gpot[ind], dtype='d')   
-    else:
-        vprint("USING ALL GAS PARTICLES, NO LOCAL REFINEMENT.")
-        # open file to fill with ALL gas data --> FLASH refinement
-        # also would only need coordinate data.
-        f = h5py.File(output_filename, 'w')
-        group = f.create_group('PartType0')
-        vprint("coords shape: ", coords.shape)
-        vprint("masses shape: ", masses.shape)
-        dset = group.create_dataset('Coordinates', data=coords, dtype='d')
-        #dset = group.create_dataset('Velocities', data=vels, dtype='d')
-        #dset = group.create_dataset('Density', data=dens, dtype='d')
-        #dset = group.create_dataset('Masses', data=masses, dtype='d')
-        #dset = group.create_dataset('InternalEnergy', data=ie, dtype='d')
-        #dset = group.create_dataset('Potential', data=gpot, dtype='d')
-
-    # Removed for now, as we do not port AREPO stars into FLASH,
-    # but this in principle could be done. - SCL
-    # Recreate stars dataset
-    #vprint("Including all stars")
-    #group_s = f.create_group('PartType4')
-    #dset = group_s.create_dataset('Coordinates', data=scoords, dtype='d')
-    #dset = group_s.create_dataset('Velocities', data=scoords, dtype='d')
-    #dset = group_s.create_dataset('Masses', data=smass, dtype='d')
-    #dset = group_s.create_dataset('GFM_InitialMass', data=sinitmass, dtype='d')
-    #dset = group_s.create_dataset('GFM_StellarFormationTime', data=sfmtime, dtype='d')
-    #dset = group_s.create_dataset('GFM_Metallicity', data=smetal, dtype='d')
 
     vprint("Wrote FLASH refinement gas and stars to", output_filename)
     f.close()
+    return scoords, svels
 
-def make_background_sinks(scoords, svels, smass, sinitmass, sage, smet, smassive, age_cut=5.0|units.Myr, apply_roi=True):
+def make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, smassive, age_cut=5.0|units.Myr, sink_rad=None, apply_roi=True,
+                          num_bins=100, min_samp_mass=0.08|units.MSun, max_samp_mass=100.0|units.MSun, sum_small=False, m_small=1.0|units.MSun):
     """
     Make sink particles in Torch from the already formed young star particles in Arepo sims.
     We only form the star particles that are young and have a massive star particle inside.
@@ -227,45 +159,75 @@ def make_background_sinks(scoords, svels, smass, sinitmass, sage, smet, smassive
 
     """
 
-    x = scoords[:,0] | units.cm
-    y = scoords[:,1] | units.cm
-    z = scoords[:,2] | units.cm
-    vx = svels[:,0] | units.cm/units.s
-    vy = svels[:,1] | units.cm/units.s
-    vz = svels[:,2] | units.cm/units.s
+    x = scoords[:,0]
+    y = scoords[:,1]
+    z = scoords[:,2]
+    vx = svels[:,0]
+    vy = svels[:,1]
+    vz = svels[:,2]
     m = smass | units.g
     massive = smassive | units.MSun
     age = sage | units.s 
 
-    sink_filter = [True]*len(x)
+    roi_filter = x==x
 
     # step one: check that these stars are in the derefinement region as described in the flash.par.
     if apply_roi:
         flashp = FlashPar("flash.par")
-        deref_xl = flashp['deref_xl'] | units.cm
-        deref_xr = flashp['deref_xr'] | units.cm
-        deref_yl = flashp['deref_yl'] | units.cm
-        deref_yr = flashp['deref_yr'] | units.cm
-        deref_zl = flashp['deref_zl'] | units.cm
-        deref_zr = flashp['deref_zr'] | units.cm
-
-        sink_filter = (
+        deref_xl = flashp['deref_xl']
+        deref_xr = flashp['deref_xr']
+        deref_yl = flashp['deref_yl']
+        deref_yr = flashp['deref_yr']
+        deref_zl = flashp['deref_zl']
+        deref_zr = flashp['deref_zr']
+        roi_filter = (
             (x > deref_xl) & (x < deref_xr) &
             (y > deref_yl) & (y < deref_yr) &
             (z > deref_zl) & (z < deref_zr)
         )
 
     # step two: apply age cut and massive star mass cut
-    sink_filter = sink_filter & (smassive > 8.0 | units.MSun) & (age<age_cut)
+    sink_filter = roi_filter & (massive > 8.0 | units.MSun) & (age<age_cut)
+
+    x = x[sink_filter]
+    y = y[sink_filter]
+    z = z[sink_filter]
+    vx = vx[sink_filter]
+    vy = vy[sink_filter]
+    vz = vz[sink_filter]
+    m = m[sink_filter]
+    age = age[sink_filter]
 
     # step three: make the sinks in flash. 
-    hydro.set_particle_pointers('sink')
-    sink_tags = hydro.make_sink(sink_tag, x[sink_filter], y[sink_filter], z[sink_filter])
-    hydro.set_particle_velocity(sink_tag, vx[sink_filter], vy[sink_filter], vz[sink_filter])
-    hydro.set_particle_mass(sink_tag, m[sink_filter])
-    hydro.set_particle_extr(sink_tag, [1]*len(m))
-    hydro.set_particle_creation_time(sink_tag, -age[sink_filter])
     hydro.set_particle_pointers('mass')
+
+    for i in range(len(x)):
+        # get imf list with arepo star mass
+        spawn_masses = sample_stellar_mass(
+                            m[i].value_in(units.MSun),
+                            num_bins,
+                            min_samp_mass=min_samp_mass.value_in(units.MSun),
+                            max_samp_mass=max_samp_mass.value_in(units.MSun),
+                            sum_small=sum_small,
+                            m_small=m_small.value_in(units.MSun))
+        nnew = len(spawn_masses)
+        if nnew == 0:
+            continue
+        sink_pos = [x[i], y[i], z[i]] | units.cm
+        sink_vel = [vx[i], vy[i], vz[i]] | units.cm/units.s
+        spawn_vel = 1.0e5
+
+        star          = Particles(nnew)
+        star.mass = spawn_masses | units.MSun
+        star.position = sink_pos + (sink_rad.value_in(units.cm)*np.random.rand(nnew,1)*random_three_vector(nnew) | units.cm)
+        star.velocity = sink_vel + (np.random.normal(scale=spawn_vel, size=(nnew,3)) | units.cm/units.s)
+        star.age = -age[i]
+        star_tag = hydro.add_particles(star.x, star.y, star.z)
+        hydro.set_particle_mass(star_tag, star.mass)
+        hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
+        hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+        hydro.set_particle_creation_time(star_tag, star.age)
+        vprint('spawning ',nnew, 'stars from arepo')
 
     return None
 
@@ -277,7 +239,7 @@ def write_voramr_data_to_txt_file(voramr_txt_filename, coords, use_localRef=Fals
     f = open(voramr_txt_filename, 'w')
     if(use_localRef):
         vprint("Doing local refinement")
-        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[3]
+        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[-1]
         diffr = np.sqrt((coords[:,0]-locx)**2 + (coords[:,1]-locy)**2 + (coords[:,2]-locz)**2)
         ind = np.where(diffr < locr)
         vprint("INDICIES < locr:", ind)

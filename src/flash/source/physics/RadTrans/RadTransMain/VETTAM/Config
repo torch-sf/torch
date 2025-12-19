@@ -246,6 +246,15 @@ SPECIES IHA
 PPDEFINE VETTAM
 
 # TORCH STUFF
+
+# Uniform background UV ionization and heating.
+# Default values below from Faucher-Giguere et al. 2009 at z=0 (see table 2)
+PARAMETER use_uv_bkgd BOOLEAN False
+PARAMETER uv_bkgd_ion_rate REAL 0.0384e-12 # 1/s
+PARAMETER uv_bkgd_heat_rate REAL 2.531e-21 # erg/s = 0.158e-12 eV/s
+
+
+
 # CFL factor to limit radiation pressure velocity
 # of timestep with newly formed feedback stars -BP19Jan23
 PARAMETER cfl_radPressure REAL 0.3
