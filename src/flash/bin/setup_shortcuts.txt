@@ -247,11 +247,8 @@ HandCnew::--with-unit=physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat/mol_an
 # Shortcut for the particles energy injection method
 enerInj::--with-unit=Particles/ParticlesMain/energyInjection
 
-# Winds for AMUSE
+# Winds and jets for AMUSE
 amuseWinds:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind
-
-# Jets from AMUSE winds module
-amuseJetsFromWinds:--with-unit=Particles/ParticlesMain/active/Sink/Couple_AMUSE/jets_from_wind
 
 checkGridVar:--with-unit=Grid/Grid_checkVar
 

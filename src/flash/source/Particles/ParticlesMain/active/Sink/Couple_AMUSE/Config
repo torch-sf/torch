@@ -1,4 +1,4 @@
-CHILDORDER jets_from_wind wind
+CHILDORDER wind
 
 # Particle properties for SeBa restart - CCC
 PARTICLEPROP REL_MASS REAL

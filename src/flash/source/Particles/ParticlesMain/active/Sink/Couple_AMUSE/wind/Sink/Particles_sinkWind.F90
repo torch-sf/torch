@@ -119,7 +119,8 @@ do i=1, localnpf
       
         call inject_direct([xloc, yloc, zloc], inj_mass, inj_vel_mag,  twind, dt, bgdy)
         ! Remove mass argument which will no longer work with inject_direct. - SA 20240408
-        ! However,the jets_from_winds inject_direct has several arguments not used here.
+        ! However, the star particle inject_direct (which has been updated to account
+        ! for and implement jets) has several arguments not used here.
         ! Adding them will require defining the angular momentum and jet_wind switch for the
         ! sink particles within this routine.
 #ifdef DEBUG
