@@ -72,27 +72,26 @@ real, parameter :: solarMass = 1.989d33
 logical, save          :: first_call = .true.
 
 #ifdef ELEMENTS
-! For yields
-real*8, allocatable :: dydt(:,:)
-real, allocatable      :: locdydt(:,:)
-integer, parameter :: pt_nelements = NMASS_SCALARS
-integer, parameter :: pt_yield_begin = Y001_PART_PROP
+! For passive tracers
+real*8, allocatable           :: dydt(:,:)
+real, allocatable             :: locdydt(:,:)
+integer, parameter            :: pt_nelements = NMASS_SCALARS
+integer, parameter            :: pt_yield_begin = Y001_PART_PROP
 real, dimension(pt_nelements) :: yields
 integer, dimension(pt_nelements), save :: pt_eleminds
 integer :: ielem
-
-! Gather element indices for particle yields.
-do ielem = 1, pt_nelements
-  pt_eleminds(ielem) = pt_yield_begin + (ielem - 1)
-enddo
-
-! Allocate local memory for yields
-allocate(locdydt(p_globalnum,pt_nelements))
-locdydt = 0.0d0
 #endif
 
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+  
+#ifdef ELEMENTS
+  ! Gather element indices for particle yields.
+  do ielem = 1, pt_nelements
+    pt_eleminds(ielem) = pt_yield_begin + (ielem - 1)
+  enddo
+#endif
+
   first_call = .false.
 end if
 
@@ -122,6 +121,11 @@ num_array = 0
 
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
+
+#ifdef ELEMENTS
+allocate(locdydt(p_globalnum,pt_nelements))
+locdydt = 0.0d0
+#endif
 
 ! This do loop then loops over each particle and checks if winds are on for that star.
 ! If winds are on, then a separate index w_numloc (which starts at 0) is incremented and
