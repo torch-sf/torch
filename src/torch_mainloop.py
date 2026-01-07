@@ -111,7 +111,7 @@ def stop_smalln():
 def initialize_workers():
 
     # Import amuse worker codes
-    from amuse.community.flash.interface import Flash
+    from torch_amuse_flash.interface import Flash
     if USER['with_petar']:
         from amuse.community.petar.interface import Petar
     elif USER['with_multiples']:
