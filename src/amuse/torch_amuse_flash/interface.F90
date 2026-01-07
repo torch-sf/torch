@@ -6821,6 +6821,9 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
 
   call Driver_getMype(GLOBAL_COMM, myProc)
   call pt_sinkGatherGlobal()
+    
+  ! Find index of element variable (element_pointer starts counting at 1).
+  part_elem_index = Y001_PART_PROP - 1 + element_pointer
 
   ! Sort by particle tag. Note that input array should also be
   ! ordered by tag number then.
