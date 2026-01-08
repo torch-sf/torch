@@ -315,7 +315,6 @@ def evolve(state, hydro, grav, mult, se):
                 state.binaries = state.binaries_from_stars()
 
             if USER['with_se']:
-                
                 if USER['with_be'] and num_stars > 1:
                     # update both stars set and hydro properties
                     # CCC 28/04/2023
@@ -346,6 +345,15 @@ def evolve(state, hydro, grav, mult, se):
                         min_feedback_mass = USER['min_feedback_mass'],
                     )
 
+                # Synchronize to grav after SE/BE
+                state.stars.synchronize_to(grav.particles)
+                state.stars_to_grav.copy_attributes(["mass"])
+                if len(grav.particles) != len(state.stars):
+                    # See this issue: https://github.com/amusecode/amuse/issues/518
+                    tprint('... forced to re-sync grav from stars')
+                    grav.particles = Particles()
+                    grav.particles.add_particles(state.stars)
+            
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
                     state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles

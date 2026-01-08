@@ -112,6 +112,8 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     # Turn off wind if mass increased - CCC 11/09/2024 
     # Keep a list of stars for which feedback was calculated - CCC 25/10/2024
     evolved_stars = Particles()
+    # Also keep a list of merged stars - CCC 08/01/2025
+    merged_stars = Particles()
     # List primaries and companions - CCC 25/10/2024
     primaries = Particles()
     companions = Particles()
@@ -380,7 +382,28 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                     
                     # Set star to evolved after feedback - CCC 29/10/2024
                     evolved_stars.add_particle(s)           
+
+        elif (s.initial_mass < min_feedback_mass) and in_binary and (t.mass == (0. | units.MSun)):
+
+            # Update position and velocity - CCC 04/04/2025
+            tprint("... low-mass stars merged from BE")
+            stars_for_COM = Particles()
+            stars_for_COM.add_particle(primaries[j])
+            stars_for_COM.add_particle(companions[j])
+            s.position = stars_for_COM.center_of_mass()
+            s.velocity = stars_for_COM.center_of_mass_velocity()
+
+            # Set stars to evolved after change in orbit
+            evolved_stars.add_particle(s)
+            evolved_stars.add_particle(t)
+
+            # Save tag of star it merged with
+            t.merged_with = s.tag
+            # Save merged time
+            t.merger_time = hydro.get_time()
+            merged_stars.add_particle(t)
             
+    
     # Binaries sync'ed to stars later, do not sync here - CCC 12/09/2024
 
     # This assumes steps are relatively small in the mass loss rate of stars,
@@ -410,6 +433,16 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
     hydro.set_particle_radius(state.stars.tag, state.stars.radius)
     hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
+
+    if len(merged_stars) > 0:
+        # Write merged stars
+        state.out_merged_stars(merged_stars, overwrite=True)
+        # Remove merged star from hydro
+        hydro.remove_particles(merged_stars.tag)
+        # Remove from SE
+        se.particles.remove_particles(merged_stars)
+        # Synchronize to state
+        se.particles.synchronize_to(state.stars)
 
     return se_dt
 
