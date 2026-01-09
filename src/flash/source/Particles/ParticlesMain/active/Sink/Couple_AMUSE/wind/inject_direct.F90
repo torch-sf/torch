@@ -770,10 +770,10 @@ if (iHaveInjectBlk) then
                             else
                                oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
                             endif
-                            if (wind_yields) then
-                              dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                            if(injectElement(ielem).LT.0.0) then
+                               dElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*dDens
                             else
-                              dElem(ielem) = 0.0
+                               dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
                             endif
                             newElem(ielem) = oldElem(ielem) + dElem(ielem)
                           enddo
@@ -969,10 +969,10 @@ if (iHaveInjectBlk) then
                             else
                                oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
                             endif
-                            if (wind_yields) then
-                              dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                            if(injectElement(ielem).LT.0.0) then
+                               dElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*dDens
                             else
-                              dElem(ielem) = 0.0
+                               dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
                             endif
                             newElem(ielem) = oldElem(ielem) + dElem(ielem)
                           enddo
