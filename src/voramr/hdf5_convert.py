@@ -132,14 +132,56 @@ def write_corrected_file(output_filename, coords, vels, dens, masses, ie, gpot, 
     f.close()
     #vprint("Wrote all gas field values to", "kdtree-"+output_filename)
     vprint("Wrote all gas field values to", "interp-data.hdf5")
-    
-    #f = h5py.File(output_filename, 'w')
-    # Recreate gas dataset
-    #group = f.create_group('PartType0')
-    
+
+    if(use_localRef):
+        vprint("DOING LOCALIZED REFINEMENT. Limiting gas particles written. Opening",output_filename)
+        # open file to fill with region-of-interest gas only --> FLASH refinement
+        # therefore only need coordinate data, commented out all other field values
+        # to reduce file size.
+        f = h5py.File(output_filename, 'w')
+        group = f.create_group('PartType0')
+        
+        locx, locy, locz, locr = local_ref[0], local_ref[1], local_ref[2], local_ref[-1]
+        vprint("locx = ", local_ref[0])
+        vprint("locy = ", local_ref[1])
+        vprint("locz = ", local_ref[2])
+        vprint("locr = ", local_ref[3])
+
+        # New addition 04/18/23 extracting particles inside cube of side 2/sqrt(2)*locr centered at loc{x,y,z}
+        # From https://stackoverflow.com/questions/42352622/finding-points-within-a-bounding-box-with-numpy
+        vprint("Creating new mask for particles in bounding cube of side 2*locr/sqrt(2)")
+        sqrt2 = np.sqrt(2)
+        bound_x = np.logical_and(coords[:, 0] > locx-locr/sqrt2, coords[:, 0] < locx+locr/sqrt2)
+        bound_y = np.logical_and(coords[:, 1] > locy-locr/sqrt2, coords[:, 1] < locy+locr/sqrt2)
+        bound_z = np.logical_and(coords[:, 2] > locz-locr/sqrt2, coords[:, 2] < locz+locr/sqrt2)
+        bb_filter = np.logical_and(np.logical_and(bound_x, bound_y), bound_z)
+        coords = coords[bb_filter]
+        vprint("len boundx:", len(np.where(bound_x==True)[0]))
+        vprint("len boundy:", len(np.where(bound_y==True)[0]))
+        vprint("len boundz:", len(np.where(bound_z==True)[0]))
+        vprint("len boundx and boundy:", len(np.where(np.logical_and(bound_x, bound_y) == True)[0]))
+        vprint("INDICIES < locr:", len(np.where(bb_filter==True)[0]))
+        vprint("coords shape: ", coords.shape)
+
+        if (recenter_coords):
+            x_cor = (coords[:,0].max()+coords[:,0].min())/2
+            y_cor = (coords[:,1].max()+coords[:,1].min())/2
+            z_cor = (coords[:,2].max()+coords[:,2].min())/2
+            coords = coords - np.array([x_cor, y_cor, z_cor]).reshape(1,3)
+        dset = group.create_dataset('Coordinates', data=coords, dtype='d')
+    else:
+        vprint("USING ALL GAS PARTICLES, NO LOCAL REFINEMENT.")
+        # open file to fill with ALL gas data --> FLASH refinement
+        # also would only need coordinate data.
+        f = h5py.File(output_filename, 'w')
+        group = f.create_group('PartType0')
+        vprint("coords shape: ", coords.shape)
+        vprint("masses shape: ", masses.shape)
+        dset = group.create_dataset('Coordinates', data=coords, dtype='d')
 
     vprint("Wrote FLASH refinement gas and stars to", output_filename)
     f.close()
+
     return scoords, svels
 
 def make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, smassive, age_cut=5.0|units.Myr, sink_rad=None, apply_roi=True,

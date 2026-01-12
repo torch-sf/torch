@@ -35,8 +35,9 @@ class TorchState(object):
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
 
         # Stellar evolution to stars, CCC 26/04/2024
-        self.stars_to_se = self.stars.new_channel_to(se.particles)
-        self.se_to_stars = se.particles.new_channel_to(self.stars)
+        if se is not None:
+            self.stars_to_se = self.stars.new_channel_to(se.particles)
+            self.se_to_stars = se.particles.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case

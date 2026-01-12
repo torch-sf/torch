@@ -598,7 +598,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     if not state.restart:
         user_initial_conditions(state, hydro)
-        if USER['with_voramr']:
+        if USER['include_bg_stars']:
             make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, smassive, sink_rad=USER['sink_rad'],
                                   num_bins=USER['sample_imf_bins'], min_samp_mass=USER['min_imf_mass'], 
                                   max_samp_mass=USER['max_imf_mass'], sum_small=USER['sum_small'], m_small=USER['m_small'])

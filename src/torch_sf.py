@@ -112,7 +112,8 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     grav.particles.add_particles(add_star)
     
     #Add particles to stellar evolution, CCC 10/05/2024
-    se.particles.add_particles(add_star)
+    if se is not None:
+        se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
