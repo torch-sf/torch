@@ -19,13 +19,14 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult, se):
+    def __init__(self, hydro, grav, mult, se, yields):
 
-        self.hydro = hydro
-        self.grav  = grav
-        self.mult  = mult
-        self.se    = se     #CCC 26/04/2024 to match above
-        
+        self.hydro  = hydro
+        self.grav   = grav
+        self.mult   = mult
+        self.se     = se     #CCC 26/04/2024 to match above
+        self.yields = yields
+
         # "Global" AMUSE-level data structures
         self.all_masses = {}
         self.stars = Particles(0)

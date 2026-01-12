@@ -90,7 +90,7 @@ from voramr.voramr_mainloop import (
     interpolate_fields
 )
 from voramr.voramr_stdout import vprint
-
+from torch_yields import LimongiChieffi2018
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -161,6 +161,9 @@ def initialize_workers():
         se = SeBa()
         se.initialize_code()
 
+        if USER['with_yields']:
+            yields = LimongiChieffi2018()
+
     if USER['evolve_async']:
         hydro = Flash(
             unit_converter=convert2,
@@ -179,7 +182,7 @@ def initialize_workers():
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
-    return hydro, grav, mult, se
+    return hydro, grav, mult, se, yields
 
 # ============================================================================
 
@@ -575,9 +578,9 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
     
-    hydro, grav, mult, se = initialize_workers()
+    hydro, grav, mult, se, yields = initialize_workers()
 
-    state = TorchState(hydro, grav, mult, se)
+    state = TorchState(hydro, grav, mult, se, yields)
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
