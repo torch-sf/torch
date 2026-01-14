@@ -161,9 +161,6 @@ def initialize_workers():
         se = SeBa()
         se.initialize_code()
 
-        if USER['with_yields']:
-            yields = LimongiChieffi2018()
-
     if USER['evolve_async']:
         hydro = Flash(
             unit_converter=convert2,
@@ -182,7 +179,7 @@ def initialize_workers():
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
-    return hydro, grav, mult, se, yields
+    return hydro, grav, mult, se
 
 # ============================================================================
 
@@ -578,7 +575,11 @@ def run_torch(user_initial_conditions, user_parameters):
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
     
-    hydro, grav, mult, se, yields = initialize_workers()
+    hydro, grav, mult, se = initialize_workers()
+
+    if USER['with_yields']:
+        yields = LimongiChieffi2018()
+        yields.tracer_fields = USER['tracer_fields']
 
     state = TorchState(hydro, grav, mult, se, yields)
 

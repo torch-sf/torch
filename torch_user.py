@@ -126,6 +126,7 @@ def user_parameters():
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
     p['with_yields'] = True
+    p['tracer_fields'] = ['ignore', 'ignore', 'ignore', 'wind', 'ccsn', 'H', 'Fe', 'O', 'Na']
 
     # <star particle creation>
 

@@ -10,6 +10,9 @@ class YieldSource:
     Creates a RegularGridInterpolator object for given elements, parameters
     and yields and provides functionallity to interpolate yields for either
     specific elements or total mass loss (sum of all elements).
+
+    This class is intended to be used when creating structure for specific
+    yields table.
     """
 
     def __init__(self, elements, params, yields):
@@ -21,7 +24,6 @@ class YieldSource:
             elements - List of elements in provided yield table
             params - Parameter space to interpolate in
             yields - Array of yields, matching list of elements and parameters
-
         """
 
         self.params = params
@@ -106,6 +108,9 @@ class YieldSource:
 
     @staticmethod
     def convert2array(params):
+        """
+        Helper function to restructure parameters to data points for interpolation.
+        """
         max_length = max([len(param) if isinstance(
             param, (list, np.ndarray)) else 1 for param in params])
 
@@ -126,8 +131,46 @@ class YieldSource:
 
 
 class LimongiChieffi2018:
+    """
+    Structures and provides functions to work with yields from Limongi & Chieffi (2018).
+    This assumes fall-back and mixing (Umeda & Nomoto, 2002) and direct collapse for stars
+    with mass > 25Msun.
+
+    If using this class, please cite Limongi & Chieffi, 2018, ApJS, 237, 13L
+
+    Class properties:
+        models            - List of models available
+        mass              - Array of tabulated stellar masses
+        metal             - Array of tabulated stellar metallicities
+        rot               - Array of tabulated stellar rotation velocities
+        ccsn_mmax         - Maximum mass for core collapse (otherwise direct collapse)
+        filedir           - Directory of tabulated data
+        yield_tablefile   - Filename for total yields
+        wind_tablefile    - Filename for wind yields
+        elements          - List of available elements
+        atomic_num        - List of atomic numbers corresponding to element list
+        wind              - Object holding interpolation points and data for winds
+        ccsn              - Object holding interpolation points and data for core-collapse SNe
+
+    Usage:
+        Loads data from yield tables and provides function to simplify
+        interpolation for list of elements at given points in mass, metallicity
+        and rotation via functions:
+
+            ccsn_yields(elements, mass, metal, rot)
+            wind_yields(elements, mass, metal, rot)
+            total_yields(elements, mass, metal, rot)
+
+        Similarly, total mass loss rates are provided with functions:
+            total_mloss(mass, metal, rot)
+            ccsn_mloss(mass, metal, rot)
+            wind_mloss(mass, metal, rot)
+    """
 
     def __init__(self, model='R', path='$TORCH_DIR/data/yield_tables/'):
+        """ Initialize class, loading tables and setting up objects 
+            for interpolation.
+        """
 
         self.models = ['F', 'I', 'M', 'R']
         self.mass = np.array(
@@ -201,6 +244,8 @@ class LimongiChieffi2018:
                               extrapolate=extrapolate)
 
     def get_element_list(self):
+        """ Helper function for reading element list during initialization.
+        """
 
         with open(self.wind_tablefile, 'r') as file:
             lines = file.readlines()
@@ -216,6 +261,8 @@ class LimongiChieffi2018:
                 atomic_num.append(int(line.split()[1]))
 
     def load_wind_yields(self):
+        """ Loader function for wind yields. Used during initialization.
+        """
 
         wind_yld = np.zeros([len(self.elements), self.rot.size,
                              self.metal.size, self.mass.size])
@@ -241,6 +288,8 @@ class LimongiChieffi2018:
         return wind_yld
 
     def load_ccsn_yields(self):
+        """ Loader function for SNe yields. Used during initialization.
+        """
 
         wind_yld = self.load_wind_yields()
         total_yld = np.zeros([len(self.elements), self.rot.size,
@@ -269,6 +318,8 @@ class LimongiChieffi2018:
 
     @staticmethod
     def get_metal_index_from_model(model):
+        """ Internal helper function.
+        """
         if model == 'a':
             return 0
         elif model == 'b':
@@ -282,6 +333,8 @@ class LimongiChieffi2018:
 
     @staticmethod
     def get_rot_index_from_model(model):
+        """ Internal helper function.
+        """
         if model == '000':
             return 0
         elif model == '150':

@@ -88,7 +88,8 @@ def stellar_evolution(time, dt, state, hydro, se,
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
     if with_yields:
-        dy_dt = np.zeros([len(state.stars), 9]) | units.g / units.s
+        num_elements = hydro.get_number_of_elements()
+        dy_dt = np.zeros([len(state.stars), num_elements]) | units.g / units.s
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
@@ -153,9 +154,20 @@ def stellar_evolution(time, dt, state, hydro, se,
                 vterm[i] = _tmp[1]
 
                 if with_yields:
-                    fX = state.yields.wind_yields(elements = ['H', 'Fe', 'O', 'Na'], mass = s.mass.as_quantity_in(units.MSun), metal=0.02, rot=300) \
-                            / state.yields.wind_mloss(mass = s.mass.as_quantity_in(units.MSun), metal=0.02, rot=300)
-                    wind_yields = np.array([-1, -1, -1, 1.0, 0.0, fX[0], fX[1], fX[2], fX[3]])
+                    wind_yields = np.ones(num_elements)
+                    for itrac, tracer in enumerate(yields.tracer_fields):
+                        if tracer == 'wind':
+                            wind_yields[itrac] = 1.0
+                        elif tracer == 'ccsn':
+                            wind_yields[itrac] = 0.0
+                        elif tracer == 'ignore':
+                            wind_yields[itrac] = -1.0
+                        elif tracer in state.yields.elements:
+                            wind_yields[itrac] = state.yields.wind_yields(elements=tracer, mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0] \
+                                / state.yields.wind_mloss(mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0]
+                        else:
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+
                     dy_dt[i] = dm_dt[i]*wind_yields
 
         # Evolutionary things besides winds could have reduced the stars mass.
@@ -179,7 +191,7 @@ def stellar_evolution(time, dt, state, hydro, se,
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     if with_yields:
-        for ielem in range(9):
+        for ielem in range(num_elements):
             hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
             hydro.set_particle_elem_dydt(state.stars.tag, dy_dt[:,ielem].as_quantity_in(units.g/units.s))
 
