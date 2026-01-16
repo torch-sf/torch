@@ -831,6 +831,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_particle_rotvel():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rotvel', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -987,6 +997,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('radius', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_rotvel():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rotvel', dtype='d', direction=function.OUT)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
@@ -1837,6 +1857,12 @@ class Flash(CommonCode):
             (object.INDEX), 
             (length, object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'get_particle_rotvel',
+            (object.INDEX), 
+            (length/time, object.ERROR_CODE)
+        )
 
         object.add_method(
             'get_particle_sigh',
@@ -1913,6 +1939,12 @@ class Flash(CommonCode):
         object.add_method(
             'set_particle_radius',
             (object.INDEX, length), 
+            (object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_rotvel',
+            (object.INDEX, length/time),
             (object.ERROR_CODE)
         )
 
@@ -2261,6 +2293,8 @@ class Flash(CommonCode):
                     'set_particle_stype',
                     'get_particle_radius',
                     'set_particle_radius',
+                    'get_particle_rotvel',
+                    'set_particle_rotvel',
                     'get_particle_sigh',
                     'set_particle_sigh',
                     'set_particle_npep',

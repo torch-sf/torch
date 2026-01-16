@@ -4449,6 +4449,93 @@ end if
 get_particle_radius=0
 END FUNCTION
 
+FUNCTION get_particle_rotvel(tags,rotvel,nparts)
+  ! Get the particle rotation velocity by tag.
+  integer :: get_particle_rotvel
+  integer :: nparts, MyPe
+  integer :: i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rotvel, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        rotvel(i) = particles_pointer(ROTVEL_PART_PROP, QSindex(j))
+      else
+        j = oldj
+        rotvel(i) = 0.0
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  else
+    rotvel = 0.0
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, rotvel, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, MyPe)
+  call pt_sinkGatherGlobal()
+  
+  if(MyPe.eq.0) then
+  
+    allocate(QSindex(localnpf))
+    allocate(id_sorted(localnpf))
+  
+    do p = 1, localnpf
+      id_sorted(p) = int(particles_global(iptag,p),8)
+    enddo
+  
+    call NewQsort_IN(id_sorted, QSindex)
+  
+    if(nparts.eq.localnpf)then
+      do i=1, localnpf
+        rotvel(i) = particles_global(ROTVEL_PART_PROP, QSindex(i))
+      enddo
+    else
+      do j=1, nparts
+        do i=1, localnpf
+          if (particles_global(iptag,i) .eq. tags(j)) then
+            rotvel(j) = particles_global(ROTVEL_PART_PROP, i)
+          endif
+        enddo
+      enddo
+    endif
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  end if
+
+#endif
+
+  get_particle_rotvel=0
+END FUNCTION
 
 
 FUNCTION set_particle_position(tags,x,y,z,nparts)
@@ -6612,6 +6699,88 @@ deallocate(id_sorted)
 #endif
 
 set_particle_radius=0
+END FUNCTION
+
+FUNCTION set_particle_rotvel(tags, rotvel, nparts)
+  ! Set the rotation velocity of a star.
+  integer :: set_particle_rotvel 
+  integer :: nparts
+  double precision :: rotvel(nparts), tags(nparts)
+  integer :: i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        particles_pointer(ROTVEL_PART_PROP, QSindex(j)) = rotvel(i)
+      else
+        j = oldj
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  if(nparts.eq.localnpf)then
+    do i=1, localnpf
+      particles_global(ROTVEL_PART_PROP, QSindex(i)) = rotvel(i)
+    enddo
+  else
+    do j=1, nparts
+      do i=1, localnpf
+        if(particles_global(iptag,i).eq.tags(j))then
+          particles_global(ROTVEL_PART_PROP, i) = corem(j)
+        endif
+      enddo
+    enddo
+  endif
+
+  do i=1, localnp
+    particles_local(ROTVEL_PART_PROP,i) = particles_global(ROTVEL_PART_PROP, i)
+  enddo
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+  set_particle_rotvel=0
 END FUNCTION
 
 
