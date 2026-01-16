@@ -132,6 +132,24 @@ def stellar_evolution(time, dt, state, hydro, se,
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                
+                if with_yields:
+                    ccsn_yields = np.ones(num_elements)
+                    for itrac, tracer in enumerate(yields.tracer_fields):
+                        if tracer == 'wind':
+                            ccsn_yields[itrac] = 0.0
+                        elif tracer == 'ccsn':
+                            ccsn_yields[itrac] = 1.0
+                        elif tracer == 'ignore':
+                            ccsn_yields[itrac] = -1.0
+                        elif tracer in state.yields.elements:
+                            ccsn_yields[itrac] = state.yields.ccsn_yields(elements=tracer, mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0] \
+                                / state.yields.ccsn_mloss(mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0]
+                        else:
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+                    
+                    for itrac, tracer in enumerate(yields.tracer_fields):
+                        hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
 
             # implicitly zeros out feedback properties by not setting
 
