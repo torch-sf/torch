@@ -8327,6 +8327,22 @@ return
 END FUNCTION
 #endif
 
+! This function updates a single scalar field. Should be used when updating mass,
+! e.g., together with energy_injection function.
+FUNCTION yield_injection(iscalar, yield, mass, xloc, yloc, zloc)
+
+integer :: yield_injection
+integer, intent(in) :: iscalar
+real*8, intent(in)  :: yield, mass, xloc, yloc, zloc
+
+#ifdef ELEMENTS
+call Particles_yieldInjection(iscalar, yield, mass, xloc, yloc, zloc)
+#else
+print*, "WARNING: Yield injection called without tracer fields, nothing will happen!"
+#endif
+
+yield_injection=0
+END FUNCTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  IO stuff

@@ -528,6 +528,15 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         #function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
+    
+    @legacy_function
+    def yield_injection():
+        function = LegacyFunctionSpecification()
+        function.addParameter('iscalar', dtype='i', direction=function.IN)
+        for x in ['yield', 'mass','xloc','yloc','zloc']:
+            function.addParameter(x, dtype='d', direction=function.IN)
+        function.result_type = 'i'
+        return function
 
     #@legacy_function
     #def wind_injection():
@@ -1646,6 +1655,13 @@ class Flash(CommonCode):
              mass, length, length, length),
             (time, object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'yield_injection',
+            (object.NO_UNIT, mass, mass, 
+             length, length, length),
+            (object.ERROR_CODE)
+        )
 
         #object.add_method(
             #'wind_injection',
@@ -2202,6 +2218,7 @@ class Flash(CommonCode):
                     'get_current_step',
                     'get_restart',
                     'energy_injection',
+                    'yield_injection',
 #                    'wind_injection',
                     'get_number_of_elements',
                     'get_number_of_particles',
