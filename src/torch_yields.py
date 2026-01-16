@@ -30,7 +30,7 @@ class YieldSource:
         self.yields = {element: RegularGridInterpolator(self.params, yields[i],
                                                         fill_value=None, bounds_error=False)
                        for i, element in enumerate(elements)}
-        self.mloss = RegularGridInterpolator(self.params, np.sum(yields, axis=0),
+        self.mloss = RegularGridInterpolator(self.params, np.sum(yields[np.array(elements, dtype=str)!='Z'], axis=0),
                                              fill_value=None, bounds_error=False)
 
     def get_yld(self, elements, params, interpolate='nearest', extrapolate=False):
@@ -189,14 +189,22 @@ class LimongiChieffi2018:
         self.wind_tablefile = self.filedir+f'LC2018/tab_{model}/tabwind.dec'
 
         self.elements, self.atomic_num = self.get_element_list()
-
-        # Stellar wind yields
+        
+        # Load tables
         wind_yld = self.load_wind_yields()
+        ccsn_yld = self.load_ccsn_yields()
+        
+        # Add metallicity variable which is sum of all elements except first two (H, He)
+        self.elements.insert(0, 'Z')
+        self.atomic_num = np.insert(self.atomic_num, 0, 0)
+        wind_yld = np.concatenate((wind_yld[2:].sum(axis=0, keepdims=True), wind_yld),axis=0)
+        ccsn_yld = np.concatenate((ccsn_yld[2:].sum(axis=0, keepdims=True), ccsn_yld),axis=0)
+
+        # Wind yield interpolation object
         self.wind = YieldSource(
                 self.elements, [self.rot, self.metal, self.mass], wind_yld)
 
-        # Core-collapse SNe yields
-        ccsn_yld = self.load_ccsn_yields()
+        # Core-collapse SNe yield interpolation object
         self.ccsn = YieldSource(
                 self.elements, [self.rot, self.metal, self.mass], ccsn_yld)
 
