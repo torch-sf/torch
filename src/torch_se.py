@@ -135,7 +135,7 @@ def stellar_evolution(time, dt, state, hydro, se,
                 
                 if with_yields:
                     ccsn_yields = np.ones(num_elements)
-                    for itrac, tracer in enumerate(yields.tracer_fields):
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
                         if tracer == 'wind':
                             ccsn_yields[itrac] = 0.0
                         elif tracer == 'ccsn':
@@ -143,12 +143,19 @@ def stellar_evolution(time, dt, state, hydro, se,
                         elif tracer == 'ignore':
                             ccsn_yields[itrac] = -1.0
                         elif tracer in state.yields.elements:
-                            ccsn_yields[itrac] = state.yields.ccsn_yields(elements=tracer, mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0] \
-                                / state.yields.ccsn_mloss(mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0]
+                            ccsn_yields[itrac] = state.yields.ccsn_yields(
+                                    elements=tracer,
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s))[0] \
+                                / state.yields.ccsn_mloss(
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s))[0]
                         else:
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
                     
-                    for itrac, tracer in enumerate(yields.tracer_fields):
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
                         hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
 
             # implicitly zeros out feedback properties by not setting
@@ -173,7 +180,7 @@ def stellar_evolution(time, dt, state, hydro, se,
 
                 if with_yields:
                     wind_yields = np.ones(num_elements)
-                    for itrac, tracer in enumerate(yields.tracer_fields):
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
                         if tracer == 'wind':
                             wind_yields[itrac] = 1.0
                         elif tracer == 'ccsn':
@@ -181,8 +188,15 @@ def stellar_evolution(time, dt, state, hydro, se,
                         elif tracer == 'ignore':
                             wind_yields[itrac] = -1.0
                         elif tracer in state.yields.elements:
-                            wind_yields[itrac] = state.yields.wind_yields(elements=tracer, mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0] \
-                                / state.yields.wind_mloss(mass=s.initial_mass.value_in(units.MSun), metal=0.02, rot=300)[0]
+                            wind_yields[itrac] = state.yields.wind_yields(
+                                    elements=tracer,
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s))[0] \
+                                / state.yields.wind_mloss(
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s))[0]
                         else:
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
 

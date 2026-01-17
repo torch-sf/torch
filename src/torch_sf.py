@@ -9,6 +9,9 @@ Joshua Wall, Drexel University
 
 from __future__ import division, print_function
 
+import os
+import random
+
 import numpy as np
 
 from amuse.datamodel import Particles
@@ -68,7 +71,16 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     coreM    = hydro.get_particle_corem(newtags)
     sType    = hydro.get_particle_stype(newtags)
     radius   = hydro.get_particle_radius(newtags)
-    
+
+    # Properties used for yields
+    rotvel   = hydro.get_particle_rotvel(newtags)
+    if 'Z' in state.yields.tracer_fields:
+        metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
+        hydro.set_particle_elem_pointer(metal_idx+1) # Fortran style counting (start on 1)
+        initial_metal = hydro.get_particle_elem(newtags)
+    else:
+        initial_metal = 0.02
+
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
@@ -85,6 +97,8 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.COcore_mass   = COcoreM
     add_star.core_mass     = coreM
     add_star.age           = relAge
+    add_star.rotvel        = rotvel
+    add_star.initial_metal = initial_metal
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     # Set stellar type and radius - CCC 06/11/2024
@@ -301,6 +315,8 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             for ielem in range(num_elements):
                 hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
                 sink_elem.append(hydro.get_particle_elem(sink_tag))
+                if state.yields.tracer_fields[ielem] == 'Z':
+                    sink_metal = sink_elem[-1]
 
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
@@ -347,16 +363,21 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
             star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
 
+            # For yields tables
+            star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
+
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+            hydro.set_particle_rotvel(star_tag, star.rotvel)
+
             if num_elements > 0:
                 for ielem in range(num_elements):
                     hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
-                    hydro.set_particle_elem(star_tag,sink_elem[ielem]*np.ones(nnew))
+                    hydro.set_particle_elem(star_tag, sink_elem[ielem]*np.ones(nnew))
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
@@ -380,6 +401,31 @@ def random_three_vector(n=1):
     three_vector[:,2] = np.cos( theta )
     return three_vector
 
+def sample_rotation_Prantzos(metallicity, filename='$TORCH_DIR/data/rotation_Prantzos2018.dat'):
+    """
+    Samples discrete rotation velocities [0, 150, 300] km/s from distributions presented in
+    Prantzos et al. (2018). Primary use is in combination with yields from Limongi & Chieffi (2018)
+    divided into these rotation bins.
+
+    If using this function, please cite Prantzos et al., 2018, MNRAS, 476, 3432-3459
+    """
+
+    filename = os.path.expandvars(filename)
+    metallicity = np.asarray(metallicity)
+    rot = np.array([0.0, 150.0, 300.0])
+
+    Z, f_r000, f_r150, f_r300 = np.loadtxt(filename).T
+    probs = np.stack([f_r000, f_r150, f_r300], axis=1)
+
+    # Find nearest index and probability
+    idx = np.abs(Z[:, None] - metallicity[None, :]).argmin(axis=0)
+    p = probs[idx]
+    p = p / p.sum(axis=1, keepdims=True)
+
+    # Inverse CDF sampling
+    cdf = np.cumsum(p, axis=1)
+    r = np.random.random(metallicity.size)
+    return rot[np.sum(r[:, None] > cdf, axis=1)]
 
 if __name__ == '__main__':
     pass
