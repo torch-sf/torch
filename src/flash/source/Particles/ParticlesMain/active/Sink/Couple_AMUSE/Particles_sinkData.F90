@@ -45,7 +45,7 @@ module Particles_sinkData
   integer, save :: ipdtold, ipcpu, iold_pmass
 
   integer, parameter :: pt_sinkParticleProps = NPART_PROPS
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   integer, parameter :: pt_nelements = NMASS_SCALARS
   integer, parameter :: pt_elem_begin = E001_PART_PROP
 #endif

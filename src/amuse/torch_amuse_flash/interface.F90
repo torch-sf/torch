@@ -116,8 +116,8 @@ integer, pointer :: number_new_particles
 
 character(len=4), save :: part_type
 
-#ifdef ELEMENTS
-integer, save :: element_pointer = 1
+#ifdef TRACER_FIELDS
+integer, save :: tracer_pointer = 1
 #endif
 
 contains
@@ -202,20 +202,20 @@ set_particle_pointers = 0
 call flush(6)
 END FUNCTION
 
-FUNCTION set_particle_elem_pointer(ielem_in)
-integer   :: set_particle_elem_pointer
-integer, intent(in) :: ielem_in
+FUNCTION set_tracer_field_pointer(itracer_in)
+integer   :: set_tracer_field_pointer
+integer, intent(in) :: itracer_in
 
-#ifdef ELEMENTS
-! element_pointer starts counting at 1. 
-element_pointer = ielem_in
+#ifdef TRACER_FIELDS
+! tracer_pointer starts counting at 1. 
+tracer_pointer = itracer_in
 #else
-    print*, "[set_particle_elem_pointer]: Tried to set element pointer &
-             but elements are not compiled in!"
-    call Driver_abortFlash("Tried to set invalid element pointer.")
+    print*, "[set_tracer_field_pointer]: Tried to set tracer_field pointer &
+             but tracer_fields are not compiled in!"
+    call Driver_abortFlash("Tried to set invalid tracer_field pointer.")
 #endif
 
-set_particle_elem_pointer=0
+set_tracer_field_pointer=0
 END FUNCTION
 
 FUNCTION internal_particle_integration_off()
@@ -1984,12 +1984,12 @@ FUNCTION get_global_grid_index_limits(global_indices)
   get_global_grid_index_limits=0
 END FUNCTION
 
-FUNCTION get_number_of_elements(value)
+FUNCTION get_number_of_tracer_fields(value)
 
   INTEGER :: value
-  INTEGER :: get_number_of_elements
+  INTEGER :: get_number_of_tracer_fields
   value = NMASS_SCALARS
-  get_number_of_elements=0
+  get_number_of_tracer_fields=0
 
 END FUNCTION
 
@@ -2766,25 +2766,25 @@ endif
 set_particle_creation_time=0
 END FUNCTION
 
-FUNCTION get_particle_elem(tags,elem,nparts)
+FUNCTION get_particle_tracer_field(tags,tracer,nparts)
 
   integer :: nparts, MyPe
-  integer :: get_particle_elem, i, j, p, oldj, ierr, counter
-  double precision, dimension(nparts) :: elem, tags
+  integer :: get_particle_tracer_field, i, j, p, oldj, ierr, counter
+  double precision, dimension(nparts) :: tracer, tags
   integer :: type_begin, type_end, type_count, offset
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-  integer :: part_elem_index
-  elem = 0.0
+  integer :: part_tracer_index
+  tracer = 0.0
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
 
   call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   if (type_count .ge. 1) then
 
-    ! Find index of element variable (element_pointer starts counting at 1).
-    part_elem_index = E001_PART_PROP - 1 + element_pointer
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = E001_PART_PROP - 1 + tracer_pointer
 
     ! Sort by particle tag. Note that input array should also be
     ! ordered by tag number then.
@@ -2817,10 +2817,10 @@ FUNCTION get_particle_elem(tags,elem,nparts)
 
         ! If found, set particle attribute accordingly.
         if (j .ne. -1) then
-          elem(i) = particles_pointer(part_elem_index, QSindex(j))
+          tracer(i) = particles_pointer(part_tracer_index, QSindex(j))
         else ! If not found (j=-1), the particle is not on this proc. Skip.
           j = oldj
-          elem(i) = 0.0
+          tracer(i) = 0.0
         end if
 
       end do ! end if particle list
@@ -2830,37 +2830,37 @@ FUNCTION get_particle_elem(tags,elem,nparts)
   
   else ! not (type_count .ge. 1)
     
-    elem = 0.0
+    tracer = 0.0
 
   endif
 
-  call MPI_AllReduce(MPI_IN_PLACE, elem, nparts, MPI_DOUBLE_PRECISION, &
+  call MPI_AllReduce(MPI_IN_PLACE, tracer, nparts, MPI_DOUBLE_PRECISION, &
                    MPI_SUM, dr_globalcomm, ierr)
 
 #endif
 #endif
-  get_particle_elem=0
+  get_particle_tracer_field=0
 END FUNCTION
 
-FUNCTION set_particle_elem(tags,elem,nparts)
+FUNCTION set_particle_tracer_field(tags,tracer,nparts)
 
   integer :: nparts
-  double precision :: elem(nparts), tags(nparts)
-  integer :: set_particle_elem, i, p, j, myProc, local_index, local_tag, oldj
+  double precision :: tracer(nparts), tags(nparts)
+  integer :: set_particle_tracer_field, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-  integer :: part_elem_index
+  integer :: part_tracer_index
 
-#ifdef ELEMENTS
-! Are we tracing elements?
+#ifdef TRACER_FIELDS
+! Are we tracing tracer_fields?
 #if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE) 
 
   call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   if (type_count .ge. 1) then
 
-    ! Find index of element variable (element_pointer starts counting at 1).
-    part_elem_index = E001_PART_PROP - 1 + element_pointer
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = E001_PART_PROP - 1 + tracer_pointer
      
     ! Sort by particle tag. Note that input array should also be
     ! ordered by tag number then.
@@ -2891,7 +2891,7 @@ FUNCTION set_particle_elem(tags,elem,nparts)
       ! becomes the new lower bound for the next search.
 
       if (j .ne. -1) then
-        particles_pointer(part_elem_index, QSindex(j)) = elem(i)
+        particles_pointer(part_tracer_index, QSindex(j)) = tracer(i)
         !print*, "Set a local particle attrib on proc ", dr_globalMe
       else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
@@ -2905,7 +2905,7 @@ FUNCTION set_particle_elem(tags,elem,nparts)
   endif
 #endif
 #endif
-  set_particle_elem=0
+  set_particle_tracer_field=0
 END FUNCTION
 
 ! This function should be called on any restart with shared tags
@@ -6927,16 +6927,16 @@ set_particle_wind_mass=0
 
 END FUNCTION
 
-FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
-  ! Set the particle's yeild injection rate (mass/time) by tag number.
+FUNCTION set_particle_tracer_dydt(tags, dydt, nparts)
+  ! Set the particle's yield injection rate (mass/time) by tag number.
   integer :: nparts
   double precision :: dydt(nparts), tags(nparts)
-  integer :: set_particle_elem_dydt, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: set_particle_tracer_dydt, i, p, j, myProc, local_index, local_tag, oldj
   integer :: type_begin, type_end, type_count
   integer*8, dimension(:), allocatable :: QSindex, id_sorted
-  integer :: part_elem_index
+  integer :: part_tracer_index
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 #ifdef WIND_INJ
   ! Are we using winds?
 
@@ -6946,8 +6946,8 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
 
   if (type_count .ge. 1) then
      
-    ! Find index of element variable (element_pointer starts counting at 1).
-    part_elem_index = Y001_PART_PROP - 1 + element_pointer
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
 
     ! Sort by particle tag. Note that input array should also be
     ! ordered by tag number then.
@@ -6975,7 +6975,7 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
 
       ! If found, set particle attribute accordingly.
       if (j .ne. -1) then
-        particles_pointer(part_elem_index, QSindex(j)) = dydt(i)
+        particles_pointer(part_tracer_index, QSindex(j)) = dydt(i)
       else ! If not found (j=-1), the particle is not on this proc. Skip.
         j = oldj
       end if
@@ -6991,8 +6991,8 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
   call Driver_getMype(GLOBAL_COMM, myProc)
   call pt_sinkGatherGlobal()
     
-  ! Find index of element variable (element_pointer starts counting at 1).
-  part_elem_index = Y001_PART_PROP - 1 + element_pointer
+  ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+  part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
 
   ! Sort by particle tag. Note that input array should also be
   ! ordered by tag number then.
@@ -7011,7 +7011,7 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
     ! Yes, then lets do them all at once.
 
     do i=1, localnpf
-      particles_global(part_elem_index, QSindex(i)) = dydt(i)
+      particles_global(part_tracer_index, QSindex(i)) = dydt(i)
     end do
 
   else
@@ -7020,7 +7020,7 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
     do j=1, nparts
       do i=1, localnpf
         if (particles_global(iptag,i) .eq. tags(j)) then
-          particles_global(part_elem_index, i) = dydt(j)
+          particles_global(part_tracer_index, i) = dydt(j)
         end if
       end do
     end do
@@ -7031,7 +7031,7 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
   ! The first localnp particles on a processor in particles_global are
   ! the local particle arrays in order.
   do i=1, localnp
-    particles_local(part_elem_index,i) = particles_global(part_elem_index, i)
+    particles_local(part_tracer_index,i) = particles_global(part_tracer_index, i)
   end do
 
   deallocate(QSindex)
@@ -7040,7 +7040,7 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
 
 #else
   
-  print*, "[interface.F90]: WARNING! Called particles_set_elem_dydt but &
+  print*, "[interface.F90]: WARNING! Called particles_set_tracer_dydt but &
          winds are not compiled into Flash!"
   call Driver_abortFlash("No winds compiled in, but attempting to set dydt.")
 
@@ -7048,13 +7048,13 @@ FUNCTION set_particle_elem_dydt(tags, dydt, nparts)
 
 #else
 
-  print*, "[interface.F90]: WARNING! Called particles_set_elem_dydt but &
-         element tracers are not compiled into Flash!"
-  call Driver_abortFlash("No elements compiled in, but attempting to set dydt.")
+  print*, "[interface.F90]: WARNING! Called particles_set_tracer_dydt but &
+         tracer_field tracers are not compiled into Flash!"
+  call Driver_abortFlash("No tracer_fields compiled in, but attempting to set dydt.")
 
 #endif
 
-  set_particle_elem_dydt=0
+  set_particle_tracer_dydt=0
 
 END FUNCTION
 
@@ -8504,7 +8504,7 @@ integer :: yield_injection
 integer, intent(in) :: iscalar
 real*8, intent(in)  :: yield, mass, xloc, yloc, zloc
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 call Particles_yieldInjection(iscalar, yield, mass, xloc, yloc, zloc)
 #else
 print*, "WARNING: Yield injection called without tracer fields, nothing will happen!"

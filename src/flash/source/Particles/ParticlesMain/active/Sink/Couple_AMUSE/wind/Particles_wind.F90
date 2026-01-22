@@ -71,7 +71,7 @@ real, parameter :: yr = (60.0d0**2.0)*24.0d0*365.25d0
 real, parameter :: solarMass = 1.989d33
 logical, save          :: first_call = .true.
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 ! For passive tracers
 real*8, allocatable           :: dydt(:,:)
 real, allocatable             :: locdydt(:,:)
@@ -85,7 +85,7 @@ integer :: ielem
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
   
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   ! Gather element indices for particle yields.
   do ielem = 1, pt_nelements
     pt_eleminds(ielem) = pt_yield_begin + (ielem - 1)
@@ -122,7 +122,7 @@ num_array = 0
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 allocate(locdydt(p_globalnum,pt_nelements))
 locdydt = 0.0d0
 #endif
@@ -154,7 +154,7 @@ do p = p_begin, p_end
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
     p_ind(w_numloc)     = p
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
     do ielem = 1,pt_nelements
       locdydt(w_numloc,ielem) = particles(pt_eleminds(ielem), p)
     enddo
@@ -203,7 +203,7 @@ allocate(dmdt(w_num), v_wind(w_num), c_time(w_num), bgdy(w_num))
 x=0.0d0; y=0.0d0; z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 ! Reallocate and reset arrays (safety)
 if (allocated(dydt)) deallocate(dydt)
 allocate(dydt(w_num,pt_nelements))
@@ -246,7 +246,7 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 do ielem = 1,pt_nelements
    call MPI_AllGatherv(locdydt(:,ielem), w_numloc, FLASH_REAL, dydt(:,ielem), num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
@@ -271,7 +271,7 @@ do p=1, w_num
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   do ielem = 1,pt_nelements
     yields(ielem) = dydt(p,ielem)*dt ! Total metal mass of this element injected by this star this step.
   enddo
@@ -283,7 +283,7 @@ do p=1, w_num
 #endif
 
   call Timers_start("inject_direct_call")
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), yields, twind, dt, bgdy(p))
 #else
   call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), 0.0, twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
@@ -310,7 +310,7 @@ deallocate(locdmdt, locv_wind, locbgdy, locc_time)
 deallocate(dmdt, v_wind, c_time, bgdy)
 deallocate(x, y, z)
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 deallocate(locdydt)
 deallocate(dydt)
 #endif

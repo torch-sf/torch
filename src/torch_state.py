@@ -19,7 +19,7 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult, se, yields):
+    def __init__(self, hydro, grav, mult, se, yields=None):
 
         self.hydro  = hydro
         self.grav   = grav

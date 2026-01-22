@@ -61,7 +61,7 @@ subroutine Grid_limitAbundance(blkLimits,solnData)
                    max(gr_smallx, min(1.e0,solnData(SPECIES_BEGIN+n,i,j,k)))
                   
            enddo
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 ! make sure mass scalars (now tracing element mass fractions) are between gr_smallx and 1
 ! must be update to only do element if new mass scalars are added.
            do n = 0,NMASS_SCALARS-1

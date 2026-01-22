@@ -40,7 +40,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 
 def stellar_evolution(time, dt, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
-    massloss_method=None, min_feedback_mass=None, with_yields=False):
+    massloss_method=None, min_feedback_mass=None):
     """
     NOTE: time = target time to evolve TO, including the dt already.
     Chosen to follow AMUSE worker convention.
@@ -87,9 +87,9 @@ def stellar_evolution(time, dt, state, hydro, se,
     npe     = np.zeros(len(state.stars)) | units.s**-1
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
-    if with_yields:
-        num_elements = hydro.get_number_of_elements()
-        dy_dt = np.zeros([len(state.stars), num_elements]) | units.g / units.s
+    if state.yields is not None:
+        num_tracers = hydro.get_number_of_tracer_fields()
+        dy_dt = np.zeros([len(state.stars), num_tracers]) | units.g / units.s
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
@@ -133,8 +133,8 @@ def stellar_evolution(time, dt, state, hydro, se,
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
                 
-                if with_yields:
-                    ccsn_yields = np.ones(num_elements)
+                if state.yields is not None:
+                    ccsn_yields = np.ones(num_tracers)
                     for itrac, tracer in enumerate(state.yields.tracer_fields):
                         if tracer == 'wind':
                             ccsn_yields[itrac] = 0.0
@@ -178,8 +178,8 @@ def stellar_evolution(time, dt, state, hydro, se,
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
 
-                if with_yields:
-                    wind_yields = np.ones(num_elements)
+                if state.yields is not None:
+                    wind_yields = np.ones(num_tracers)
                     for itrac, tracer in enumerate(state.yields.tracer_fields):
                         if tracer == 'wind':
                             wind_yields[itrac] = 1.0
@@ -222,10 +222,10 @@ def stellar_evolution(time, dt, state, hydro, se,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
-    if with_yields:
-        for ielem in range(num_elements):
-            hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
-            hydro.set_particle_elem_dydt(state.stars.tag, dy_dt[:,ielem].as_quantity_in(units.g/units.s))
+    if state.yields is not None:
+        for itrac in range(num_tracers):
+            hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+            hydro.set_particle_tracer_dydt(state.stars.tag, dy_dt[:,itrac].as_quantity_in(units.g/units.s))
 
     # Set SeBa properties for checkpoint - CCC 26/04/2024, 06/11/2024
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)

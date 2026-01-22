@@ -84,7 +84,7 @@ PARAMETER sim_withStaticGrav    BOOLEAN     False
 USESETUPVARS withElements
 IF withElements
 # Flag telling FLASH to include element tracers. 
-PPDEFINE ELEMENTS
+PPDEFINE TRACER_FIELDS
 # Number of elements
 PARAMETER sim_nelements INTEGER 9
 

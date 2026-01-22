@@ -138,7 +138,7 @@ subroutine Particles_sinkCreateAccrete(dt)
                   VELX_PART_PROP, VELY_PART_PROP, VELZ_PART_PROP, &
                   X_ANG_PART_PROP, Y_ANG_PART_PROP, Z_ANG_PART_PROP /)
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   integer, dimension(pt_nelements), save :: gather_eleminds  
   integer :: ielem
   real, dimension(pt_nelements, maxsinks) :: elem_mass
@@ -181,7 +181,7 @@ subroutine Particles_sinkCreateAccrete(dt)
     iZcoord  = KAXIS
     izn = CENTER
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
     ! Gather element indices for particles.
     do ielem = 1, pt_nelements
       gather_eleminds(ielem) = pt_elem_begin + (ielem - 1)
@@ -639,7 +639,7 @@ subroutine Particles_sinkCreateAccrete(dt)
   ang_x(:)      = 0.
   ang_y(:)      = 0.
   ang_z(:)      = 0.
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   elem_mass = 0.
 #endif
 
@@ -848,7 +848,7 @@ subroutine Particles_sinkCreateAccrete(dt)
                         ang_z(pno_to_accrete)    = ang_z(pno_to_accrete) + &
                              & (distx*solnData(ively,ip,jp,kp)-disty*solnData(ivelx,ip,jp,kp))*mass
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
                         ! Save metal mass, convert to fraction later.
                         do ielem = 1, pt_nelements
                           elem_mass(ielem, pno_to_accrete) = elem_mass(ielem, pno_to_accrete) + &
@@ -893,7 +893,7 @@ subroutine Particles_sinkCreateAccrete(dt)
       particles_local(iplx,lp) = ang_x(lp)
       particles_local(iply,lp) = ang_y(lp)
       particles_local(iplz,lp) = ang_z(lp)
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
       ! Convert from mass to fraction
       if (tot_mass(lp) .ne. 0.0) then
          do ielem = 1, pt_nelements
@@ -905,7 +905,7 @@ subroutine Particles_sinkCreateAccrete(dt)
 
    ! Exchange information across CPUs
    call pt_sinkGatherGlobal(gather_propinds, gather_nprops)
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
    ! Handle information exchange for element tracers separately.
    call pt_sinkGatherGlobal(gather_eleminds, pt_nelements)
 #endif
@@ -937,7 +937,7 @@ subroutine Particles_sinkCreateAccrete(dt)
             ang_x(lp) = ang_x(lp) + particles_global(iplx,nlp)
             ang_y(lp) = ang_y(lp) + particles_global(iply,nlp)
             ang_z(lp) = ang_z(lp) + particles_global(iplz,nlp)
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
             do ielem = 1,pt_nelements
                elem_mass(ielem,lp) = elem_mass(ielem,lp) + particles_global(gather_eleminds(ielem),nlp)*particles_global(ipm,nlp)
             enddo
@@ -980,7 +980,7 @@ subroutine Particles_sinkCreateAccrete(dt)
          particles_local(iplz,lp) = particles_local(iplz,lp) + ang_z(lp) - particles_local(ipm,lp) * &
                                     ( (particles_local(ipx,lp)-px_old)*particles_local(ipvy,lp) - &
                                       (particles_local(ipy,lp)-py_old)*particles_local(ipvx,lp)  )
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
          ! element update
          do ielem = 1,pt_nelements
             particles_local(gather_eleminds(ielem),lp) = (particles_local(gather_eleminds(ielem),lp) * &

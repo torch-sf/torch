@@ -65,7 +65,7 @@ use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
 use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 use Particles_windData, ONLY: wind_yields, mass_load_yields, ism_loading
 #endif
 
@@ -168,7 +168,7 @@ logical  :: calcBgDens
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 real(dp), intent(in)              :: injectElementIn(NMASS_SCALARS)
 real(dp),dimension(NMASS_SCALARS) :: injectElement
 real(dp),dimension(NMASS_SCALARS) :: oldElem, dElem, newElem
@@ -199,7 +199,7 @@ if (first_call) then
     call RuntimeParameters_get("perturb_std_dev", perturb_std_dev)
     call RuntimeParameters_get("use_wind_compute_dt", use_wind_compute_dt)
     call Grid_getMinCellSize(delta(1))
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
     call RuntimeParameters_get("wind_yields", wind_yields)
     call RuntimeParameters_get("mass_load_yields", mass_load_yields)
     call RuntimeParameters_get("ism_loading", ism_loading)
@@ -260,7 +260,7 @@ deltaKinE    = 0.0
 injectMass = injectMassIn
 injectVelocity = injectVelocityIn
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 ism_mass = 0.0d0
 injectElement = injectElementIn
 ! Sanity checks
@@ -460,7 +460,7 @@ if (mass_load) then
     endif
 end if
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
 ! Mass loading yields is tricky. We must make a choice about where the
 ! additional mass comes from. Either it is part of the wind (ism_loading=false),
 ! or it is swept up mass in the surrounding of the star (ism_loading=true).
@@ -758,7 +758,7 @@ if (iHaveInjectBlk) then
                       totP    = injVel * dDens + oldVel * oldDens
                       newVel  = totP / newDens
                       
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Compute the metal density of material which is added to cell.
                           do ielem = 1, NMASS_SCALARS
@@ -860,7 +860,7 @@ if (iHaveInjectBlk) then
                       solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
                       solndata(DENS_VAR, i, j, k) = newDens
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Update scalar field to new metallicity after wind mass injection
                           do ielem = 1, NMASS_SCALARS
@@ -957,7 +957,7 @@ if (iHaveInjectBlk) then
                       oldE    = oldDens * sum(oldVel**2)
                       oldP    = oldDens * sqrt(sum(oldVel**2))
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Compute the metal density of material which is added to cell.
                           do ielem = 1, NMASS_SCALARS
@@ -989,7 +989,7 @@ if (iHaveInjectBlk) then
                       solndata(DENS_VAR, i, j, k) = newDens
                       solndata(ENER_VAR, i, j, k) =  0.5_dp*sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k)
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Update scalar field to new metallicity after wind mass injection
                           do ielem = 1, NMASS_SCALARS

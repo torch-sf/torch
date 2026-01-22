@@ -38,7 +38,7 @@ module Particles_windData
   logical, save    :: perturb_velocity    =.false.
   real*8,  save    :: perturb_std_dev
 
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   logical, save    :: wind_yields         =.false. ! Winds add metals
   logical, save    :: mass_load_yields    =.false. ! Mass load metals
   logical, save    :: ism_loading         =.false. ! Mass load with ism me

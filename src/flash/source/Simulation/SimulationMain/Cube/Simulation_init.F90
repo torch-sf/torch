@@ -124,7 +124,7 @@ subroutine Simulation_init()
      if (use_deref) call Logfile_stamp('derefining outside region of interest', "[Simulation_init]")
   endif
   
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   call RuntimeParameters_get('sim_nelements', sim_nelements)
   
 ! Check for consistent setup.
@@ -160,7 +160,7 @@ subroutine Simulation_init()
   allocate(sim_velzArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velzArr")
   
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   allocate(sim_elemArr(NMASS_SCALARS, sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_elemArr")
 #endif
@@ -169,7 +169,7 @@ subroutine Simulation_init()
     do i = 1,sim_nCD(IAXIS)
       do j = 1,sim_nCD(JAXIS)
         do k = 1,sim_nCD(KAXIS)
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
           read(55,*) ii,jj,kk, sim_densArr(i,j,k), sim_presArr(i,j,k), &
           & sim_velxArr(i,j,k), sim_velyArr(i,j,k), sim_velzArr(i,j,k), &
           & sim_gpotArr(i,j,k), sim_elemArr(:,i,j,k)
@@ -199,7 +199,7 @@ subroutine Simulation_init()
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
   call MPI_Bcast(sim_velzArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS), &
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   call MPI_Bcast(sim_elemArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS)*NMASS_SCALARS, &
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
 #endif

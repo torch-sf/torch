@@ -35,7 +35,7 @@ module Simulation_data
   real, allocatable, save :: sim_gpotArr(:,:,:), sim_velxArr(:,:,:)
   real, allocatable, save :: sim_velyArr(:,:,:), sim_velzArr(:,:,:)
   
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   !! Arrays and variables for elements.
   integer, save :: sim_nelements
   real, allocatable, save :: sim_elemArr(:,:,:,:)

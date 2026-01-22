@@ -308,7 +308,6 @@ def evolve(state, hydro, grav, mult, se):
                     with_sn           = USER['with_sn'],
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
-                    with_yields       = USER['with_yields']
                 )
                 tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
                 
@@ -580,6 +579,8 @@ def run_torch(user_initial_conditions, user_parameters):
     if USER['with_yields']:
         yields = LimongiChieffi2018()
         yields.tracer_fields = USER['tracer_fields']
+    else:
+        yields = None
 
     state = TorchState(hydro, grav, mult, se, yields)
 

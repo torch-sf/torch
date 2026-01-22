@@ -56,7 +56,7 @@ subroutine Simulation_initBlock (blockId)
   real, dimension(NSPECIES) :: massFrac_box
 
   logical :: gcell = .true.
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
   integer  :: ielem
   real,dimension(NMASS_SCALARS) :: elem
 #endif
@@ -195,7 +195,7 @@ subroutine Simulation_initBlock (blockId)
         &    +     p *    q *(1.-r)*sim_velzArr(ixp1, iyp1, iz  ) &
         &    +     p *    q *    r *sim_velzArr(ixp1, iyp1, izp1)
         
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
         do ielem = 1, NMASS_SCALARS
           elem(ielem) = (1.-p)*(1.-q)*(1.-r)*sim_elemArr(ielem, ix  , iy  , iz  ) &
                 &    + (1.-p)*(1.-q)*    r *sim_elemArr(ielem, ix  , iy  , izp1) &
@@ -232,7 +232,7 @@ subroutine Simulation_initBlock (blockId)
         solnData(VELX_VAR,i,j,k)=vx
         solnData(VELY_VAR,i,j,k)=vy
         solnData(VELZ_VAR,i,j,k)=vz
-#ifdef ELEMENTS
+#ifdef TRACER_FIELDS
         do ielem = 1, NMASS_SCALARS
            solnData(MASS_SCALARS_BEGIN+ielem-1,i,j,k) = elem(ielem)
         enddo

@@ -73,13 +73,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     radius   = hydro.get_particle_radius(newtags)
 
     # Properties used for yields
-    rotvel   = hydro.get_particle_rotvel(newtags)
-    if 'Z' in state.yields.tracer_fields:
-        metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
-        hydro.set_particle_elem_pointer(metal_idx+1) # Fortran style counting (start on 1)
-        initial_metal = hydro.get_particle_elem(newtags)
-    else:
-        initial_metal = 0.02
+    if state.yields is not None:
+        rotvel   = hydro.get_particle_rotvel(newtags)
+        if 'Z' in state.yields.tracer_fields:
+            metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
+            hydro.set_tracer_field_pointer(metal_idx+1) # Fortran style counting (start on 1)
+            initial_metal = hydro.get_particle_tracer_field(newtags)
+        else:
+            initial_metal = 0.02
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
@@ -97,8 +98,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.COcore_mass   = COcoreM
     add_star.core_mass     = coreM
     add_star.age           = relAge
-    add_star.rotvel        = rotvel
-    add_star.initial_metal = initial_metal
+    
+    if state.yields is not None:
+        add_star.rotvel        = rotvel
+        add_star.initial_metal = initial_metal
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     # Set stellar type and radius - CCC 06/11/2024
@@ -293,7 +296,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
-    num_elements = hydro.get_number_of_elements()
+    num_tracers = hydro.get_number_of_tracer_fields()
     if num_sinks == 0:
         # can't get sink tags w/ empty list so need to exit early
         hydro.set_particle_pointers('mass')
@@ -310,13 +313,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
 
-        if num_elements > 0:
-            sink_elem = []
-            for ielem in range(num_elements):
-                hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
-                sink_elem.append(hydro.get_particle_elem(sink_tag))
-                if state.yields.tracer_fields[ielem] == 'Z':
-                    sink_metal = sink_elem[-1]
+        if num_tracers > 0:
+            sink_tracer_field = []
+            for itrac in range(num_tracers):
+                hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+                sink_tracer_field.append(hydro.get_particle_tracer_field(sink_tag))
 
         # get all the stars that we can form now
         csum = np.cumsum(state.all_masses[sink_tag])
@@ -362,9 +363,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
             star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
-
-            # For yields tables
-            star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
+            
+            if state.yields is not None:
+                # For yields tables
+                star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -372,12 +374,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-            hydro.set_particle_rotvel(star_tag, star.rotvel)
+            if state.yields is not None:
+                hydro.set_particle_rotvel(star_tag, star.rotvel)
 
-            if num_elements > 0:
-                for ielem in range(num_elements):
-                    hydro.set_particle_elem_pointer(ielem+1) # Fortran style counting (start on 1)
-                    hydro.set_particle_elem(star_tag, sink_elem[ielem]*np.ones(nnew))
+            if num_tracers > 0:
+                for itrac in range(num_tracers):
+                    hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+                    hydro.set_particle_tracer_field(star_tag, sink_tracer_field[itrac]*np.ones(nnew))
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')

@@ -73,7 +73,7 @@ subroutine Particles_yieldInjection(iscalar, injectYieldIn, injectMassIn, xloc, 
   real(dp) :: injectYield, injectMass
   real(dp) :: oldScalar, newScalar, dScalar
 
-#ifndef ELEMENTS
+#ifndef TRACER_FIELDS
   print*, "Function Particles_yieldInjection cannot be called without tracer fields. Something went wrong!"
 #endif
 
