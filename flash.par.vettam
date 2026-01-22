@@ -1,69 +1,6 @@
 
 
 
-## Parameters commonly changed by the user for the VETTAM module
-## I am assuming Torch needs only the EUV and FUV bands, so skipping important parameters relevant to the IR band
-
-# MARSHAK BCS -- FIXES NON-CONVERGENCE IN FUV BAND! -BP.5.10.25
-xl_rad_bc                   =          6
-xr_rad_bc                   =          6
-yl_rad_bc                   =          6
-yr_rad_bc                   =          6
-zl_rad_bc                   =          6
-zr_rad_bc                   =          6
-
-#rt_debug = .true.
-
-#==========================================
-#
-# VETTAM Parameters
-#
-useRadTrans           = .true. #Use VETTAM
-rt_rtol             = 1.e-2 #Tolerance of implicit radiation update solve
-rt_dtol             = 1.e10 #Maximum relative change permitted per iteration
-rt_maxits           = 2000 #Maximum iterations before attempting subcycling
-rt_update_hydro     = .true. 
-rt_hydro_type       = 1 #Only relevant for IR band
-
-hnu = 2.17896e-11 # EUV band is 13.6eV
-
-# Ray-Tracer Parameters (This is important only if VET closure used)
-useRayTrace           = .true. # Set true if using the VET closure (default)
-# Healpix stuff
-rt_healpix_nSide      = 2 # 2 is standard; must be multiple of 2 (recommended; higher-> more accurate, slower)
-rt_healpix_randomize  = 1 # Randomize the healpix tesselation -- highly recommended to keep as 1
-rt_nrOfAngleGroups    = 1 #  this affects mem consumption (use more for less mem > see raytrace*.log)
-
-# Sink Injection Properties
-sigma_star           = 0.5 #Gaussian source size in units of dx for sink radiation injection (Rec: 2-4)
-noSink_VETTAM = .true.  #Flag to set whether VETTAM should be on even if there are no sinks; if no source of background radiation, can save you time
-
-# Moment method closure - "edd", "m1", or "vet" (Note: M1 probably has bugs, wouldn't recommend in current version)
-rt_etens      = "vet"
-
-rt_linearsolver = "lgmres"
-preconditioner  = "asm"
-
-# Frequency bands (max:5). Implemented ones are: EUV, FUV, LW, PE, EUV_13P6_15P2, EUV_15P2_INFTY
-# I have assumed Torch needs only EUV (i.e. LyC) and FUV
-rt_freqbands = 2
-rt_band1 = "FUV"
-rt_band2 = "EUV"
-
-# Dust Opacities
-dust_opacity_fuv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
-dust_opacity_euv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
-dust_euvopac_value = 1.25e3 #600.0 # to match sigDust; 1.25e3 #1250 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
-dust_fuvopac_value = 600.0 # this matches sigDust; 600 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
-dusttoGasRatio = 1.0 #Dust to gas ratio scaled to the solar value; opacities are scaled by this value
-
-# Ionization stuff
-ion_sigmaH = 3.6e-18 #Cross section of H atoms to EUV Photons
-useEUVIonize = .true. # Switch on hydrogen ionization
-useH2Ionize = .false. #I am assuming you don't have H2; this shouldnt matter anyways if the H2_SPEC is not defined. But in case it is keep this off if you don't want H2 ionization
-
-
-
 # ==================================================================
 # Simulation/SimulationMain, monitors/Logfile/LogfileMain, IO/IOMain
 # ==================================================================
@@ -520,6 +457,66 @@ nd_cool_max = 1e10
 # he_theatmax?
 dust_sputter_temp = 3e5 # See fig 25.4 in Draine's book
 
+
+## Parameters commonly changed by the user for the VETTAM module. If used please cite S. Menon et al. 2022 (MNRAS 512, 401–423)
+## Torch needs only the EUV and FUV bands, so skipping important parameters relevant to the IR band
+#==========================================
+#
+# VETTAM Parameters
+#
+useRadTrans           = .true. #Use VETTAM
+rt_rtol             = 1.e-2 #Tolerance of implicit radiation update solve
+rt_dtol             = 1.e10 #Maximum relative change permitted per iteration
+rt_maxits           = 2000 #Maximum iterations before attempting subcycling
+rt_update_hydro     = .true. 
+rt_hydro_type       = 1 #Only relevant for IR band
+
+hnu = 2.17896e-11 # EUV band is 13.6eV
+
+# Ray-Tracer Parameters (This is important only if VET closure used)
+useRayTrace           = .true. # Set true if using the VET closure (default)
+# Healpix stuff
+rt_healpix_nSide      = 2 # 2 is standard; must be multiple of 2 (recommended; higher-> more accurate, slower)
+rt_healpix_randomize  = 1 # Randomize the healpix tesselation -- highly recommended to keep as 1
+rt_nrOfAngleGroups    = 1 #  this affects mem consumption (use more for less mem > see raytrace*.log)
+
+# Sink Injection Properties
+sigma_star           = 1.0 #Gaussian source size in units of dx for sink radiation injection. Do not go below 1.0 as the energy difference between cells becomes too large resulting in energy loss. 
+noSink_VETTAM = .true.  #Flag to set whether VETTAM should be on even if there are no sinks; if no source of background radiation, can save you time
+
+# Moment method closure - "edd", "m1", or "vet" (Note: M1 probably has bugs, wouldn't recommend in current version)
+rt_etens      = "vet"
+
+rt_linearsolver = "lgmres"
+preconditioner  = "asm"
+
+# Frequency bands (max:5). Implemented ones are: EUV, FUV, LW, PE, EUV_13P6_15P2, EUV_15P2_INFTY
+# I have assumed Torch needs only EUV (i.e. LyC) and FUV
+rt_freqbands = 2
+rt_band1 = "FUV"
+rt_band2 = "EUV"
+
+# Dust Opacities
+dust_opacity_fuv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
+dust_opacity_euv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
+dust_euvopac_value = 1.25e3 #600.0 # to match sigDust; 1.25e3 #1250 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
+dust_fuvopac_value = 600.0 # this matches sigDust; 600 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
+dusttoGasRatio = 1.0 #Dust to gas ratio scaled to the solar value; opacities are scaled by this value
+
+# Ionization stuff
+ion_sigmaH = 3.6e-18 #Cross section of H atoms to EUV Photons
+useEUVIonize = .true. # Switch on hydrogen ionization
+useH2Ionize = .false. #I am assuming you don't have H2; this shouldnt matter anyways if the H2_SPEC is not defined. But in case it is keep this off if you don't want H2 ionization
+
+# MARSHAK BCS -- FIXES NON-CONVERGENCE IN FUV BAND! -BP.5.10.25
+xl_rad_bc                   =          6
+xr_rad_bc                   =          6
+yl_rad_bc                   =          6
+yr_rad_bc                   =          6
+zl_rad_bc                   =          6
+zr_rad_bc                   =          6
+
+#rt_debug = .true.
 
 # ================================================
 # radiative transfer options
