@@ -14,7 +14,7 @@
 
 
 
-subroutine Particles_yieldInjection(iscalar, injectYieldIn, injectMassIn, xloc, yloc, zloc)
+subroutine Particles_yieldInjection(itracer, injectYieldIn, injectMassIn, xloc, yloc, zloc)
 
 !#define DEBUG2
 
@@ -41,8 +41,8 @@ subroutine Particles_yieldInjection(iscalar, injectYieldIn, injectMassIn, xloc, 
   integer, parameter :: dp = kind(1.d0)
   integer :: ierr
   
-  integer, intent(in) :: iscalar ! Scalar index starts counting at 1.
-  real(dp),intent(in) :: injectMassIn, xloc, yloc, zloc
+  integer, intent(in) :: itracer ! Tracer field indices starts counting at 1.
+  real(dp),intent(in) :: injectMassIn,: xloc, yloc, zloc
   real(dp),intent(in) :: injectYieldIn
   
   logical :: iHaveInjectBlk
@@ -71,7 +71,7 @@ subroutine Particles_yieldInjection(iscalar, injectYieldIn, injectMassIn, xloc, 
   real(dp) :: blkCtr(3), blkSize(3)  ! code requires MDIM=3
   
   real(dp) :: injectYield, injectMass
-  real(dp) :: oldScalar, newScalar, dScalar
+  real(dp) :: oldTracerField, newTracerField, dTracerField
 
 #ifndef TRACER_FIELDS
   print*, "Function Particles_yieldInjection cannot be called without tracer fields. Something went wrong!"
@@ -265,18 +265,18 @@ subroutine Particles_yieldInjection(iscalar, injectYieldIn, injectMassIn, xloc, 
               newDens = solndata(DENS_VAR,i,j,k) + dDens
             
               ! Compute the tracer field density of material which is added to cell.
-              oldScalar = solndata(MASS_SCALARS_BEGIN+(iscalar-1),i,j,k)*oldDens ! Tracer field mass per volume
+              oldTracerField = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Tracer field mass per volume
               if(injectYield.LT.0.0) then
                  ! Old field should remain untouched. Apply old field to injected mass
-                 dScalar = solndata(MASS_SCALARS_BEGIN+(iscalar-1),i,j,k)*dDens
+                 dTracerField = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
               else
                   ! Injected mass will update field, if yields=0 -> field is depleted.
-                 dScalar = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield/dVol
+                 dTracerField = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield/dVol
               endif
-              newScalar = oldScalar + dScalar
+              newTracerField = oldTracerField + dTracerField
               
               ! Update scalar field to new metallicity
-              solndata(MASS_SCALARS_BEGIN+(iscalar-1), i, j, k) = newScalar/newDens
+              solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField/newDens
             
             end do
           end do

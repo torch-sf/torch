@@ -153,7 +153,7 @@ def stellar_evolution(time, dt, state, hydro, se,
                                     metal=s.initial_metal,
                                     rot=s.rotvel.value_in(units.km/units.s))[0]
                         else:
-                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
                     
                     for itrac, tracer in enumerate(state.yields.tracer_fields):
                         hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)

@@ -85,8 +85,8 @@ USESETUPVARS withElements
 IF withElements
 # Flag telling FLASH to include element tracers. 
 PPDEFINE TRACER_FIELDS
-# Number of elements
-PARAMETER sim_nelements INTEGER 9
+# Number of tracer fields
+PARAMETER sim_nTracerFields INTEGER 9
 
 # Tracer fields as mass scalars.
 MASS_SCALAR E001

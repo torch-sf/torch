@@ -57,8 +57,8 @@ subroutine Simulation_initBlock (blockId)
 
   logical :: gcell = .true.
 #ifdef TRACER_FIELDS
-  integer  :: ielem
-  real,dimension(NMASS_SCALARS) :: elem
+  integer  :: itracer
+  real,dimension(NMASS_SCALARS) :: tracerFields
 #endif
      
 !! ---------------------------------------------------------------------------
@@ -196,15 +196,15 @@ subroutine Simulation_initBlock (blockId)
         &    +     p *    q *    r *sim_velzArr(ixp1, iyp1, izp1)
         
 #ifdef TRACER_FIELDS
-        do ielem = 1, NMASS_SCALARS
-          elem(ielem) = (1.-p)*(1.-q)*(1.-r)*sim_elemArr(ielem, ix  , iy  , iz  ) &
-                &    + (1.-p)*(1.-q)*    r *sim_elemArr(ielem, ix  , iy  , izp1) &
-                &    + (1.-p)*    q *(1.-r)*sim_elemArr(ielem, ix  , iyp1, iz  ) &
-                &    + (1.-p)*    q *    r *sim_elemArr(ielem, ix  , iyp1, izp1) &
-                &    +     p *(1.-q)*(1.-r)*sim_elemArr(ielem, ixp1, iy  , iz  ) &
-                &    +     p *(1.-q)*    r *sim_elemArr(ielem, ixp1, iy  , izp1) &
-                &    +     p *    q *(1.-r)*sim_elemArr(ielem, ixp1, iyp1, iz  ) &
-                &    +     p *    q *    r *sim_elemArr(ielem, ixp1, iyp1, izp1)
+        do itracer = 1, NMASS_SCALARS
+          tracerFields(itracer) = (1.-p)*(1.-q)*(1.-r)*sim_TracerFieldArr(itracer, ix  , iy  , iz  ) &
+          &                     + (1.-p)*(1.-q)*    r *sim_TracerFieldArr(itracer, ix  , iy  , izp1) &
+          &                     + (1.-p)*    q *(1.-r)*sim_TracerFieldArr(itracer, ix  , iyp1, iz  ) &
+          &                     + (1.-p)*    q *    r *sim_TracerFieldArr(itracer, ix  , iyp1, izp1) &
+          &                     +     p *(1.-q)*(1.-r)*sim_TracerFieldArr(itracer, ixp1, iy  , iz  ) &
+          &                     +     p *(1.-q)*    r *sim_TracerFieldArr(itracer, ixp1, iy  , izp1) &
+          &                     +     p *    q *(1.-r)*sim_TracerFieldArr(itracer, ixp1, iyp1, iz  ) &
+          &                     +     p *    q *    r *sim_TracerFieldArr(itracer, ixp1, iyp1, izp1)
         enddo
 #endif
 
@@ -233,8 +233,8 @@ subroutine Simulation_initBlock (blockId)
         solnData(VELY_VAR,i,j,k)=vy
         solnData(VELZ_VAR,i,j,k)=vz
 #ifdef TRACER_FIELDS
-        do ielem = 1, NMASS_SCALARS
-           solnData(MASS_SCALARS_BEGIN+ielem-1,i,j,k) = elem(ielem)
+        do itracer = 1, NMASS_SCALARS
+           solnData(MASS_SCALARS_BEGIN+itracer-1,i,j,k) = tracerFields(itracer)
         enddo
 #endif
 #ifdef TDUS_VAR

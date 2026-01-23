@@ -46,8 +46,8 @@ module Particles_sinkData
 
   integer, parameter :: pt_sinkParticleProps = NPART_PROPS
 #ifdef TRACER_FIELDS
-  integer, parameter :: pt_nelements = NMASS_SCALARS
-  integer, parameter :: pt_elem_begin = E001_PART_PROP
+  integer, parameter :: pt_num_tracer_fields = NMASS_SCALARS
+  integer, parameter :: pt_tracer_fields_begin = E001_PART_PROP
 #endif
   ! particles_local and particles_global refer to 
   ! sink particles - the local list and the global list

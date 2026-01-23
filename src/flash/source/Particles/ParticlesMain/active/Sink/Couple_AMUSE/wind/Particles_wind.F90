@@ -72,23 +72,23 @@ real, parameter :: solarMass = 1.989d33
 logical, save          :: first_call = .true.
 
 #ifdef TRACER_FIELDS
-! For passive tracers
+! For tracer fields
 real*8, allocatable           :: dydt(:,:)
 real, allocatable             :: locdydt(:,:)
-integer, parameter            :: pt_nelements = NMASS_SCALARS
-integer, parameter            :: pt_yield_begin = Y001_PART_PROP
-real, dimension(pt_nelements) :: yields
-integer, dimension(pt_nelements), save :: pt_eleminds
-integer :: ielem
+integer, parameter            :: pt_num_tracer_fields = NMASS_SCALARS
+integer, parameter            :: pt_tracer_fields_begin = Y001_PART_PROP
+real, dimension(pt_num_tracer_fields) :: yields
+integer, dimension(pt_num_tracer_fields), save :: pt_tracer_inds
+integer :: itracer
 #endif
 
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
   
 #ifdef TRACER_FIELDS
-  ! Gather element indices for particle yields.
-  do ielem = 1, pt_nelements
-    pt_eleminds(ielem) = pt_yield_begin + (ielem - 1)
+  ! Gather tracer field indices for particle yields.
+  do itracer = 1, pt_num_tracer_fields
+    pt_tracer_inds(itracer) = pt_tracer_fields_begin + (itracer - 1)
   enddo
 #endif
 
@@ -123,7 +123,7 @@ locx = 0.0d0; locy=0.0d0; locz=0.0d0
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 
 #ifdef TRACER_FIELDS
-allocate(locdydt(p_globalnum,pt_nelements))
+allocate(locdydt(p_globalnum,pt_num_tracer_fields))
 locdydt = 0.0d0
 #endif
 
@@ -155,8 +155,8 @@ do p = p_begin, p_end
     p_ind(w_numloc)     = p
 
 #ifdef TRACER_FIELDS
-    do ielem = 1,pt_nelements
-      locdydt(w_numloc,ielem) = particles(pt_eleminds(ielem), p)
+    do itracer = 1,pt_num_tracer_fields
+      locdydt(w_numloc,itracer) = particles(pt_tracer_inds(itracer), p)
     enddo
 #endif
 
@@ -206,7 +206,7 @@ dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
 #ifdef TRACER_FIELDS
 ! Reallocate and reset arrays (safety)
 if (allocated(dydt)) deallocate(dydt)
-allocate(dydt(w_num,pt_nelements))
+allocate(dydt(w_num,pt_num_tracer_fields))
 yields = 0.0d0
 dydt = 0.0d0
 #endif
@@ -247,8 +247,8 @@ call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 
 #ifdef TRACER_FIELDS
-do ielem = 1,pt_nelements
-   call MPI_AllGatherv(locdydt(:,ielem), w_numloc, FLASH_REAL, dydt(:,ielem), num_array, &
+do itracer = 1,pt_num_tracer_fields
+   call MPI_AllGatherv(locdydt(:,itracer), w_numloc, FLASH_REAL, dydt(:,itracer), num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 enddo
 #endif
@@ -272,8 +272,8 @@ do p=1, w_num
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
 
 #ifdef TRACER_FIELDS
-  do ielem = 1,pt_nelements
-    yields(ielem) = dydt(p,ielem)*dt ! Total metal mass of this element injected by this star this step.
+  do itracer = 1,pt_num_tracer_fields
+    yields(itracer) = dydt(p,itracer)*dt ! Total mass of this tracer field injected by this star this step.
   enddo
 #endif
 

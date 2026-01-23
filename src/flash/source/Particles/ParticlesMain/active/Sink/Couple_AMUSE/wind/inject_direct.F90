@@ -35,7 +35,7 @@
 
 
 
-subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectElementIn, twind, dt, bgDens)
+subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, twind, dt, bgDens)
 
 !#define DEBUG
 #define DEBUG_ENERGY
@@ -169,13 +169,13 @@ logical  :: calcBgDens
 !logical  :: hostCell
 
 #ifdef TRACER_FIELDS
-real(dp), intent(in)              :: injectElementIn(NMASS_SCALARS)
-real(dp),dimension(NMASS_SCALARS) :: injectElement
-real(dp),dimension(NMASS_SCALARS) :: oldElem, dElem, newElem
+real(dp), intent(in)              :: injectYieldIn(NMASS_SCALARS)
+real(dp),dimension(NMASS_SCALARS) :: injectYield
+real(dp),dimension(NMASS_SCALARS) :: oldTracerField, dTracerField, newTracerField
 real(dp) :: ism_mass
-integer  :: ielem
+integer  :: itracer
 #else
-real(dp), intent(in)              :: injectElementIn
+real(dp), intent(in)              :: injectYieldIn
 #endif
 
 ! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
@@ -262,15 +262,7 @@ injectVelocity = injectVelocityIn
 
 #ifdef TRACER_FIELDS
 ism_mass = 0.0d0
-injectElement = injectElementIn
-! Sanity checks
-if (wind_yields) then
-   do ielem = 1, NMASS_SCALARS
-      if (injectElement(ielem).GT.injectMass) print*, "Injecting more element than available mass", ielem, &
-         & injectElement(ielem),injectMass
-      if (injectElement(ielem).LE.0.0) print*, "Injecting zero or negative amount of element", ielem, injectElement(ielem)
-   enddo
-endif
+injectYield = injectYieldIn
 #endif
 
 call Grid_getMinCellSize(delta(1))
@@ -464,13 +456,13 @@ end if
 ! Mass loading yields is tricky. We must make a choice about where the
 ! additional mass comes from. Either it is part of the wind (ism_loading=false),
 ! or it is swept up mass in the surrounding of the star (ism_loading=true).
-! This choise determines the element abundances of the mass that is swept up.
+! This choise determines the abundances of the mass that is swept up.
 if (wind_yields .and. mass_load_yields) then
     if (ism_loading) then
-        ! To be multiplied by ISM metallicity
+        ! To be multiplied by ISM abundance
         ism_mass = injectMassIn*mass_load_factor
     else
-        injectElement = injectElementIn*(1.0d0+mass_load_factor)
+        injectYield = injectYieldIn*(1.0d0+mass_load_factor)
     endif
 endif
 #endif
@@ -760,22 +752,22 @@ if (iHaveInjectBlk) then
                       
 #ifdef TRACER_FIELDS
                       if (wind_yields) then
-                          ! Compute the metal density of material which is added to cell.
-                          do ielem = 1, NMASS_SCALARS
+                          ! Compute the tracer field density of material which is added to cell.
+                          do itracer = 1, NMASS_SCALARS
                             if(mass_load_yields.AND.ism_loading) then
                                ! ism_mass is the additional mass due to mass loading if applied.
-                               ! ism loading implies additional mass is from swept-up material (old metallicity)
-                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k) &
-                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
+                               ! ism loading implies additional mass is from swept-up material (old tracer field)
+                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Tracer field mass per volume
                             else
-                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
+                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Tracer field mass per volume
                             endif
-                            if(injectElement(ielem).LT.0.0) then
-                               dElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*dDens
+                            if(injectYield(itracer).LT.0.0) then
+                               dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
                             else
-                               dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                               dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
                             endif
-                            newElem(ielem) = oldElem(ielem) + dElem(ielem)
+                            newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
                           enddo
                       endif
 #endif
@@ -863,8 +855,8 @@ if (iHaveInjectBlk) then
 #ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Update scalar field to new metallicity after wind mass injection
-                          do ielem = 1, NMASS_SCALARS
-                              solndata(MASS_SCALARS_BEGIN+(ielem-1), i, j, k) = newElem(ielem)/newDens
+                          do itracer = 1, NMASS_SCALARS
+                              solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
                           enddo
                       endif
 #endif
@@ -960,21 +952,21 @@ if (iHaveInjectBlk) then
 #ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Compute the metal density of material which is added to cell.
-                          do ielem = 1, NMASS_SCALARS
+                          do itracer = 1, NMASS_SCALARS
                             if(mass_load_yields.AND.ism_loading) then
                                ! ism_mass is the additional mass due to mass loading if applied.
                                ! ism loading implies additional mass is from swept-up material (old metallicity)
-                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k) &
+                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
                                  & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
                             else
-                               oldElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*oldDens ! Metal mass (per volume)
+                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Metal mass (per volume)
                             endif
-                            if(injectElement(ielem).LT.0.0) then
-                               dElem(ielem) = solndata(MASS_SCALARS_BEGIN+(ielem-1),i,j,k)*dDens
+                            if(injectYield(itracer).LT.0.0) then
+                               dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
                             else
-                               dElem(ielem) = injectDataOverlap(n,i,j,k)/sumOverlap*injectElement(ielem)/dVol
+                               dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
                             endif
-                            newElem(ielem) = oldElem(ielem) + dElem(ielem)
+                            newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
                           enddo
                       endif
 #endif
@@ -992,8 +984,8 @@ if (iHaveInjectBlk) then
 #ifdef TRACER_FIELDS
                       if (wind_yields) then
                           ! Update scalar field to new metallicity after wind mass injection
-                          do ielem = 1, NMASS_SCALARS
-                            solndata(MASS_SCALARS_BEGIN+(ielem-1), i, j, k) = newElem(ielem)/newDens
+                          do itracer = 1, NMASS_SCALARS
+                            solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
                           enddo
                       endif
 #endif

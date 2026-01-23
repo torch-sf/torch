@@ -36,9 +36,9 @@ module Simulation_data
   real, allocatable, save :: sim_velyArr(:,:,:), sim_velzArr(:,:,:)
   
 #ifdef TRACER_FIELDS
-  !! Arrays and variables for elements.
-  integer, save :: sim_nelements
-  real, allocatable, save :: sim_elemArr(:,:,:,:)
+  !! Arrays and variables for tracer fields.
+  integer, save :: sim_nTracerFields
+  real, allocatable, save :: sim_TracerFieldArr(:,:,:,:)
 #endif
 
 ! single fluid stuff
