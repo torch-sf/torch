@@ -42,7 +42,7 @@ subroutine Particles_yieldInjection(itracer, injectYieldIn, injectMassIn, xloc, 
   integer :: ierr
   
   integer, intent(in) :: itracer ! Tracer field indices starts counting at 1.
-  real(dp),intent(in) :: injectMassIn,: xloc, yloc, zloc
+  real(dp),intent(in) :: injectMassIn, xloc, yloc, zloc
   real(dp),intent(in) :: injectYieldIn
   
   logical :: iHaveInjectBlk
