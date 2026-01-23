@@ -66,7 +66,7 @@ use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
 
 #ifdef TRACER_FIELDS
-use Particles_windData, ONLY: wind_yields, mass_load_yields, ism_loading
+use Particles_windData, ONLY: mass_load_yields, ism_loading
 #endif
 
 implicit none
@@ -200,7 +200,6 @@ if (first_call) then
     call RuntimeParameters_get("use_wind_compute_dt", use_wind_compute_dt)
     call Grid_getMinCellSize(delta(1))
 #ifdef TRACER_FIELDS
-    call RuntimeParameters_get("wind_yields", wind_yields)
     call RuntimeParameters_get("mass_load_yields", mass_load_yields)
     call RuntimeParameters_get("ism_loading", ism_loading)
 #endif
@@ -457,7 +456,7 @@ end if
 ! additional mass comes from. Either it is part of the wind (ism_loading=false),
 ! or it is swept up mass in the surrounding of the star (ism_loading=true).
 ! This choise determines the abundances of the mass that is swept up.
-if (wind_yields .and. mass_load_yields) then
+if (mass_load_yields) then
     if (ism_loading) then
         ! To be multiplied by ISM abundance
         ism_mass = injectMassIn*mass_load_factor
@@ -751,25 +750,23 @@ if (iHaveInjectBlk) then
                       newVel  = totP / newDens
                       
 #ifdef TRACER_FIELDS
-                      if (wind_yields) then
-                          ! Compute the tracer field density of material which is added to cell.
-                          do itracer = 1, NMASS_SCALARS
-                            if(mass_load_yields.AND.ism_loading) then
-                               ! ism_mass is the additional mass due to mass loading if applied.
-                               ! ism loading implies additional mass is from swept-up material (old tracer field)
-                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
-                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Tracer field mass per volume
-                            else
-                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Tracer field mass per volume
-                            endif
-                            if(injectYield(itracer).LT.0.0) then
-                               dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
-                            else
-                               dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
-                            endif
-                            newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
-                          enddo
-                      endif
+                      ! Compute the tracer field density of material which is added to cell.
+                      do itracer = 1, NMASS_SCALARS
+                        if(mass_load_yields.AND.ism_loading) then
+                           ! ism_mass is the additional mass due to mass loading if applied.
+                           ! ism loading implies additional mass is from swept-up material (old tracer field)
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                             & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Tracer field mass per volume
+                        else
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Tracer field mass per volume
+                        endif
+                        if(injectYield(itracer).LT.0.0) then
+                           dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
+                        else
+                           dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
+                        endif
+                        newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
+                      enddo
 #endif
 
                       ! How much mass are we really putting in? - JW
@@ -853,12 +850,10 @@ if (iHaveInjectBlk) then
                       solndata(DENS_VAR, i, j, k) = newDens
 
 #ifdef TRACER_FIELDS
-                      if (wind_yields) then
-                          ! Update scalar field to new metallicity after wind mass injection
-                          do itracer = 1, NMASS_SCALARS
-                              solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
-                          enddo
-                      endif
+                      ! Update scalar field to new metallicity after wind mass injection
+                      do itracer = 1, NMASS_SCALARS
+                          solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
+                      enddo
 #endif
 
 		              if (addKinE .gt. largestKE) largestKE = addKinE*dVol
@@ -950,25 +945,23 @@ if (iHaveInjectBlk) then
                       oldP    = oldDens * sqrt(sum(oldVel**2))
 
 #ifdef TRACER_FIELDS
-                      if (wind_yields) then
-                          ! Compute the metal density of material which is added to cell.
-                          do itracer = 1, NMASS_SCALARS
-                            if(mass_load_yields.AND.ism_loading) then
-                               ! ism_mass is the additional mass due to mass loading if applied.
-                               ! ism loading implies additional mass is from swept-up material (old metallicity)
-                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
-                                 & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
-                            else
-                               oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Metal mass (per volume)
-                            endif
-                            if(injectYield(itracer).LT.0.0) then
-                               dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
-                            else
-                               dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
-                            endif
-                            newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
-                          enddo
-                      endif
+                      ! Compute the metal density of material which is added to cell.
+                      do itracer = 1, NMASS_SCALARS
+                        if(mass_load_yields.AND.ism_loading) then
+                           ! ism_mass is the additional mass due to mass loading if applied.
+                           ! ism loading implies additional mass is from swept-up material (old metallicity)
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                             & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
+                        else
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Metal mass (per volume)
+                        endif
+                        if(injectYield(itracer).LT.0.0) then
+                           dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
+                        else
+                           dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
+                        endif
+                        newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
+                      enddo
 #endif
 
                       ! Same as above, but conserving kinetic energy
@@ -982,12 +975,10 @@ if (iHaveInjectBlk) then
                       solndata(ENER_VAR, i, j, k) =  0.5_dp*sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k)
 
 #ifdef TRACER_FIELDS
-                      if (wind_yields) then
-                          ! Update scalar field to new metallicity after wind mass injection
-                          do itracer = 1, NMASS_SCALARS
-                            solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
-                          enddo
-                      endif
+                      ! Update scalar field to new metallicity after wind mass injection
+                      do itracer = 1, NMASS_SCALARS
+                        solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
+                      enddo
 #endif
 
                       newE = newDens * sum(newVel**2)
