@@ -138,6 +138,9 @@ class LimongiChieffi2018:
 
     If using this class, please cite Limongi & Chieffi, 2018, ApJS, 237, 13L
 
+    To use this class, you must download the yield tables available at
+        https://orfeo.iaps.inaf.it/
+
     Class properties:
         models            - List of models available
         mass              - Array of tabulated stellar masses
