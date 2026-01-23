@@ -81,8 +81,8 @@ PARAMETER sim_aParm4        REAL 0.0
 PARAMETER sim_withStaticGrav    BOOLEAN     False
 
 #### Include passive scalars to track enrichment
-USESETUPVARS withElements
-IF withElements
+USESETUPVARS withTracerFields
+IF withTracerFields
 # Flag telling FLASH to include element tracers. 
 PPDEFINE TRACER_FIELDS
 # Number of tracer fields
