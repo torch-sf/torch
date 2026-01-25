@@ -289,13 +289,16 @@ subroutine Particles_yieldInjection(itracer, injectYieldIn, injectMassIn, xloc, 
 
   call Grid_notifySolnDataUpdate()
 
-  deallocate(localInjectBlocks)
-  deallocate(injectDataOverlap)
+  if (iHaveInjectBlk) then
+    deallocate(localInjectBlocks)
+    deallocate(injectDataOverlap)
 
 #ifdef DEBUG2
-  print *, "Deallocating done for proc", gr_meshMe
+    print *, "Deallocating done for proc", gr_meshMe
 #endif
 
+  endif
+  
   call Grid_fillGuardCells(CENTER, ALLDIR) !, eosMode=MODE_DENS_EI, doEos=.true.)
 
 #ifdef DEBUG2

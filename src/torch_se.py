@@ -147,11 +147,13 @@ def stellar_evolution(time, dt, state, hydro, se,
                                     elements=tracer,
                                     mass=s.initial_mass.value_in(units.MSun),
                                     metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s))[0] \
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0] \
                                 / state.yields.ccsn_mloss(
                                     mass=s.initial_mass.value_in(units.MSun),
                                     metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s))[0]
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0]
                         else:
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
                     
@@ -192,11 +194,13 @@ def stellar_evolution(time, dt, state, hydro, se,
                                     elements=tracer,
                                     mass=s.initial_mass.value_in(units.MSun),
                                     metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s))[0] \
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0] \
                                 / state.yields.wind_mloss(
                                     mass=s.initial_mass.value_in(units.MSun),
                                     metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s))[0]
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0]
                         else:
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
 
