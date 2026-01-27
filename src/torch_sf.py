@@ -112,7 +112,8 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     grav.particles.add_particles(add_star)
     
     #Add particles to stellar evolution, CCC 10/05/2024
-    se.particles.add_particles(add_star)
+    if se is not None:
+        se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -208,7 +209,8 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
-        se.particles.remove_particles(se_rem)
+        if se is not None:
+            se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
         else:
