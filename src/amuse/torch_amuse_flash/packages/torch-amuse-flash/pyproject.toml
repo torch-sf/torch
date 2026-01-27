@@ -1,0 +1,47 @@
+[project]
+name = "torch-amuse-flash"
+version = "0.0.1"
+# use the line below instead of the version above if this code is inside the AMUSE
+# repository
+# dynamic = ["version"]
+requires-python = ">=3.7"
+dependencies = [
+    "amuse-framework>=2025.5.0.rc4"
+]
+
+[build-system]
+requires = ["hatchling", "versioningit"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit.next-version]
+method = "smallest"
+
+[tool.versioningit.format]
+distance = "{next_version}.dev{distance}+{vcs}{rev}"
+dirty = "{base_version}+d{build_date:%Y%m%d}"
+distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
+
+[tool.versioningit.vcs]
+method = { module = "version_helper", value = "get_amuse_version", module-dir = "amuse_flash/support/shared" }
+
+[tool.hatch.build]
+skip-excluded-dirs = true
+
+[tool.hatch.build.targets.wheel]
+include = ["torch_amuse_flash/**/*.py"]
+exclude = [
+    "torch_amuse_flash/packages",
+    "torch_amuse_flash/support",
+    "torch_amuse_flash/src",
+    "torch_amuse_flash/tests"
+    ]
+artifacts = ["torch_amuse_flash/flash_worker"]
+
+[tool.pytest.ini_options]
+pythonpath = ["torch_amuse_flash/tests/"]
+
+testpaths = ["torch_amuse_flash/tests"]
+

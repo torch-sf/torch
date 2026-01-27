@@ -42,229 +42,25 @@ def user_initial_conditions(state, hydro):
     """
 
     # ------------------------------------------------------------------------
-    # Star removal test: plop a single star into FLASH that exits domain
-    # quickly.
+    # Single star  test: plop a single star at the center of the box
+    # ------------------------------------------------------------------------
 
 #    flashp = FlashPar("flash.par")
 #
 #    star          = Particles(1)
 #    star.mass     = 1 | units.MSun
-#    star.position = [flashp['xmax'] - 1e10, 0, 0] | units.cm
-#    star.velocity = [1e5, 0, 0] | units.cm/units.s
+#    star.position = [0, 0, 0] | units.cm
+#    star.velocity = [0, 0, 0] | units.cm/units.s
 #
 #    star_tag = hydro.add_particles(star.x, star.y, star.z)
 #    hydro.set_particle_mass(star_tag, star.mass)
 #    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
 #    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
 
+    # NOTE: This only works with a ZAMS star -- other parameters are needed to start 
+    # with an evolved star.
     # ------------------------------------------------------------------------
-    # SN with SE test: plop a star that goes SN within 5e11 seconds
 
-#    star        = Particles(1)
-#    star.mass   = 3.09698e+34 | units.g
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
-#
-#    oldmass = 5.10964e+34 | units.g  # about 25.5 MSun
-#    creation_time = hydro.get_time() - (2.3861e+14|units.s)  # 7.5611 Myr old
-#    # goes SN between 7.5611 and 7.5763 Myr (2.3861e14 to 2.3909e14 s)
-#
-#    tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(tag, star.mass)
-#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(tag, oldmass) # for SE code
-#    hydro.set_particle_creation_time(tag, creation_time)
-
-    # ------------------------------------------------------------------------
-    # Multiples test: plop a binary system
-
-#    star        = Particles(2)
-#    star.mass   = 1. | units.MSun
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
-#
-#    star[0].x = 1.5e16 | units.cm  # 1000 AU away
-#    star[1].vy = 1.0e4 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s ...
-#
-#    creation_time = hydro.get_time()  # comes with AMUSE units
-#
-#    tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(tag, star.mass)
-#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(tag, star.mass) # for SE code
-#    hydro.set_particle_creation_time(tag, creation_time)
-
-    # ------------------------------------------------------------------------
-    # Multiples test: plop a binary system that exits domain QUICKLY
-
-#    star        = Particles(2)
-#    star.mass   = 1. | units.MSun
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
-#
-#    # make bound binary
-#    star[0].x = -1.5e16 | units.cm  # 1000 AU away
-#    star[1].vy = 1.0e4 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
-#
-#    # place system on exit trajectory
-#    flashp = FlashPar("flash.par")
-#    star.x = star.x + ((flashp['xmax'] - 1e17) | units.cm)
-#    star.vx = (5.0e17/1.0e12) | units.cm/units.s  # 6e4 cm/s
-#
-#    creation_time = hydro.get_time()  # comes with AMUSE units
-#
-#    tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(tag, star.mass)
-#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(tag, star.mass) # for SE code
-#    hydro.set_particle_creation_time(tag, creation_time)
-
-    # ------------------------------------------------------------------------
-    # Multiples test: plop a binary system that exits domain SLOWLY,
-    # such that one star lies outside bndbox while COM lies inside bndbox.
-    # This is a bit unphysical because the star's position while tracked by
-    # Multiples is not well defined.
-
-#    star        = Particles(2)
-#    star.mass   = 1. | units.MSun
-#    star.x      = 0.0 | units.cm
-#    star.y      = 0.0 | units.cm
-#    star.z      = 0.0 | units.cm
-#    star.vx     = 0.0 | units.cm/units.s
-#    star.vy     = 0.0 | units.cm/units.s
-#    star.vz     = 0.0 | units.cm/units.s
-#
-#    # make bound binary with stars initially along x-axis.
-#    star[0].x = -1.5e16 | units.cm  # 1000 AU away
-#    star[0].vy = -1.0e3 | units.cm/units.s  # sqrt(GM/R) = 9.42e4 cm/s
-#    star[1].vy = 1.0e3 | units.cm/units.s  # balance so that COM vy~0
-#
-#    # first bridge dt = 4.5e12 sec, dx = 4.5e14cm.  Nominally,
-#    # system moves 1/3rd of binary sep, so COM in domain, one star past xmax.
-#    # next bridge dt, COM exits domain.
-#    flashp = FlashPar("flash.par")
-#    star.x = star.x + ((flashp['xmax'] - 1e12) | units.cm)
-#    star.y = star.y + ((flashp['ymax'] - 1e15) | units.cm)  # be careful about float precision
-#    star.z = star.z + ((flashp['zmax'] - 1e15) | units.cm)
-#    star.vx = star.vx + (1e3 | units.cm/units.s)  # COM vx=1e2 cm/s too small, gets perturbed by grav
-#
-#    # The stars fall towards each other and perturb starting positions before
-#    # ph4 throws stopping condition, so the setup is inexact.
-#    #
-#    # Nevertheless, with current (2019 nov 02) example torch settings, after
-#    # two bridge steps the binary straddles domain boundary with COM inside and
-#    # one star outside.
-#    #
-#    # This triggers crash in hydro.particles_sort() with old star-removal
-#    # algorithm that only looks for ph4 particles outside domain.
-#    # New algorithm, which removes entire tree if any leaf outside, works.
-#
-#    creation_time = hydro.get_time()  # comes with AMUSE units
-#
-#    tag = hydro.add_particles(star.x, star.y, star.z)
-#    hydro.set_particle_mass(tag, star.mass)
-#    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
-#    hydro.set_particle_oldmass(tag, star.mass) # for SE code
-#    hydro.set_particle_creation_time(tag, creation_time)
-
-    # ------------------------------------------------------------------------
-    # Start with a cluster.  BEWARE: properties are not very carefully chosen,
-    # e.g., current initialization scheme probably adds subtle biases etc...
-
-    # The fractal cluster model requires an extra worker, a bit wasteful.
-    # It calls "stop()" and should probably release/kill the worker...
-    # If we re-initialize grav, delay grav init to after IC setup, or only load
-    # cluster from file instead of worker, maybe we can save a process.
-    # -AT, 2019 Nov 25
-#    from amuse.community.fractalcluster.interface import new_fractal_cluster_model
-#    from amuse.ic.brokenimf import new_kroupa_mass_distribution
-#    from amuse.ic.plummer import new_plummer_sphere
-#    from amuse.ic.salpeter import new_salpeter_mass_distribution
-#    from amuse.io import write_set_to_file, read_set_from_file
-#    from amuse.units import nbody_system
-#    import numpy as np
-#
-#    def make_cluster(converter, nm_part, bndbox, fractal=False):
-#        stars_out = True
-#        n = 0
-#        while stars_out:
-#            if fractal:
-#                cluster = new_kroupa_mass_distribution(nm_part, mass_max=(150.0|units.MSun))
-#                cluster = new_fractal_cluster_model(masses=cluster, convert_nbody=converter, do_scale=False, virial_ratio=1.0)
-#            else:
-#                cluster = new_plummer_sphere(nm_part, convert_nbody=converter, do_scale=False)
-#                cluster.mass = new_kroupa_mass_distribution(nm_part, mass_min=(0.08|units.MSun), mass_max=(150.0|units.MSun))
-#            remove_stars = cluster.select(lambda r: bndbox < max(abs(r)), ["position"])
-#            stars_out = len(remove_stars) > 0
-#            n += 1
-#        print("Made cluster in", n, "attempts.")
-#        return cluster
-#
-#    def make_cluster_in_hydro(cluster, bndbox):
-#
-#        tag = hydro.add_particles(cluster.x, cluster.y, cluster.z)
-#        hydro.set_particle_velocity(tag, cluster.vx, cluster.vy, cluster.vz)
-#        hydro.set_particle_mass(tag, cluster.mass)
-#        hydro.set_particle_oldmass(tag, cluster.mass)  # for SE code
-#        hydro.set_particle_creation_time(tag, hydro.get_time())
-#
-#        return tag
-#
-#    flashp = FlashPar("flash.par")
-#    xmax = flashp['xmax'] | units.cm
-#
-#    # create new cluster from scratch...
-#    conv_cluster = nbody_system.nbody_to_si(3.0|units.parsec, 300.0|units.MSun)
-#    cluster = make_cluster(conv_cluster, 100, xmax, fractal=True)
-#    #write_set_to_file(cluster, 'starting_cluster.hdf5', 'hdf5')
-#
-#    # load cluster from file...
-#    #cluster = read_set_from_file('starting_cluster.hdf5', 'hdf5')
-#
-#    make_cluster_in_hydro(cluster, xmax)
-
-    # ------------------------------------------------------------------------ 
-    # Start with a cluster extracted from VorAMR initial file.
-    # ------------------------------------------------------------------------
-#    import numpy as np
-#    from amuse.units import nbody_system
-#    import h5py
-#    print("Reading input hdf5 for stars")
-#    f = h5py.File("voramr_input.hdf5", "r")
-#    ds = f['PartType4']
-#    c = ds['Coordinates'][:]
-#    m = ds['Masses'][:]
-#    v = ds['Velocities'][:]
-#    im = ds['GFM_InitialMass']
-#    a = ds['GFM_StellarFormationTime']
-#    print("Extracted data")
-#    pos = np.array([c[:,0], c[:,1], c[:,2]]).T
-#    vel = np.array([v[:,0], v[:,1], c[:,2]]).T
-#    #age = 0.499035 - a
-#    stars = Particles(len(m))
-#    stars.mass = m | units.MSun
-#    stars.position = pos | units.cm
-#    stars.velocity = vel | units.cm/units.s
-#    print("Converted to AMUSE particle set")
-#    tag = hydro.add_particles(stars.x, stars.y, stars.z)
-#    hydro.set_particle_mass(tag, stars.mass)
-#    hydro.set_particle_velocity(tag, stars.vx, stars.vy, stars.vz)
-#    hydro.set_particle_oldmass(tag, stars.mass) # for SE code
-#    #hydro.set_particle_creation_time(tag, creation_time)
-#    f.close()
-#    print("Set hydro data")
     return
 
 def user_parameters():

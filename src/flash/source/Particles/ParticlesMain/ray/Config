@@ -6,4 +6,4 @@ REQUIRES Particles/ParticlesMain/ray/rayAPI
 # this ensures that implemented stubs are chosen and not the stubs, as both folder are on the same hierarchy level
 CHILDORDER rayAPI
 
-PARAMETER useRadTransfer BOOLEAN  FALSE
+PARAMETER useRadTransfer BOOLEAN  TRUE

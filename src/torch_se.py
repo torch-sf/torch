@@ -38,7 +38,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def stellar_evolution(time, dt, state, hydro, se,
+def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     massloss_method=None, min_feedback_mass=None):
     """
@@ -49,8 +49,6 @@ def stellar_evolution(time, dt, state, hydro, se,
     assert min_feedback_mass is not None
 
     # We call SeBa on indiv stars, but get/set hydro star props in bulk.
-    # index of feedback stars to evolve
-    #idx = np.where(state.stars.initial_mass >= min_feedback_mass)
 
     # Always recompute star's age from hydro time and particle creation time.
     # Don't attach star age to particle.  Why?  (1) Repeated increment of star
@@ -93,58 +91,66 @@ def stellar_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
-    # CCC 26/04/2024
-    # Structure changed to use evolve_model to evolve all stars at the same time
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
+
+    # make list of remnant stars so we don't explode them again
+    remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
+
+    # Use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
-    # binary evolution - CCC 04/11/2023
+    # binary evolution - CCC 26/04/2024
     state.stars_to_se.copy()
-    se.evolve_model(time)
+    se.evolve_model(se_time)
     state.se_to_stars.copy()
 
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
     state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
-    
+
+    # Indices of active feedback stars to evolve
+    #active_idx = np.argwhere(state.stars.initial_mass >= min_feedback_mass)
+    # Loop only over active stars while retaining the correct indexing for total star array
     for i, s in enumerate(state.stars):
 
-        if went_supernova(s.stellar_type):
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
-        if s.mass >= min_feedback_mass:
+        if with_sn and went_supernova(s.stellar_type):
 
-            if with_sn and went_supernova(s.stellar_type):
+            inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
+            if inj_mass > 15.0|units.MSun:
+                # expected upper limit for SeBa tracks; see
+                # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                tprint("... setting maximum SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                inj_mass = 15.0|units.MSun
 
-                inj_mass = s.mass - se_mass  # minus stellar remnant's mass
-                if inj_mass > 15.0|units.MSun:
-                    # expected upper limit for SeBa tracks; see
-                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
-                    inj_mass = 15.0|units.MSun
-
-                # inject energy and mass onto grid
+            # Inject energy and mass onto grid
+            # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
+            if s.COcore_mass <= 15 | units.MSun:
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
-                # implicitly zeros out feedback properties by not setting
+            # implicitly zeros out feedback properties by not setting
 
-            else:
+        else:
 
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds:
-                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                              massloss_method=massloss_method)
-                    dm_dt[i] = _tmp[0]
-                    vterm[i] = _tmp[1]
+            if with_lyc:
+                _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                eion[i] = _tmp[0]
+                nion[i] = _tmp[1]
+                sigh[i] = _tmp[2]
+            if with_pe_heat:
+                _tmp = compute_epe_npe(s.temperature, s.radius)
+                epe[i] = _tmp[0]
+                npe[i] = _tmp[1]
+                sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+            if with_winds:
+                _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                          massloss_method=massloss_method)
+                dm_dt[i] = _tmp[0]
+                vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
@@ -265,8 +271,12 @@ def compute_epe_npe(se_temp, se_radius):
 
 
 def went_supernova(stellar_type):
-    return 13 <= stellar_type.value_in(units.stellar_type) <= 15
-
+    """
+    Determines whether a SeBa star has went supernova or not. Types 13-15 are neutron star, black hole,
+    and disintegrated. This function returns an array or scalar based on input type.
+    """
+    types = stellar_type.value_in(units.stellar_type)
+    return (types >= 13) & (types <= 15)
 
 def lum_wl_cs(l, l_max, T):
     """
