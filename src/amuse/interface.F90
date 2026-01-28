@@ -3136,7 +3136,7 @@ if (type_count .ge. 1) then
         ! If found, set particle attribute accordingly.
 
         if (j .ne. -1) then
-            nion(i) = particles_pointer(MASS_PART_PROP, QSindex(j))
+            nion(i) = particles_pointer(NION_PART_PROP, QSindex(j))
 
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
@@ -3265,7 +3265,7 @@ if (type_count .ge. 1) then
         ! If found, set particle attribute accordingly.
 
         if (j .ne. -1) then
-            eion(i) = particles_pointer(MASS_PART_PROP, QSindex(j))
+            eion(i) = particles_pointer(EION_PART_PROP, QSindex(j))
 
         else ! If not found (j=-1), the particle is not on this proc. Skip.
             j = oldj
