@@ -56,6 +56,8 @@ tar -cz -C ${FLASH_DIR} --checkpoint=100 --totals \
 
 ln -sf ${TORCH_DIR}/cool.dat
 ln -sf ${TORCH_DIR}/opacity.inp
+ln -sf ${TORCH_DIR}/kP_h2001.dat
+ln -sf ${TORCH_DIR}/kR_h2001.dat
 ln -sf ${TORCH_DIR}/cube128
 cp -nv ${TORCH_DIR}/torch_user.py .
 cp -nv ${TORCH_DIR}/flash.par.turbsph_standard flash.par

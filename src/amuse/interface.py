@@ -82,6 +82,12 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def fill_guardcells():
+        function = LegacyFunctionSpecification()
+        function.result_type='i'
+        return function
+
+    @legacy_function
     def set_block_state():
         # VorAMR addition - SCL
         function = LegacyFunctionSpecification()

@@ -239,6 +239,7 @@ def make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, s
     vz = vz[sink_filter]
     m = m[sink_filter]
     age = age[sink_filter]
+    massive = massive[sink_filter]
 
     # step three: make the sinks in flash. 
     hydro.set_particle_pointers('mass')
@@ -246,12 +247,13 @@ def make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, s
     for i in range(len(x)):
         # get imf list with arepo star mass
         spawn_masses = sample_stellar_mass(
-                            m[i].value_in(units.MSun),
+                            max(m[i]-massive[i],0.0|units.g).value_in(units.MSun),
                             num_bins,
                             min_samp_mass=min_samp_mass.value_in(units.MSun),
-                            max_samp_mass=max_samp_mass.value_in(units.MSun),
+                            max_samp_mass=7.99,
                             sum_small=sum_small,
                             m_small=m_small.value_in(units.MSun))
+        spawn_masses = np.append(spawn_masses, massive[i].value_in(units.MSun))
         nnew = len(spawn_masses)
         if nnew == 0:
             continue

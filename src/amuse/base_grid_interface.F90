@@ -361,17 +361,34 @@ FUNCTION set_grid_state(i, j, k, index_of_grid, nproc, rho, rhovx, rhovy, rhovz,
   set_grid_state=0
 END FUNCTION set_grid_state
 
+
+FUNCTION fill_guardcells()
+
+  use Grid_interface, ONLY : Grid_fillGuardCells
+
+  INTEGER :: fill_guardcells
+ print*,'filling guardcells in ammuse'
+  call Grid_fillGuardCells(CENTER, ALLDIR, eosMode=MODE_DENS_EI, doEos=.true.)
+  print*,'done filling guardcells in amuse'
+
+  fill_guardcells=0
+END FUNCTION fill_guardcells
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! New block-by-block grid setter for VorAMR.
 !!! - SCL
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot, xion)
+FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot, xH0)
+ use Simulation_data
+ ! use Grid_interface, only : Grid_getBlkIndexLimits
+
   INTEGER :: blockID, procID
   INTEGER :: dataSize
-  DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot, xion
+  DOUBLE PRECISION,dimension(dataSize,dataSize,dataSize) :: rho, vx, vy, vz, eint, gpot, xH0, e,ek,pres,temp
   INTEGER :: set_block_state !beginCount, set_block_state
   INTEGER,dimension(3) :: startPos, dataDims
-
+  INTEGER,dimension(2,MDIM) :: blkLimits,blkLimitsGC
   INTEGER :: myProc, communicator, ierr
 
   call Driver_getMype(GLOBAL_COMM, myProc)
@@ -381,6 +398,16 @@ FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot,
   dataDims = (/dataSize,dataSize,dataSize /)
 
   if (myProc .eq. procID) then
+
+
+        ek  = 0.5*(vx*vx + vy*vy + vz*vz)
+        e   = eint + ek
+        pres  = eint*rho*(sim_gamma-1)
+        pres = max(pres, smallP)
+        e   = max (e, smallP)
+        rho  = max(rho, smlrho)
+        eint = max(eint, smallP)
+        xH0  = max(xH0, smallX)
 
   call Grid_putBlkData(blockID, CENTER, DENS_VAR, INTERIOR, &
                       startPos, rho, dataDims)
@@ -392,14 +419,20 @@ FUNCTION set_block_state(blockID, procID, dataSize, rho, vx, vy, vz, eint, gpot,
                       startPos, vz, dataDims)
   call Grid_putBlkData(blockID, CENTER, EINT_VAR, INTERIOR, &
                       startPos, eint, dataDims)
+  call Grid_putBlkData(blockID, CENTER, PRES_VAR, INTERIOR, &
+                      startPos, pres, dataDims)
+  call Grid_putBlkData(blockID, CENTER, ENER_VAR, INTERIOR, &
+                      startPos, e, dataDims)
   call Grid_putBlkData(blockID, CENTER, GPOT_VAR, INTERIOR, &
                       startPos, gpot, dataDims)
-  call Grid_putBlkData(blockID, CENTER, IHP_SPEC, INTERIOR, &
-                      startPos, xion, dataDims)
   call Grid_putBlkData(blockID, CENTER, IHA_SPEC, INTERIOR, &
-                      startPos, 1.0-xion, dataDims)
+                      startPos, xH0, dataDims)
+  call Grid_putBlkData(blockID, CENTER, IHP_SPEC, INTERIOR, &
+                      startPos, 1.0-xH0, dataDims)
 
   endif
+  !call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+  !call Eos_wrapped(MODE_DENS_EI, blkLimits, blockID)
 
   set_block_state=0
 END FUNCTION

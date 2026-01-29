@@ -590,7 +590,9 @@ def run_torch(user_initial_conditions, user_parameters):
         vprint("Interpolating external data to FLASH grid via VorAMR.")
         leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
         interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
-        vprint("Done interpolating. Making background sinks.")
+        vprint("Done interpolating. Filling guardcells.")
+        hydro.fill_guardcells()
+        vprint("Done filling guardcells.")
         #hydro.hydro.write_chpt()
         #vprint("Wrote checkpoint.")
 
