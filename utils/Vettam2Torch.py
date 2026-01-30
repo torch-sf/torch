@@ -1,3 +1,9 @@
+# Written by Shyam Menon
+# This script converts vanilla vettam to Torch-compatible vettam 
+# Variable namees are changed
+# NOTE: this script must be updated, see diff files between torch-vettam and vettam
+# attached to the vettam pull request for all changes. 
+
 import os
 import re
 import tarfile
