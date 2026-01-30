@@ -51,11 +51,6 @@ import numpy as np
 np.set_printoptions(precision=3)
 
 from amuse.lab import *
-from torch_amuse_flash.interface import Flash
-from amuse.community.kepler.interface import Kepler
-from amuse.community.smalln.interface import SmallN
-from amuse.community.petar.interface import Petar
-from amuse.couple import multiples
 
 from torch_se import (
     stellar_evolution,
@@ -115,6 +110,15 @@ def stop_smalln():
 
 def initialize_workers():
 
+    # Import amuse worker codes
+    from torch_amuse_flash.interface import Flash
+    if USER['with_petar']:
+        from amuse.community.petar.interface import Petar
+    elif USER['with_multiples']:
+        from amuse.community.kepler.interface import Kepler
+        from amuse.community.smalln.interface import SmallN
+        from amuse.couple import multiples
+    
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun)
     # Converter for the hydro code.
