@@ -42,7 +42,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 ##  Add a debug flag for jets print statements - SA 20240125
 jets_debug = False
 
-def stellar_evolution(time, dt, state, hydro, se,
+def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
     jet_fraction=0.0, jet_lifetime=0.0|units.yr, jet_vel_frac=1,
     massloss_method=None, minimum_wind_mass=None, min_sn_mass=None, min_rad_mass=None,
@@ -104,15 +104,17 @@ def stellar_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
+
     # make list of remnant stars so we don't explode them again
     remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
 
-    # CCC 26/04/2024
-    # Structure changed to use evolve_model to evolve all stars at the same time
+    # Use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
-    # binary evolution - CCC 04/11/2023
+    # binary evolution - CCC 26/04/2024
     state.stars_to_se.copy()
-    se.evolve_model(time)
+    se.evolve_model(se_time)
     state.se_to_stars.copy()
 
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0

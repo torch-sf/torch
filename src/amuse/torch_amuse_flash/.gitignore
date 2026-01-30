@@ -1,0 +1,11 @@
+*.o
+*.mod
+*worker*
+
+src/*
+!src/Makefile
+
+support/autom4te.cache
+support/config.mk
+support/config.status
+
