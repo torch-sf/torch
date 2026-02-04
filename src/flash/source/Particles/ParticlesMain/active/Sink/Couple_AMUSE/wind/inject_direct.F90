@@ -758,7 +758,8 @@ if (iHaveInjectBlk) then
                            oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
                              & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Tracer field mass per volume
                         else
-                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Tracer field mass per volume
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                                                     *oldDens ! Tracer field mass per volume
                         endif
                         if(injectYield(itracer).LT.0.0) then
                            dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
@@ -852,7 +853,8 @@ if (iHaveInjectBlk) then
 #ifdef TRACER_FIELDS
                       ! Update scalar field to new metallicity after wind mass injection
                       do itracer = 1, NMASS_SCALARS
-                          solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
+                          solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer) &
+                                                                              /newDens
                       enddo
 #endif
 
@@ -953,7 +955,8 @@ if (iHaveInjectBlk) then
                            oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
                              & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
                         else
-                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*oldDens ! Metal mass (per volume)
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                                                     *oldDens ! Metal mass (per volume)
                         endif
                         if(injectYield(itracer).LT.0.0) then
                            dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
@@ -977,7 +980,8 @@ if (iHaveInjectBlk) then
 #ifdef TRACER_FIELDS
                       ! Update scalar field to new metallicity after wind mass injection
                       do itracer = 1, NMASS_SCALARS
-                        solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer)/newDens
+                        solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer) &
+                                                                            /newDens
                       enddo
 #endif
 

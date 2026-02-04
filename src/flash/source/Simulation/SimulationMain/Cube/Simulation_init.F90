@@ -130,7 +130,10 @@ subroutine Simulation_init()
 ! Check for consistent setup.
   if (NMASS_SCALARS .ne. sim_nTracerFields) then
     if (sim_myPE .eq. MASTER_PE) then
-      print*, "Number of mass scalars is not consitent with sim_nTracerFields: NMASS_SCALARS, sim_nTracerFields = ", NMASS_SCALARS, sim_nTracerFields
+      print*, "Number of mass scalars is not consistent with sim_nTracerFields: ", &
+        "NMASS_SCALARS, sim_nTracerFields = ", &
+        NMASS_SCALARS, sim_nTracerFields
+
     end if
     call Driver_abortFlash("Inconsitency between number of tracer fields and mass scalars. Check flash.par and Simulation Config.")
   endif

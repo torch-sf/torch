@@ -939,7 +939,9 @@ subroutine Particles_sinkCreateAccrete(dt)
             ang_z(lp) = ang_z(lp) + particles_global(iplz,nlp)
 #ifdef TRACER_FIELDS
             do itracer = 1,pt_num_tracer_fields
-               tracer_mass(itracer,lp) = tracer_mass(itracer,lp) + particles_global(gather_tracer_inds(itracer),nlp)*particles_global(ipm,nlp)
+               tracer_mass(itracer,lp) = tracer_mass(itracer,lp) &
+                 + particles_global(gather_tracer_inds(itracer), nlp) &
+                 * particles_global(ipm, nlp)
             enddo
 #endif
          end if
