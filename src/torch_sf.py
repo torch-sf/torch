@@ -348,24 +348,14 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
 
-            # if radiation is on, initialize stellar radiation values
+            # Initialize cross section values to something reasonable and non-zero.
+            # if stellar evolution is off and radiation is on, these values are zero
+            # which causes non-convergence in vettam. BP-2.23.26 
             if state.user['with_lyc'] or state.user['with_pe_heat']: 
                 star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
                 star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
-                #star.nion = star.npep = np.zeros(nnew) | 1/units.s
-                #star.eion = star.epep = np.zeros(nnew) | units.erg
-                #hydro.set_particle_nion(star_tag, star.nion)
-                #hydro.set_particle_eion(star_tag, star.eion)
                 hydro.set_particle_sigh(star_tag, star.sigh)
-                #hydro.set_particle_npep(star_tag, star.npep)
-                #hydro.set_particle_epep(star_tag, star.epep)
                 hydro.set_particle_sigd(star_tag, star.sigd)
-
-            #if state.user['with_winds']:
-            #    star.mwind    = np.zeros(nnew) | units.MSun
-            #    star.vwind    = np.zeros(nnew) | units.cm/units.s
-            #    hydro.set_particle_wind_mass(star_tag, star.mwind)
-            #    hydro.set_particle_wind_vel(star_tag, star.vwind)
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
