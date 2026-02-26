@@ -584,7 +584,7 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
-    state = TorchState(hydro, grav, mult, se)
+    state = TorchState(hydro, grav, mult, se, USER)
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
