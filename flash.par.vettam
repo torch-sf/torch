@@ -144,13 +144,9 @@ plot_var_11 = "tdus"
 plot_var_12 = "magx"
 plot_var_13 = "magy"
 plot_var_14 = "magz"
-plot_var_15 = "uvfl"
-plot_var_16 = "fufl"
-plot_var_15 = "auvf"
-plot_var_16 = "afuf"
-plot_var_17 = "magp"
-plot_var_18 = "gpot"
-plot_var_19 = "bgpt"
+plot_var_15 = "magp"
+plot_var_16 = "gpot"
+plot_var_17 = "bgpt"
 
 
 # ============
@@ -407,7 +403,7 @@ rt_healpix_randomize  = 1 # Randomize the healpix tesselation -- highly recommen
 rt_nrOfAngleGroups    = 1 #  this affects mem consumption (use more for less mem > see raytrace*.log)
 
 # Sink Injection Properties
-sigma_star           = 1.0 #Gaussian source size in units of dx for sink radiation injection. Do not go below 1.0 as the energy difference between cells becomes too large resulting in energy loss. 
+sigma_star           = 1.0 #Gaussian source size in units of dx for sink radiation injection. Do not go below 0.5 as the energy difference between cells becomes too large resulting in energy loss. 
 noSink_VETTAM = .true.  #Flag to set whether VETTAM should be on even if there are no sinks; if no source of background radiation, can save you time
 
 # Moment method closure - "edd", "m1", or "vet" (Note: M1 probably has bugs, wouldn't recommend in current version)

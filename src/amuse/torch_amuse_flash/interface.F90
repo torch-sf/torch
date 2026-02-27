@@ -6804,9 +6804,6 @@ END FUNCTION
 !  integer :: set_particle_prop, i, p, j, oldj
 !  integer*8, dimension(:), allocatable :: QSindex, id_sorted
 
-!! Are we using radiation?
-!!#ifdef FERVENT
-
 !!#define bisect_test
 
 !!#ifdef bisect
