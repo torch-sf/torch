@@ -37,7 +37,7 @@ while IFS= read -r -d $'\0' file <&3; do
     mkdir -p "$(dirname "${target}")"
     if [ -L "${target}" ] ; then
         link_target=$(readlink -n "${target}")
-        if [ ${link_target#${TORCH_DIR}/src/flash/} = ${link_target} ] ; then
+        if [ "${link_target#${TORCH_DIR}/src/flash/}" = "${link_target}" ] ; then
             # link does not point into TORCH_DIR
             rm "${target}"
         fi
