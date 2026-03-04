@@ -1,0 +1,4 @@
+# Configuration file for ionization with only atomic H species. Uses a mass scalar to store the neutral fraction.
+# AUTHOR: Shyam Menon (2022-2023)
+D Neutral Fraction Mass Scalar
+MASS_SCALAR iony

@@ -1,0 +1,8 @@
+#
+# config file for HEALPIX functions
+# 
+
+PPDEFINE RT_HEALPIX
+
+PARAMETER rt_healpix_nSide    INTEGER  1
+

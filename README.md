@@ -55,6 +55,7 @@ In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 * Robi Banerjee
 * Moo Kwang Ryan Joung
 * Juan Camilo Ibáñez-Mejía
+* Shyam Menon
 * Daniel Seifried
 * Long Wang
 * Richard Wünsch

@@ -1,0 +1,50 @@
+#
+# hybrid characteristics RT with parallel rays
+#
+# based on Rijkhorst et al. A&A (2006)
+# see Buntemeyer et al., New Astronomy, 43 (2016)
+#
+#
+
+# Define (e.g. -DCHECKS_RT) to activate a lot of validity checks
+# Should be deactivated in production runs, since this adds quite some
+# runtime.
+#PPDEFINE CHECKS_RT
+
+DEFAULT 3DRT
+
+
+
+D useRayTrace flag to indicate whether to use the raytracer
+PARAMETER useRayTrace BOOLEAN TRUE
+
+D lambda iteration
+D 0 = simple lambda iteration
+D 1 = ALI with diagonal lambda operator
+D 2 = ALI with tri-diagonal lambda operator
+PARAMETER rt_ALI      INTEGER  1
+
+# 
+PARAMETER rt_nPhi           INTEGER 1
+PARAMETER rt_nTheta         INTEGER 1
+D the number of angle groups for communication 
+PARAMETER rt_nrOfAngleGroups  INTEGER  1
+
+D rt_healpix_randomize Randomize the healpix sphere orientation every nth call of the raytracer. 0 = No randomization
+PARAMETER rt_healpix_randomize INTEGER 1
+
+D max number of periodic boundary conditions iterations
+PARAMETER rt_maxNrOfBoundIter  INTEGER  0
+
+#
+PARAMETER rt_dirX           REAL    1.0
+PARAMETER rt_dirY           REAL    0.0
+PARAMETER rt_dirZ           REAL    0.0
+
+PARAMETER rt_irradiation    REAL    0.0
+
+D rt_epsilon This is the thermal coupling parameter for the source function S = (1-epsilon) * J + epsilon * B
+PARAMETER rt_epsilon     REAL    1.0
+
+D source function
+VARIABLE sour

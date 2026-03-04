@@ -1,0 +1,3 @@
+#	Configuration file for the dust+gas opacity module (Semenov) and opacity due to stellar radiation (Sinks)
+
+REQUIRES physics/materialProperties/Opacity/RadTrans/Semenov
