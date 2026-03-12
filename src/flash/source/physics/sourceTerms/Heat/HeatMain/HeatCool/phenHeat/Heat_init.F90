@@ -98,6 +98,7 @@ subroutine Heat_init()
 
   call Grid_getListOfBlocks(LEAF,blockList,blockCount)
 
+#ifdef FERVENT
   do thisBlock = 1, blockCount
     blockID = blockList(thisBlock)
 ! Get a pointer to solution data 
@@ -105,6 +106,7 @@ subroutine Heat_init()
     solnData(PHHE_VAR,:,:,:) = 0d0
     call Grid_releaseBlkPtr(blockID,solnData)
   enddo ! block loop
+#endif
 
    return
 end subroutine Heat_init

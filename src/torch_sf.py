@@ -20,7 +20,6 @@ from amuse.units import units
 from torch_stdout import tprint
 from imf_sample import sample_stellar_mass
 
-
 def add_particles_to_grav(state, hydro, grav, mult, se):
     """
     Send prtl from hydro to grav + AMUSE
@@ -129,7 +128,8 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     grav.particles.add_particles(add_star)
     
     #Add particles to stellar evolution, CCC 10/05/2024
-    se.particles.add_particles(add_star)
+    if se is not None:
+        se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -225,7 +225,8 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
-        se.particles.remove_particles(se_rem)
+        if se is not None:
+            se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
         else:
@@ -331,13 +332,6 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
             tprint("... sink tag {} did not spawn stars".format(sink_tag))
 
-        elif np.isnan(sink_cs.value_in(units.cm/units.s)):
-
-            tprint("... sink tag {} blocked from spawning".format(sink_tag), end='')
-            print(" {:d} stars,".format(nnew), end='')
-            print(" total mass {:.2f},".format(np.sum(spawn_masses)), end='')
-            print(" due to absence of nearby cold gas")
-
         else:
 
             tprint("... sink tag {} spawned".format(sink_tag), end='')
@@ -362,12 +356,16 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
-            star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
+            # with the maximum value corresponding to gas at T=100K
+            spawn_vel = sink_cs.value_in(units.cm/units.s)
+            if np.isnan(spawn_vel):
+                spawn_vel = 117200.0
+            star.velocity = sink_vel + (np.random.normal(scale=spawn_vel, size=(nnew,3)) | units.cm/units.s)
             
             if state.yields is not None:
-                # For yields tables
+                # For yields tables (assumes solar metallicity)
                 star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
-
+            
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
             star_tag = hydro.add_particles(star.x, star.y, star.z)
@@ -381,6 +379,15 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
                 for itrac in range(num_tracers):
                     hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
                     hydro.set_particle_tracer_field(star_tag, sink_tracer_field[itrac]*np.ones(nnew))
+
+            # Initialize cross section values to something reasonable and non-zero.
+            # if stellar evolution is off and radiation is on, these values are zero
+            # which causes non-convergence in vettam. BP-2.23.26 
+            if state.user['with_lyc'] or state.user['with_pe_heat']: 
+                star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
+                star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
+                hydro.set_particle_sigh(star_tag, star.sigh)
+                hydro.set_particle_sigd(star_tag, star.sigd)
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
