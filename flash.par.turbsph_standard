@@ -150,6 +150,8 @@ plot_var_17 = "bgpt"
 plot_var_18 = "phio"
 plot_var_19 = "phhe"
 plot_var_20 = "pefl"
+plot_var_21 = "taup"
+plot_var_22 = "tauh"
 
 # ============
 # Hydro solver
