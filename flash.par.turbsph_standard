@@ -104,7 +104,7 @@ tmax            = 6.3113852e13 # 2 Myr
 dtinit          = 3.15e8
 dtmin           = 3.15e7
 dtmax           = 3.15e12
-dr_shortenLastStepBeforeTMax = .true.
+dr_shortenLastStepBeforeTMax = .false. # Setting true works but causes crash in amuse preventing graceful exit.
 tstep_change_factor = 2.0
 
 wall_clock_checkpoint       = 0.432e+05
@@ -385,7 +385,9 @@ dust_sputter_temp = 3e5 # See fig 25.4 in Draine's book
 
 
 ## Parameters commonly changed by the user for the VETTAM module. If used please cite S. Menon et al. 2022 (MNRAS 512, 401–423)
-## Torch needs only the EUV and FUV bands, so skipping important parameters relevant to the IR band
+## Torch needs only the EUV and FUV bands, so the only parameters set here are the ones relevant to the EUV and FUV bands.
+## As of 13.03.2026, the parameters relevant to the other bands (incl. the IR band) are left as default. If we eventually implement
+## IR radiation pressure in Torch, we will need to add the relevant parameters below.
 #==========================================
 #
 # VETTAM Parameters
@@ -444,8 +446,7 @@ zr_rad_bc                   =          6
 #rt_debug = .true.
 
 # ================================================
-# Parameters for radiation/ionization/heating/cooling
-# Used by FERVENT and VETTAM
+# Parameters for ionization/heating/cooling
 # ================================================
 rt_rayTrace    = T
 
