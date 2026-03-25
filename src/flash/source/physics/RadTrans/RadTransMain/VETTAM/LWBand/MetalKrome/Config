@@ -1,0 +1,14 @@
+D Variable storing the absorbed energy in LW band by dust (for the PE heating rate, and for subsequent self-shielded H2, CO and C dissociation/ionization)
+VARIABLE ULWD
+
+D Variable storing the absorbed energy in the PE band by dust (for the PE heating rate)
+VARIABLE UPED
+
+D Variable storing the shielded dissociation rate of H2
+VARIABLE DIH2
+
+D Variable storing the shielded ionization rate of Carbon
+VARIABLE IC
+
+D Variable storing the shielded dissociation rate of CO
+VARIABLE DICO

@@ -1,0 +1,43 @@
+#
+# Config for dissociation of H2 (and other species) by LW photons: works with the data containers in KROME
+# Shyam Harimohan Menon, 2023
+#
+
+D Manual: H2 dissociation is done in-house in VETTAM; PrimKrome: Primordial chemistry with KROME; MetalKrome: Metal chemistry with KROME
+DEFAULT Manual
+EXCLUSIVE Manual PrimKrome MetalKrome
+
+REQUIRES physics/RadTrans/RadTransMain/VETTAM
+REQUIRES physics/RadTrans/RadTransMain/VETTAM/RayTrace
+
+D flag to use ionising radiation module
+PARAMETER useH2Dissociate   BOOLEAN  TRUE
+
+D H2 dissociation type
+PARAMETER lwdiss_type  STRING  "raytrace"
+
+D Doppler b parameter used in fshield equation in units of km/s (see Draine and Bertoldi 1996); default value of 1
+PARAMETER   bfive   REAL    1.0 
+
+D The parameter fpump that quantifies the probability of UV pumping vs dissociation; Eq 45 of Baczynski et al 2015
+PARAMETER   fpump   REAL    6.94
+
+D The thermal energy deposited per photodissociation event; using 0.4 eV by default (Black & Dalgarno 1977)
+PARAMETER   energyPerDissociation  REAL  6.408705848000027e-13
+
+D The average energy of a LW photon -- this would depend on the spectrum, but we use 12.2 eV by default -- typical of a stellar population (Kim+ 23)
+PARAMETER   avgEnergyLW     REAL     1.954655283640008e-11
+
+D Flag to switch on/off H2 shielding due to H
+PARAMETER   useHIshield     BOOLEAN     TRUE
+
+D Variable Storing the Shielding Factor of mol H2 for the cell
+VARIABLE FSHM
+
+D Variable Storing the Shielding Factor of atomic H2 for the cell
+VARIABLE FSHA
+
+D Variable storing the self-shielded LW dissociation flux
+VARIABLE LWFL
+
+

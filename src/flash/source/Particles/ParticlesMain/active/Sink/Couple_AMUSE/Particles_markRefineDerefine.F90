@@ -103,7 +103,7 @@ character(len=80), save    :: grav_boundary_type
 
 ! If neither feedback method is in, just return.
 ! If in jets branch WIND_INJ includes both winds and jets -SA 202309118
-#if !defined(FERVENT) && !defined(WIND_INJ)
+#if !defined(FERVENT) && !defined(WIND_INJ) && !defined(VETTAM)
 return
 #endif
 
@@ -220,7 +220,7 @@ print*, "y =", y
 print*, "z =", z
 #endif
 
-#ifdef FERVENT
+#if defined(FERVENT) || defined(VETTAM)
        ! Any block with a feedback particle in it should be at highest refinement level. - JW
        ! This part is basically for HII regions to be well resolved initially
        ! for radiation feedback.
