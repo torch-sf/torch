@@ -18,7 +18,6 @@ from amuse.units import units
 from torch_stdout import tprint
 from imf_sample import sample_stellar_mass
 
-
 def add_particles_to_grav(state, hydro, grav, mult, se):
     """
     Send prtl from hydro to grav + AMUSE
@@ -138,7 +137,8 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     #tprint("Finished grav.particles.add_particles()")
    
     #Add particles to stellar evolution, CCC 10/05/2024
-    se.particles.add_particles(add_star)
+    if se is not None:
+        se.particles.add_particles(add_star)
 
     if mult is not None:
         mult._inmemory_particles.add_particles(add_star)
@@ -238,7 +238,8 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
         hydro.remove_particles(t)
         state.stars.remove_particles(stars_rem)
         grav.particles.remove_particles(grav_rem)
-        se.particles.remove_particles(se_rem)
+        if se is not None:
+            se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
         else:
@@ -436,6 +437,15 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
 
     # Indicate we're done spawning stars
     tprint("Finished checking whether to spawn stars from sink particles.")
+
+            # Initialize cross section values to something reasonable and non-zero.
+            # if stellar evolution is off and radiation is on, these values are zero
+            # which causes non-convergence in vettam. BP-2.23.26 
+            if state.user['with_lyc'] or state.user['with_pe_heat']: 
+                star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
+                star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
+                hydro.set_particle_sigh(star_tag, star.sigh)
+                hydro.set_particle_sigd(star_tag, star.sigd)
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
