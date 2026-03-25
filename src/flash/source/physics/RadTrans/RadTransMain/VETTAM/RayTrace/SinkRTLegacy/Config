@@ -1,0 +1,17 @@
+#
+# Legacy RT from sinks (this version is not tested probably and has known issues)
+#
+
+PPDEFINE SINK_RT
+
+D flux from point source
+VARIABLE fspt
+
+D Radiation Pressure from stellar sources
+VARIABLE STMX
+VARIABLE STMY
+VARIABLE STMZ
+
+REQUIRES physics/RadTrans/RadTransMain/VETTAM/RayTrace/3DRT
+REQUIRES Particles/ParticlesMain/Sink/StellarEvolution
+REQUIRES physics/materialProperties/Opacity/RadTrans/Sinks

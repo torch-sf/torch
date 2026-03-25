@@ -51,11 +51,6 @@ import numpy as np
 np.set_printoptions(precision=3)
 
 from amuse.lab import *
-from torch_amuse_flash.interface import Flash
-from amuse.community.kepler.interface import Kepler
-from amuse.community.smalln.interface import SmallN
-from amuse.community.petar.interface import Petar
-from amuse.couple import multiples
 
 from torch_se import (
     stellar_evolution,
@@ -115,6 +110,15 @@ def stop_smalln():
 
 def initialize_workers():
 
+    # Import amuse worker codes
+    from torch_amuse_flash.interface import Flash
+    if USER['with_petar']:
+        from amuse.community.petar.interface import Petar
+    elif USER['with_multiples']:
+        from amuse.community.kepler.interface import Kepler
+        from amuse.community.smalln.interface import SmallN
+        from amuse.couple import multiples
+    
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun)
     # Converter for the hydro code.
@@ -195,6 +199,10 @@ def evolve(state, hydro, grav, mult, se):
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
+
+    # Save initial time for stellar evolution
+    se_restart_time = hydro.get_time()
+    tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
@@ -309,7 +317,7 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("Do stellar evolution")
                 # update both stars set and hydro properties
                 se_dt = stellar_evolution(
-                    hy_time+dt, dt, state, hydro, se,
+                    hy_time+dt, dt, se_restart_time, state, hydro, se,
                     with_lyc          = USER['with_lyc'],
                     with_pe_heat      = USER['with_pe_heat'],
                     with_winds        = USER['with_winds'],
@@ -597,7 +605,7 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
-    state = TorchState(hydro, grav, mult, se)
+    state = TorchState(hydro, grav, mult, se, USER)
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash

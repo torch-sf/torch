@@ -52,8 +52,6 @@ subroutine Grid_markRefineDerefine()
                         gr_lrefineMaxRedDoByLogR,&
                         gr_lrefineCenterI,gr_lrefineCenterJ,gr_lrefineCenterK,&
                         gr_eosModeNow
-  use Simulation_data, ONLY: use_deref,deref_xl, deref_xr, deref_yl, &
-                        deref_yr, deref_zl, deref_zr, deref_lref
   use tree, ONLY : newchild, refine, derefine, stay, nodetype
 !!$  use physicaldata, ONLY : force_consistency
   use Logfile_interface, ONLY : Logfile_stampVarMask
@@ -141,19 +139,6 @@ subroutine Grid_markRefineDerefine()
   
   call Particles_sinkMarkRefineDerefine()
 
-
-  if(use_deref) then 
-    ! set dimensions of derefine region 
-    specs(1) = deref_xl
-    specs(2) = deref_xr
-    specs(3) = deref_yl
-    specs(4) = deref_yr
-    specs(5) = deref_zl
-    specs(6) = deref_zr
-    specs(7) = 1 ! block must be completely outside of refine region 
-
-    call Grid_markDerefineSpecialized(RECTANGLE,size(specs),specs,deref_lref)
-  endif
 
   ! When the flag arrays are passed to Paramesh for processing, only leaf
   ! blocks should be marked. - KW

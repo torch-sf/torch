@@ -117,7 +117,7 @@ def user_parameters():
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
-    p['remove_merged'] = True # remove merged stars
+    p['remove_merged'] = True and p['with_se'] # remove merged stars, only available if running with stellar evolution
 
     # <timestepping>
 
@@ -139,6 +139,7 @@ def user_parameters():
 
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
+    p['sigd'] = flashp['sigDust'] # Cross section of dust per hydrogen nulcei
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'

@@ -19,12 +19,13 @@ class TorchState(object):
     (1) hold things, (2) perform I/O for all torch workers.
     """
 
-    def __init__(self, hydro, grav, mult, se):
+    def __init__(self, hydro, grav, mult, se, user_params):
 
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
         self.se    = se     #CCC 26/04/2024 to match above
+        self.user  = user_params
         
         # "Global" AMUSE-level data structures
         self.all_masses = {}
@@ -41,8 +42,9 @@ class TorchState(object):
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
 
         # Stellar evolution to stars, CCC 26/04/2024
-        self.stars_to_se = self.stars.new_channel_to(se.particles)
-        self.se_to_stars = se.particles.new_channel_to(self.stars)
+        if se is not None:
+            self.stars_to_se = self.stars.new_channel_to(se.particles)
+            self.se_to_stars = se.particles.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case

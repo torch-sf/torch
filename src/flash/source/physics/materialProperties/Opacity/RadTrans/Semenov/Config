@@ -1,0 +1,11 @@
+#	Configuration file for grey constant
+#	absorption and scattering opacities 
+
+D total extinction coefficient
+VARIABLE opac
+
+DATAFILES *.dat
+DATAFILES *.inp
+
+#Floor opacity returned by the Semenov routine
+PARAMETER opac_floor 		REAL	1.e-5  

@@ -264,6 +264,8 @@ subroutine RadHeat (blockCount,blockList,dt,time)
 #ifdef PE_HEAT
 ! Get the photoelectric flux from radiation sources. -JW
           Gflux = solnData(PEFL_VAR,i,j,k)
+#elif defined(VETTAM)
+          Gflux = solnData(PEFL_VAR,i,j,k)
 #else
           Gflux = 0.0
 #endif
@@ -416,7 +418,9 @@ subroutine RadHeat (blockCount,blockList,dt,time)
             solnData(TDUS_VAR,i,j,k) = tdust
 
 !clean up heating rate
+#ifdef FERVENT
             solnData(PHHE_VAR,i,j,k) = 0d0
+#endif
 #ifdef PE_HEAT
 ! Clean up fluxes too. - JW
             solnData(PEFL_VAR,i,j,k) = 0d0

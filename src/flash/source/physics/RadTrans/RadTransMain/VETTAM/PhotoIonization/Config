@@ -1,0 +1,78 @@
+#
+# Ionising radiation heating/cooling module
+# Shyam Harimohan Menon, 2021-2022
+#
+
+DEFAULT ThermoChemistry 
+EXCLUSIVE OnlyH ThermoChemistry
+
+REQUIRES physics/RadTrans/RadTransMain/VETTAM
+
+D flag to use ionising radiation module
+PARAMETER useEUVIonize   BOOLEAN  TRUE
+
+D flag to ionise molecular hydrogen
+PARAMETER useH2Ionize   BOOLEAN   TRUE
+
+D flag to use the on-the-spot approximation
+PARAMETER ion_OTS   BOOLEAN  TRUE
+
+D Cross section of H to LyC photons with >13.6eV averaged over SB99 luminosities (Kim+23)
+PARAMETER   ion_sigmaH   REAL    3.1e-18 
+
+D Cross section of H to LyC photons with energies 13.6<hnu<15.2 (Baczynski+ 2015)
+PARAMETER   ion_sigmaH_13p6_15p2   REAL    5.6e-18
+
+D Cross section of H to LyC photons with energies hnu>15.2 (Baczynski+ 2015)
+PARAMETER   ion_sigmaH_15p2_infty   REAL    3.1e-18
+
+D Cross section of H2 to LyC photons with energies > 15.2eV (Baczynski+ 2015)
+PARAMETER   ion_sigmaH2_15p2_infty     REAL    5.5e-18
+
+D Cross section of H2 to LyC photons with energies > 13.6eV averaged over SB99 luminosities (Kim+ 23)
+PARAMETER   ion_sigmaH2     REAL    4.6e-18
+
+D Recombination coefficient type: either "default" for a temp-dependent fit or "constant"; latter useful for standard tests
+PARAMETER alpha_type STRING   "default"
+
+D Recombination rate coefficients: Case B and Case A coefficient values - used only if alpha_type is "constant"
+PARAMETER alpha_B    REAL     2.6e-13
+
+PARAMETER alpha_A    REAL     4.1e-13
+
+#Types- 1: Explicit method of Kim+17, 2: Explicit method of Altay and Theuns, 3: Implicit backward-Euler Quadratic update 4: less-stable+more accurate Implicit backward-Euler Quadratic update
+PARAMETER ion_type    INTEGER 1
+
+#Implicitly evolve radiation field with ionisation state
+PARAMETER ion_implicit   BOOLEAN  TRUE
+
+D Substepping timestep factor for ionisation-recombination balance (for methods 1 and 2)
+PARAMETER C_tss    REAL     1.0
+
+D Substepping timestep factor for heating-cooling balance (if Ideal Gas EOS used)
+PARAMETER C_therm   REAL    100.0
+
+D Tolerances of ionisation-radiation coupling (methods 3 and 4)
+PARAMETER ion_conv_rtol     REAL  1.e-2
+PARAMETER ion_conv_atol     REAL  1.e-4
+PARAMETER ion_conv_maxits   INTEGER  100
+
+D Energy per Ionisation of H in ergs: Default is 3.4 eV, app for Star Cluster (Kim+23, Table 3)
+PARAMETER energyPerIonH  REAL 5.447399970800022e-12
+
+D Energy per Ionisation of H2 in ergs: Default is 4.4 eV, app for Star Cluster (Kim+23, Table 3)
+PARAMETER energyPerIonH2  REAL 7.04957643280003e-12
+
+D Average energy per ionising photons (18 eV by default. Will affect dust heating by EUV)
+PARAMETER hnu       REAL 2.883917631600012e-11
+
+D Cumulative heat added per unit volume via ionisations for this cell
+VARIABLE IONH
+
+VARIABLE IONP
+VARIABLE IONO
+VARIABLE UEUV
+VARIABLE TAUH
+VARIABLE HEUV
+
+
