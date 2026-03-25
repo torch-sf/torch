@@ -432,12 +432,6 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             #print("Setting star angular momentum now - e.g., ", star.ang_mom[0])
             hydro.set_particle_ang_mom(star_tag, star.ang_mom[:,0], star.ang_mom[:,1], star.ang_mom[:,2], nnew )  # Add angular momentum -SA 20230425
 
-        # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
-        tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))
-
-    # Indicate we're done spawning stars
-    tprint("Finished checking whether to spawn stars from sink particles.")
-
             # Initialize cross section values to something reasonable and non-zero.
             # if stellar evolution is off and radiation is on, these values are zero
             # which causes non-convergence in vettam. BP-2.23.26 
@@ -446,6 +440,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
                 star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
                 hydro.set_particle_sigh(star_tag, star.sigh)
                 hydro.set_particle_sigd(star_tag, star.sigd)
+
+        # Add quick print statement (2 of 2) to double check sink accretion method for jets -SA 20221012
+        tprint("Sink mass after checking whether to form stars for sink tag {}".format(sink_tag), "mass is {}".format(sink_mass))
+
+    # Indicate we're done spawning stars
+    tprint("Finished checking whether to spawn stars from sink particles.")
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')
