@@ -1,5 +1,18 @@
 CHILDORDER wind
 
+PPDEFINE ACTIVE
+
+# define additional source particle properties
+PARTICLEPROP Nion REAL
+PARTICLEPROP sigh REAL
+PARTICLEPROP Eion REAL
+
+# For PE heating from radiation - JW
+
+PARTICLEPROP NPEP REAL
+PARTICLEPROP SPEP REAL
+PARTICLEPROP EPEP REAL
+
 # Particle properties for SeBa restart - CCC
 PARTICLEPROP REL_MASS REAL
 PARTICLEPROP REL_AGE REAL

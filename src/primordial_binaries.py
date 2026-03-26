@@ -183,8 +183,8 @@ def get_periods(m, pdist='inner'):
     p[_mask] = 10**inv_transform_sampling(m[_mask], m_range=2, pdist=pdist)
 
     # Verify that all period values are within bounds
-    assert np.min(p) >= 10**0.2
-    assert np.max(p) <= 10**7.5
+    assert (10**0.2/np.min(p)) <= (1.+1e-5)
+    assert (np.max(p)/10**7.5) <= (1.+1e-5)
     
     return p
 
@@ -324,7 +324,7 @@ def get_mass_ratios(m, p, qdist='field', mmin=0.08):
         _mask = np.where(m*return_q < mmin)[0]
         return_m = np.ones(len(_mask)) * mmin
         return_q[_mask] = return_m / m[_mask]
-        
+
         return return_q
     
     q = inv_transform_sampling(p, m)

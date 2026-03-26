@@ -51,7 +51,7 @@ import numpy as np
 np.set_printoptions(precision=3)
 
 from amuse.lab import *
-from amuse.community.flash.interface import Flash
+from torch_amuse_flash.interface import Flash
 from amuse.community.kepler.interface import Kepler
 from amuse.community.smalln.interface import SmallN
 from amuse.community.petar.interface import Petar
@@ -196,6 +196,9 @@ def evolve(state, hydro, grav, mult, se):
     hy_time         = hydro.get_time()
     hy_max_steps    = hydro.get_max_num_steps()
     hy_max_time     = hydro.get_end_time()
+    # Save initial time for stellar evolution
+    se_restart_time = hydro.get_time()
+    tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
@@ -306,16 +309,19 @@ def evolve(state, hydro, grav, mult, se):
             ### Stellar evolution.
             ### ------------------
 
+            if (USER['with_be'] or USER['binaries']) and num_stars > 1:
+                # Also identify binaries at runtime if no BE
+                tprint("Identify binaries")
+                state.binaries = state.binaries_from_stars()
+
             if USER['with_se']:
-                
-                if USER['with_be']:
+                if USER['with_be'] and num_stars > 1:
                     # update both stars set and hydro properties
                     # CCC 28/04/2023
                     tprint("Do stellar and binary evolution")
-                    # Check for binaries, CCC 25/07/2024
-                    state.binaries = state.binaries_from_stars()
                     se_dt = binary_evolution(
-                        hy_time+dt, dt, state, hydro, se,
+                        hy_time+dt, dt, se_restart_time,
+                        state, hydro, se,
                         with_lyc          = USER['with_lyc'],
                         with_pe_heat      = USER['with_pe_heat'],
                         with_winds        = USER['with_winds'],
@@ -329,7 +335,8 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("Do stellar evolution")
                     # update both stars set and hydro properties
                     se_dt = stellar_evolution(
-                        hy_time+dt, dt, state, hydro, se,
+                        hy_time+dt, dt, se_restart_time,
+                        state, hydro, se,
                         with_lyc          = USER['with_lyc'],
                         with_pe_heat      = USER['with_pe_heat'],
                         with_winds        = USER['with_winds'],
@@ -338,6 +345,15 @@ def evolve(state, hydro, grav, mult, se):
                         min_feedback_mass = USER['min_feedback_mass'],
                     )
 
+                # Synchronize to grav after SE/BE
+                state.stars.synchronize_to(grav.particles)
+                state.stars_to_grav.copy_attributes(["mass"])
+                if len(grav.particles) != len(state.stars):
+                    # See this issue: https://github.com/amusecode/amuse/issues/518
+                    tprint('... forced to re-sync grav from stars')
+                    grav.particles = Particles()
+                    grav.particles.add_particles(state.stars)
+            
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
                     state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles

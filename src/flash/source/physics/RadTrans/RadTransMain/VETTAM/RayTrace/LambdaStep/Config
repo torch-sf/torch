@@ -1,0 +1,10 @@
+#
+# hybrid characteristics RT with parallel rays
+#
+# based on Rijkhorst et al. A&A (2006)
+# see Buntemeyer et al., New Astronomy, 43 (2016)
+#
+# 
+
+VARIABLE LAMB
+VARIABLE MEAO

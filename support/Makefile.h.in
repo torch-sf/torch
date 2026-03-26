@@ -1,0 +1,88 @@
+FCOMP   = @MPIFC@
+CCOMP   = @MPICC@
+CPPCOMP = @MPICXX@
+LINK    = @MPIFC@
+
+LIB_MPI =               # almost always empty but needed for FLASH's ./setup
+
+
+# General compilation flags
+# Specify -debug to ./setup to use the _DEBUG versions. The _TEST version is used by
+# flash_test, for quick code generation, and sometimes for profiling.
+
+FFLAGS_OPT = -ggdb -c -O2 -fdefault-real-8 -fdefault-double-8 -Wuninitialized \
+             -fallow-argument-mismatch
+
+FFLAGS_DEBUG = -ggdb -c -O0 -fdefault-real-8 -fdefault-double-8 \
+-pedantic -Wall -Waliasing \
+-Wsurprising -Wconversion -Wunderflow \
+-fallow-argument-mismatch \
+-ffpe-trap=invalid,zero,overflow -fbounds-check \
+-fimplicit-none -fstack-protector-all
+
+FFLAGS_TEST = -ggdb -c -O0 -fdefault-real-8 -fdefault-double-8 -fallow-argument-mismatch
+
+F90FLAGS =
+
+
+#The macro _FORTIFY_SOURCE adds some lightweight checks for buffer
+#overflows at both compile time and run time (only active at -O1 or higher)
+#http://gcc.gnu.org/ml/gcc-patches/2004-09/msg02055.html
+CFLAGS_OPT = -ggdb -c -O2 -Wuninitialized -D_FORTIFY_SOURCE=2
+
+CFLAGS_DEBUG = -ggdb -c -O0 -Wno-div-by-zero -Wundef \
+-Wconversion -Wstrict-prototypes -Wunreachable-code \
+-pedantic -Wall -Winit-self -ftree-vrp -Wfloat-equal \
+-Wunsafe-loop-optimizations -Wpadded -fstack-protector-all
+
+CFLAGS_TEST = -ggdb -O0 -c
+
+
+# General linking flags
+LFLAGS_OPT   = -ggdb -o
+LFLAGS_DEBUG = -ggdb -O0 -o
+LFLAGS_TEST  = -ggdb -O0 -o
+
+
+# OpenMP support
+OPENMP_FORTRAN = @OPENMP_FCFLAGS@
+OPENMP_C = @OPENMP_CFLAGS@
+OPENMP_LINK = @OPENMP_FCFLAGS@
+
+
+# HDF5 flags and linking options (TORCH does not use NetCDF)
+CFLAGS_HDF5 = @HDF5_CPPFLAGS@ -DH5_USE_16_API
+LIB_HDF5  = @HDF5_LDFLAGS@ @HDF5_FLIBS@ @HDF5_LIBS@
+# there's no FFLAGS_HDF5, so we add these directly
+FFLAGS_OPT += @HDF5_FFLAGS@ -DH5_USE_16_API
+FFLAGS_DEBUG += @HDF5_FFLAGS@ -DH5_USE_16_API
+FFLAGS_TEST += @HDF5_FFLAGS@ -DH5_USE_16_API
+
+
+# HYPRE library
+CFLAGS_HYPRE =
+LIB_HYPRE = @LIB_HYPRE@
+
+
+# PETSC library
+CFLAGS_OPT += @PETSC_CFLAGS@
+CFLAGS_DEBUG += @PETSC_CFLAGS@
+CFLAGS_TEST += @PETSC_CFLAGS@
+
+FFLAGS_OPT += @PETSC_CFLAGS@
+FFLAGS_DEBUG += @PETSC_CFLAGS@
+FFLAGS_TEST += @PETSC_CFLAGS@
+
+LIB_PETSC = @PETSC_LDFLAGS@ @PETSC_LIBS@
+
+
+# Other libraries if needed
+LIB_OPT   +=
+LIB_DEBUG +=
+LIB_TEST  +=
+
+
+# Additional commands
+
+ECHO = echo
+

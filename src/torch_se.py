@@ -38,7 +38,7 @@ sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
 # TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
 
 
-def binary_evolution(time, dt, state, hydro, se,
+def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                      with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
                      massloss_method=None, min_feedback_mass=None, CE_method='wind', CE_alpha=1):
     """
@@ -47,16 +47,6 @@ def binary_evolution(time, dt, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-
-    # We call SeBa on indiv stars, but get/set hydro star props in bulk.
-
-    # Always recompute star's age from hydro time and particle creation time.
-    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
-    # age at each bridge step would introduce error.  (2) Multiple ways to
-    # query star age may not agree exactly.
-
-    # Age not used explicitly for SE - CCC 02/08/2024
-    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -98,6 +88,9 @@ def binary_evolution(time, dt, state, hydro, se,
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
+    
     # Pass information to SE
     # Check for new systems, important for binaries - CCC 02/08/2024
     state.binaries.synchronize_to(se.binaries)
@@ -106,16 +99,21 @@ def binary_evolution(time, dt, state, hydro, se,
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
     # Evolve model
-    se.evolve_model(time) #Time attached to se.particles.age, which is the "simulation" time
+    se.evolve_model(se_time) #Time attached to se.particles.age, which is the "simulation" time
     
     # Pass information back to stars after end of SE loop - CCC 02/08/2024
     for _attribute in se.particles.get_attribute_names_defined_in_store():
         if _attribute in state.stars.get_attribute_names_defined_in_store():
             state.se_to_stars.copy_attributes([_attribute])
 
+    # Reset the stars' age after the SE step
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
+
     # Turn off wind if mass increased - CCC 11/09/2024 
     # Keep a list of stars for which feedback was calculated - CCC 25/10/2024
     evolved_stars = Particles()
+    # Also keep a list of merged stars - CCC 08/01/2025
+    merged_stars = Particles()
     # List primaries and companions - CCC 25/10/2024
     primaries = Particles()
     companions = Particles()
@@ -151,7 +149,7 @@ def binary_evolution(time, dt, state, hydro, se,
 
         if s.initial_mass >= min_feedback_mass:
 
-            if with_sn and went_supernova(s.stellar_type): # Do not check if in binary for SN - CCC 29/10/2024
+            if with_sn and went_supernova_from_kick(s, state.stars): # Do not check if in binary for SN - CCC 29/10/2024
 
                 inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
                 
@@ -161,10 +159,12 @@ def binary_evolution(time, dt, state, hydro, se,
                     tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
                     inj_mass = 15.0|units.MSun
 
-                # inject energy and mass onto grid
-                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
-                se_dt = min(se_dt, _tmp)
-                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                # Inject energy and mass onto grid                         
+                # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN          
+                if s.COcore_mass <= 15 | units.MSun:
+                    _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                    se_dt = min(se_dt, _tmp)
+                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
                 # implicitly zeros out feedback properties by not setting
 
@@ -177,7 +177,7 @@ def binary_evolution(time, dt, state, hydro, se,
                 evolved_stars.add_particle(s)
                 
             # Check if companion went supernova - CCC 15/04/2025
-            if in_binary and with_sn and went_supernova(t.stellar_type):
+            if in_binary and with_sn and went_supernova_from_kick(t, state.stars):
                 
                 inj_mass = old_mass[k] - t.mass  # minus stellar remnant's mass
                 
@@ -187,11 +187,13 @@ def binary_evolution(time, dt, state, hydro, se,
                     tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
                     inj_mass = 15.0|units.MSun
 
-                # inject energy and mass onto grid
-                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), t.x, t.y, t.z)
-                se_dt = min(se_dt, _tmp)
-                tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(t.x, t.y, t.z, inj_mass.value_in(units.MSun), s.tag))
-
+                # Inject energy and mass onto grid                                                                                                                                                             
+                # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN                                                                                                       
+                if t.COcore_mass <= 15 | units.MSun:
+                    _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), t.x, t.y, t.z)
+                    se_dt = min(se_dt, _tmp)
+                    tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(t.x, t.y, t.z, inj_mass.value_in(units.MSun), t.tag))
+                
                 # implicitly zeros out feedback properties by not setting
 
                 # Update velocity from kick velocity - CCC 06/04/2025
@@ -380,7 +382,28 @@ def binary_evolution(time, dt, state, hydro, se,
                     
                     # Set star to evolved after feedback - CCC 29/10/2024
                     evolved_stars.add_particle(s)           
+
+        elif (s.initial_mass < min_feedback_mass) and in_binary and (t.mass == (0. | units.MSun)):
+
+            # Update position and velocity - CCC 04/04/2025
+            tprint("... low-mass stars merged from BE")
+            stars_for_COM = Particles()
+            stars_for_COM.add_particle(primaries[j])
+            stars_for_COM.add_particle(companions[j])
+            s.position = stars_for_COM.center_of_mass()
+            s.velocity = stars_for_COM.center_of_mass_velocity()
+
+            # Set stars to evolved after change in orbit
+            evolved_stars.add_particle(s)
+            evolved_stars.add_particle(t)
+
+            # Save tag of star it merged with
+            t.merged_with = s.tag
+            # Save merged time
+            t.merger_time = hydro.get_time()
+            merged_stars.add_particle(t)
             
+    
     # Binaries sync'ed to stars later, do not sync here - CCC 12/09/2024
 
     # This assumes steps are relatively small in the mass loss rate of stars,
@@ -411,10 +434,20 @@ def binary_evolution(time, dt, state, hydro, se,
     hydro.set_particle_radius(state.stars.tag, state.stars.radius)
     hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
 
+    if len(merged_stars) > 0:
+        # Write merged stars
+        state.out_merged_stars(merged_stars, overwrite=True)
+        # Remove merged star from hydro
+        hydro.remove_particles(merged_stars.tag)
+        # Remove from SE
+        se.particles.remove_particles(merged_stars)
+        # Synchronize to state
+        se.particles.synchronize_to(state.stars)
+
     return se_dt
 
 
-def stellar_evolution(time, dt, state, hydro, se,
+def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
                       massloss_method=None, min_feedback_mass=None):
     """
@@ -423,15 +456,6 @@ def stellar_evolution(time, dt, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
-    
-    # We call SeBa on all stars at once but loop through stars for feedback
-    # TO DO: Edit to loop only through feedback stars (see bitbucket) - CCC 04/11/2023
-
-    # Always recompute star's age from hydro time and particle creation time.
-    # Don't attach star age to particle.  Why?  (1) Repeated increment of star
-    # age at each bridge step would introduce error.  (2) Multiple ways to
-    # query star age may not agree exactly.
-    state.stars.age = (time - dt) - hydro.get_particle_creation_time(state.stars.tag)
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -467,55 +491,67 @@ def stellar_evolution(time, dt, state, hydro, se,
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
+
+    # Time since star formation or restart, to use for stellar evolution
+    se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
     
+    # make list of remnant stars so we don't explode them again
+    remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
+
+    # CCC 26/04/2024
     # Structure changed to use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 04/11/2023
     state.stars_to_se.copy() # CCC 25/07/2024
-    se.evolve_model(time)
+    se.evolve_model(se_time)
+    #se.particles.evolve_for(dt) #se_time, dt
     state.se_to_stars.copy()
+    
+    # Reset the stars' age after the SE step, as the SeBa age is reset to 0
+    # at each restart - CCC 22/11/2024
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
+    # Loop only over active stars while retaining the correct indexing for total star array
     for i, s in enumerate(state.stars):
 
-        if went_supernova(s.stellar_type):
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
-        if s.mass >= min_feedback_mass:
+        if with_sn and went_supernova(s.stellar_type):
 
-            if with_sn and went_supernova(s.stellar_type):
+            inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
+            if inj_mass > 15.0|units.MSun:
+                # expected upper limit for SeBa tracks; see
+                # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                tprint("... setting maximum SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                inj_mass = 15.0|units.MSun
 
-                inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
-                
-                if inj_mass > 15.0|units.MSun:
-                    # expected upper limit for SeBa tracks; see
-                    # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
-                    tprint("... flooring SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
-                    inj_mass = 15.0|units.MSun
-
-                # inject energy and mass onto grid
+            # Inject energy and mass onto grid
+            # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
+            if s.COcore_mass <= 15 | units.MSun:
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
 
-                # implicitly zeros out feedback properties by not setting
+            # implicitly zeros out feedback properties by not setting
 
-            else:
+        else:
 
-                if with_lyc:
-                    _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
-                    eion[i] = _tmp[0]
-                    nion[i] = _tmp[1]
-                    sigh[i] = _tmp[2]
-                if with_pe_heat:
-                    _tmp = compute_epe_npe(s.temperature, s.radius)
-                    epe[i] = _tmp[0]
-                    npe[i] = _tmp[1]
-                    sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
-                if with_winds:
-                    _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                              massloss_method=massloss_method)
-                    dm_dt[i] = _tmp[0]
-                    vterm[i] = _tmp[1]
+            if with_lyc:
+                _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                eion[i] = _tmp[0]
+                nion[i] = _tmp[1]
+                sigh[i] = _tmp[2]
+            if with_pe_heat:
+                _tmp = compute_epe_npe(s.temperature, s.radius)
+                epe[i] = _tmp[0]
+                npe[i] = _tmp[1]
+                sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+            if with_winds:
+                _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                                          massloss_method=massloss_method)
+                dm_dt[i] = _tmp[0]
+                vterm[i] = _tmp[1]
 
         # Evolutionary things besides winds could have reduced the stars mass.
         if dm_dt[i]*dt > 0.0|units.MSun:
@@ -656,7 +692,23 @@ def compute_epe_npe(se_temp, se_radius):
 
 
 def went_supernova(stellar_type):
-    return 13 <= stellar_type.value_in(units.stellar_type) <= 15
+    """                                                                                               
+    Determines whether a SeBa star has went supernova or not. Types 13-15 are neutron star, black hole,                                                                                                   
+    and disintegrated. This function returns an array or scalar based on input type.                                                                                                      
+    """
+    types = stellar_type.value_in(units.stellar_type)
+    return (types >= 13) & (types <= 15)
+
+def went_supernova_from_kick(star, stars):
+    """                                                                                               
+    Determines whether a SeBa star has undergone supernova or not, based on whether or not the
+    natal kick is set for the star. Used to avoid superfluous SNe from e.g. CEE with BE.
+    """
+    kick_set = False
+    if 'natal_kick_x' in stars.get_attribute_names_defined_in_store():
+        if star.natal_kick_x != (0 | units.km/units.s):
+            kick_set = True
+    return kick_set
 
 # Used to check for common envelope or unstable mass transfer
 # This type of mass loss is triggered if >1% of the stars' mass was lost
@@ -678,7 +730,6 @@ def high_dm_dt(new_mass, old_mass, dt):
 def accreted_mass(new_mass, old_mass):
     dm = (old_mass - new_mass)/old_mass
     return dm < 0
-
 
 def lum_wl_cs(l, l_max, T):
     """
