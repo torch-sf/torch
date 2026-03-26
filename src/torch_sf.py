@@ -347,7 +347,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
             assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
-        spawn_masses     = state.all_masses[sink_tag][:i]
+        spawn_masses = state.all_masses[sink_tag][:i]
         if binaries:
             spawn_systems    = state.system_masses[sink_tag][:i]
             spawn_positions  = state.all_positions[sink_tag][:i]
@@ -406,12 +406,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
                     else:
                         random_pos = sink_rad*np.random.rand()*random_three_vector()
-                        random_vel = np.random.normal(scale=spawn_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
+                        random_vel = np.random.normal(scale=spawn_cs, size=3) | units.cm/units.s
                         star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
             else:
                 star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
-                star.velocity = sink_vel + (np.random.normal(scale=spawn_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
+                star.velocity = sink_vel + (np.random.normal(scale=spawn_cs, size=(nnew,3)) | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
