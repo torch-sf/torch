@@ -354,3 +354,267 @@ class LimongiChieffi2018:
             return 2
         else:
             raise ValueError("Model does not exist.")
+
+# ================================================ EL =============================================
+
+# Interpolation class, for unstructured (non-regular) grids
+class YieldSource_unsgrid:
+    """
+    Class for interpolating yields from a source.
+    Creates a RegularGridInterpolator object for given elements, parameters
+    and yields and provides functionallity to interpolate yields for either
+    specific elements or total mass loss (sum of all elements).
+
+    This class is intended to be used when creating structure for specific
+    yields table.
+    """
+
+    def __init__(self, elements, params, yields):
+        """
+        Initialize RegularGridInterpolator object for element yields and total
+        mass loss.
+
+        Positional Arguments:
+            elements - List of elements in provided yield table
+            params - Parameter space to interpolate in
+            yields - Array of yields, matching list of elements and parameters
+        """
+        
+        self.elements = elements
+        self.params = params
+        self.yields = yields
+
+    
+    def get_yld(self, int_elements, int_params, interpolate='linear', extrapolate=False):
+        """
+        Return total yields for list of elements provided at parameters.
+
+        Positional Arguments:
+            elements - List of elements
+            params - Points in parameters space to interpolate.
+        Keyword Arguments:
+            interpolate - Interpolation method, see scipy.interpolate.RegularGridInterpolator
+            extrapolate - If true, allow extrapolation outside table parameter space. Use with caution.
+        """
+
+        int_elements = np.atleast_1d(int_elements)
+
+        if int_params.shape[1] != self.params.shape[1]:            
+            raise ValueError(
+                "Supplied parameters do not match yield set parameters.")
+
+        
+        # Not adding extrapolation stuff since might define this outside, if param is too far from param space then no yields
+        
+        # if not extrapolate:
+        #     for ip in range(int_params.shape[1]):
+        #         int_params[:, ip][(int_params[:, ip] < np.min(self.params[:,ip]))] = np.min(
+        #             self.params[:,ip])
+        #         int_params[:, ip][(int_params[:, ip] > np.max(self.params[:,ip]))] = np.max(
+        #             self.params[:,ip])
+        # else:
+        #     warnings.warn("Extrapolating yields might lead to problematic behaviour (e.g., negative yields). Ensure that yields behave as expected.")
+
+        
+        
+        if len(int_elements) == 1:
+            try:
+                # Get index of element in the elements array -- if fails, not in list
+                el_ind = np.where(int_elements[0] == self.elements)[0][0]
+                
+                # Check if params are inside covered param space, by getting H yield
+                if np.any(np.isnan(griddata(self.params, self.yields[:, 0], int_params, method=interpolate))):
+                    # Params are outside of the covered param space, so switch to nearest interpolation
+                    return [ griddata(self.params, self.yields[:, el_ind], int_params, method='nearest') ]
+                else:
+                    # Params are outside of the covered param space, so stick with interpolation method
+                    return [ griddata(self.params, self.yields[:, el_ind], int_params, method=interpolate) ]
+            except IndexError: # Failed to find element in list, so not there
+                shape = griddata(self.params, self.yields[:, 0], int_params, method=interpolate).shape
+                return np.ones(shape) * np.nan
+        else:
+            # Gets indexes of each element. If element not in tables, saves un-indexable index
+            el_inds = [np.where(element == self.elements)[0][0] if element in self.elements else len(self.elements)+1 for element in elements]
+            
+            # If finds index larger than size of elements, then one element not in list
+            if np.any([ind>len(self.elements) for ind in el_inds]):
+                yld = []
+                for el_ind in el_inds:
+                    try:
+                        yld.append(griddata(self.params, self.yields[:, el_ind], int_params, method=interpolate))
+                    except IndexError: # If can't locate el_ind in ylds, then element not in list, assign nans
+                        shape = griddata(self.params, self.yields[:, 0], int_params, method=interpolate).shape
+                        yld.append(np.ones(shape) * np.nan)
+                return yld
+                
+            else: # All good, interpolate the yields
+                # Check if params are inside covered param space, by getting H yield (if outside then is nan)
+                if np.any(np.isnan(griddata(self.params, self.yields[:, 0], int_params, method=interpolate))):
+                    # Params are outside of the covered param space, so switch to nearest interpolation
+                    print('extrap')
+                    return [griddata(self.params, self.yields[:, el_ind], int_params, method='nearest') for el_ind in el_inds]
+                else:
+                    return [griddata(self.params, self.yields[:, el_ind], int_params, method=interpolate) for el_ind in el_inds]
+
+                # %%%% Need to take into account case where one set of params is outside but the others are inside, so only want to 
+                # do nearest on the set that's outside but linear for the rest
+                # Might need to just drop the list loop and do it one by one I guess
+
+
+
+    
+    def get_mloss(self, int_params, interpolate='nearest', extrapolate=False):
+        """
+        Return sum of all yields (mass loss) for these parameters.
+
+        Positional Arguments:
+            params - Points in parameters space to interpolate.
+        Keyword Arguments:
+            interpolate - Interpolation method, see scipy.interpolate.RegularGridInterpolator
+            extrapolate - If true, allow extrapolation outside table parameter space. Use caution.
+        """
+
+        if int_params.shape[1] != self.params.shape[1]:            
+            raise ValueError(
+                "Supplied parameters do not match yield set parameters.")
+
+        # Interpolate massloss (sum of all yields, excluding Z) at the given params
+        mloss = griddata(self.params, np.sum(self.yields[:, 1:], axis=1), int_params, method=interpolate)
+        return mloss
+
+# Binary yields class, reads those yield tables
+class BinaryYields:
+    """
+    Class properties:
+        ...
+    Usage:
+        Loads data from yield tables and provides function to simplify
+        interpolation for list of elements at given points in primary mass, mass ratio
+        and period via function:
+        
+            wind_yields(elements, params)
+
+        Similarly, total mass loss rates are provided with functions:
+            wind_mloss(params)
+    """
+
+    def __init__(self, path_to_file='/home/elaverde/alpha_reduced/summary.data'): # '$TORCH_DIR/data/yield_tables/'
+        # Remember to change the path to something like '$TORCH_DIR/data/binary_yields/summary.data'
+        """ Initialize class, loading tables and setting up objects 
+            for interpolation.
+        """
+
+        self.summ_path = path_to_file
+        
+        # Load summary file, which has all the yields info
+        summ = np.loadtxt(path_to_file, delimiter=',', skiprows=1, usecols=range(1,43))
+        # For header see row 0. Skipping model name column
+
+        # Parameter space, from the summary datafile
+        m1s = np.array(summ[:,0])
+        qs = np.array(summ[:,1])
+        ps = np.array(summ[:,2])
+        # Time of peak mass ejection
+        timescale = np.array(summ[:,4])
+        # Points of parameter space, shape (185,3)
+        self.points = np.dstack( (m1s, qs, ps) )[0]
+
+        # Get list of elements from summary file header
+        self.elements = self.get_element_list()
+        
+        # Load tables
+        self.yld = self.load_yields()
+
+        # Calculate metallicity, sum of all elems but H and He
+        Zs = self.get_metallicity()
+        # Add Z to yields
+        self.yld = np.concatenate((Zs, self.yld), axis=1)
+        
+        # Add metallicity variable which is sum of all elements except first two (H, He)
+        self.elements.insert(0, 'Z')
+        # self.atomic_num = np.insert(self.atomic_num, 0, 0)
+
+        self.elements = np.array(self.elements)
+
+        
+        # Wind yield interpolation object
+        self.wind = YieldSource_unsgrid(
+                self.elements, self.points, self.yld)
+
+        # # Core-collapse SNe yield interpolation object
+        # self.ccsn = YieldSource(
+        #         self.elements, [self.rot, self.metal, self.mass], ccsn_yld)
+
+    # def ccsn_yields(self, elements, mass, metal, rot, interpolate='nearest', extrapolate=False):
+    #     """ Returns yields [Msol] for elements from core-collapse supernovae given mass [Msol], 
+    #         metallicity [mass fraction], and rotation [km/s].
+    #     """
+    #     return self.ccsn.get_yld(elements, [rot, metal, mass], interpolate=interpolate, extrapolate=extrapolate)
+
+    def wind_yields(self, elements, int_params, interpolate='nearest', extrapolate=False):
+        """ Returns yields [Msol] for elements from pre-supernovae wind given mass [Msol], 
+            metallicity [mass fraction], and rotation [km/s].
+            int_params = [ [m1, q, p], [m1, q, p] ]
+        """
+        return self.wind.get_yld(elements, int_params, interpolate=interpolate, extrapolate=extrapolate)
+
+    # def total_yields(self, elements, mass, metal, rot, interpolate='nearest', extrapolate=False):
+    #     """ Returning yields [Msol] for each element in elements, given
+    #         stellar parameters mass [Msol], metal [mass fraction], and rot [km/s]."""
+    #     args = (elements, mass, metal, rot, interpolate, extrapolate)
+    #     return self.wind_yields(*args) + self.ccsn_yields(*args)
+
+    # def ccsn_mloss(self, mass, metal, rot, interpolate='nearest', extrapolate=False):
+    #     """ Returning mass loss [Msol] as sum of all elements from core-collapse supernovae given mass [Msol], 
+    #         metallicity [mass fraction], and rotation [km/s].
+    #     """
+    #     return self.ccsn.get_mloss([rot, metal, mass], interpolate=interpolate, extrapolate=extrapolate)
+    
+    def wind_mloss(self, int_params, interpolate='nearest', extrapolate=False):
+        """ Returning mass loss [Msol] as sum of all elements.
+        """
+        return self.wind.get_mloss(int_params, interpolate=interpolate, extrapolate=extrapolate)
+
+    # def total_mloss(self, mass, metal, rot, source='all', interpolate='nearest', extrapolate=False):
+    #     """ Returning mass loss [Msol] as sum of all elements, given
+    #         stellar parameters mass [Msol], metal [mass fraction], and rot [km/s]."""
+
+    #     return self.wind_mloss(mass, metal, rot,
+    #                            source=source,
+    #                            interpolate=interpolate,
+    #                            extrapolate=extrapolate) \
+    #         + self.ccsn_mloss(mass, metal, rot,
+    #                           source=source,
+    #                           interpolate=interpolate,
+    #                           extrapolate=extrapolate)
+
+    def get_element_list(self):
+        """ Helper function for reading element list during initialization.
+        """
+
+        # Load header from summary file, names of each column
+        header = np.loadtxt(self.summ_path, delimiter=',', skiprows=0, usecols=range(1,43), dtype=object)[0]
+        # Grab elements names from the columns, e.g. 'mass_ejected_He'
+        elements = [el.split('_')[-1] for el in header[7::2]]
+
+        return elements
+        
+
+    def load_yields(self):
+        """ Loader function for wind yields. Used during initialization.
+        """
+        # Load summary file
+        summ = np.loadtxt(self.summ_path, delimiter=',', skiprows=1, usecols=range(1,43))
+        # Grab yields for each element for all models
+        ylds = np.array( [model[7::2] for model in summ] )
+
+        return ylds
+
+    def get_metallicity(self):
+        elements_array = np.array(self.elements)
+        # Make mask to leave out H and He
+        mask_Z = ~((elements_array=='H') + (elements_array=='He'))
+        # Sum all remaining yields for each model
+        Zs = np.sum(self.yld[:, mask_Z], axis=1, keepdims=True)
+
+        return Zs
