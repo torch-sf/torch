@@ -1,10 +1,63 @@
 
+## Parameters commonly changed by the user for the VETTAM module
+## I am assuming Torch needs only the EUV and FUV bands, so skipping important parameters relevant to the IR band
+
+#==========================================
+#
+# VETTAM Parameters
+#
+useRadTrans           = .true. #Use VETTAM
+rt_rtol             = 1.e-3 #Tolerance of implicit radiation update solve
+rt_dtol             = 1.e10 #Maximum relative change permitted per iteration
+rt_maxits           = 2000 #Maximum iterations before attempting subcycling
+rt_update_hydro     = .true. 
+rt_hydro_type       = 1 #Only relevant for IR band
+
+# Ray-Tracer Parameters (This is important only if VET closure used)
+useRayTrace           = .true. # Set true if using the VET closure (default)
+# Healpix stuff
+rt_healpix_nSide      = 2 # must be multiple of 2 (recommended; higher-> more accurate, slower)
+rt_healpix_randomize  = 1 # Randomize the healpix tesselation -- highly recommended to keep as 1
+rt_nrOfAngleGroups    = 1 #  this affects mem consumption (use more for less mem > see raytrace*.log)
+
+# Sink Injection Properties
+sigma_star           = 1.0 #Gaussian source size in units of dx for sink radiation injection
+noSink_VETTAM = .true.  #Flag to set whether VETTAM should be on even if there are no sinks; if no source of background radiation, can save you time
+
+# Moment method closure - "edd", "m1", or "vet" (Note: M1 probably has bugs, wouldn't recommend in current version)
+rt_etens      = "vet"
+
+rt_linearsolver = "gmres"
+preconditioner  = "asm"
+
+# Frequency bands (max:5). Implemented ones are: EUV, FUV, LW, PE, EUV_13P6_15P2, EUV_15P2_INFTY
+# I have assumed Torch needs only EUV (i.e. LyC) and FUV
+rt_freqbands = 1
+rt_band1 = "EUV"
+#rt_band1 = "FUV"
+
+# Dust Opacities
+dust_opacity_fuv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
+dust_opacity_euv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
+dust_euvopac_value = 1.25e3 #600.0 # to match sigDust; 1.25e3 #1250 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
+dust_fuvopac_value = 600.0 # this matches sigDust; 600 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
+dusttoGasRatio = 0.0 #Dust to gas ratio scaled to the solar value; opacities are scaled by this value
+
+# Ionization stuff
+ion_sigmaH = 3.6e-18 #Cross section of H atoms to EUV Photons
+useEUVIonize = .true. # Switch on hydrogen ionization
+useH2Ionize = .false. #I am assuming you don't have H2; this shouldnt matter anyways if the H2_SPEC is not defined. But in case it is keep this off if you don't want H2 ionization
+
+
+# Update the radiation field every dt. You can set this to a value if you'd like to keep the radiation frozen for a given time -- useful when SNe or winds slow down timesteps 
+#rt_useeverydt = 0.0 
+
 # ==================================================================
 # Simulation/SimulationMain, monitors/Logfile/LogfileMain, IO/IOMain
 # ==================================================================
-basenm          = "turbsph_"
-log_file        = "turbsph.log"
-run_comment     = "Turbulent sphere"
+basenm          = "dtype_"
+log_file        = "dtype.log"
+run_comment     = "D-type expansion test"
 output_directory= "./data"
 
 
@@ -12,7 +65,10 @@ output_directory= "./data"
 # Simulation/SimulationMain/Cube
 # ==============================
 
-sim_cubeFile        ="./cube128"
+sim_cubeFile        ="./dtype_ic"
+#sim_cubeFile        ="./M3V02B/cubeM3V02B" # "./cubefile"
+#sim_cubeFile        ="./M4V02B/cubeM4V02B" # "./cubefile"
+#sim_cubeFile        ="./M5V02B/cubeM5V02B" # "./cubefile"
 
 # ionised gas fraction
 sim_init_Hp = 1e-4
@@ -24,7 +80,7 @@ sim_A_i                   =  0.6698 #-1.0
 #initial magnetic field
 bx0 = 0.0e0
 by0 = 0.0e0
-bz0 = 3.0e-6
+bz0 = 0.0e0
 
 
 # ===================
@@ -32,7 +88,7 @@ bz0 = 3.0e-6
 # ===================
 gamma = 1.66666666666666667
 # don't double count this mu! its in dust cooling also -JW
-#eos_singleSpeciesA  = 2.0
+eos_singleSpeciesA  = 1.0
 
 
 # =============
@@ -40,13 +96,13 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For the test problem in cube128 (-7,+7) pc
-xmax            =  2.1602e+19 
-xmin            = -2.1602e+19 
-ymax            =  2.1602e+19
-ymin            = -2.1602e+19
-zmax            =  2.1602e+19
-zmin            = -2.1602e+19
+# 10 pc
+xmax            =  3.0857e+19 
+xmin            = -3.0857e+19 
+ymax            =  3.0857e+19
+ymin            = -3.0857e+19
+zmax            =  3.0857e+19
+zmin            = -3.0857e+19
 
 # remember to update grav boundaries if you change this
 xl_boundary_type      = "outflow" #"diode"
@@ -62,11 +118,15 @@ zr_boundary_type      = "outflow" #"diode"
 nblockx         = 1
 nblocky         = 1
 nblockz         = 1
-lrefine_max     = 2
-lrefine_min     = 2
+lrefine_max     = 3
+lrefine_min     = 3
+
+alpha_type = "default"
 
 refine_var_1    = "pres"
+refine_var_2    = "temp"
 refine_filter_1 = 1e-2
+refine_filter_2 = 1e-2
 # Note a factor of 2 in difference gives 0.97087
 # A factor of 3 is just above 0.98
 refine_cutoff_1 = 0.98
@@ -77,14 +137,16 @@ derefine_cutoff_1 = 0.6  # fairly aggressive
 # ===================================================
 use_deref         = .false.
 deref_lref        = 2  # level to derefine to
-deref_xl          = -1.543e+19  # 5 pc
+# EXAMPLE: derefine to level deref_lref outside center 5pc square
+deref_xl          = -1.543e+19  # 5pc
 deref_xr          =  1.543e+19 
 deref_yl          = -1.543e+19
 deref_yr          =  1.543e+19
 deref_zl          = -1.543e+19
 deref_zr          =  1.543e+19
 
-#nrefs = 2 # calls refinement every nrefs step
+#   maximum change of refinements per step
+#nrefs = 2
 #converttoconsvdformeshcalls = .true.
 #converttoconsvdinmeshinterp = .true.
 #interpol_order = 2
@@ -100,11 +162,11 @@ gr_pmrpConserve          = .true.
 # ==================================================
 restart         = .false.
 nend            = 999999999
-tmax            = 6.3113852e13 # 2 Myr
-dtinit          = 3.15e8
+tmax            = 3.1556926e13 
+dtinit          = 3.15e7
 dtmin           = 3.15e7
 dtmax           = 3.15e12
-dr_shortenLastStepBeforeTMax = .false. # Setting true works but causes crash in amuse preventing graceful exit.
+dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 2.0
 
 wall_clock_checkpoint       = 0.432e+05
@@ -144,14 +206,21 @@ plot_var_11 = "tdus"
 plot_var_12 = "magx"
 plot_var_13 = "magy"
 plot_var_14 = "magz"
-plot_var_15 = "magp"
-plot_var_16 = "gpot"
-plot_var_17 = "bgpt"
-plot_var_18 = "phio"
-plot_var_19 = "phhe"
-plot_var_20 = "pefl"
-plot_var_21 = "taup"
-plot_var_22 = "tauh"
+plot_var_15 = "uvfl"
+plot_var_16 = "fufl"
+plot_var_15 = "auvf"
+plot_var_16 = "afuf"
+plot_var_17 = "magp"
+plot_var_18 = "gpot"
+plot_var_19 = "bgpt"
+plot_var_20 = "ueuv"
+plot_var_21 = "erad"
+plot_var_22 = "taup"
+plot_var_23 = "trad"
+plot_var_24 = "phio"
+plot_var_25 = "phhe"
+plot_var_26 = "pefl"
+plot_var_27 = "tauh"
 
 # ============
 # Hydro solver
@@ -159,7 +228,7 @@ plot_var_22 = "tauh"
 
 useHydro       = T
 
-cfl		= 0.8
+cfl		= 0.3
 eintSwitch      = 1.e-4
 killdivb    = T
 UnitSystem  = "CGS"
@@ -255,6 +324,18 @@ jeans_ncells_deref  = 24.0  #40.0 #64.0
 sink_density_thresh       = 8.52171362932e-22
 sink_accretion_radius     = 3.3753125e+18
 sink_softening_radius     = 3.3753125e+18
+# For -+7pc box
+#sink_density_thresh       = 2.47685070948e-21 # 7pc 4.85564e-21 # 10 pc box # 3.47202e-22 # 50 pc box #5.24209e-21 #1.0e-18
+#sink_accretion_radius     = 1.68765625e+18 # 7 pc 1.205e18 #for 10 pc box # 6.02734e18 # for 50 pc box 7.5333925e+16 # 2.5 x grid cell size #2.1096e17 # 7 cell radius for winds  #
+#sink_softening_radius     = 1.68765625e+18 #1.205e18 # 6.02734e18 #7.5333925e+16 # 2.5 x grid cell size #2.1096e17 # to guarantee refinement. #
+# For -+12 pc box
+#sink_density_thresh       = 8.42817255308e-22 
+#sink_accretion_radius     = 2.893125e+18
+#sink_softening_radius     = 2.893125e+18
+#For -+55 pc box
+#sink_density_thresh       = 4.01208875254e-23
+#sink_accretion_radius     = 1.326015625e+19
+#sink_softening_radius     = 1.326015625e+19
 
 sink_softening_type_gas   = "spline" #"linear"
 sink_softening_type_sinks = "spline"
@@ -278,11 +359,15 @@ sink_GasAccretionChecks   = .true.
 # physics/Gravity/GravityMain/Poisson/Multigrid
 # =============================================
 
-useGravity      = T #F
+useGravity      = F #F
 updateGravity   = .true.
 
 # remember to update grid boundary conditions if you change this
 grav_boundary_type      = "isolated"
+# different x,y,z BCs for BHTree only
+grav_boundary_type_x    = "isolated"
+grav_boundary_type_y    = "isolated"
+grav_boundary_type_z    = "isolated"
 
 # ----------------
 # Multigrid solver
@@ -290,6 +375,41 @@ grav_boundary_type      = "isolated"
 mpole_lmax = 10
 mg_maxResidualNorm = 0.01 #1e-6
 mg_printNorm       = .false.
+
+## -------------
+## BHTree solver
+## -------------
+## grid solver
+#gr_bhPhysMACTW           = .true. # These two should always be true,
+#gr_bhPhysMACComm         = .true. # means gravity unit uses the gravity opening criterion
+#gr_bhTreeLimAngle        = 0.5    # when Grav walks the tree. - JW
+#gr_bhTreeSafeBox         = 1.2
+## WARNING! Using unified tree walk results in LARGE errors
+## # after a refinement! - JW
+#gr_bhUseUnifiedTW        = .false. ###### MAKE IT FALSE! .true.
+#gr_bhTWMaxQueueSize      = 10000
+#
+## Here's the fastest from Wunsch's paper. 
+## gravity
+#grv_bhNewton            = -1.0
+#grv_bhMAC               = "ApproxPartialErr" #"MaxPartialErr"
+#grv_bhMPDegree          = 2
+#grv_bhUseRelAccErr      = .false.
+#grv_bhAccErr            = 1e-2
+## gravity, Ewald field
+#grv_bhEwaldAlwaysGenerate = .true.
+#grv_bhEwaldSeriesN        = 10
+## Wunsch's paper, Sec 2.2.5 "second approach"
+#grv_bhEwaldFName          = "ewald_field"
+#grv_bhEwaldNPer           = 32
+### Wunsch's paper, Sec 2.2.5 "first approach", toggled by setup variable
+##grv_bhEwaldFNameAccV42    = "ewald_field_V42"
+##grv_bhEwaldFieldNxV42     = 64
+##grv_bhEwaldFieldNyV42     = 64
+##grv_bhEwaldFieldNzV42     = 64
+##grv_bhEwaldNRefV42        = -1
+##grv_bhLinearInterpolOnlyV42 = .true.
+
 
 # ===================================================
 # heating and cooling
@@ -302,7 +422,7 @@ mg_printNorm       = .false.
 useHeat        = T #F
 
 he_abundM = 0.0
-he_metal  = 4.
+he_metal  = 0.0
 #he_abundM = 0.1  # 0.1 for solar
 #he_metal = 4.21676774992 # mu, solar metallicity gas, Taken from Cloudy.
 
@@ -343,7 +463,7 @@ stratifyHeat = .false.
 h_uv      = 9.25703274e20
 
 # Background FUV in Habing units (Draine field is 1.69).
-Gzero = 1.69e0
+Gzero = 0.0
 
 #///////////////////////////
 ## All new CR stuff by Josh
@@ -358,7 +478,7 @@ Gzero = 1.69e0
 ## formula needs column densities greater than 10^25 N_H that I never see.
 ## There, I warned you! - JW
 ##///////////////////////////
-use_cr_heating = .true.
+use_cr_heating = .false.
 
 ## W98
 crIonRate      = 2.0e-17
@@ -375,78 +495,29 @@ crIonEnergy    = 20.0e0  # Average energy per proton CR.
 #   molecular + dust cooling
 #///////////////////
 
-useDustCool = .true. #
-T_cool_min  = 10.0 #Neufeld goes down to 10.
-nd_cool_min = 1e1 #2.7355645e4 #density range for dust and molecular cooling
+useDustCool = .false. #
+T_cool_min  = 1e10 #Neufeld goes down to 10.
+nd_cool_min = 1e10 #2.7355645e4 #density range for dust and molecular cooling
 nd_cool_max = 1e10
 # Use the sputtering temperature to turn off heating instead of
 # he_theatmax?
 dust_sputter_temp = 3e5 # See fig 25.4 in Draine's book
 
-## Parameters commonly changed by the user for the VETTAM module. If used please cite S. Menon et al. 2022 (MNRAS 512, 401–423)
-## Torch needs only the EUV and FUV bands, so the only parameters set here are the ones relevant to the EUV and FUV bands.
-## As of 13.03.2026, the parameters relevant to the other bands (incl. the IR band) are left as default. If we eventually implement
-## IR radiation pressure in Torch, we will need to add the relevant parameters below.
-#==========================================
-#
-# VETTAM Parameters
-#
-useRadTrans           = .true. #Use VETTAM
-rt_rtol             = 1.e-2 #Tolerance of implicit radiation update solve
-rt_dtol             = 1.e10 #Maximum relative change permitted per iteration
-rt_maxits           = 2000 #Maximum iterations before attempting subcycling
-rt_update_hydro     = .true. 
-rt_hydro_type       = 1 #Only relevant for IR band
-
-# Ray-Tracer Parameters (This is important only if VET closure used)
-useRayTrace           = .true. # Set true if using the VET closure (default)
-# Healpix stuff
-rt_healpix_nSide      = 2 # 2 is standard; must be multiple of 2 (recommended; higher-> more accurate, slower)
-rt_healpix_randomize  = 1 # Randomize the healpix tesselation -- highly recommended to keep as 1
-rt_nrOfAngleGroups    = 1 # If failing in raytrace step, raise this value; this affects mem consumption (use more for less mem > see raytrace*.log)
-
-# Sink Injection Properties
-sigma_star           = 1.0 #Gaussian source size in units of dx for sink radiation injection. Do not go below 0.5 as the energy difference between cells becomes too large resulting in energy loss. 
-noSink_VETTAM = .true.  #Flag to set whether VETTAM should be on even if there are no sinks; if no source of background radiation, can save you time
-noStar_VETTAM = .false.  #Flag to set whether VETTAM should be on even if there are no stars; reccomended to keep off to speed up runs before star formation 
-
-# Moment method closure - "edd", "m1", or "vet" (Note: M1 probably has bugs, wouldn't recommend in current version)
-rt_etens      = "vet"
-
-rt_linearsolver = "gmres"
-
-# Frequency bands (max:5). Implemented ones are: EUV, FUV, LW, PE, EUV_13P6_15P2, EUV_15P2_INFTY
-# I have assumed Torch needs only EUV (i.e. LyC) and FUV
-rt_freqbands = 2
-rt_band1 = "FUV"
-rt_band2 = "EUV"
-
-# Dust Opacities
-dust_opacity_fuv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
-dust_opacity_euv = "Fixed" #Fixed value (options are fixed or scattering (i.e. only flux-opacity, not energy/Planck-opacity))
-dust_euvopac_value = 1.25e3 #600.0 # to match sigDust; 1.25e3 #1250 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
-dust_fuvopac_value = 600.0 # this matches sigDust; 600 cm^2/g (appropriate for a fully-sampled star cluster with a Kroupa IMF; Kim+2023)
-dusttoGasRatio = 1.0 #Dust to gas ratio scaled to the solar value; opacities are scaled by this value
-
-# Ionization stuff
-ion_sigmaH = 3.6e-18 #Cross section of H atoms to EUV Photons
-useEUVIonize = .true. # Switch on hydrogen ionization
-useH2Ionize = .false. #I am assuming you don't have H2; this shouldnt matter anyways if the H2_SPEC is not defined. But in case it is keep this off if you don't want H2 ionization
-
-# MARSHAK BCS -- FIXES NON-CONVERGENCE IN FUV BAND! -BP.5.10.25
-xl_rad_bc                   =          6
-xr_rad_bc                   =          6
-yl_rad_bc                   =          6
-yr_rad_bc                   =          6
-zl_rad_bc                   =          6
-zr_rad_bc                   =          6
-
-#rt_debug = .true.
-
+#rt_heatInRad = .false.
 # ================================================
-# Parameters for ionization/heating/cooling
+# radiative transfer options
+#
+# physics/RadTrans/RadTransMain
+# physics/RadTrans/RadTransMain/RayRad
+# Particles/ParticlesMain/ray_pe/MultiSourceSimple
 # ================================================
+# two switches, if ionisation state has to be calculated
+# without radiation from point sources
+useRadTrans    = T
 rt_rayTrace    = T
+
+# NOTE: useRadTrans and useRadTransfer do distinct things
+useRadTransfer = T
 
 rt_maxHchange = 0.1  # this number shouldn't be doing anything now. -JW
 rt_ion_threshold = 0.1  # this replaces rt_maxHchange
@@ -460,12 +531,23 @@ rt_neutral_min = 1e-10
 # first timestep after a feedback star is put on the grid. -BP 19Jan23
 rt_dt_temp     = 1.0e5
 
+ph_sampling     = 2.0
+ph_initHPlevel  = 2
+ph_inBlockSplit = T
+ph_rotRays      = T
+ph_maxNRays     = 1000000 #300000
+ph_raysToBundle = 5
+ph_CommCheckInterval = 20
+ph_radPressure  = T
+
 # cfl factor used to limit velocity of radiation pressure, used as a limiter of 
 # first timestep after a feedback star is put on the grid. -BP 19Jan23
 cfl_radPressure = 0.3
 
-sigDust         = 1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
-dust_gas_ratio  = 0.01  # 1% dust
+early_term_FUV  = F
+sigDust         = 0.0 #1e-21 # Cross section of dust per hydrogen nulcei, from Draine review 2011
+dust_gas_ratio  = 0.00  # 1% dust
+ph_EUVonDust    = F     # Should EUV (E > 13.6 eV) photons be allowed to interact with dust?
 
 rt_useRadTransDt = .true.
 # Use the feedback safety timestep on start or restart?
@@ -484,7 +566,7 @@ rt_numStepsRadTransDt = 10  # how many safe steps to take
 # that the wind bubble is 'resolved'
 # I find 3.5*sqrt(3)*dx is good (about 5 cells),
 # which is the default if this is set to -1.0. - JW
-ref_radius = -1.0 
+ref_radius = -1.0 #1.8268e17
 
 # Min injection radius.
 min_radius = 0.0

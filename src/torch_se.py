@@ -498,13 +498,11 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     # make list of remnant stars so we don't explode them again
     remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
 
-    # CCC 26/04/2024
-    # Structure changed to use evolve_model to evolve all stars at the same time
+    # Use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
-    # binary evolution - CCC 04/11/2023
-    state.stars_to_se.copy() # CCC 25/07/2024
+    # binary evolution - CCC 26/04/2024
+    state.stars_to_se.copy()
     se.evolve_model(se_time)
-    #se.particles.evolve_for(dt) #se_time, dt
     state.se_to_stars.copy()
     
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
