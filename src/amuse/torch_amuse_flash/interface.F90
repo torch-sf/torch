@@ -6718,7 +6718,7 @@ FUNCTION set_particle_rotvel(tags, rotvel, nparts)
     do j=1, nparts
       do i=1, localnpf
         if(particles_global(iptag,i).eq.tags(j))then
-          particles_global(ROTVEL_PART_PROP, i) = corem(j)
+          particles_global(ROTVEL_PART_PROP, i) = rotvel(j)
         endif
       enddo
     enddo
