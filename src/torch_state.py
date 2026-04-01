@@ -29,7 +29,6 @@ class TorchState(object):
         
         # "Global" AMUSE-level data structures
         self.all_masses = {}
-        self.loop = {}
         self.stars = Particles(0)
         self.stars_next_id = 0  # to supply ID attribute for ph4
 
@@ -92,13 +91,6 @@ class TorchState(object):
 
         if self.restart:
 
-            loopfile = path.join(self.output_dir,
-                'torch_loop{:04d}.pickle'.format(self.chknum))
-
-            with open(loopfile, 'rb') as f:                          #Added b to avoid unicode errors, CCC 03/2021
-                self.loop = pickle.load(f, encoding='latin1')        #Added encoding to restart python2 with python3, CCC 27/01/2022
-            tprint("Loaded torch loop state from "+loopfile)
-
             if not refresh:
 
                 rstatefile = path.join(self.output_dir,
@@ -122,29 +114,26 @@ class TorchState(object):
                 with open(massesfile, 'rb') as f:                       #Added b, CCC 03/2021
                     self.all_masses = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 tprint("Loaded all_masses dictionary from "+massesfile)
-                
-                # Adding these to permit primordial binaries -CCC, May 3, 2020
-                with open(systemsfile, 'rb') as f:                          #Added b, CCC 03/2021
-                    self.system_masses = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022 
-                tprint("Loaded system_masses dictionary from "+systemsfile)
-                
-                with open(positionsfile, 'rb') as f:                        #Added b, CCC 03/2021
-                    self.all_positions = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022
-                tprint("Loaded all_positions dictionary from "+positionsfile)
-                
-                with open(velocitiesfile, 'rb') as f:                       #Added b, CCC 03/2021
-                    self.all_velocities = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
-                tprint("Loaded all_velocities dictionary from "+velocitiesfile)
+
+                if self.user['binaries']:
+                    # Adding these to permit primordial binaries -CCC, May 3, 2020
+                    with open(systemsfile, 'rb') as f:                          #Added b, CCC 03/2021
+                        self.system_masses = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022 
+                    tprint("Loaded system_masses dictionary from "+systemsfile)
+                    
+                    with open(positionsfile, 'rb') as f:                        #Added b, CCC 03/2021
+                        self.all_positions = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    tprint("Loaded all_positions dictionary from "+positionsfile)
+                    
+                    with open(velocitiesfile, 'rb') as f:                       #Added b, CCC 03/2021
+                        self.all_velocities = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    tprint("Loaded all_velocities dictionary from "+velocitiesfile)
 
             else:
 
                 tprint("WARNING: Refreshing random state with a new seed.")
 
         else:
-
-            # state from "previous" loop, so gets incremented
-            self.loop['it'] = 0
-            self.loop['dt'] = 0.0 | units.s
 
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
@@ -165,12 +154,14 @@ class TorchState(object):
 
         # Force a checkpoint to be written, CCC 09/03/2023
         # Torch state files
-        self.out_loop()
         self.out_mass()
-        self.out_system()
-        self.out_position()
-        self.out_velocity()
         self.out_rnd()
+
+        # these outputs only needed by binaries
+        if self.user['binaries']:
+            self.out_system()
+            self.out_position()
+            self.out_velocity()
 
         hy_chknum = self.hydro.IO_out('chk')
         # Check if a checkpoint would have been written at the end of the step, and update nums accordingly
@@ -190,13 +181,13 @@ class TorchState(object):
         # If a checkpoint file was written, dump all Torch state files
         # conditional allows for possibility of rolling chk
         if hy_chknum != self.chknum:
-            self.out_loop()
             self.out_mass()
-        # Adding the three below to include primordial binaries -CCC, May 3, 2020
-            self.out_system()
-            self.out_position()
-            self.out_velocity()
             self.out_rnd()
+            if self.user['binaries']:
+            # Adding the three below to include primordial binaries -CCC, May 3, 2020
+                self.out_system()
+                self.out_position()
+                self.out_velocity()
             self.chknum = hy_chknum
 
         hy_pltnum = self.hydro.IO_out('pltpart')
@@ -207,14 +198,6 @@ class TorchState(object):
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
-
-    def out_loop(self):
-        """Write dict with bridge loop state to pickle"""
-        fname = path.join(self.output_dir,
-                          "torch_loop{:04d}.pickle".format(self.chknum))
-        with open(fname, 'wb') as f:
-            pickle.dump(self.loop, f)
-        tprint("*** Wrote bridge loop state to {:s} ****".format(fname))
 
     def out_mass(self):
         """Write dict with all future stars to pickle"""
