@@ -840,6 +840,42 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.result_type = 'i'
         return function
 
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def set_particle_period():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('period', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def set_particle_massratio():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('massratio', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i', direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def set_particle_binylds():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('binylds', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
@@ -1010,7 +1046,43 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
-
+        
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def get_particle_period():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('period', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def get_particle_massratio():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('massratio', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    @legacy_function
+    def get_particle_binylds():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('binylds', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     @legacy_function
     def get_particle_sigh():
         function = LegacyFunctionSpecification()
@@ -1864,6 +1936,28 @@ class Flash(CommonCode):
             (length/time, object.ERROR_CODE)
         )
 
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'get_particle_period',
+            (object.INDEX), 
+            (time, object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'get_particle_massratio',
+            (object.INDEX), 
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'get_particle_binylds',
+            (object.INDEX), 
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         object.add_method(
             'get_particle_sigh',
             (object.INDEX),
@@ -1948,6 +2042,29 @@ class Flash(CommonCode):
             (object.ERROR_CODE)
         )
 
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'set_particle_period',
+            (object.INDEX, time),
+            (object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'set_particle_massratio',
+            (object.INDEX, object.NO_UNIT),
+            (object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        object.add_method(
+            'set_particle_binylds',
+            (object.INDEX, object.NO_UNIT),
+            (object.ERROR_CODE)
+        )
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        
         object.add_method(
             'set_particle_sigh',
             (object.INDEX, length*length),
@@ -2295,6 +2412,12 @@ class Flash(CommonCode):
                     'set_particle_radius',
                     'get_particle_rotvel',
                     'set_particle_rotvel',
+                    'get_particle_period', # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    'set_particle_period',
+                    'get_particle_massratio', # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    'set_particle_massratio',
+                    'get_particle_binylds', # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    'set_particle_binylds',
                     'get_particle_sigh',
                     'set_particle_sigh',
                     'set_particle_npep',

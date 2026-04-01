@@ -4519,6 +4519,278 @@ FUNCTION get_particle_rotvel(tags,rotvel,nparts)
   get_particle_rotvel=0
 END FUNCTION
 
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+FUNCTION get_particle_period(tags,period,nparts)
+  ! Get the particle period by tag.
+  integer :: get_particle_period
+  integer :: nparts, MyPe
+  integer :: i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: period, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        period(i) = particles_pointer(PERIOD_PART_PROP, QSindex(j))
+      else
+        j = oldj
+        period(i) = 0.0
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  else
+    period = 0.0
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, period, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, MyPe)
+  call pt_sinkGatherGlobal()
+  
+  if(MyPe.eq.0) then
+  
+    allocate(QSindex(localnpf))
+    allocate(id_sorted(localnpf))
+  
+    do p = 1, localnpf
+      id_sorted(p) = int(particles_global(iptag,p),8)
+    enddo
+  
+    call NewQsort_IN(id_sorted, QSindex)
+  
+    if(nparts.eq.localnpf)then
+      do i=1, localnpf
+        period(i) = particles_global(PERIOD_PART_PROP, QSindex(i))
+      enddo
+    else
+      do j=1, nparts
+        do i=1, localnpf
+          if (particles_global(iptag,i) .eq. tags(j)) then
+            period(j) = particles_global(PERIOD_PART_PROP, i)
+          endif
+        enddo
+      enddo
+    endif
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  end if
+
+#endif
+
+  get_particle_period=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+FUNCTION get_particle_massratio(tags,massratio,nparts)
+  ! Get the particle massratio by tag.
+  integer :: get_particle_massratio
+  integer :: nparts, MyPe
+  integer :: i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: massratio, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        massratio(i) = particles_pointer(MASSRATIO_PART_PROP, QSindex(j))
+      else
+        j = oldj
+        massratio(i) = 0.0
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  else
+    massratio = 0.0
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, massratio, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, MyPe)
+  call pt_sinkGatherGlobal()
+  
+  if(MyPe.eq.0) then
+  
+    allocate(QSindex(localnpf))
+    allocate(id_sorted(localnpf))
+  
+    do p = 1, localnpf
+      id_sorted(p) = int(particles_global(iptag,p),8)
+    enddo
+  
+    call NewQsort_IN(id_sorted, QSindex)
+  
+    if(nparts.eq.localnpf)then
+      do i=1, localnpf
+        massratio(i) = particles_global(MASSRATIO_PART_PROP, QSindex(i))
+      enddo
+    else
+      do j=1, nparts
+        do i=1, localnpf
+          if (particles_global(iptag,i) .eq. tags(j)) then
+            massratio(j) = particles_global(MASSRATIO_PART_PROP, i)
+          endif
+        enddo
+      enddo
+    endif
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  end if
+
+#endif
+
+  get_particle_massratio=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+FUNCTION get_particle_binylds(tags,binylds,nparts)
+  ! Get the particle binylds by tag.
+  integer :: get_particle_binylds
+  integer :: nparts, MyPe
+  integer :: i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: binylds, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        binylds(i) = particles_pointer(BINYLDS_PART_PROP, QSindex(j))
+      else
+        j = oldj
+        binylds(i) = 0.0
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  else
+    binylds = 0.0
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, binylds, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, MyPe)
+  call pt_sinkGatherGlobal()
+  
+  if(MyPe.eq.0) then
+  
+    allocate(QSindex(localnpf))
+    allocate(id_sorted(localnpf))
+  
+    do p = 1, localnpf
+      id_sorted(p) = int(particles_global(iptag,p),8)
+    enddo
+  
+    call NewQsort_IN(id_sorted, QSindex)
+  
+    if(nparts.eq.localnpf)then
+      do i=1, localnpf
+        binylds(i) = particles_global(BINYLDS_PART_PROP, QSindex(i))
+      enddo
+    else
+      do j=1, nparts
+        do i=1, localnpf
+          if (particles_global(iptag,i) .eq. tags(j)) then
+            binylds(j) = particles_global(BINYLDS_PART_PROP, i)
+          endif
+        enddo
+      enddo
+    endif
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  end if
+
+#endif
+
+  get_particle_binylds=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 
 FUNCTION set_particle_position(tags,x,y,z,nparts)
 
@@ -6718,7 +6990,7 @@ FUNCTION set_particle_rotvel(tags, rotvel, nparts)
     do j=1, nparts
       do i=1, localnpf
         if(particles_global(iptag,i).eq.tags(j))then
-          particles_global(ROTVEL_PART_PROP, i) = corem(j)
+          particles_global(ROTVEL_PART_PROP, i) = rotvel(j)
         endif
       enddo
     enddo
@@ -6734,6 +7006,264 @@ FUNCTION set_particle_rotvel(tags, rotvel, nparts)
 
   set_particle_rotvel=0
 END FUNCTION
+
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+FUNCTION set_particle_period(tags, period, nparts)
+  ! Set the period of a star.
+  integer :: set_particle_period
+  integer :: nparts
+  double precision :: period(nparts), tags(nparts)
+  integer :: i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        particles_pointer(PERIOD_PART_PROP, QSindex(j)) = period(i)
+      else
+        j = oldj
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  if(nparts.eq.localnpf)then
+    do i=1, localnpf
+      particles_global(PERIOD_PART_PROP, QSindex(i)) = period(i)
+    enddo
+  else
+    do j=1, nparts
+      do i=1, localnpf
+        if(particles_global(iptag,i).eq.tags(j))then
+          particles_global(PERIOD_PART_PROP, i) = period(j)
+        endif
+      enddo
+    enddo
+  endif
+
+  do i=1, localnp
+    particles_local(PERIOD_PART_PROP,i) = particles_global(PERIOD_PART_PROP, i)
+  enddo
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+  set_particle_period=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+FUNCTION set_particle_massratio(tags, massratio, nparts)
+  ! Set the massratio of a star.
+  integer :: set_particle_massratio
+  integer :: nparts
+  double precision :: massratio(nparts), tags(nparts)
+  integer :: i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        particles_pointer(MASSRATIO_PART_PROP, QSindex(j)) = massratio(i)
+      else
+        j = oldj
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  if(nparts.eq.localnpf)then
+    do i=1, localnpf
+      particles_global(MASSRATIO_PART_PROP, QSindex(i)) = massratio(i)
+    enddo
+  else
+    do j=1, nparts
+      do i=1, localnpf
+        if(particles_global(iptag,i).eq.tags(j))then
+          particles_global(MASSRATIO_PART_PROP, i) = massratio(j)
+        endif
+      enddo
+    enddo
+  endif
+
+  do i=1, localnp
+    particles_local(MASSRATIO_PART_PROP,i) = particles_global(MASSRATIO_PART_PROP, i)
+  enddo
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+  set_particle_massratio=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+FUNCTION set_particle_binylds(tags, binylds, nparts)
+  ! Set the binylds of a star.
+  integer :: set_particle_binylds
+  integer :: nparts
+  double precision :: binylds(nparts), tags(nparts)
+  integer :: i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        particles_pointer(BINYLDS_PART_PROP, QSindex(j)) = binylds(i)
+      else
+        j = oldj
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  if(nparts.eq.localnpf)then
+    do i=1, localnpf
+      particles_global(BINYLDS_PART_PROP, QSindex(i)) = binylds(i)
+    enddo
+  else
+    do j=1, nparts
+      do i=1, localnpf
+        if(particles_global(iptag,i).eq.tags(j))then
+          particles_global(BINYLDS_PART_PROP, i) = binylds(j) ! Maybe problematic - review %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+        endif
+      enddo
+    enddo
+  endif
+
+  do i=1, localnp
+    particles_local(BINYLDS_PART_PROP,i) = particles_global(BINYLDS_PART_PROP, i)
+  enddo
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+  set_particle_binylds=0
+END FUNCTION
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 
 FUNCTION set_particle_wind_mass(tags, dmdt, nparts)

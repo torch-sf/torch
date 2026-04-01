@@ -1,4 +1,5 @@
 from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import griddata
 
 import numpy as np
 import os

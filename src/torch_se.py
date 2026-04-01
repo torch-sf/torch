@@ -119,6 +119,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
         if s.tag in remnants or s.initial_mass < min_feedback_mass:
             continue
 
+            
         if with_sn and went_supernova(s.stellar_type):
 
             inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
@@ -177,36 +178,58 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 npe[i] = _tmp[1]
                 sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
             if with_winds:
+                
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                           massloss_method=massloss_method)
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
 
                 if state.yields is not None:
-                    wind_yields = np.ones(num_tracers)
-                    for itrac, tracer in enumerate(state.yields.tracer_fields):
-                        if tracer == 'wind':
-                            wind_yields[itrac] = 1.0
-                        elif tracer == 'ccsn':
-                            wind_yields[itrac] = 0.0
-                        elif tracer == 'ignore':
-                            wind_yields[itrac] = -1.0
-                        elif tracer in state.yields.elements:
-                            wind_yields[itrac] = state.yields.wind_yields(
-                                    elements=tracer,
-                                    mass=s.initial_mass.value_in(units.MSun),
-                                    metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s),
-                                    interpolate='linear')[0] \
-                                / state.yields.wind_mloss(
-                                    mass=s.initial_mass.value_in(units.MSun),
-                                    metal=s.initial_metal,
-                                    rot=s.rotvel.value_in(units.km/units.s),
-                                    interpolate='linear')[0]
-                        else:
-                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+                    # Or could do the binary yield check here, after checking yields in general. Though have to rewrite dmdt and vterm then
+                    # if with_binary_yields:
 
-                    dy_dt[i] = dm_dt[i]*wind_yields
+                    tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
+                    if s.binylds:
+                        tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
+                        
+                        # timescale check ...
+
+                        # re-calculate dmdt and vterm ...
+                        
+                        # yield injection stuff ...
+            
+                        # Update flag, now that have injected, won't anymore
+                        s.binylds = 0
+                        tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
+    
+                    # else
+                    else:
+                        tprint('star is now injecting normal single-star wind yields')
+                        
+                        wind_yields = np.ones(num_tracers)
+                        for itrac, tracer in enumerate(state.yields.tracer_fields):
+                            if tracer == 'wind':
+                                wind_yields[itrac] = 1.0
+                            elif tracer == 'ccsn':
+                                wind_yields[itrac] = 0.0
+                            elif tracer == 'ignore':
+                                wind_yields[itrac] = -1.0
+                            elif tracer in state.yields.elements:
+                                wind_yields[itrac] = state.yields.wind_yields(
+                                        elements=tracer,
+                                        mass=s.initial_mass.value_in(units.MSun),
+                                        metal=s.initial_metal,
+                                        rot=s.rotvel.value_in(units.km/units.s),
+                                        interpolate='linear')[0] \
+                                    / state.yields.wind_mloss(
+                                        mass=s.initial_mass.value_in(units.MSun),
+                                        metal=s.initial_metal,
+                                        rot=s.rotvel.value_in(units.km/units.s),
+                                        interpolate='linear')[0]
+                            else:
+                                raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+    
+                        dy_dt[i] = dm_dt[i]*wind_yields
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
@@ -229,6 +252,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     if state.yields is not None:
+        hydro.set_particle_binylds(state.stars.tag, state.stars.binylds)
         for itrac in range(num_tracers):
             hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
             hydro.set_particle_tracer_dydt(state.stars.tag, dy_dt[:,itrac].as_quantity_in(units.g/units.s))

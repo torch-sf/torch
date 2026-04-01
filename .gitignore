@@ -62,3 +62,4 @@ tags
 *.tar
 *.GZ
 *.TAR
+data/yield_tables/

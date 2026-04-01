@@ -74,6 +74,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     # Properties used for yields
     if state.yields is not None:
         rotvel   = hydro.get_particle_rotvel(newtags)
+        # Later add an if here for binary yields
+        period   = hydro.get_particle_period(newtags) # %%%%%%%%%%%%%%%%%%%%%
+        massratio   = hydro.get_particle_massratio(newtags) # %%%%%%%%%%%%%%%%%%%%%
+        binylds   = hydro.get_particle_binylds(newtags) # %%%%%%%%%%%%%%%%%%%%%
         if 'Z' in state.yields.tracer_fields:
             metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
             hydro.set_tracer_field_pointer(metal_idx+1) # Fortran style counting (start on 1)
@@ -101,6 +105,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     if state.yields is not None:
         add_star.rotvel        = rotvel
         add_star.initial_metal = initial_metal
+        # Later add an if here for binary yields
+        add_star.period        = period # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        add_star.massratio     = massratio # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        add_star.binylds       = binylds # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     # Set stellar type and radius - CCC 06/11/2024
@@ -365,6 +373,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             if state.yields is not None:
                 # For yields tables (assumes solar metallicity)
                 star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
+                # Later add an if here for binary yields
+                # In reality would need to sample some distributions for these values, but for now just this to test - EL
+                star.period = 1.0 | units.s # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                star.massratio = 1.0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                star.binylds = 0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -374,6 +387,11 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
             if state.yields is not None:
                 hydro.set_particle_rotvel(star_tag, star.rotvel)
+                # Later add an if here for binary yields
+                hydro.set_particle_period(star_tag, star.period) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                hydro.set_particle_massratio(star_tag, star.massratio) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                hydro.set_particle_binylds(star_tag, star.binylds) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                
 
             if num_tracers > 0:
                 for itrac in range(num_tracers):
