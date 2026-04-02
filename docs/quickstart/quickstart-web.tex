@@ -425,6 +425,36 @@ tar xzf FLASH4.6.2.tar.gz
 export FLASH_DIR=${PWD}/FLASH4.6.2
 \end{lstlisting}
 
+Running the most up-to-date version of Torch, with the VETTAM radiation solver, requires PETSc 3.19.x. 
+Some HPC systems have the correct version of PETSc available as a module; if this is the case, load
+PETSc and skip the step below. If the correct version of PETSc is not installed on your system,
+you can download and compile it as follows:
+
+\begin{lstlisting}[language=bash]
+cd torch_project
+wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.19.6.tar.gz
+tar -xvf petsc-3.19.6.tar.gz
+cd petsc-3.19.6
+./configure --with-cc=mpicc --with-cxx=mpic++ --with-fc=mpif90
+\end{lstlisting}
+
+You may need to specify the location of your HDF5 directory with the \texttt{--with-hdf5-dir} flag.
+Once PETSc is compiled, the script will print instructions to make the code. Those will likely be
+as follows:
+
+\begin{lstlisting}[language=bash]
+make PETSC_DIR=torch_project/petsc-3.19.6 PETSC_ARCH=arch-linux-c-debug all
+make PETSC_DIR=torch_project/petsc-3.19.6 PETSC_ARCH=arch-linux-c-debug check
+\end{lstlisting}
+
+To ensure that Torch can find PETSc, add the following lines to your \texttt{Torch.env} file:
+
+\begin{lstlisting}[language=bash]
+export PETSC_DIR=torch_project/petsc-3.19.6 
+export PETSC_ARCH=arch-linux-c-debug all
+export LD_LIBRARY_PATH=${PETSC_DIR}/${PETSC_ARCH}/lib:$LD_LIBRARY_PATH
+\end{lstlisting}
+
 Next, we can download Torch, and set \texttt{TORCH\_DIR}:
 
 \begin{lstlisting}[language=bash]
@@ -457,15 +487,31 @@ module load HDF5/1.14.6-gompi-2025a
 module load make/4.4.1-GCCcore-14.2.0
 module load Python/3.13.1-GCCcore-14.2.0
 
+. /path/to/torch_project/Torch-env/bin/activate
+
+export PETSC_DIR=torch_project/petsc-3.19.6 
+export PETSC_ARCH=arch-linux-c-debug all
+export LD_LIBRARY_PATH=${PETSC_DIR}/${PETSC_ARCH}/lib:$LD_LIBRARY_PATH
+
 FLASH_DIR=/path/to/FLASH4.6.2
 TORCH_DIR=/path/to/torch
-
-. /path/to/torch_project/Torch-env/bin/activate
 
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 \end{lstlisting}
 
-With Torch installed into FLASH, we can now go to the FLASH directory and configure it:
+With Torch installed into FLASH, we can now go to the FLASH directory and configure it. We recommend
+running with the VETTAM radiation solver:
+
+%\begin{lstlisting}[language=bash]
+%cd $FLASH_DIR
+%./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
+%+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
+%\end{lstlisting}
+
+You may also configure FLASH with the FERVENT radiation solver. It is significantly slower than VETTAM
+for large numbers of sources, and we recommend that new users use VETTAM instead. If you want to use
+FERVENT, for example to continue simulations run with a previous version of Torch, you can configure 
+FLASH with:
 
 \begin{lstlisting}[language=bash]
 cd $FLASH_DIR
@@ -483,6 +529,12 @@ cd $TORCH_DIR
 make -C src/amuse/torch_amuse_flash develop-torch-amuse-flash
 \end{lstlisting}
 
+If you are recompiling after a failed attempt, make sure to clean the directory first:
+
+\begin{lstlisting}[language=bash]
+cd $TORCH_DIR
+make -C src/amuse/torch_amuse_flash distclean
+\end{lstlisting}
 
 With that, your environment should contain a working Torch installation. Time to give
 it a try!
@@ -533,6 +585,12 @@ ln -s $TORCH_DIR/cube128
 cp $TORCH_DIR/torch_user.py                torch_user.py
 cp $TORCH_DIR/flash.par.turbsph_standard   flash.par
 mkdir data
+\end{lstlisting}
+
+If you are running with VETTAM, make sure to also link the following files:
+\begin{lstlisting}[language=bash]
+ln -s $TORCH_DIR/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/*.dat ./
+ln -s $TORCH_DIR/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/opacity.inp ./
 \end{lstlisting}
 
 The file \texttt{torch\_mainloop.py} is the heart of the simulation.  It
@@ -1148,6 +1206,8 @@ This list includes most major components, but is not comprehensive.
     \item Fervent (radiative transfer):
         \href{https://ui.adsabs.harvard.edu/abs/2015MNRAS.454..380B/abstract}{Baczynski+ 2015},
         \href{http://archiv.ub.uni-heidelberg.de/volltextserver/19189/}{Baczynski 2015, Ph.D thesis}
+    \item VETTAM (radiative transfer):
+        \href{https://ui.adsabs.harvard.edu/abs/2022MNRAS.512..401M/abstract}{Menon+ 2022}
     \item Multigrid (self-gravity):
         \href{https://ui.adsabs.harvard.edu/abs/2008ApJS..176..293R/abstract}{Ricker+ 2008}
     \item BHTree (self-gravity):
@@ -1594,7 +1654,7 @@ export MV2_ENABLE_AFFINITY=0
 \end{lstlisting}
 
 You can then create your virtual environment. Using a CONDA environment should also work, but the instructions below use a standard Python virtual environment.
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cd /home1/10548/cournoyc/TORCH
 python -m venv /home1/10548/cournoyc/TORCH/torch_env
 source /home1/10548/cournoyc/TORCH/torch_env/bin/activate 
@@ -1605,17 +1665,17 @@ pip install --no-cache-dir mpi4py
 \end{lstlisting}
 
 Now, you can install and configure Torch. You should start by running
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cd $TORCH_DIR
 ./install.sh
 \end{lstlisting}
 
 You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH\_DIR/sites}, run:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
 \end{lstlisting}
-Then in \texttt{\$FLASH_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
-\begin{lstlisting}
+Then in \texttt{\$FLASH\_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
+\begin{lstlisting}[language=bash]
 MPI_PATH   = ${MPI_HOME}
 HDF5_PATH   = ${HDF5_HOME}
 F90FLAGES = -fallow-argument-mismatch
@@ -1623,27 +1683,27 @@ CFLAGS_HDF5 = -I${TACC_HDF5_INC} -DH5_USE_16_API
 LIB_HDF5  = -L ${HDF5_HOME}/lib -Wl,-rpath,${TACC_HDF5_LIB} -lhdf5 -lhdf5_fortran -lz
 \end{lstlisting}
 and replace all instances of \texttt{mpifort} by \texttt{mpif90}. Also change \texttt{setcheckinterval} to \texttt{setswitchinterval} in \texttt{FLASH4.6.2/bin/setup.py}. After this, you can compile FLASH:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev +cube16 -maxblocks=50 --site=stampede3.tacc.utexas.edu
 cd object
 make 
 \end{lstlisting}
 
 Once you have successfully compiled FLASH, you can configure and build AMUSE. Go the AMUSE directory and un the following commands:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 ./configure  # It should find the correct paths on its own
 make framework
 \end{lstlisting}
 To install the AMUSE flash worker, set the following in \texttt{amuse/src/amuse/community/flash/Makefile}:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 opt:   FCFLAGS = -O3 -march=native -fallow-argument-mismatch
 \end{lstlisting}
 In \texttt{amuse/config.mk}, set:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
 \end{lstlisting}
 To install the AMUSE petar work, set the following in \texttt{amuse/src/amuse/community/petar/Makefile} (uncomment if commented out) and add the \texttt{-I} flag beofre \texttt{{\$INCLUDE}}:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 # arch
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -D INTRINSIC_X86
@@ -1651,12 +1711,12 @@ CXXFLAGS += -D USE_SIMD
 CXXFLAGS += -D DIV_FIX
 \end{lstlisting}
 From there, you can make the worker codes:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 make flash.code petar.code seba.code kepler.code smalln.code ph4.code
 \end{lstlisting}
 
 SLURM submit script:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 #!/bin/sh
 #SBATCH --job-name=test
 #SBATCH -N 1
