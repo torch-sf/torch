@@ -347,7 +347,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
             assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
 
-        spawn_masses     = state.all_masses[sink_tag][:i]
+        spawn_masses = state.all_masses[sink_tag][:i]
         if binaries:
             spawn_systems    = state.system_masses[sink_tag][:i]
             spawn_positions  = state.all_positions[sink_tag][:i]
@@ -361,7 +361,6 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
         if nnew == 0:
 
             tprint("... sink tag {} did not spawn stars".format(sink_tag))
-
 
         else:
 
@@ -394,7 +393,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             # so that stars' specific energy 1/2 <v**2> = (3/2)*sink_cs**2                                           
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3                                              
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
-
+            # with the maximum value corresponding to gas at T=100K
+            spawn_cs = sink_cs.value_in(units.cm/units.s)
+            if np.isnan(spawn_cs):
+                spawn_cs = 117200.0
             if binaries:
                 for j in range(len(star)):
                     spawn_position = spawn_positions[j]
@@ -404,16 +406,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
                     else:
                         random_pos = sink_rad*np.random.rand()*random_three_vector()
-                        random_vel = np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=3) | units.cm/units.s
+                        random_vel = np.random.normal(scale=spawn_cs, size=3) | units.cm/units.s
                         star[j].position = sink_pos + random_pos + (spawn_positions[j] | units.cm)
                         star[j].velocity = sink_vel + random_vel + (spawn_velocity | units.cm/units.s)
             else:
                 star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
-                if np.isnan(sink_cs.value_in(units.cm/units.s)):
-                    # with the maximum value corresponding to gas at T=100K
-                    star.velocity = sink_vel + (np.random.normal(117200.0, size=(nnew,3)) | units.cm/units.s)
-                else:
-                    star.velocity = sink_vel + (np.random.normal(scale=sink_cs.value_in(units.cm/units.s), size=(nnew,3)) | units.cm/units.s)
+                star.velocity = sink_vel + (np.random.normal(scale=spawn_cs, size=(nnew,3)) | units.cm/units.s)
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
