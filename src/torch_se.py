@@ -34,9 +34,6 @@ E_lyc = 13.6*E_ev  # 13.6 eV
 # Value = tau / N_H where tau = gamma * Av (Draine and Bertoli 96)
 # Av = N_H,tot / (1.87e21 cm^2) (Bohlin et al 78)
 # gamma = 2.5 (Bergin et al 2004)
-sigDust = 1e-21 | units.cm**2.0 # Cross section for dust from Draine 2011
-# TODO should sigDust be a user-controlled parameter? -AT, 2019oct14
-
 
 def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
@@ -145,7 +142,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 _tmp = compute_epe_npe(s.temperature, s.radius)
                 epe[i] = _tmp[0]
                 npe[i] = _tmp[1]
-                sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                sigpe[i] = state.user['sigd'] | units.cm**2
             if with_winds:
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                           massloss_method=massloss_method)
