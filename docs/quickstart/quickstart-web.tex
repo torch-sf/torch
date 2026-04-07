@@ -790,6 +790,55 @@ The default values (0.03 pc and 125 yr) are shown as the black star, and were ch
 \subsection{VETTAM Radiation Solver}
 \textbf{Additional documentation on the choice of VETTAM parameters to be added here before merging \texttt{develop} into \texttt{main}. If you are not familiar with VETTAM, use the defaults from \texttt{flash.par.turbsph\_standard}.}
 
+\subsection{Primordial Binaries}
+
+The primordial binaries implemented in this branch are based on observations compiled by Moe \& Di Stefano (2017) for solar-type and early-type stars, and on the observations by Winters et al. (2019, as corrected by Offner et al. 2023) 
+for low-mass stars. The sampling routine for binaries is stored in \texttt{primordial\_binaries.py}, which can be readily modified to allow for other prescriptions. The values in the present version however reflect the mass-dependent binary 
+fraction observed for main sequence stars, as well as the mass-dependent period distribution, and the mass- and period-dependent mass ratio and eccentricity distributions. Those distributions are shown in the plots below.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_frac.png}
+\label{fig:binary_frac}
+\caption{Binary fraction as a function of primary mass, based on the multiple star fractions reported in \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_period.png}
+\label{fig:binary_period}
+\caption{Binary period distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_mrat.png}
+\label{fig:binary_mass_ratio}
+\caption{Binary mass ratio distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} and 
+\href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}, and depend on both primary mass and orbital period.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_ecc.png}
+\label{fig:binary_eccentricity}
+\caption{Binary eccentricity distribution as a function of primary mass, from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)}.}
+\end{figure}
+
+To use primordial binaries in your simulations, the following parameters must be set in \texttt{torch\_user.py}:
+\begin{lstlisting}[language=python]
+p['binaries'] = True
+# Not used if binaries is false, can leave to default values                                                                
+p['mult_frac'] = 'field'  #Currently accepted method is 'field'.
+p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. 
+p['qdist'] = 'field' #Currently accepted method is 'field'. 
+p['edist'] = 'field' #Currently accepted method is 'field'. 
+\end{lstlisting}
+The recommended value for the period distribution is 'inner', which is designed to sample the inner companion in hierarchical triples while 'field' samples a random companion. The 'inner' distribution better reproduces the observed
+close binary population. This choice is most important for massive stars, which have both a large triple fraction and a large fraction of systems with close companions. 
+
 % ============
 % VorAMR Addon
 % ============
