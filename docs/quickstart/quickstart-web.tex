@@ -502,11 +502,11 @@ export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 With Torch installed into FLASH, we can now go to the FLASH directory and configure it. We recommend
 running with the VETTAM radiation solver:
 
-%\begin{lstlisting}[language=bash]
-%cd $FLASH_DIR
-%./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
-%+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
-%\end{lstlisting}
+\begin{lstlisting}[language=bash]
+cd $FLASH_DIR
+./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
++amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
+\end{lstlisting}
 
 You may also configure FLASH with the FERVENT radiation solver. It is significantly slower than VETTAM
 for large numbers of sources, and we recommend that new users use VETTAM instead. If you want to use
@@ -758,6 +758,11 @@ These setup flags are aliases for various FLASH units; the flags are defined in
 Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
 
+% ==========================
+% Additional physics modules
+% ==========================
+\section{Parameters Choices \& Default Values}
+
 % ============
 %     PeTar
 % ============
@@ -766,9 +771,73 @@ recompile the AMUSE worker too.
 Torch is now capable of using \texttt{PeTar} for stellar dynamics. This is recommended for all runs, but particularly for runs with $>5,000$ stars or runs containing many binaries such as those with primordial binaries. To use \texttt{PeTar}, set
 \begin{lstlisting}[language=python]
 p['with_petar'] = True
-p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+p['r_bin'] = 100 | units.au
+p['r_out'] = 0.03 | units.pc # outer radius for tree 
+p['dt_soft_max'] = 0.125 | units.kyr # maximum PeTar timestep
 \end{lstlisting}
-in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. 
+For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+\texttt{r\_out} and \texttt{dt\_soft\_max} must be set together, to ensure that dynamics are properly resolved at all separations. In the plot below, the different combinations have been chosen for
+binaries with masses 1 M$_{\odot}$ and 0.1 M$_{\odot}$, and correspond to the timestep and \texttt{r\_out} for which an orbit is resolved by 10 or 100 steps, at \texttt{r\_out} or \texttt{r\_in}.
+The recommended usage is to pick a combination of timestep and \texttt{r\_out} along or below the red line, which ensures that orbits with separation \texttt{r\_in} are resolved by 100 steps. 
+The default values (0.03 pc and 125 yr) are shown as the black star, and were chosen to match the upper limit of a FLASH timestep once feedback stars have formed, at a resolution around 0.1-0.2 pc.
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.7\textwidth]{fig/petar_dt.pdf}
+    \label{fig:petar_dt}
+\end{figure}
+
+\subsection{VETTAM Radiation Solver}
+\textbf{Additional documentation on the choice of VETTAM parameters to be added here before merging \texttt{develop} into \texttt{main}. If you are not familiar with VETTAM, use the defaults from \texttt{flash.par.turbsph\_standard}.}
+
+\subsection{Primordial Binaries}
+
+The primordial binaries implemented in this branch are based on observations compiled by Moe \& Di Stefano (2017) for solar-type and early-type stars, and on the observations by Winters et al. (2019, as corrected by Offner et al. 2023) 
+for low-mass stars. The sampling routine for binaries is stored in \texttt{primordial\_binaries.py}, which can be readily modified to allow for other prescriptions. The values in the present version however reflect the mass-dependent binary 
+fraction observed for main sequence stars, as well as the mass-dependent period distribution, and the mass- and period-dependent mass ratio and eccentricity distributions. Those distributions are shown in the plots below.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_frac.png}
+\label{fig:binary_frac}
+\caption{Binary fraction as a function of primary mass, based on the multiple star fractions reported in \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_period.png}
+\label{fig:binary_period}
+\caption{Binary period distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_mrat.png}
+\label{fig:binary_mass_ratio}
+\caption{Binary mass ratio distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} and 
+\href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}, and depend on both primary mass and orbital period.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_ecc.png}
+\label{fig:binary_eccentricity}
+\caption{Binary eccentricity distribution as a function of primary mass, from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)}.}
+\end{figure}
+
+To use primordial binaries in your simulations, the following parameters must be set in \texttt{torch\_user.py}:
+\begin{lstlisting}[language=python]
+p['binaries'] = True
+# Not used if binaries is false, can leave to default values                                                                
+p['mult_frac'] = 'field'  #Currently accepted method is 'field'.
+p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. 
+p['qdist'] = 'field' #Currently accepted method is 'field'. 
+p['edist'] = 'field' #Currently accepted method is 'field'. 
+\end{lstlisting}
+The recommended value for the period distribution is 'inner', which is designed to sample the inner companion in hierarchical triples while 'field' samples a random companion. The 'inner' distribution better reproduces the observed
+close binary population. This choice is most important for massive stars, which have both a large triple fraction and a large fraction of systems with close companions. 
 
 % ============
 % VorAMR Addon
