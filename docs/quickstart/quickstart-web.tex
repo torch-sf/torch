@@ -502,11 +502,11 @@ export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 With Torch installed into FLASH, we can now go to the FLASH directory and configure it. We recommend
 running with the VETTAM radiation solver:
 
-%\begin{lstlisting}[language=bash]
-%cd $FLASH_DIR
-%./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
-%+amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
-%\end{lstlisting}
+\begin{lstlisting}[language=bash]
+cd $FLASH_DIR
+./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
++amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
+\end{lstlisting}
 
 You may also configure FLASH with the FERVENT radiation solver. It is significantly slower than VETTAM
 for large numbers of sources, and we recommend that new users use VETTAM instead. If you want to use
