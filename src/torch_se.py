@@ -44,6 +44,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
+    assert state.user['max_gamma'] <= 1
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -449,6 +450,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     """
     assert massloss_method is not None
     assert min_feedback_mass is not None
+    assert state.user['max_gamma'] <= 1
     
     # Set radius to physical radius for restart with user ICs
     # This assumes the stars are ZAMS, which may be incorrect 
@@ -540,7 +542,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 sigpe[i] = state.user['sigd'] | units.cm**2
             if with_winds:
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                          massloss_method=massloss_method)
+                                          massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
 
@@ -579,7 +581,8 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     return se_dt
 
 
-def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massloss_method=None):
+def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, 
+                       massloss_method=None, max_gamma=1):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
     """
@@ -595,7 +598,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
         # Mass loss rates from SeBa with velocities from Kudritzki & Puls winds
         # Added by CCC, 27/11/2024
         dm_dt = (prev_mass - se_mass)/dt
-        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
+        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius, max_gamma)
         vterm = star_wind.vterm
 
     # Note that Leitherer and Puls calculations use the old mass
@@ -611,7 +614,7 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
 
     elif massloss_method == 'puls':
         # Kudritzki and Puls winds, see Kudritzki & Puls 2000, Markova & Puls 2004, 2008 and Vink 2000
-        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
+        star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius, max_gamma)
         dm_dt = star_wind.dm_dt
         vterm = star_wind.vterm
 
@@ -786,12 +789,13 @@ def lum_wl_per_ph(l, T):
 class PulsStellarWind(object):
     """Implementation of stellar winds based on Kudritzki and Puls ARAA 2000 and Vink A&A 2000."""
 
-    def __init__(self, teff, mass, lum, radius):
+    def __init__(self, teff, mass, lum, radius, max_gamma):
 
-        self.mass     = mass
-        self.lum      = lum
-        self.teff     = teff
-        self.radius   = radius
+        self.mass      = mass
+        self.lum       = lum
+        self.teff      = teff
+        self.radius    = radius
+        self.max_gamma = max_gamma
         self.thom_sig()
         self.thom_Gam()
         self.vesc()
@@ -811,7 +815,7 @@ class PulsStellarWind(object):
 
     def thom_Gam(self):
         self.thom_Gam = 7.66e-5*self.thom_sig/self.mass.value_in(units.MSun)*self.lum.value_in(units.LSun)
-        self.thom_Gam = min(self.thom_Gam, 0.8)
+        self.thom_Gam = min(self.thom_Gam, self.max_gamma)
         return
 
     def vesc(self):
