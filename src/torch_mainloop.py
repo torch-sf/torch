@@ -131,9 +131,13 @@ def initialize_workers():
         grav.parameters.force_sync = 1  # end exactly at requested time
         grav.parameters.timestep_parameter = 0.14  # timestep accuracy # TODO how was this chosen?! -AT,2019oct13
     elif USER['with_petar']:
-        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
+        grav = Petar(convert, number_of_workers=USER['num_grav_workers'], mode='cpu',
+                     redirection='file',
+                     redirect_stdout_file='petar_worker.out',
+                     redirect_stderr_file='petar_worker.err')
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
-        grav.parameters.r_out = USER['petar_rout']
+        grav.parameters.r_bin = USER['r_bin']
+        grav.parameters.r_out = USER['r_out']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -203,17 +207,21 @@ def evolve(state, hydro, grav, mult, se):
     # stellar evolution timestep (hack for SN)
     # TODO this really shuld be handled by HYDRO and not torch -AT, 2019Oct14
     se_dt = 1e99 | units.s
+    
+    num_stars = hydro.get_number_of_particles()
 
     # bridge loop control
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
+        # Get maximum dt from torch_user.py
+        dt_max = USER['dt_soft_max']
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        dt = dt_nbody
-    dt_old = dt
-
-    num_stars = hydro.get_number_of_particles()
+        if num_stars > 0:
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+        else: # Only enforce dt_soft_max if stars are formed
+            dt = dt_nbody
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -317,11 +325,11 @@ def evolve(state, hydro, grav, mult, se):
                     massloss_method   = USER['massloss_method'],
                     min_feedback_mass = USER['min_feedback_mass'],
                 )
-                tprint("... dt from stellar evol:", se_dt)  # IF we keep this python-level dt management, this probably should enter hydro dt right away... -AT, 2019 nov 26
-                
+
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
-                    state.stars_to_grav.copy_attributes(["mass", "radius"])  # AMUSE -> grav singles
+                    state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
+                    state.stars_to_grav.copy_attributes(["radius"])
                     if USER['with_multiples']:
                         mult.channel_from_code_to_memory.copy() # grav  -> multiples
                         state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
@@ -362,10 +370,11 @@ def evolve(state, hydro, grav, mult, se):
                         if pool_table_hydro and pool_table_hydro[-1] == it:
                             tprint("... hydro advanced")
                         elif pool_table_grav and pool_table_grav[-1] == it:
-                            tprint("... grav advanced")
-
+                                tprint("... grav advanced")
+                            
                         pool.wait()
                         tprint("... both grav and hydro advanced")
+
 
                 else:  # evolve models sequentially
 
@@ -386,7 +395,6 @@ def evolve(state, hydro, grav, mult, se):
                     tprint("grav-hydro time = ",grav.get_time()-hydro.get_time())
                     hydro.evolve_model(grav.get_time())
 
-
                 # sync position & velocity to stars + hydro from gravity code(s)
                 state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
                 if USER['with_multiples']:
@@ -395,6 +403,7 @@ def evolve(state, hydro, grav, mult, se):
                 hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
                 hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
 
+                                
             else: # num_stars=1
 
                 tprint("Evolving hydro without grav to reach t =", hy_time+dt)
@@ -437,15 +446,22 @@ def evolve(state, hydro, grav, mult, se):
         hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
-        queue_stars(state, hydro,
-            min_imf_mass=USER['min_imf_mass'],
-            max_imf_mass=USER['max_imf_mass'],
-            sample_imf_mass=USER['sample_imf_mass'],
-            sample_imf_bins=USER['sample_imf_bins'],
-            sum_small=USER['sum_small'],
-            m_small=USER['m_small']
-        )
-        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'])  # in hydro
+        # Change structure to write checkpoint if sink formed, CCC 26/04/2023
+        queued_stars = queue_stars(state, hydro,
+                                   min_imf_mass=USER['min_imf_mass'],
+                                   max_imf_mass=USER['max_imf_mass'],
+                                   sample_imf_mass=USER['sample_imf_mass'],
+                                   sample_imf_bins=USER['sample_imf_bins'],
+                                   sum_small=USER['sum_small'],
+                                   binaries=USER['binaries'],
+                                   mult_frac=USER['mult_frac'],
+                                   pdist=USER['pdist'],
+                                   qdist=USER['qdist'],
+                                   edist=USER['edist'] )
+        #Write checkpoint at sink formation to have a record of the binaries and stars to be formed, CCC 26/04/2023                                                                                     
+        if queued_stars:
+            state.force_output(overwrite=USER['overwrite'])
+        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'], binaries=USER['binaries'])  # in hydro
         if made_stars:
             add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
@@ -505,13 +521,18 @@ def evolve(state, hydro, grav, mult, se):
         if USER['with_petar']:
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
+            if num_stars > 0:
+                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+            else: # Only enforce dt_soft_max if stars are formed
+                dt = dt_nbody
+
         num_stars = hydro.get_number_of_particles()  # loop variable
 
         if USER['with_petar']:
             # only assert time-sync with PeTar if stars have formed
             if first_star==1:
                 assert abs(hy_time - gr_time) <= (1e4|units.s)
-                print("hydro-grav time = ",hy_time - gr_time)
+                #print("hydro-grav time = ",hy_time - gr_time)
         else:
             assert abs(hy_time - gr_time) <= (1e4|units.s)
         assert num_stars == len(state.stars)
@@ -620,7 +641,7 @@ def run_torch(user_initial_conditions, user_parameters):
     try:
 
         evolve(state, hydro, grav, mult, se)
-
+        
     finally:
         pass
         #hydro.timer_summary()

@@ -22,12 +22,29 @@ from torch_mainloop import run_torch
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
     n = None
-    with open(name) as f:
-        for line in f:
-            w = line.split()
-            if len(w) >= 3 and w[0] == '#SBATCH' and w[1] == '-n':
-                assert n is None  # throw error if #SBATCH -n occurs >1x
-                n = int(w[2])
+    nodes = None
+    cores = None
+    import os
+    # Check for slurm ntasks
+    n = int(os.getenv("SLURM_NTASKS"))
+    if n is None:
+        with open(name) as f:
+            for line in f:
+                w = line.split()
+                if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
+                    assert cores is None  # throw error if #SBATCH -n occurs >1x
+                    cores = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-N'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-n'):
+                    assert n is None
+                    n = int(''.join(char for char in w[1] if char.isdigit()))
+        if n is None:
+            n = nodes*cores
     assert n is not None
     return n
 
@@ -61,7 +78,6 @@ def user_initial_conditions(state, hydro):
     # with an evolved star.
     # ------------------------------------------------------------------------
 
-    return
 
 def user_parameters():
     """
@@ -115,7 +131,9 @@ def user_parameters():
     # <star/n-body gravity & binaries>
 
     p['with_petar'] = True
-    p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+    p['r_bin'] = 50 | units.au
+    p['r_out'] = 0.003 | units.pc #Change with below 
+    p['dt_soft_max'] = 0.125 | units.kyr
 
     # <stellar evolution>
 
@@ -126,9 +144,16 @@ def user_parameters():
     p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
     p['massloss_method'] = 'puls'
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['remove_merged'] = True # remove merged stars
 
     # <star particle creation>
 
+    p['binaries'] = False
+    #Not used if binaries is false, can leave to default values                                                                
+    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
+    p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
+    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.
+    p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100.0 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
@@ -152,6 +177,7 @@ def user_parameters():
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
+        p['epsilon'] = 0 | units.RSun
 
     if p['with_se']:
         p['num_hy_workers'] -= 1

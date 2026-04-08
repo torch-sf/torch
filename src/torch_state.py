@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import division, print_function
+
 
 import numpy as np
 from os import path, listdir
@@ -32,6 +32,11 @@ class TorchState(object):
         self.stars = Particles(0)
         self.stars_next_id = 0  # to supply ID attribute for ph4
 
+        # Adding these to permit primordial binaries -CCC, May 1, 2020
+        self.system_masses = {}
+        self.all_positions = {}
+        self.all_velocities = {}
+
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
 
@@ -60,10 +65,6 @@ class TorchState(object):
 
     def initial_io(self, overwrite, refresh=False):
         """Load restart files or write starting Torch state
-        Args:
-            overwrite: for data output,
-            ... overwrite AMUSE starXXXX.amuse files.
-            ... If False, assume usual AMUSE anti-overwrite behavior.
         Kwargs:
             refresh (False): for restarts,
             ... use new random number generator state.
@@ -97,20 +98,43 @@ class TorchState(object):
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'rb') as f:
-                    rnd_state = pickle.load(f)
+                # Addind these to permit binaries - CCC, May 3, 2020
+                systemsfile = path.join(self.output_dir,
+                    'system_masses{:04d}.pickle'.format(self.chknum))
+                positionsfile = path.join(self.output_dir,
+                    'all_positions{:04d}.pickle'.format(self.chknum))
+                velocitiesfile = path.join(self.output_dir,
+                    'all_velocities{:04d}.pickle'.format(self.chknum))
+
+                with open(rstatefile, 'rb') as f:                 #Added b, CCC 03/2021
+                    rnd_state = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'rb') as f:
-                    self.all_masses = pickle.load(f)
+                with open(massesfile, 'rb') as f:                       #Added b, CCC 03/2021
+                    self.all_masses = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
                 tprint("Loaded all_masses dictionary from "+massesfile)
+
+                if self.user['binaries']:
+                    # Adding these to permit primordial binaries -CCC, May 3, 2020
+                    with open(systemsfile, 'rb') as f:                          #Added b, CCC 03/2021
+                        self.system_masses = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022 
+                    tprint("Loaded system_masses dictionary from "+systemsfile)
+                    
+                    with open(positionsfile, 'rb') as f:                        #Added b, CCC 03/2021
+                        self.all_positions = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    tprint("Loaded all_positions dictionary from "+positionsfile)
+                    
+                    with open(velocitiesfile, 'rb') as f:                       #Added b, CCC 03/2021
+                        self.all_velocities = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    tprint("Loaded all_velocities dictionary from "+velocitiesfile)
 
             else:
 
                 tprint("WARNING: Refreshing random state with a new seed.")
 
         else:
+
             # This call will try to write chk/plt files.
             # FLASH shouldn't write chk/plt again, but hy_chknum != self.chknum
             # and hy_pltnum != self.pltnum, so we will write torch files.
@@ -121,6 +145,33 @@ class TorchState(object):
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
+    # Force a checkpoint (to use for stalls), CCC 09/03/2023
+    # Also used to ensure a checkpoint is written immediately after sink formation, CCC 04/05/2023
+    def force_output(self, overwrite):
+        """
+        Force write chk and full Torch state.
+        """
+
+        # Force a checkpoint to be written, CCC 09/03/2023
+        # Torch state files
+        self.out_mass()
+        self.out_rnd()
+
+        # these outputs only needed by binaries
+        if self.user['binaries']:
+            self.out_system()
+            self.out_position()
+            self.out_velocity()
+
+        hy_chknum = self.hydro.IO_out('chk')
+        # Check if a checkpoint would have been written at the end of the step, and update nums accordingly
+        if hy_chknum > self.chknum:
+            self.chknum = hy_chknum
+        else:
+            self.hydro.write_chpt()
+            self.chknum += 1
+
+                
     def output(self, overwrite):
         """Try to write chk and plt files; if FLASH chk written,
         also dump full Torch state to disk.
@@ -130,16 +181,19 @@ class TorchState(object):
         # If a checkpoint file was written, dump all Torch state files
         # conditional allows for possibility of rolling chk
         if hy_chknum != self.chknum:
-            tprint("*** wrote chk {:04d} ***".format(self.chknum))
             self.out_mass()
             self.out_rnd()
+            if self.user['binaries']:
+            # Adding the three below to include primordial binaries -CCC, May 3, 2020
+                self.out_system()
+                self.out_position()
+                self.out_velocity()
             self.chknum = hy_chknum
 
         hy_pltnum = self.hydro.IO_out('pltpart')
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
-            tprint("*** wrote plt {:04d} ***".format(self.pltnum))
             self.out_stars(overwrite)
             self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
@@ -151,6 +205,32 @@ class TorchState(object):
                           "all_masses{:04d}.pickle".format(self.chknum))
         with open(fname, 'wb') as f:
             pickle.dump(self.all_masses, f)
+        tprint("*** Wrote queued stars to {:s} ****".format(fname))
+
+    # Adding these to permit primordial binaries
+    def out_system(self):
+        """Write dict with all future system masses to pickle"""
+        fname = path.join(self.output_dir,
+                          "system_masses{:04d}.pickle".format(self.chknum))
+        with open(fname, 'wb') as f:
+            pickle.dump(self.system_masses, f)
+        tprint("*** Wrote queued system masses to {:s} ****".format(fname))
+
+    def out_position(self):
+        """Write dict with all future positions wrt COM to pickle"""
+        fname = path.join(self.output_dir,
+                          "all_positions{:04d}.pickle".format(self.chknum))
+        with open(fname, 'wb') as f:
+            pickle.dump(self.all_positions, f)
+        tprint("*** Wrote queued positions wrt COM to {:s} ****".format(fname))
+
+    def out_velocity(self):
+        """Write dict with all future velocities wrt COM to pickle"""
+        fname = path.join(self.output_dir,
+                          "all_velocities{:04d}.pickle".format(self.chknum))
+        with open(fname, 'wb') as f:
+            pickle.dump(self.all_velocities, f)
+        tprint("*** Wrote queued velocities wrt COM to {:s} ****".format(fname))
 
     def out_rnd(self):
         """Write current random number state to pickle"""
@@ -158,6 +238,7 @@ class TorchState(object):
                           "rnd_state{:04d}.pickle".format(self.chknum))
         with open(fname, 'wb') as f:
             pickle.dump(np.random.get_state(), f)
+        tprint("*** Wrote numpy random state to {:s} ****".format(fname))
 
     def out_stars(self, overwrite):
         """Write star particles to AMUSE file"""
