@@ -203,7 +203,7 @@ class TorchState(object):
         if hy_pltnum > self.pltnum:
             self.out_stars(overwrite)
             self.pltnum = hy_pltnum
-            if (USER['with_be'] or USER['binaries']):
+            if (self.user['with_be'] or self.user['binaries']):
                 self.out_binaries(overwrite)
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
