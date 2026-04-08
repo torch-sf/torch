@@ -26,7 +26,7 @@ h = 6.6261e-27 # Planck's constant
 c = 2.9979e10  # Speed of light
 k = 1.3807e-16 # Boltzmann constant
 
-sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4, CCC 26/04/2024
+sigSB = 5.6704e-5 | (units.g/((units.s)**3 * (units.K)**4)) # Stefan-Boltzmann constant, g s^-3 K^-4
 sig0 = 6.304e-18 # Photoionization cross section at threshold for hydrogen
 E_ev = 1.60222497096e-12 # energy of 1 eV in erg
 E_lyc = 13.6*E_ev  # 13.6 eV
@@ -50,28 +50,25 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     # This assumes the stars are ZAMS, which may be incorrect 
     _attributes = state.stars.get_attribute_names_defined_in_store()
     if 'radius' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Initial guess for the radius if running with user ICs
         # It must be somewhat realistic in case there is a contact system
         # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
         # Use linear MRR for upper mass range
         state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
     if 'luminosity' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
         # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
         # Use linear MLR for upper mass range
         state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
     if 'temperature' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
-        # Use BB luminosity and radius, luminosity
+        # Use blackbody luminosity, radius, and luminosity
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
     if "wind_mass_loss_rate" not in _attributes:
-        # Save wind mass loss rate for comparison - CCC 09/04/2025
-        # Set to 0 initially
+        # Save wind mass loss rate for comparison, set initially to 0
         state.stars.wind_mass_loss_rate = np.zeros(len(state.stars)) | units.MSun / units.yr 
 
     
     # Update ALL the star properties in bulk for consistency.
-    # Copy the old mass for the wind velocities (calculated outside of amuse) - CCC 04/11/2023
+    # Copy the old mass for the wind velocities (calculated outside of amuse)
     old_mass = np.copy(state.stars.mass)
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
@@ -90,16 +87,16 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     se_time = time - max(se_restart_time, min(hydro.get_particle_creation_time(state.stars.tag)))
     
     # Pass information to SE
-    # Check for new systems, important for binaries - CCC 02/08/2024
+    # Check for new systems, important for binaries
     state.binaries.synchronize_to(se.binaries)
-    # Now pass attributes to binaries - CCC 03/08/2024
+    # Now pass attributes to binaries
     for _attribute in state.binaries.get_attribute_names_defined_in_store():
         if _attribute in se.binaries.get_attribute_names_defined_in_store():
             state.binaries_to_se.copy_attributes([_attribute])
     # Evolve model
     se.evolve_model(se_time) #Time attached to se.particles.age, which is the "simulation" time
     
-    # Pass information back to stars after end of SE loop - CCC 02/08/2024
+    # Pass information back to stars after end of SE loop
     for _attribute in se.particles.get_attribute_names_defined_in_store():
         if _attribute in state.stars.get_attribute_names_defined_in_store():
             state.se_to_stars.copy_attributes([_attribute])
@@ -107,12 +104,12 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     # Reset the stars' age after the SE step
     state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
-    # Turn off wind if mass increased - CCC 11/09/2024 
-    # Keep a list of stars for which feedback was calculated - CCC 25/10/2024
+    # Turn off wind if mass increased 
+    # Keep a list of stars for which feedback was calculated
     evolved_stars = Particles()
-    # Also keep a list of merged stars - CCC 08/01/2025
+    # Also keep a list of merged stars
     merged_stars = Particles()
-    # List primaries and companions - CCC 25/10/2024
+    # List primaries and companions
     primaries = Particles()
     companions = Particles()
     if len(state.binaries) > 0:
@@ -120,17 +117,17 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
             primaries.add_particle(binary.child1)
             companions.add_particle(binary.child2)
 
-        # Update positions and velocities from binary interaction - CCC 03/04/2025
+        # Update positions and velocities from binary interaction
         orbital_elements = get_orbital_elements_from_binaries(primaries, companions)
     
     for i, s in enumerate(state.stars):
         
-        in_binary = False # Set to true if in binary - CCC 25/10/2024
+        in_binary = False # Set to true if in binary
         
-        if s in evolved_stars: # CCC 25/10/24
+        if s in evolved_stars:
             continue
             
-        if (s in primaries): # CCC 25/10/24
+        if (s in primaries):
             in_binary = True
             # Find the binary
             j = np.where(primaries.tag == s.tag)[0]
@@ -140,14 +137,14 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
             t = state.stars[k]
         
         if (s in companions):
-            continue # Force choice of primary and companion for change in orbit - CCC 06/04/2025
+            continue
 
         if went_supernova(s.stellar_type):
             continue
 
         if s.initial_mass >= min_feedback_mass:
 
-            if with_sn and went_supernova_from_kick(s, state.stars): # Do not check if in binary for SN - CCC 29/10/2024
+            if with_sn and went_supernova_from_kick(s, state.stars):
 
                 inj_mass = old_mass[i] - s.mass  # minus stellar remnant's mass
                 
@@ -166,15 +163,15 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
 
                 # implicitly zeros out feedback properties by not setting
 
-                # Update velocity from kick velocity - CCC 06/04/2025
+                # Update velocity from kick velocity
                 s.vx += s.natal_kick_x
                 s.vy += s.natal_kick_y
                 s.vz += s.natal_kick_z
                 
-                # Set star to evolved after SN - CCC 29/10/2024
+                # Set star to evolved after SN
                 evolved_stars.add_particle(s)
                 
-            # Check if companion went supernova - CCC 15/04/2025
+            # Check if companion went supernova
             if in_binary and with_sn and went_supernova_from_kick(t, state.stars):
                 
                 inj_mass = old_mass[k] - t.mass  # minus stellar remnant's mass
@@ -194,63 +191,52 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                 
                 # implicitly zeros out feedback properties by not setting
 
-                # Update velocity from kick velocity - CCC 06/04/2025
+                # Update velocity from kick velocity
                 t.vx += t.natal_kick_x
                 t.vy += t.natal_kick_y
                 t.vz += t.natal_kick_z
                 
-                # Set star to evolved after SN - CCC 29/10/2024
+                # Set star to evolved after SN
                 evolved_stars.add_particle(t)
                 
-            else: # Check if in binary to determine the feedback mechanisms - CCC 29/10/2024
+            else: # Check if in binary to determine the feedback mechanisms
                 
                 if in_binary:
 
                     be = se.binaries[j] # Evolved binary
 
-                    # Energy after minus energy before --> should be > 0 for CE - CCC 08/04/2025
-                    _dE = (units.constants.G / 2) * (((s.mass * t.mass / be.semi_major_axis) - old_mass[i]*old_mass[k] / b.semi_major_axis))[0] # Try here - CCC 08/12/2024
+                    # Energy after minus energy before --> _dE > 0 indicates mass transfer
+                    _dE = (units.constants.G / 2) * (((s.mass * t.mass / be.semi_major_axis) - old_mass[i]*old_mass[k] / b.semi_major_axis))[0]
                     inj_mass = old_mass[i] + old_mass[k] - s.mass - t.mass
-                    # If _dE > 0, mass transfer or CE; if _dE < 0, wind mass loss
 
-                    # Different ways to detect the interaction - CCC 06/04/2025
+                    # Different ways to detect the interaction
                     if (_dE > (0 | units.erg)) or (be.binary_type > 2) or (be.semi_major_axis < b.semi_major_axis) \
                     or accreted_mass(s.mass, old_mass[i]) or accreted_mass(t.mass, old_mass[k]): 
-                        
-                        tprint('... change in orbit from BE')
 
-                        # Compare to wind mass loss rate - CCC 06/04/2025
+                        # Compare to wind mass loss rate
                         dm_dt_wind_1, vterm_wind_1 = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                                                        massloss_method=massloss_method)
+                                                                        massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                         dm_dt_wind_2, vterm_wind_2 = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
-                                                                        massloss_method=massloss_method)
+                                                                        massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
 
-                        # If lost mass in excess of wind mass loss rate - CCC 06/04/2025
                         # Wind mass loss rate from SeBa is negative by definition
                         if dm_dt_wind_1 > -1*s.wind_mass_loss_rate or dm_dt_wind_2 > -1*t.wind_mass_loss_rate: 
                             tprint('... mass transfer')
                             tprint('Injected mass:', "{0:.2f}".format(inj_mass.value_in(units.MSun)), 'MSun')
-
-                            # https://www.aanda.org/articles/aa/full_html/2021/04/aa40442-21/aa40442-21.html
-                            # CCC 12/09/2024, 20/06/2023
                             E_bind = CE_alpha * _dE
-                            #tprint('Ejecta energy:', "{0:.1e}".format(E_bind.value_in(units.erg)), 'erg')
-                        
                         
                             if CE_method=='wind':
                             
                                 if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
                                     # If donor is star s
                                     dm_dt[i] = inj_mass/dt
-                                    vterm[i] = vterm_wind_1 # Cap the ejecta velocity at the wind velocity
+                                    vterm[i] = vterm_wind_1 # Set the ejecta velocity to the wind velocity
                                     tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[i].value_in(units.km/units.s)), 'km/s')
                                 else:
                                     dm_dt[k] = inj_mass/dt
-                                    vterm[k] = vterm_wind_2 # Cap the ejecta velocity at the wind velocity
+                                    vterm[k] = vterm_wind_2 # Set the ejecta velocity to the wind velocity
                                     tprint('Ejecta velocity from wind', "{0:.1e}".format(vterm[k].value_in(units.km/units.s)), 'km/s')
                             
-                            # If there is no energy from the envelope ejection, do wind mass loss
-                            # for the donor star instead
                             elif CE_method=='alpha':
                             
                                 if (old_mass[i] - s.mass) > (old_mass[k] - t.mass):
@@ -300,7 +286,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                             sigpe[k] = state.user['sigd'] | units.cm**2
                         # Do not set wind properties for stars that have lost mass due to CE
 
-                        # Update position and velocity - CCC 04/04/2025
+                        # Update position and velocity
                         stars_for_COM = Particles()
                         stars_for_COM.add_particle(primaries[j])
                         stars_for_COM.add_particle(companions[j])
@@ -318,7 +304,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                         s.velocity = COV - m1_f*rel_vel[0]
                         t.velocity = COV + m2_f*rel_vel[0]
                         
-                        # Set star to evolved after uMT/CE - CCC 22/11/2024
+                        # Set star to evolved after mass transfer
                         evolved_stars.add_particle(s)
                         evolved_stars.add_particle(t)
                         
@@ -326,11 +312,11 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                             
                         if with_winds:
                             _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                                      massloss_method=massloss_method)
+                                                      massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                             dm_dt[i] = _tmp[0]
                             vterm[i] = _tmp[1]
                             _tmp = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
-                                                      massloss_method=massloss_method)
+                                                      massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                             dm_dt[k] = _tmp[0]
                             vterm[k] = _tmp[1]
                         if with_lyc:
@@ -370,16 +356,16 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                         sigpe[i] = state.user['sigd'] | units.cm**2
                     if with_winds:
                         _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
-                                                  massloss_method=massloss_method)
+                                                  massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                         dm_dt[i] = _tmp[0]
                         vterm[i] = _tmp[1]
                     
-                    # Set star to evolved after feedback - CCC 29/10/2024
+                    # Set star to evolved after feedback
                     evolved_stars.add_particle(s)           
 
         elif (s.initial_mass < min_feedback_mass) and in_binary and (t.mass == (0. | units.MSun)):
 
-            # Update position and velocity - CCC 04/04/2025
+            # Update position and velocity
             tprint("... low-mass stars merged from BE")
             stars_for_COM = Particles()
             stars_for_COM.add_particle(primaries[j])
@@ -398,7 +384,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
             merged_stars.add_particle(t)
             
     
-    # Binaries sync'ed to stars later, do not sync here - CCC 12/09/2024
+    # Binaries sync'ed to stars later, do not sync here
 
     # This assumes steps are relatively small in the mass loss rate of stars,
     # so that gravity can use the mass after all the wind mass loss has
@@ -420,7 +406,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
     
-    # Set SeBa properties for checkpoint - CCC 26/04/2024
+    # Set SeBa properties for checkpoint
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
     hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
     hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
@@ -456,23 +442,21 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     # This assumes the stars are ZAMS, which may be incorrect 
     _attributes = state.stars.get_attribute_names_defined_in_store()
     if 'radius' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+        # Initial guess for the radius if running with user ICs
         # It must be somewhat realistic in case there is a contact system
         # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
         # Use linear MRR for upper mass range
         state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
     if 'luminosity' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
         # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
         # Use linear MLR for upper mass range
         state.stars.luminosity = (1.15 * (state.stars.mass / (1 | units.MSun)) ** 3.36) | units.LSun
     if 'temperature' not in _attributes:
-        # Initial guess for the radius if running with user ICs - CCC 12/05/2023
-        # Use BB luminosity and radius, luminosity
+        # Use blackbody luminosity, radius, and luminosity
         state.stars.temperature = (state.stars.luminosity / (4 * np.pi * sigSB))**(1./4) * state.stars.radius**(-1./2)
 
     # Update ALL the star properties in bulk for consistency.
-    # Copy the old mass for the mass loss rates (calculated outside of amuse) - CCC 04/11/2023
+    # Copy the old mass for the mass loss rates (calculated outside of amuse)
     old_mass = np.copy(state.stars.mass)
     
     dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
@@ -500,8 +484,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     se.evolve_model(se_time)
     state.se_to_stars.copy()
     
-    # Reset the stars' age after the SE step, as the SeBa age is reset to 0
-    # at each restart - CCC 22/11/2024
+    # Reset the stars' age after the SE step, as the SeBa age is reset to 0 at each restart
     state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
 
     # Loop only over active stars while retaining the correct indexing for total star array
@@ -570,7 +553,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
-    # Set SeBa properties for checkpoint - CCC 26/04/2024
+    # Set SeBa properties for checkpoint
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
     hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
     hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
@@ -596,7 +579,6 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt,
         
     elif massloss_method == 'seba_puls':
         # Mass loss rates from SeBa with velocities from Kudritzki & Puls winds
-        # Added by CCC, 27/11/2024
         dm_dt = (prev_mass - se_mass)/dt
         star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius, max_gamma)
         vterm = star_wind.vterm
@@ -704,7 +686,7 @@ def went_supernova_from_kick(star, stars):
     return kick_set
 
 # Used to check for stable mass transfer
-# If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
+# If a star accreted at one timestep, do not set the wind properties
 def accreted_mass(new_mass, old_mass):
     dm = (old_mass - new_mass)/old_mass
     return dm < 0
@@ -799,16 +781,19 @@ class PulsStellarWind(object):
         return
 
     def thom_Gam(self):
+        """Calculate the Eddington factor"""
         self.thom_Gam = 7.66e-5*self.thom_sig/self.mass.value_in(units.MSun)*self.lum.value_in(units.LSun)
         self.thom_Gam = min(self.thom_Gam, self.max_gamma)
         return
 
     def vesc(self):
+        """Calculate the effective escape velocity"""
         self.vesc = np.sqrt(2.0*units.constants.G*self.mass*(1-self.thom_Gam)
                             /(self.radius)).as_quantity_in(units.km / units.s)
         return
 
     def vterm(self):
+        """Calculate the wind injection velocity"""
         if self.teff <= 1.0e4|units.K:
             self.vterm = self.vesc
         elif 1.0e4|units.K < self.teff < 2.1e4|units.K:

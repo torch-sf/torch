@@ -145,9 +145,9 @@ def user_parameters():
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
     p['sigd'] = flashp['sigDust'] # Cross section of dust per hydrogen nulcei
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
-    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
+    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities
     p['massloss_method'] = 'seba_puls' # use SeBa mass loss rates and velocities from Kudritzki and Puls 2000, ARA&A.
-    p['max_gamma'] = 0.8 # maximum Eddington factor with which to calculate wind velocities. Default value of 0.8 is based on upper limit for non-interacting stars, see Vink 2022, ARA&A Fig. 5. -CCC 08.04.2026
+    p['max_gamma'] = 0.8 # maximum Eddington factor with which to calculate wind velocities. Default value of 0.8 is based on upper limit for non-interacting stars, see Vink 2022, ARA&A Fig. 5.
     p['min_feedback_mass'] = 7.0 | units.MSun
     p['CE_method'] = 'wind' # method for CE ejection. Default is 'wind' but the alpha formalism ('alpha') or the SN injection scheme ('SN')are also availaible
     p['CE_alpha'] = 1 # efficiency for CE ejection if using the alpha formalism; default is 1.
@@ -157,14 +157,14 @@ def user_parameters():
 
     p['binaries'] = False
     #Not used if binaries is false, can leave to default values                                                                
-    p['mult_frac'] = 'field'  #Currently accepted method is 'field'. TO DO: Add fraction. 
-    p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. TO DO: Add lognormal. 
-    p['qdist'] = 'field' #Currently accepted method is 'field'. TO DO: Add random.
-    p['edist'] = 'field' #Currently accepted method is 'field'. TO DO: Add thermal.
+    p['mult_frac'] = 'field'  #Currently accepted method is 'field'.
+    p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'.
+    p['qdist'] = 'field' #Currently accepted method is 'field'.
+    p['edist'] = 'field' #Currently accepted method is 'field'.
     p['min_imf_mass'] = 0.08 | units.MSun
     p['max_imf_mass'] = 100 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
+    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20.
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
     p['m_small'] = 1.0 | units.MSun # agglomerate mass in Msun

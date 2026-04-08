@@ -5,8 +5,6 @@ Currently, just implements scheme for creating stars from sinks.
 Could be made more general in the future.
 
 Joshua Wall, Drexel University
-
-Modified to account for primordial binaries (CCC, 05/2020, 02/2021, 11/2021)
 """
 
 
@@ -80,7 +78,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.vy   = velocity[:,1]
     add_star.vz   = velocity[:,2]
 
-    # Add saved SeBa properties to AMUSE particles - CCC 25/04/2024, 06/11/2024
+    # Add saved SeBa properties to AMUSE particles
     add_star.relative_mass = relMass
     add_star.relative_age  = relAge
     add_star.COcore_mass   = COcoreM
@@ -89,14 +87,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.initial_mass = initMass # for SE/SN uses
-    # Set stellar type and radius - CCC 07/08/2024
+    # Set stellar type and radius
     # If restart or user ICs, take values from FLASH, otherwise use sensible guess
     add_star.stellar_type = sType | units.stellar_type
     add_star.radius       = radius
     # For new stars
     _new_stars = np.where(sType == 0)[0]
     add_star[_new_stars].stellar_type = 1 | units.stellar_type # ZAMS star
-    # Initial guess for the radius if running with user ICs - CCC 12/05/2023
+    # Initial guess for the radius if running with user ICs
     # It must be somewhat realistic in case there is a contact system
     # Empirical relation from https://articles.adsabs.harvard.edu/pdf/1991Ap%26SS.181..313D
     # Use linear MRR for upper mass range
@@ -112,7 +110,7 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
 
     grav.particles.add_particles(add_star)
     
-    #Add particles to stellar evolution, CCC 10/05/2024
+    #Add particles to stellar evolution
     if se is not None:
         se.particles.add_particles(add_star)
 
@@ -241,16 +239,16 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
     # of old sinks, which I (AT) removed for brevity.
     # Simple for-loop should work fine for up to few thousand sinks...
     
-    # Only set system_masses, all_positions and all_velocities if binaries=True - CCC 18/06/2025
+    # Only set system_masses, all_positions and all_velocities if binaries=True
     if binaries:
         
         for sink_tag in sink_tags:
 
             if sink_tag not in state.all_masses:
                 state.all_masses[sink_tag]     = np.array([])
-                state.system_masses[sink_tag]  = np.array([])    # Added by CCC for binaries, 04/04/2020
-                state.all_positions[sink_tag]  = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
-                state.all_velocities[sink_tag] = np.empty([0,3]) # Added by CCC for binaries, 04/04/2020
+                state.system_masses[sink_tag]  = np.array([])
+                state.all_positions[sink_tag]  = np.empty([0,3])
+                state.all_velocities[sink_tag] = np.empty([0,3])
                 tprint("... new sink tag {}".format(sink_tag))
                 new_sink_ = True # save original sink list
 
@@ -338,7 +336,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
         
         if binaries:
             # get all the stars that we can form now
-            csum = np.cumsum(state.system_masses[sink_tag]) #Changed from all_masses to accomodate binaries
+            csum = np.cumsum(state.system_masses[sink_tag])
             i = np.searchsorted(csum, sink_mass.value_in(units.MSun), side='left')
             assert i < len(csum)  # ensure csum[-1] = sum(queue) > sink_mass
         else:
@@ -367,7 +365,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             tprint("... sink tag {} spawned".format(sink_tag), end='')
             print(" {} stars".format(nnew), end='')
             if binaries:
-                print(" ({} single stars".format(nsin), end='')  #Added by CCC, May 9, 2020 to account for binaries
+                print(" ({} single stars".format(nsin), end='')
                 print(" and {} binaries),".format(nbin), end='')
             print(" total mass {},".format(np.sum(spawn_masses)), end='')
             print(" max mass {}".format(np.amax(spawn_masses)))
@@ -422,7 +420,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
 
             # Initialize cross section values to something reasonable and non-zero.
             # if stellar evolution is off and radiation is on, these values are zero
-            # which causes non-convergence in vettam. BP-2.23.26 
+            # which causes non-convergence in vettam. 
             if state.user['with_lyc'] or state.user['with_pe_heat']: 
                 star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
                 star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm

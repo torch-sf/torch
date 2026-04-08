@@ -280,9 +280,8 @@ def evolve(state, hydro, grav, mult, se):
             ### First bridge kick.
             ### ------------------
 
-            state_ = state # save a copy of state in case we need to save then exit during the loop, CCC 09/03/2023
-            # Merge stars at same location, based on fix by BP, commit 366d5be on petar branch - 06/03/2024
-            # Repeat every timestep - CCC 18/11/2024
+            state_ = state # save a copy of state in case we need to save then exit during the loop
+            # Merge stars at same location
             remove_merged_stars(USER['remove_merged'], USER['overwrite'], state, hydro, grav, se)
             remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
             hydro.particles_sort()  # also checks for stars outside domain
@@ -321,8 +320,6 @@ def evolve(state, hydro, grav, mult, se):
 
             if USER['with_se']:
                 if USER['with_be'] and num_stars > 1:
-                    # update both stars set and hydro properties
-                    # CCC 28/04/2023
                     tprint("Do stellar and binary evolution")
                     se_dt = binary_evolution(
                         hy_time+dt, dt, se_restart_time,
@@ -338,7 +335,6 @@ def evolve(state, hydro, grav, mult, se):
                     )
                 else:
                     tprint("Do stellar evolution")
-                    # update both stars set and hydro properties
                     se_dt = stellar_evolution(
                         hy_time+dt, dt, se_restart_time,
                         state, hydro, se,
@@ -363,7 +359,7 @@ def evolve(state, hydro, grav, mult, se):
                 if num_stars > 1:
                     state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
                     state.stars_to_grav.copy_attributes(["radius"])
-                    state.stars_to_grav.copy_attributes(["x", "y", "z", "vx", "vy", "vz"]) # Copy position and velocity post-SE
+                    state.stars_to_grav.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
                     if USER['with_multiples']:
                         mult.channel_from_code_to_memory.copy() # grav  -> multiples
                         state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
@@ -480,7 +476,7 @@ def evolve(state, hydro, grav, mult, se):
         hydro.particles_sort()  # also checks for stars outside domain
 
         tprint("Star formation check")
-        # Change structure to write checkpoint if sink formed, CCC 26/04/2023
+        # Change structure to write checkpoint if sink formed
         queued_stars = queue_stars(state, hydro,
                                    min_imf_mass=USER['min_imf_mass'],
                                    max_imf_mass=USER['max_imf_mass'],
@@ -492,7 +488,7 @@ def evolve(state, hydro, grav, mult, se):
                                    pdist=USER['pdist'],
                                    qdist=USER['qdist'],
                                    edist=USER['edist'] )
-        #Write checkpoint at sink formation to have a record of the binaries and stars to be formed, CCC 26/04/2023                                                                                     
+        #Write checkpoint at sink formation to have a record of the binaries and stars to be formed                                                                                     
         if queued_stars:
             state.force_output(overwrite=USER['overwrite'])
         made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'], binaries=USER['binaries'])  # in hydro
