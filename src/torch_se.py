@@ -703,21 +703,6 @@ def went_supernova_from_kick(star, stars):
             kick_set = True
     return kick_set
 
-# Used to check for common envelope or unstable mass transfer
-# This type of mass loss is triggered if >1% of the stars' mass was lost
-# in one step - CCC 12/09/2024
-def lost_envelope(new_mass, old_mass):
-    dm = (old_mass - new_mass)/old_mass
-    return dm >= 0.01
-
-# Look for systems with high mass loss rates (> 1e-3 MSun/yr)
-# See https://www.aanda.org/articles/aa/pdf/2001/14/aah2347.pdf 
-# and https://articles.adsabs.harvard.edu/pdf/1986A%26A...168..111V
-# for comparison to O stars and WR stars - CCC 08/12/2024
-def high_dm_dt(new_mass, old_mass, dt):
-    dm_dt = (old_mass - new_mass)/dt
-    return dm_dt > (1.e-2 | units.MSun/units.yr)
-
 # Used to check for stable mass transfer
 # If a star accreted at one timestep, do not set the wind properties - CCC 12/09/2024
 def accreted_mass(new_mass, old_mass):
@@ -824,15 +809,12 @@ class PulsStellarWind(object):
         return
 
     def vterm(self):
-        if self.thom_Gam >= 1:
-            self.vterm = 100 | units.km/units.s # CCC 08/12/2024, set velocity to 100 km/s for test
+        if self.teff <= 1.0e4|units.K:
+            self.vterm = self.vesc
+        elif 1.0e4|units.K < self.teff < 2.1e4|units.K:
+            self.vterm = 1.4*self.vesc
         else:
-            if self.teff <= 1.0e4|units.K:
-                self.vterm = self.vesc
-            elif 1.0e4|units.K < self.teff < 2.1e4|units.K:
-                self.vterm = 1.4*self.vesc
-            else:
-                self.vterm = 2.65*self.vesc
+            self.vterm = 2.65*self.vesc
         return
 
     def dm_dt(self):
