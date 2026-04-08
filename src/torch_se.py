@@ -292,11 +292,11 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                             _tmp = compute_epe_npe(s.temperature, s.radius)
                             epe[i] = _tmp[0]
                             npe[i] = _tmp[1]
-                            sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                            sigpe[i] = state.user['sigd'] | units.cm**2
                             _tmp = compute_epe_npe(t.temperature, t.radius)
                             epe[k] = _tmp[0]
                             npe[k] = _tmp[1]
-                            sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
+                            sigpe[k] = state.user['sigd'] | units.cm**2
                         # Do not set wind properties for stars that have lost mass due to CE
 
                         # Update position and velocity - CCC 04/04/2025
@@ -328,14 +328,10 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                                                       massloss_method=massloss_method)
                             dm_dt[i] = _tmp[0]
                             vterm[i] = _tmp[1]
-                            #tprint('Star 1 wind dm/dt:', dm_dt[i])
-                            #tprint('Star 1 wind velocity:', vterm[i])
                             _tmp = compute_dmdt_vterm(old_mass[k], t.temperature, t.radius, t.mass, t.luminosity, dt,
                                                       massloss_method=massloss_method)
                             dm_dt[k] = _tmp[0]
                             vterm[k] = _tmp[1]
-                            #tprint('Star 2 wind dm/dt:', dm_dt[k])
-                            #tprint('Star 2 wind velocity:', vterm[k])
                         if with_lyc:
                             _tmp = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
                             eion[i] = _tmp[0]
@@ -349,11 +345,11 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                             _tmp = compute_epe_npe(s.temperature, s.radius)
                             epe[i] = _tmp[0]
                             npe[i] = _tmp[1]
-                            sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                            sigpe[i] = state.user['sigd'] | units.cm**2
                             _tmp = compute_epe_npe(t.temperature, t.radius)
                             epe[k] = _tmp[0]
                             npe[k] = _tmp[1]
-                            sigpe[k] = sigDust  # TODO magic constant -AT 2019Oct14
+                            sigpe[k] = state.user['sigd'] | units.cm**2
                     
                         # Set star to evolved after feedback
                         evolved_stars.add_particle(s)
@@ -370,7 +366,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                         _tmp = compute_epe_npe(s.temperature, s.radius)
                         epe[i] = _tmp[0]
                         npe[i] = _tmp[1]
-                        sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
+                        sigpe[i] = state.user['sigd'] | units.cm**2
                     if with_winds:
                         _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                                   massloss_method=massloss_method)
@@ -600,7 +596,6 @@ def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, massl
         # Added by CCC, 27/11/2024
         dm_dt = (prev_mass - se_mass)/dt
         star_wind   = PulsStellarWind(se_temp, prev_mass, se_lum, se_radius)
-        #tprint('Wind properties:', star_wind.thom_Gam, star_wind.vesc, star_wind.dm_dt)
         vterm = star_wind.vterm
 
     # Note that Leitherer and Puls calculations use the old mass
