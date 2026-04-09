@@ -233,10 +233,6 @@ amuseHybrid::--with-unit=physics/Gravity/GravityMain/Poisson/Multigrid/Couple_AM
 # Original BHTree with AMUSE coupling.
 amuseBHTree:--with-unit=physics/Gravity/GravityMain/Poisson/BHTree/Couple_AMUSE:--with-unit=Grid/GridSolvers/BHTree:--without-unit=physics/Gravity/GravityMain/Poisson/Multigrid
 
-# Shortcut for ray tracing with sink particles
-raySink::--with-unit=Particles/ParticlesMain/ray/MultiSourceSimple/Active/Sink:--with-unit=physics/RadTrans/RadTransMain/RayRad/SinksRad
-#:--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
-
 rayPE::--with-unit=Particles/ParticlesMain/ray_pe/MultiSourceSimple/Active/Sink:--with-unit=physics/RadTrans/RadTransMain/RayRad/SinksRad
 #:--with-unit=physics/sourceTerms/Heat/HeatMain/phenHeat/RadHeat
 
