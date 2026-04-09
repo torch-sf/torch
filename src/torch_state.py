@@ -9,9 +9,7 @@ import pickle
 from amuse.datamodel import Particles
 from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
-# Import for binaries, CCC 19/07/2023
-from amuse.ext.orbital_elements import get_orbital_elements_from_arrays
-# Import for binary identification, CCC 23/07/2024
+
 from binary_identification import get_binaries_from_stars
 
 from torch_param import FlashPar
@@ -50,10 +48,12 @@ class TorchState(object):
             self.stars_to_se = self.stars.new_channel_to(se.particles)
             self.se_to_stars = se.particles.new_channel_to(self.stars)
             # Binary evolution
-            self.binaries_to_se = self.binaries.new_channel_to(se.binaries)
-            self.se_to_binaries = se.binaries.new_channel_to(self.binaries)
-            self.stars_to_binaries = self.stars.new_channel_to(self.binaries)
-            self.binaries_to_stars = self.binaries.new_channel_to(self.stars)
+            if self.user['with_be']:
+                self.binaries_to_se = self.binaries.new_channel_to(se.binaries)
+                self.se_to_binaries = se.binaries.new_channel_to(self.binaries)
+            if (self.user['with_be'] or self.user['binaries']):
+                self.stars_to_binaries = self.stars.new_channel_to(self.binaries)
+                self.binaries_to_stars = self.binaries.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -108,7 +108,7 @@ class TorchState(object):
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
 
-                # Addind these to permit binaries - CCC, May 3, 2020
+                # For binaries
                 systemsfile = path.join(self.output_dir,
                     'system_masses{:04d}.pickle'.format(self.chknum))
                 positionsfile = path.join(self.output_dir,
@@ -216,7 +216,7 @@ class TorchState(object):
             pickle.dump(self.all_masses, f)
         tprint("*** Wrote queued stars to {:s} ****".format(fname))
 
-    # Adding these to permit primordial binaries
+    # For primordial binaries
     def out_system(self):
         """Write dict with all future system masses to pickle"""
         fname = path.join(self.output_dir,
