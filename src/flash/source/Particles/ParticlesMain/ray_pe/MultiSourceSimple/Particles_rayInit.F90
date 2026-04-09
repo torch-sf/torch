@@ -22,7 +22,7 @@ subroutine Particles_rayInit(restart)
   use Timers_interface, ONLY : Timers_start, Timers_stop
   use Grid_data, ONLY :  gr_imin, gr_imax, gr_jmin, gr_jmax, gr_kmin, gr_kmax, &
                          gr_domainBC
-
+  use rt_data, only: rt_rayTrace
   use pt_rayAsyncComm, ONLY : ph_globalMe, ph_globalComm, ph_globalNumProcs, & 
                               ph_meshMe, ph_meshComm, ph_meshNumProcs, ph_numNeigh, & 
                               ph_size, ph_rank, ph_raysToBundle, ph_CommCheckInterval
