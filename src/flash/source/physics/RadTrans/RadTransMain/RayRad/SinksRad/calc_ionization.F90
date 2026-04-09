@@ -20,7 +20,7 @@ subroutine calc_ionization(dt, del_t_new, temp0, ndens, xh, xhold, k_ion)
 #ifdef ONE_CELL_TESTING
 #define debug
 #endif
-#define debug2
+!#define debug2
 
   use rt_data, only : albpow, bh00, temph0, colh0
   implicit none
