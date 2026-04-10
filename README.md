@@ -5,8 +5,8 @@ Torch is an open-source code used to simulate coupled gas and N-body dynamics in
 
 See our [website](https://torch-sf.bitbucket.io/) for more information.
 
-The current stable version is [Torch 2.1](https://bitbucket.org/torch-sf/torch/src/torch-v2.1/).  
-Stable version of torch lives on the [main](https://bitbucket.org/torch-sf/torch/src/main/) branch, and ongoing development happens on the [develop](https://bitbucket.org/torch-sf/torch/src/develop/) branch.
+The current stable version is [Torch 2.2](https://bitbucket.org/torch-sf/torch/src/torch-v2.2/).  
+Stable version of Torch lives on the [main](https://bitbucket.org/torch-sf/torch/src/main/) branch, and ongoing development happens on the [develop](https://bitbucket.org/torch-sf/torch/src/develop/) branch.
 
 Quick-start
 -----------
@@ -55,6 +55,7 @@ In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 * Robi Banerjee
 * Moo Kwang Ryan Joung
 * Juan Camilo Ibáñez-Mejía
+* Shyam Menon
 * Daniel Seifried
 * Long Wang
 * Richard Wünsch

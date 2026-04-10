@@ -15,19 +15,39 @@ from __future__ import division, print_function
 
 from amuse.datamodel import Particles
 from amuse.units import units
+from amuse.ext.orbital_elements import generate_binaries, new_binary_from_orbital_elements
 
 from torch_param import FlashPar
 from torch_mainloop import run_torch
 
+from amuse.io import write_set_to_file, read_set_from_file
+
 def get_ntasks_from_run_script(name="run.sh"):
     """formally -n is --ntasks, de facto same as nprocs"""
     n = None
-    with open(name) as f:
-        for line in f:
-            w = line.split()
-            if len(w) >= 3 and w[0] == '#SBATCH' and w[1] == '-n':
-                assert n is None  # throw error if #SBATCH -n occurs >1x
-                n = int(w[2])
+    nodes = None
+    cores = None
+    import os
+    # Check for slurm ntasks
+    n = int(os.getenv("SLURM_NTASKS"))
+    if n is None:
+        with open(name) as f:
+            for line in f:
+                w = line.split()
+                if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
+                    assert cores is None  # throw error if #SBATCH -n occurs >1x
+                    cores = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-N'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
+                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
+                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
+                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-n'):
+                    assert n is None
+                    n = int(''.join(char for char in w[1] if char.isdigit()))
+        if n is None:
+            n = nodes*cores
     assert n is not None
     return n
 
@@ -73,7 +93,6 @@ def user_parameters():
 
     # <VorAMR>
 
-    
     try:
         p['with_voramr'] = flashp['use_voramr']
     except KeyError:
@@ -92,7 +111,7 @@ def user_parameters():
         p['cellsPerBlock'] = 16
         
     # <bridge>
-
+    
     p['npy_seed'] = 0  # random seed for numpy RNG. no effect if (restart && restart_with_new_rng=False)
     p['restart_with_new_rng'] = False  # refresh numpy random seed upon restart?
     p['restart_with_user_ics'] = False  # meant for testing
@@ -101,37 +120,51 @@ def user_parameters():
     p['with_bridge'] = True  # use bridge leapfrog to evolve posiions and velocities? Warning: "False" is not well tested / supported
     p['with_multiples'] = True  # adds two workers: kepler, smalln
     p['with_se'] = True  # do stellar evolution for individual stars?
-    p['remove_merged'] = True # remove merged stars
+    p['remove_merged'] = True and p['with_se'] # remove merged stars, only available if running with stellar evolution
 
     # <timestepping>
-
+    
     p['hy_dt_factor'] = 0.99999  # pin bridge timestep to <= hy_dt_factor*(hydro timestep)
 
     # <star/n-body gravity>
-
+    
     p['with_ph4'] = True  # use ph4 or Hermite
     p['epsilon'] = 15.0 | units.RSun  # N-body softening = actual radius of a massive star
 
     # <star/n-body gravity & binaries>
-
+    
     p['with_petar'] = True
-    p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+    p['r_bin'] = 50 | units.au
+    p['r_out'] = 0.003 | units.pc #Change with below 
+    p['dt_soft_max'] = 0.125 | units.kyr
 
     # <stellar evolution>
-
+    
+    p['with_be'] = False  # do binary evolution?
     p['with_lyc'] = True  # ionizing radiation, via ray-tracing from stars
     p['with_pe_heat'] = True  # photoelectric heating from stellar radiation (ray-traced); this is SEPARATE from background diffuse photoelectric heating
+    p['sigd'] = flashp['sigDust'] # Cross section of dust per hydrogen nulcei
     p['with_sn'] = True  # allow stars to deposit SNe at end of life
-    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities -BP 25Jan23
-    p['massloss_method'] = 'puls'
+    p['with_winds'] = True  # allow stars to deposit hot winds. NOTE: if winds are off and the radiation pressure on, timesteps won't be limited enough for velocities from radiation pressure and may cause unphysically high velocities
+    p['massloss_method'] = 'seba_puls' # use SeBa mass loss rates and velocities from Kudritzki and Puls 2000, ARA&A.
+    p['max_gamma'] = 0.8 # maximum Eddington factor with which to calculate wind velocities. Default value of 0.8 is based on upper limit for non-interacting stars, see Vink 2022, ARA&A Fig. 5.
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['CE_method'] = 'wind' # method for CE ejection. Default is 'wind' but the alpha formalism ('alpha') or the SN injection scheme ('SN')are also availaible
+    p['CE_alpha'] = 1 # efficiency for CE ejection if using the alpha formalism; default is 1.
+    p['remove_merged'] = True # remove merged stars
 
     # <star particle creation>
 
+    p['binaries'] = False
+    #Not used if binaries is false, can leave to default values                                                                
+    p['mult_frac'] = 'field'  #Currently accepted method is 'field'.
+    p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'.
+    p['qdist'] = 'field' #Currently accepted method is 'field'.
+    p['edist'] = 'field' #Currently accepted method is 'field'.
     p['min_imf_mass'] = 0.08 | units.MSun
-    p['max_imf_mass'] = 100.0 | units.MSun
+    p['max_imf_mass'] = 100 | units.MSun
     p['sample_imf_mass'] = 10000.0 | units.MSun
-    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20. Value of 100 used in Cournoyer-Cloutier+21. https://groups.google.com/g/torch-users/c/BB4qsaxJoig
+    p['sample_imf_bins'] = 100 # Number of log-space bins from which we Poisson sample the Kroupa IMF. Value of 10 was used for Wall+19 and Wall+20.
     p['sink_rad'] = flashp['sink_accretion_radius'] | units.cm
     p['sum_small'] = False # agglomerate low-mass stars into particles with mass >= m_small Msun?
     p['m_small'] = 1.0 | units.MSun # agglomerate mass in Msun
@@ -141,7 +174,7 @@ def user_parameters():
     p['overwrite'] = True # <True> Passes flag to AMUSE write_set_to_file(); allows .amuse files to be overwritten without warning.
 
     # <job>
-
+    
     ntasks = get_ntasks_from_run_script("run.sh")
 
     p['num_grav_workers'] = 1 # must be power of 2 for PeTar 
@@ -151,6 +184,7 @@ def user_parameters():
     if p['with_petar']:
         p['with_ph4'] = False
         p['with_multiples'] = False
+        p['epsilon'] = 0 | units.RSun
 
     if p['with_se']:
         p['num_hy_workers'] -= 1
