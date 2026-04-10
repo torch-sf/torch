@@ -34,7 +34,7 @@
 !!
 
 !#define debug
-#define DEBUG_OVERHEAT
+!#define DEBUG_OVERHEAT
 !#define DEBUG_RADHEAT
 !#define DEBUG_DUST
 !#define DEBUG_STEP
