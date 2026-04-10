@@ -322,8 +322,16 @@ cd $TORCH_DIR
 make -C src/amuse/torch_amuse_flash develop-torch-amuse-flash
 ```
 
+If you are recompiling after a failed attempt, make sure to clean the directory first:
+
+```
+make -C src/amuse/torch_amuse_flash distclean
+```
+
 With that, your environment should contain a working Torch installation. Time to
 give it a try!
+
+
 
 ## Running the turbsph test
 You are now ready to run a Torch simulation! We will simulate a 
