@@ -8,6 +8,10 @@ HDF4_PATH  =
 HDF5_PATH  = ${EBROOTHDF5}
 HYPRE_PATH = /usr/local/hypre
 
+HDF5_INC   = ${HDF5_PATH}/include
+HDF5_LIB   = ${HDF5_PATH}/lib
+HDF5LIBS   = -lhdf5_fortran -lhdf5
+
 ZLIB_PATH  =
 
 PAPI_PATH  =
@@ -50,7 +54,9 @@ OPENMP = -fopenmp
 
 #FFLAGS_OPT = -ggdb -c -O3 -fdefault-real-8 -fdefault-double-8 \
 -mtune='intel' -Wuninitialized
-FFLAGS_OPT = -c -O2 -fdefault-real-8 -fdefault-double-8 
+FFLAGS_OPT = -c -O2 -fdefault-real-8 -fdefault-double-8 \
+  -I${HDF5_INC} -L${HDF5_LIB} ${HDF5LIBS} -fallow-argument-mismatch \
+  -I${EBROOTPETSC}/include -L${EBROOTPETSC}/lib -lpetsc -lz
 
 #I explictly add -O0 because I found that compiling source files without
 #an optimization flag generates the same object code as compiling source
@@ -125,6 +131,8 @@ LIB_TEST  =
 LIB_HDF4  =
 # Suggested at http://flash.uchicago.edu/pipermail/flash-users/2013-July/001322.html
 LIB_HDF5  = -L ${HDF5_PATH}/lib -Wl,-rpath,${HDF5_PATH}/lib -lhdf5 -lhdf5_fortran -lz
+
+LIB_PETSC  = -L${EBROOTPETSC}/lib -lpetsc -lz
 
 LIB_PAPI  =
 LIB_MATH  =

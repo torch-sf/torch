@@ -339,7 +339,7 @@ We can then activate the environment, and install the Python dependencies:
 
 \begin{lstlisting}[language=bash]
 . /path/to/torch_project/Torch-env/bin/activate
-pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
+pip3 install -U pip wheel scipy scikit-learn astropy jupyter pandas seaborn matplotlib yt
 \end{lstlisting}
 
 
@@ -838,6 +838,22 @@ p['edist'] = 'field' #Currently accepted method is 'field'.
 \end{lstlisting}
 The recommended value for the period distribution is 'inner', which is designed to sample the inner companion in hierarchical triples while 'field' samples a random companion. The 'inner' distribution better reproduces the observed
 close binary population. This choice is most important for massive stars, which have both a large triple fraction and a large fraction of systems with close companions. 
+
+\subsection{Interacting Binaries}
+To use interacting binaries in your simulations, the following parameters must be set in \texttt{torch\_user.py}:
+\begin{lstlisting}[language=python]
+p['with_be'] = True
+p['massloss_method'] = 'seba-puls'
+p['remove_merged'] = True
+p['binaries'] = True # can be set to False, not recommended
+# Feedback channels, interacting binaries have not been tested when those are turned off
+p['with_lyc'] = True
+p['with_pe_heat'] = True
+p['with_sn'] = True
+p['with_winds'] = True
+\end{lstlisting}
+Note that the \texttt{p['min\_feedback\_mass']} parameter now sets the minimum feedback for the primary in a binary system; if the companion is less massive than this mass, the system will still produce feedback.
+
 
 % ============
 % VorAMR Addon

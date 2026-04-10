@@ -10,6 +10,8 @@ from amuse.datamodel import Particles
 from amuse.io import write_set_to_file, read_set_from_file
 from amuse.units import units
 
+from binary_identification import get_binaries_from_stars
+
 from torch_param import FlashPar
 from torch_stdout import tprint
 
@@ -24,15 +26,16 @@ class TorchState(object):
         self.hydro = hydro
         self.grav  = grav
         self.mult  = mult
-        self.se    = se     #CCC 26/04/2024 to match above
+        self.se    = se
         self.user  = user_params
         
         # "Global" AMUSE-level data structures
         self.all_masses = {}
         self.stars = Particles(0)
+        self.binaries = Particles(0)
         self.stars_next_id = 0  # to supply ID attribute for ph4
 
-        # Adding these to permit primordial binaries -CCC, May 1, 2020
+        # For primordial binaries
         self.system_masses = {}
         self.all_positions = {}
         self.all_velocities = {}
@@ -40,10 +43,17 @@ class TorchState(object):
         self.stars_to_grav = self.stars.new_channel_to(grav.particles)
         self.grav_to_stars = grav.particles.new_channel_to(self.stars)
 
-        # Stellar evolution to stars, CCC 26/04/2024
+        # Stellar evolution to stars
         if se is not None:
             self.stars_to_se = self.stars.new_channel_to(se.particles)
             self.se_to_stars = se.particles.new_channel_to(self.stars)
+            # Binary evolution
+            if self.user['with_be']:
+                self.binaries_to_se = self.binaries.new_channel_to(se.binaries)
+                self.se_to_binaries = se.binaries.new_channel_to(self.binaries)
+            if (self.user['with_be'] or self.user['binaries']):
+                self.stars_to_binaries = self.stars.new_channel_to(self.binaries)
+                self.binaries_to_stars = self.binaries.new_channel_to(self.stars)
 
         # TODO enhancement - read from FLASH's own RuntimeParameter interface,
         # instead of duplicating the flash.par file parsing and default case
@@ -98,7 +108,7 @@ class TorchState(object):
                 massesfile = path.join(self.output_dir,
                     'all_masses{:04d}.pickle'.format(self.chknum))
 
-                # Addind these to permit binaries - CCC, May 3, 2020
+                # For binaries
                 systemsfile = path.join(self.output_dir,
                     'system_masses{:04d}.pickle'.format(self.chknum))
                 positionsfile = path.join(self.output_dir,
@@ -106,27 +116,26 @@ class TorchState(object):
                 velocitiesfile = path.join(self.output_dir,
                     'all_velocities{:04d}.pickle'.format(self.chknum))
 
-                with open(rstatefile, 'rb') as f:                 #Added b, CCC 03/2021
-                    rnd_state = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
+                with open(rstatefile, 'rb') as f:                 
+                    rnd_state = pickle.load(f, encoding='latin1') # encoding necessary to restart python2 with python3
                 np.random.set_state(rnd_state)
                 tprint("Random state set from "+rstatefile)
 
-                with open(massesfile, 'rb') as f:                       #Added b, CCC 03/2021
-                    self.all_masses = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
+                with open(massesfile, 'rb') as f:                       
+                    self.all_masses = pickle.load(f, encoding='latin1')
                 tprint("Loaded all_masses dictionary from "+massesfile)
 
                 if self.user['binaries']:
-                    # Adding these to permit primordial binaries -CCC, May 3, 2020
-                    with open(systemsfile, 'rb') as f:                          #Added b, CCC 03/2021
-                        self.system_masses = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022 
+                    with open(systemsfile, 'rb') as f:
+                        self.system_masses = pickle.load(f, encoding='latin1')
                     tprint("Loaded system_masses dictionary from "+systemsfile)
                     
-                    with open(positionsfile, 'rb') as f:                        #Added b, CCC 03/2021
-                        self.all_positions = pickle.load(f, encoding='latin1')  #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    with open(positionsfile, 'rb') as f:
+                        self.all_positions = pickle.load(f, encoding='latin1')
                     tprint("Loaded all_positions dictionary from "+positionsfile)
                     
-                    with open(velocitiesfile, 'rb') as f:                       #Added b, CCC 03/2021
-                        self.all_velocities = pickle.load(f, encoding='latin1') #Added encoding to restart python2 with python3, CCC 27/01/2022
+                    with open(velocitiesfile, 'rb') as f:
+                        self.all_velocities = pickle.load(f, encoding='latin1')
                     tprint("Loaded all_velocities dictionary from "+velocitiesfile)
 
             else:
@@ -145,19 +154,17 @@ class TorchState(object):
         # Must update our value of chknum, too.
         self.chknum = self.hydro.IO_num('chk')
 
-    # Force a checkpoint (to use for stalls), CCC 09/03/2023
-    # Also used to ensure a checkpoint is written immediately after sink formation, CCC 04/05/2023
+    # Force a checkpoint (to use for stalls)
+    # Also used to ensure a checkpoint is written immediately after sink formation
     def force_output(self, overwrite):
         """
         Force write chk and full Torch state.
         """
 
-        # Force a checkpoint to be written, CCC 09/03/2023
         # Torch state files
         self.out_mass()
         self.out_rnd()
 
-        # these outputs only needed by binaries
         if self.user['binaries']:
             self.out_system()
             self.out_position()
@@ -184,18 +191,20 @@ class TorchState(object):
             self.out_mass()
             self.out_rnd()
             if self.user['binaries']:
-            # Adding the three below to include primordial binaries -CCC, May 3, 2020
                 self.out_system()
                 self.out_position()
                 self.out_velocity()
             self.chknum = hy_chknum
-
+            
+            
         hy_pltnum = self.hydro.IO_out('pltpart')
 
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
             self.out_stars(overwrite)
             self.pltnum = hy_pltnum
+            if (self.user['with_be'] or self.user['binaries']):
+                self.out_binaries(overwrite)
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
 
@@ -207,7 +216,7 @@ class TorchState(object):
             pickle.dump(self.all_masses, f)
         tprint("*** Wrote queued stars to {:s} ****".format(fname))
 
-    # Adding these to permit primordial binaries
+    # For primordial binaries
     def out_system(self):
         """Write dict with all future system masses to pickle"""
         fname = path.join(self.output_dir,
@@ -264,7 +273,7 @@ class TorchState(object):
         tprint("*** Wrote merged stars to merged_stars.amuse")
         
     def out_escaped_stars(self, removed_stars, overwrite):
-        """Write merged star particles to AMUSE file"""
+        """Write escaped star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "escaped_stars.amuse")
         if stars_fname in listdir(self.output_dir):
@@ -274,6 +283,13 @@ class TorchState(object):
             all_removed_stars = removed_stars
         write_set_to_file(all_removed_stars, stars_fname, format='hdf5', overwrite_file=True)  # hdf5 works with Particles(0), csv breaks
         tprint("*** Wrote escaped stars to escaped_stars.amuse")
+
+    def out_binaries(self, overwrite):
+        """Write binary particles to AMUSE file"""
+        binaries_fname = path.join(self.output_dir,
+                               "binaries{:04d}.amuse".format(self.pltnum))
+        write_set_to_file(self.binaries, binaries_fname, format='hdf5', append_to_file=False, overwrite_file=overwrite)  # hdf5 works with Particles(0), csv breaks
+        tprint("*** Wrote existing binaries to {:s} ****".format(binaries_fname))
 
     def stars_to_mult_grav_copy(self, attr):
         """
@@ -300,6 +316,16 @@ class TorchState(object):
                         s.as_particle_in_set(leaves).velocity = s.velocity
 
         update_roots_from_leaves(self.mult, self.grav)
+        
+    def binaries_from_stars(self):
+        """
+        Identifies binaries from the stars particle set, and saves
+        binaries with semi-major axis and eccentricity, as well as
+        the particle information.
+        """
+        binaries = get_binaries_from_stars(self.stars, num_stars_for_tree = 10, a_max = 1e4)
+
+        return binaries
 
 
 def update_roots_from_leaves(mult, grav):

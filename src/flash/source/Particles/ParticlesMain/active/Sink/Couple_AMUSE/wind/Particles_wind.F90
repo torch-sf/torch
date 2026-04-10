@@ -10,7 +10,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !#define debug
-#define debug2
+!#define debug2
 
 
 subroutine Particles_wind(dt)

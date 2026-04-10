@@ -62,3 +62,7 @@ tags
 *.tar
 *.GZ
 *.TAR
+
+# Website
+# Sphinx build artifacts
+docs/rtd/build/

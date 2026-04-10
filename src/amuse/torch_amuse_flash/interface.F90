@@ -2261,7 +2261,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -2760,7 +2760,7 @@ integer set_starting_local_tag_numbers, lp
         if (get_ppe(int(allproc_particles(TAG_PART_PROP,lp),8)) .EQ. dr_globalMe) then
            local_tag_number = max(local_tag_number, get_pno(int(allproc_particles(TAG_PART_PROP,lp),8)))
         endif
-    enddo
+    end do
 
 set_starting_local_tag_numbers=0
 END FUNCTION
@@ -3173,7 +3173,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3300,7 +3300,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3427,7 +3427,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3556,7 +3556,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3691,7 +3691,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3822,7 +3822,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -3953,7 +3953,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -4083,7 +4083,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -4213,7 +4213,7 @@ if (MyPe .eq. 0) then
 
   do p = 1, localnpf
      id_sorted(p) = int(particles_global(iptag,p),8)
-  enddo
+  end do
 
   call NewQsort_IN(id_sorted, QSindex)
 
@@ -4470,7 +4470,7 @@ allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
    id_sorted(p) = int(particles_global(iptag,p),8)
-enddo
+end do
 
 call NewQsort_IN(id_sorted, QSindex)
 
@@ -4724,7 +4724,7 @@ allocate(id_sorted(localnpf))
 
 do p = 1, localnpf
    id_sorted(p) = int(particles_global(iptag,p),8)
-enddo
+end do
 
 call NewQsort_IN(id_sorted, QSindex)
 
@@ -7155,7 +7155,7 @@ allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
 !     id_sorted(p) = int(particles_global(iptag,p),8)
-!  enddo
+!  end do
 
   call NewQsort_IN(new_tags_array, QSindex)
 
@@ -7376,7 +7376,7 @@ allocate(id_sorted(nparts))
 
 !  do p = 1, localnpf
 !     id_sorted(p) = int(particles_global(iptag,p),8)
-!  enddo
+!  end do
 
   call NewQsort_IN(new_tags_array, QSindex)
 
