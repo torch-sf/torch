@@ -2,7 +2,7 @@ DEFAULT MultiSource
 
 PPDEFINE FERVENT
 PPDEFINE PE_HEAT
-REQUIRES Particles/ParticlesMain/ray/rayAPI
+REQUIRES Particles/ParticlesMain/ray_pe/rayAPI
 
 # this ensures that implemented stubs are chosen and not the stubs, as both folder are on the same hierarchy level
 CHILDORDER rayAPI
