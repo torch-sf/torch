@@ -55,8 +55,10 @@ OPENMP = -fopenmp
 #FFLAGS_OPT = -ggdb -c -O3 -fdefault-real-8 -fdefault-double-8 \
 -mtune='intel' -Wuninitialized
 FFLAGS_OPT = -c -O2 -fdefault-real-8 -fdefault-double-8 \
-             -I${HDF5INCLUDE} -L${HDF5LIBPATH} -L${HDF5LIBS} \
-             -fallow-argument-mismatch -Wuninitialized
+             -I${HDF5INCLUDE} -L${HDF5LIBPATH} ${HDF5LIBS} \
+             -fallow-argument-mismatch -Wuninitialized \
+	     -I${PETSC_DIR}/include -I${PETSC_ARCH}/include \
+	     -L${PETSC_DIR}/lib -L${PETSC_ARCH}/lib -lpetsc -lz
 
 #I explictly add -O0 because I found that compiling source files without
 #an optimization flag generates the same object code as compiling source
@@ -141,6 +143,8 @@ LIB_NCMPI = -L ${NCMPI_PATH}/lib -lpnetcdf
 LIB_MPE   =
 
 LIB_HYPRE = -L${HYPRE_PATH}/lib -lHYPRE
+
+LIB_PETSC  = -L${PETSC_DIR}/lib -L${PETSC_ARCH}/lib -lpetsc -lz
 
 # Uncomment the following line to use electic fence memory debugger.
 # export EF_ALLOW_MALLOC_0=1
