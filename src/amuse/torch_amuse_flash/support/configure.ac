@@ -34,11 +34,11 @@ AX_MPI()
 AC_OPENMP()
 AC_SUBST(OPENMP_FCFLAGS)
 
-AX_LIB_HDF5()
 TORCH_PETSC(3, 19, 0, 3, 20, 0)
 
 AC_LANG_POP([Fortran])
 
+AMUSE_LIB_HDF5()
 
 # Generate output
 AC_CONFIG_FILES([config.mk])
