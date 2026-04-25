@@ -186,50 +186,99 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
 
                 if state.yields is not None:
                     # Or could do the binary yield check here, after checking yields in general. Though have to rewrite dmdt and vterm then
-                    # if with_binary_yields:
+                    # if with_binary_yields: # In case user didn't define this option (?)
+                    if state.yields_bin is not None:
+                        tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
+                        if s.binylds:
+                            tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
+                            
+                            # timescale check ...
 
-                    tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
-                    if s.binylds:
-                        tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
-                        
-                        # timescale check ...
+                            
+    
+                            # Get inj_mass -- how much mass is being injected by this process
+                            # Initially use summ.mass_ejected to get these values, which gives the total ejected mass by the system
+                            # Need to build a similar interp object as the yld one, for this %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-                        # re-calculate dmdt and vterm ...
-                        
-                        # yield injection stuff ...
-            
-                        # Update flag, now that have injected, won't anymore
-                        s.binylds = 0
-                        tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
-    
-                    # else
-                    else:
-                        tprint('star is now injecting normal single-star wind yields')
-                        
-                        wind_yields = np.ones(num_tracers)
-                        for itrac, tracer in enumerate(state.yields.tracer_fields):
-                            if tracer == 'wind':
-                                wind_yields[itrac] = 1.0
-                            elif tracer == 'ccsn':
-                                wind_yields[itrac] = 0.0
-                            elif tracer == 'ignore':
-                                wind_yields[itrac] = -1.0
-                            elif tracer in state.yields.elements:
-                                wind_yields[itrac] = state.yields.wind_yields(
-                                        elements=tracer,
-                                        mass=s.initial_mass.value_in(units.MSun),
-                                        metal=s.initial_metal,
-                                        rot=s.rotvel.value_in(units.km/units.s),
-                                        interpolate='linear')[0] \
-                                    / state.yields.wind_mloss(
-                                        mass=s.initial_mass.value_in(units.MSun),
-                                        metal=s.initial_metal,
-                                        rot=s.rotvel.value_in(units.km/units.s),
-                                        interpolate='linear')[0]
-                            else:
-                                raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
-    
-                        dy_dt[i] = dm_dt[i]*wind_yields
+                            # inj_mass = state.yields_bin.ejected_mass(params) | units.MSun
+                            inj_mass = 2 | units.MSun # Test for now
+
+        
+                            
+                            # yield injection stuff ...
+                            bin_yields = np.ones(num_tracers)
+                            for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
+                                if tracer == 'wind':
+                                    bin_yields[itrac] = 0.0
+                                elif tracer == 'ccsn':
+                                    bin_yields[itrac] = 0.0
+                                # Here could add tracer for 'bin_ylds', field that tracks material from bins -- later, TODO %%%%
+                                elif tracer == 'ignore':
+                                    bin_yields[itrac] = -1.0
+                                elif tracer in state.yields_bin.elements:
+                                    bin_yields[itrac] = state.yields_bin.wind_yields( # Maybe change the name from wind to something else
+                                            elements=tracer,
+                                            int_params=np.array([[s.initial_mass.value_in(units.MSun),
+                                                              s.massratio,
+                                                              s.period.value_in(units.day)]]), # Not sure if these units work -- CHECK %%%%% - if not,
+                                        # can just put it in seconds, and then convert to days
+                                            )[0] \
+                                        / state.yields_bin.wind_mloss(
+                                            int_params=np.array([[s.initial_mass.value_in(units.MSun),
+                                                              s.massratio,
+                                                              s.period.value_in(units.day)]]) )[0]
+                                else:
+                                    raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
+                            tprint("%%%%%%% bin_yields:", bin_yields)
+                            for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
+                                hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
+                                
+
+                            
+                            # for itrac, tracer in enumerate(state.yields.tracer_fields):
+                            #     hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
+
+                            # Since later doing continue, need to do this inside here so it happens (?) ccsn doesn't calculate dm_dt hm. Is that an error? %%%%
+                            # if dm_dt[i]*dt > 0.0|units.MSun:
+                            #     s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+                            tprint("%%%%%%% Mass before:", s.mass)
+                            # For now could just do:
+                            s.mass = old_mass[i] - inj_mass
+                            tprint("%%%%%%% Mass after:", s.mass)
+                
+                            # Update flag, now that have injected, won't anymore
+                            s.binylds = 0
+                            tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
+                            
+                            # After injecting bin ylds for this star, keep looping for next star (don't do code below)
+                            continue
+                    # %% Should get here if this star is not injecting bin ylds, or if bin ylds are not being used to begin with. Otherwise, continue before
+                    
+                    
+                    wind_yields = np.ones(num_tracers)
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
+                        if tracer == 'wind':
+                            wind_yields[itrac] = 1.0
+                        elif tracer == 'ccsn':
+                            wind_yields[itrac] = 0.0
+                        elif tracer == 'ignore':
+                            wind_yields[itrac] = -1.0
+                        elif tracer in state.yields.elements:
+                            wind_yields[itrac] = state.yields.wind_yields(
+                                    elements=tracer,
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0] \
+                                / state.yields.wind_mloss(
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0]
+                        else:
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+
+                    dy_dt[i] = dm_dt[i]*wind_yields
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024

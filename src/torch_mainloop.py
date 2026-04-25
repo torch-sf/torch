@@ -85,7 +85,7 @@ from voramr.voramr_mainloop import (
     interpolate_fields
 )
 from voramr.voramr_stdout import vprint
-from torch_yields import LimongiChieffi2018
+from torch_yields import LimongiChieffi2018, BinaryYields
 
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
@@ -587,10 +587,17 @@ def run_torch(user_initial_conditions, user_parameters):
     if USER['with_yields']:
         yields = LimongiChieffi2018()
         yields.tracer_fields = USER['tracer_fields']
+        
+        if USER['with_binary_yields']:
+            bin_yields = BinaryYields()
+            bin_yields.tracer_fields = USER['tracer_fields']
+        else:
+            bin_yields = None
     else:
         yields = None
+        bin_yields = None
 
-    state = TorchState(hydro, grav, mult, se, USER, yields)
+    state = TorchState(hydro, grav, mult, se, USER, yields, bin_yields)
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
