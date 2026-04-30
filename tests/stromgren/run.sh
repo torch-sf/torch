@@ -1,13 +1,12 @@
 #!/bin/sh
 #SBATCH --job-name=rad_tests
-#SBATCH -n 50
-#SBATCH --ntasks-per-node=50       # adjust to fill your CPUs
+#SBATCH -n 10
+#SBATCH --ntasks-per-node=10       # adjust to fill your CPUs
 #SBATCH --cpus-per-task=1
-#SBATCH --exclusive
 #SBATCH -p genoa
 #SBATCH --time=5:00:00
 
-source $TORCH_DIR/torch.env
+#source /full/path/to/torch.env
 
 ulimit -s unlimited
 export OMP_STACKSIZE=128M
