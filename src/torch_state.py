@@ -27,7 +27,7 @@ class TorchState(object):
         self.se    = se     #CCC 26/04/2024 to match above
         self.user  = user_params
         self.yields = yields
-        self.yields_bin = yields_bin
+        self.yields_bin = yields_bin # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         # "Global" AMUSE-level data structures
         self.all_masses = {}

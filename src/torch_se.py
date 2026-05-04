@@ -188,8 +188,18 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                     # Or could do the binary yield check here, after checking yields in general. Though have to rewrite dmdt and vterm then
                     # if with_binary_yields: # In case user didn't define this option (?)
                     if state.yields_bin is not None:
+                        # DEBUG ===========================================================
+                        # Load params of this star
+                        star_params = np.array([[s.initial_mass.value_in(units.MSun),
+                                                              s.massratio,
+                                                              s.period.value_in(units.day)]])
                         tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
-                        if s.binylds:
+                        tprint("%%%%%%% Star's age:", s.age)
+                        tprint("%%%%%%% Star's binyld timescale:", state.yields_bin.timescale(star_params) | units.s)
+                        tprint("%%%%%%% Star's binyld massej:", state.yields_bin.massej(star_params) | units.MSun)
+                        # DEBUG ===========================================================
+                        
+                        if s.binylds and s.age > 33529233868.2 | units.s: # 1.104e11 | units.s: # if older than 3.5kyr
                             tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
                             
                             # timescale check ...
@@ -218,15 +228,9 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                                 elif tracer in state.yields_bin.elements:
                                     bin_yields[itrac] = state.yields_bin.wind_yields( # Maybe change the name from wind to something else
                                             elements=tracer,
-                                            int_params=np.array([[s.initial_mass.value_in(units.MSun),
-                                                              s.massratio,
-                                                              s.period.value_in(units.day)]]), # Not sure if these units work -- CHECK %%%%% - if not,
-                                        # can just put it in seconds, and then convert to days
-                                            )[0] \
+                                            int_params=star_params)[0] \
                                         / state.yields_bin.wind_mloss(
-                                            int_params=np.array([[s.initial_mass.value_in(units.MSun),
-                                                              s.massratio,
-                                                              s.period.value_in(units.day)]]) )[0]
+                                            int_params=star_params )[0]
                                 else:
                                     raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
                             tprint("%%%%%%% bin_yields:", bin_yields)
@@ -254,7 +258,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             continue
                     # %% Should get here if this star is not injecting bin ylds, or if bin ylds are not being used to begin with. Otherwise, continue before
                     
-                    
+                    tprint("%%%%%%% Doing normal wind!!!!")
                     wind_yields = np.ones(num_tracers)
                     for itrac, tracer in enumerate(state.yields.tracer_fields):
                         if tracer == 'wind':

@@ -370,7 +370,7 @@ class YieldSource_unsgrid:
     yields table.
     """
 
-    def __init__(self, elements, params, yields):
+    def __init__(self, elements, params, yields, timescales, massej):
         """
         Initialize RegularGridInterpolator object for element yields and total
         mass loss.
@@ -384,6 +384,9 @@ class YieldSource_unsgrid:
         self.elements = elements
         self.params = params
         self.yields = yields
+
+        self.timescales = timescales
+        self.massej = massej
 
     
     def get_yld(self, int_elements, int_params, interpolate='linear', extrapolate=False):
@@ -428,7 +431,7 @@ class YieldSource_unsgrid:
                     # Params are outside of the covered param space, so switch to nearest interpolation
                     return [ griddata(self.params, self.yields[:, el_ind], int_params, method='nearest') ]
                 else:
-                    # Params are outside of the covered param space, so stick with interpolation method
+                    # Params are inside of the covered param space, so stick with interpolation method
                     return [ griddata(self.params, self.yields[:, el_ind], int_params, method=interpolate) ]
             except IndexError: # Failed to find element in list, so not there
                 shape = griddata(self.params, self.yields[:, 0], int_params, method=interpolate).shape
@@ -462,8 +465,6 @@ class YieldSource_unsgrid:
                 # Might need to just drop the list loop and do it one by one I guess
 
 
-
-    
     def get_mloss(self, int_params, interpolate='nearest', extrapolate=False):
         """
         Return sum of all yields (mass loss) for these parameters.
@@ -482,6 +483,45 @@ class YieldSource_unsgrid:
         # Interpolate massloss (sum of all yields, excluding Z) at the given params
         mloss = griddata(self.params, np.sum(self.yields[:, 1:], axis=1), int_params, method=interpolate)
         return mloss
+
+
+    def get_timescale(self, int_params, interpolate='linear', extrapolate=False):
+        '''
+        Returns interpolated timescale (from tables) of injection for these parameters.
+        Timescale in [s]
+        '''
+
+        if int_params.shape[1] != self.params.shape[1]:            
+            raise ValueError(
+                "Supplied parameters do not match yield set parameters.")
+
+        # check if any set of params lies outside of param space (is nan)
+        nancheck = np.isnan(griddata(self.params, self.timescales, int_params, method=interpolate))
+
+        # Interpolate for each set of params, using interp method depending on whether or not inside param space
+        return [ griddata(self.params, self.timescales, int_params[ind_param], method='nearest')[0] if (nancheck[ind_param]) \
+                 else griddata(self.params, self.timescales, int_params[ind_param], method=interpolate)[0] \
+                 for ind_param in range(int_params.shape[0]) ]
+
+
+    def get_massej(self, int_params, interpolate='linear', extrapolate=False):
+        '''
+        Returns interpolated total ejected mass (from tables) for these parameters.
+        Ejected mass in [MSun]
+        '''
+
+        if int_params.shape[1] != self.params.shape[1]:            
+            raise ValueError(
+                "Supplied parameters do not match yield set parameters.")
+
+        # check if any set of params lies outside of param space (is nan)
+        nancheck = np.isnan(griddata(self.params, self.massej, int_params, method=interpolate))
+
+        # Interpolate for each set of params, using interp method depending on whether or not inside param space
+        return [ griddata(self.params, self.massej, int_params[ind_param], method='nearest')[0] if (nancheck[ind_param]) \
+                 else griddata(self.params, self.massej, int_params[ind_param], method=interpolate)[0] \
+                 for ind_param in range(int_params.shape[0]) ]
+
 
 # Binary yields class, reads those yield tables
 class BinaryYields:
@@ -537,10 +577,13 @@ class BinaryYields:
 
         self.elements = np.array(self.elements)
 
+
+        self.timescales = self.load_timescales()
+        self.massejs = self.load_massej()
         
         # Wind yield interpolation object
         self.wind = YieldSource_unsgrid(
-                self.elements, self.points, self.yld)
+                self.elements, self.points, self.yld, self.timescales, self.massejs)
 
         # # Core-collapse SNe yield interpolation object
         # self.ccsn = YieldSource(
@@ -552,7 +595,7 @@ class BinaryYields:
     #     """
     #     return self.ccsn.get_yld(elements, [rot, metal, mass], interpolate=interpolate, extrapolate=extrapolate)
 
-    def wind_yields(self, elements, int_params, interpolate='nearest', extrapolate=False):
+    def wind_yields(self, elements, int_params, interpolate='linear', extrapolate=False):
         """ Returns yields [Msol] for elements from pre-supernovae wind given mass [Msol], 
             metallicity [mass fraction], and rotation [km/s].
             int_params = [ [m1, q, p], [m1, q, p] ]
@@ -571,7 +614,7 @@ class BinaryYields:
     #     """
     #     return self.ccsn.get_mloss([rot, metal, mass], interpolate=interpolate, extrapolate=extrapolate)
     
-    def wind_mloss(self, int_params, interpolate='nearest', extrapolate=False):
+    def wind_mloss(self, int_params, interpolate='linear', extrapolate=False):
         """ Returning mass loss [Msol] as sum of all elements.
         """
         return self.wind.get_mloss(int_params, interpolate=interpolate, extrapolate=extrapolate)
@@ -589,6 +632,18 @@ class BinaryYields:
     #                           interpolate=interpolate,
     #                           extrapolate=extrapolate)
 
+    def timescale(self, int_params, interpolate='linear', extrapolate=False):
+        """ Returns injection time for a given binary system. Timescale in [s]
+        """
+        return self.wind.get_timescale(int_params, interpolate=interpolate, extrapolate=extrapolate)
+
+    
+    def massej(self, int_params, interpolate='linear', extrapolate=False):
+        """ Returns total ejected mass for a given binary system. Ejected mass in [MSun]
+        """
+        return self.wind.get_massej(int_params, interpolate=interpolate, extrapolate=extrapolate)
+
+    
     def get_element_list(self):
         """ Helper function for reading element list during initialization.
         """
@@ -610,6 +665,26 @@ class BinaryYields:
         ylds = np.array( [model[7::2] for model in summ] )
 
         return ylds
+
+    def load_timescales(self):
+        """ Loader function for wind yields. Used during initialization.
+        """
+        # Load summary file
+        summ = np.loadtxt(self.summ_path, delimiter=',', skiprows=1, usecols=range(1,43))
+        # Grab yields for each element for all models
+        timescales = np.array( [model[4] for model in summ] )
+
+        return timescales
+        
+    def load_massej(self):
+        """ Loader function for wind yields. Used during initialization.
+        """
+        # Load summary file
+        summ = np.loadtxt(self.summ_path, delimiter=',', skiprows=1, usecols=range(1,43))
+        # Grab yields for each element for all models
+        mass_ejs = np.array( [model[3] for model in summ] )
+
+        return mass_ejs
 
     def get_metallicity(self):
         elements_array = np.array(self.elements)
