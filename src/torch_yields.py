@@ -358,6 +358,7 @@ class LimongiChieffi2018:
 
 # ================================================ EL =============================================
 
+
 # Interpolation class, for unstructured (non-regular) grids
 class YieldSource_unsgrid:
     """
@@ -482,6 +483,10 @@ class YieldSource_unsgrid:
 
         # Interpolate massloss (sum of all yields, excluding Z) at the given params
         mloss = griddata(self.params, np.sum(self.yields[:, 1:], axis=1), int_params, method=interpolate)
+        # In case the params lie outside, just interpolate to nearest
+        if np.isnan(mloss):
+            mloss = griddata(self.params, np.sum(self.yields[:, 1:], axis=1), int_params, method='nearest')
+        
         return mloss
 
 

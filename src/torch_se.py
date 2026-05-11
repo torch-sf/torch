@@ -103,9 +103,11 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     # Use evolve_model to evolve all stars at the same time
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 26/04/2024
+    tprint('%%%%%%% Mass before evolve:', state.stars.mass)
     state.stars_to_se.copy()
     se.evolve_model(se_time)
     state.se_to_stars.copy()
+    tprint('%%%%%%% Mass after evolve:', state.stars.mass)
 
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
@@ -143,6 +145,8 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             ccsn_yields[itrac] = 0.0
                         elif tracer == 'ccsn':
                             ccsn_yields[itrac] = 1.0
+                        elif tracer == 'bin':
+                            ccsn_yields[itrac] = 0.0
                         elif tracer == 'ignore':
                             ccsn_yields[itrac] = -1.0
                         elif tracer in state.yields.elements:
@@ -178,6 +182,9 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 npe[i] = _tmp[1]
                 sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
             if with_winds:
+
+                tprint('%%%%%%% old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt, massloss_method')
+                tprint(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt, massloss_method)
                 
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                           massloss_method=massloss_method)
@@ -185,8 +192,6 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 vterm[i] = _tmp[1]
 
                 if state.yields is not None:
-                    # Or could do the binary yield check here, after checking yields in general. Though have to rewrite dmdt and vterm then
-                    # if with_binary_yields: # In case user didn't define this option (?)
                     if state.yields_bin is not None:
                         # DEBUG ===========================================================
                         # Load params of this star
@@ -203,16 +208,13 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
                             
                             # timescale check ...
-
-                            
+                            # state.yields_bin.timescale(star_params)
     
                             # Get inj_mass -- how much mass is being injected by this process
-                            # Initially use summ.mass_ejected to get these values, which gives the total ejected mass by the system
-                            # Need to build a similar interp object as the yld one, for this %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
                             # inj_mass = state.yields_bin.ejected_mass(params) | units.MSun
                             inj_mass = 2 | units.MSun # Test for now
 
+                            dm_dt[i] = inj_mass/dt
         
                             
                             # yield injection stuff ...
@@ -222,7 +224,8 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                                     bin_yields[itrac] = 0.0
                                 elif tracer == 'ccsn':
                                     bin_yields[itrac] = 0.0
-                                # Here could add tracer for 'bin_ylds', field that tracks material from bins -- later, TODO %%%%
+                                elif tracer == 'bin':
+                                    bin_yields[itrac] = 1.0
                                 elif tracer == 'ignore':
                                     bin_yields[itrac] = -1.0
                                 elif tracer in state.yields_bin.elements:
@@ -234,25 +237,30 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                                 else:
                                     raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
                             tprint("%%%%%%% bin_yields:", bin_yields)
-                            for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
-                                hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
-                                
+                            tprint("%%%%%%% star_params:", star_params)
+                            tprint("%%%%%%% mass [Msun], q, period [day]")
 
                             
-                            # for itrac, tracer in enumerate(state.yields.tracer_fields):
-                            #     hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
+                            tprint("%%%%% dm_dt =", dm_dt[i])
+                            tprint("%%%%% dm =", dm_dt[i]*dt)
+                            
+                            # for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
+                            #     hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
+                                
 
-                            # Since later doing continue, need to do this inside here so it happens (?) ccsn doesn't calculate dm_dt hm. Is that an error? %%%%
-                            # if dm_dt[i]*dt > 0.0|units.MSun:
-                            #     s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+
+                            # Since later doing continue, need to do this inside here so it happens (?)
                             tprint("%%%%%%% Mass before:", s.mass)
-                            # For now could just do:
-                            s.mass = old_mass[i] - inj_mass
+                            if dm_dt[i]*dt > 0.0|units.MSun:
+                                s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
                             tprint("%%%%%%% Mass after:", s.mass)
                 
                             # Update flag, now that have injected, won't anymore
                             s.binylds = 0
                             tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
+
+                            
+                            dy_dt[i] = dm_dt[i]*bin_yields
                             
                             # After injecting bin ylds for this star, keep looping for next star (don't do code below)
                             continue
@@ -265,6 +273,8 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             wind_yields[itrac] = 1.0
                         elif tracer == 'ccsn':
                             wind_yields[itrac] = 0.0
+                        elif tracer == 'bin':
+                            wind_yields[itrac] = -1.0 # Testing -1 or 0
                         elif tracer == 'ignore':
                             wind_yields[itrac] = -1.0
                         elif tracer in state.yields.elements:
@@ -283,12 +293,15 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
 
                     dy_dt[i] = dm_dt[i]*wind_yields
+                    tprint("%%%%% dm_dt =", dm_dt[i])
+                    tprint("%%%%% dm =", dm_dt[i]*dt)
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
+    tprint('%%%%% Now setting star props')
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
     # TODO not sure if as_quantity_in(...) calls are actually needed.
@@ -305,7 +318,8 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
     if state.yields is not None:
-        hydro.set_particle_binylds(state.stars.tag, state.stars.binylds)
+        if state.yields_bin is not None:
+            hydro.set_particle_binylds(state.stars.tag, state.stars.binylds)
         for itrac in range(num_tracers):
             hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
             hydro.set_particle_tracer_dydt(state.stars.tag, dy_dt[:,itrac].as_quantity_in(units.g/units.s))
@@ -317,6 +331,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
     hydro.set_particle_radius(state.stars.tag, state.stars.radius)
     hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
+    tprint('%%%%% Done setting star props')
     
     return se_dt
 
