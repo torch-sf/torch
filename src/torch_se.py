@@ -302,7 +302,7 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
                         s.position = COM - m1_f*rel_pos[0]
                         t.position = COM + m2_f*rel_pos[0]
                         # Only update the velocities if the stars did not merge, to avoid PeTar errors
-                        if (s.mass != (0. | units.MSun)) and (t.mass != (0. | units.MSun)):
+                        if len(np.nonzero(rel_pos.value_in(units.pc))[0]) > 0:
                             s.velocity = COV - m1_f*rel_vel[0]
                             t.velocity = COV + m2_f*rel_vel[0]
                         
