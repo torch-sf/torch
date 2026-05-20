@@ -29,7 +29,7 @@
 !!***
 
 ! this corresponds to ionization from FLASH2.5 without the raytracing 
-#define DEBUG_RADTRANS
+!#define DEBUG_RADTRANS
 #define timing
 
 subroutine RadTrans(nblk, blklst, dt, pass)

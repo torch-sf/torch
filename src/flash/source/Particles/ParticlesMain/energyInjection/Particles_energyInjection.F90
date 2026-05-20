@@ -38,7 +38,7 @@ subroutine Particles_energyInjection(injectEnergyin, fracKin, injectMassIn, xloc
 
 !#define DEBUG
 !#define DEBUG2
-#define DEBUG_ENERGY
+!#define DEBUG_ENERGY
 
 use Grid_data, ONLY: gr_meshComm, gr_meshMe
 

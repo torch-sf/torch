@@ -38,7 +38,7 @@
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
 
 !#define DEBUG
-#define DEBUG_ENERGY
+!#define DEBUG_ENERGY
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
