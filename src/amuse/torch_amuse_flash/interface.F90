@@ -7422,14 +7422,20 @@ FUNCTION set_particle_tracer_dydt(tags, dydt, nparts)
 #ifdef WIND_INJ
   ! Are we using winds?
 
+print*, "[interface.F90]: %%%%%%%%%%%%% inside set_particle_tracer_dydt"
+
 #ifdef bisect
+  print*, "[interface.F90]: %%%%%%%%%%%%% inside bisect"
 
   call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
 
   if (type_count .ge. 1) then
-     
+  
+    print*, "[interface.F90]: %%%%%%%%%%%%% inside if (type_count .ge. 1) then"
     ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
     part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
+
+    print*, "[interface.F90]: %%%%%%%%%%%%% bisect, part_tracer_index=", part_tracer_index
 
     ! Sort by particle tag. Note that input array should also be
     ! ordered by tag number then.
@@ -7475,6 +7481,9 @@ FUNCTION set_particle_tracer_dydt(tags, dydt, nparts)
     
   ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
   part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
+
+  
+  print*, "[interface.F90]: %%%%%%%%%%%%% bisect else, part_tracer_index=", part_tracer_index
 
   ! Sort by particle tag. Note that input array should also be
   ! ordered by tag number then.

@@ -74,10 +74,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     # Properties used for yields
     if state.yields is not None:
         rotvel   = hydro.get_particle_rotvel(newtags)
-        # Later add an if here for binary yields
-        period   = hydro.get_particle_period(newtags) # %%%%%%%%%%%%%%%%%%%%%
-        massratio   = hydro.get_particle_massratio(newtags) # %%%%%%%%%%%%%%%%%%%%%
-        binylds   = hydro.get_particle_binylds(newtags) # %%%%%%%%%%%%%%%%%%%%%
+        if state.yields_bin is not None:
+            period   = hydro.get_particle_period(newtags) # %%%%%%%%%%%%%%%%%%%%%
+            massratio   = hydro.get_particle_massratio(newtags) # %%%%%%%%%%%%%%%%%%%%%
+            binylds   = hydro.get_particle_binylds(newtags) # %%%%%%%%%%%%%%%%%%%%%
         if 'Z' in state.yields.tracer_fields:
             metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
             hydro.set_tracer_field_pointer(metal_idx+1) # Fortran style counting (start on 1)
@@ -105,10 +105,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     if state.yields is not None:
         add_star.rotvel        = rotvel
         add_star.initial_metal = initial_metal
-        # Later add an if here for binary yields
-        add_star.period        = period # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        add_star.massratio     = massratio # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        add_star.binylds       = binylds # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if state.yields_bin is not None:
+            add_star.period        = period # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            add_star.massratio     = massratio # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            add_star.binylds       = binylds # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     # Set stellar type and radius - CCC 06/11/2024
