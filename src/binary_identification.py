@@ -32,9 +32,7 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
     def _get_companion(star, stars):
         E = _binding_energy(star, stars).flatten()
         c = np.argmin(E.value_in(units.erg))
-        a = get_orbital_elements_from_binaries(star, stars[c])[2]
-        e = get_orbital_elements_from_binaries(star, stars[c])[3]
-        return c, E[c].value_in(units.erg), a.value_in(units.au), e, stars[c].mass.value_in(units.MSun)
+        return c, E[c].value_in(units.erg), stars[c].mass.value_in(units.MSun)
         
     stars_for_tree = np.transpose(np.vstack((stars.x.value_in(units.pc), stars.y.value_in(units.pc), stars.z.value_in(units.pc))))
     tree = KDTree(stars_for_tree)
@@ -54,11 +52,13 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
             
             for s in _p_id:
                 s_ids = np.where(_p_id != s)[0]
-                _c_id_tmp, _energies[s], _a[s], _e[s], _cmass[s] = _get_companion(stars[s], stars[s_ids])
+                _c_id_tmp, _energies[s], _cmass[s] = _get_companion(stars[s], stars[s_ids])
                 if _energies[s] == -1*np.inf:
                     print('Stars at same location!', _cmass[s], _pmass[s])
                 _c_id[s] = s_ids[_c_id_tmp]
             _c_id = _c_id.astype('int')
+            _a, _e = get_orbital_elements_from_binaries(stars[_p_id], stars[_c_id])[2:4]
+            _a = _a.value_in(units.au)
             
         else:
             nearest_dist, _nearest_ind = tree.query(stars_for_tree, k=num_stars_for_tree + 1)  # k=2 nearest neighbors where k1 = identity
@@ -66,11 +66,13 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
 
             for s in _p_id:
                 s_ids = nearest_ind[s]
-                _c_id_tmp, _energies[s], _a[s], _e[s], _cmass[s] = _get_companion(stars[s], stars[s_ids])
+                _c_id_tmp, _energies[s], _cmass[s] = _get_companion(stars[s], stars[s_ids])
                 if _energies[s] == -1*np.inf:
                     print('Stars at same location!', _cmass[s], _pmass[s])
                 _c_id[s] = s_ids[_c_id_tmp]
             _c_id = _c_id.astype('int')
+            _a, _e = get_orbital_elements_from_binaries(stars[_p_id], stars[_c_id])[2:4]
+            _a = _a.value_in(units.au)
             
     
         # Keep only bound pairs
@@ -106,26 +108,11 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
         _energies = _energies[sort_by_energy]
         _a = _a[sort_by_energy]
         _e = _e[sort_by_energy]
-        
-    
-        # Remove duplicate companions
-        select_by_companion = np.ones(len(_pmass))
-        for c in range(len(_c_id)):
-            if _c_id[c] in _c_id[:c]:
-                select_by_companion[c] = 0
-        select_by_companion = np.arange(len(_c_id))[select_by_companion > 0]
-        _pmass = _pmass[select_by_companion]
-        _cmass = _cmass[select_by_companion]
-        _p_id = _p_id[select_by_companion]
-        _c_id = _c_id[select_by_companion]
-        _energies = _energies[select_by_companion]
-        _a = _a[select_by_companion]
-        _e = _e[select_by_companion]
     
         # Remove duplicate companions & primaries
         select_by_companion = np.ones(len(_pmass))
         for c in range(len(_c_id)):
-            if (_p_id[c] in _c_id[:c]) or (_c_id[c] in _p_id[:c]):
+            if (_c_id[c] in _c_id[:c]) or (_p_id[c] in _c_id[:c]) or (_c_id[c] in _p_id[:c]):
                 select_by_companion[c] = 0
         select_by_companion = np.arange(len(_c_id))[select_by_companion > 0]
         _pmass = _pmass[select_by_companion]
@@ -137,13 +124,9 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
         e = _e[select_by_companion]
     
         # Prepare particle set for saving
-        binaries = Particles(len(_p_id))
-
-        for i in range(len(binaries)):
-            binaries[i].child1 = stars[_p_id][i]
-            binaries[i].child2 = stars[_c_id][i]
-        binaries.semi_major_axis = a
-        binaries.eccentricity    = e
+        binaries = Particles(semi_major_axis=a, eccentricity=e)
+        binaries.child1 = list(stars[_p_id])
+        binaries.child2 = list(stars[_c_id])
         
         return binaries
     
