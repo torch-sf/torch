@@ -121,7 +121,7 @@ def initialize_workers():
         from amuse.couple import multiples
     
     # Converter for the N-body code.
-    convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun)
+    convert = nbody.nbody_to_si(1.0|units.yr, 1.0|units.MSun)
     # Converter for the hydro code.
     convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
 
@@ -139,6 +139,7 @@ def initialize_workers():
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out']
+        grav.parameters.dt_soft = USER['dt_soft']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
@@ -216,13 +217,14 @@ def evolve(state, hydro, grav, mult, se):
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
-        # Get maximum dt from torch_user.py
-        dt_max = USER['dt_soft_max']
-        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
+        # Get dt_soft from torch_user.py
+        dt_petar = USER['dt_soft']
+        dt_nbody = dt_petar * pow(2., np.floor(np.log2(dt/dt_petar)))
         if num_stars > 0:
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
-        else: # Only enforce dt_soft_max if stars are formed
             dt = dt_nbody
+            if dt_nbody < dt_petar:
+                tprint("dt_soft > dt_flash: Lowering dt_soft")
+                grav.parameters.dt_soft = dt
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -389,8 +391,6 @@ def evolve(state, hydro, grav, mult, se):
 
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        if USER['with_petar']:
-                            grav.parameters.dt_soft = dt
                         dt_old = dt
                         req_grav = grav.evolve_model.asynchronous(hy_time+dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
@@ -412,8 +412,6 @@ def evolve(state, hydro, grav, mult, se):
                     if USER['with_multiples']:
                         mult.evolve_model(hy_time+dt)
                     else:
-                        if USER['with_petar']:
-                            grav.parameters.dt_soft = dt
                         start_t = time.time()
                         grav.evolve_model(hy_time+dt)
                         gr_evolve_time = time.time()-start_t
@@ -549,12 +547,12 @@ def evolve(state, hydro, grav, mult, se):
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
-            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-            dt = dt_nbody
+            dt_nbody = dt_petar * pow(2., np.floor(np.log2(dt/dt_petar)))
             if num_stars > 0:
-                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
-            else: # Only enforce dt_soft_max if stars are formed
                 dt = dt_nbody
+                if dt_nbody < dt_petar:
+                    tprint("dt_soft > dt_flash: Lowering dt_soft")
+                    grav.parameters.dt_soft = dt
 
         num_stars = hydro.get_number_of_particles()  # loop variable
 

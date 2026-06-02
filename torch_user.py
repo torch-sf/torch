@@ -134,9 +134,9 @@ def user_parameters():
     # <star/n-body gravity & binaries>
     
     p['with_petar'] = True
-    p['r_bin'] = 50 | units.au
+    p['r_bin'] = 50. | units.au
     p['r_out'] = 0.003 | units.pc #Change with below 
-    p['dt_soft_max'] = 0.125 | units.kyr
+    p['dt_soft'] = 4. | units.yr
 
     # <stellar evolution>
     
