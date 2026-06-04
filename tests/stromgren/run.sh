@@ -8,6 +8,12 @@
 
 #source /full/path/to/torch.env
 
+# link files
+ln -sf ${TORCH_DIR}/cool.dat
+ln -sf ${TORCH_DIR}/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/opacity.inp
+ln -sf ${TORCH_DIR}/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/kP_h2001.dat
+ln -sf ${TORCH_DIR}/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/kR_h2001.dat
+
 ulimit -s unlimited
 export OMP_STACKSIZE=128M
 

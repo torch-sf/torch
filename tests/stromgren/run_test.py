@@ -49,6 +49,7 @@ def user_parameter_decorator(func):
         p['with_lyc'] = False 
         p['with_pe_heat'] = False 
         p['with_winds'] = False
+        p['remove_merged'] = False
 
         return p
     return wrapper

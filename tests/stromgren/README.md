@@ -2,10 +2,8 @@
 
 Directions:
 
-1. Copy and run the setup\_simulation.sh script in run directory. 
+1. Adapt run.sh as needed for system. 
 
-2. Adapt run.sh as needed for system. 
+2. Submit test.
 
-3. Submit test.
-
-4. Check outputted plot file stromgren.png.
+3. Check outputted plot file stromgren.png.
