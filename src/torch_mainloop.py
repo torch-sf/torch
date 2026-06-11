@@ -214,7 +214,7 @@ def evolve(state, hydro, grav, mult, se):
 
     # bridge loop control
     it = 1
-    dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+    dt = min(USER['dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
     if USER['with_petar']:
         # Get dt_soft from torch_user.py
@@ -392,7 +392,7 @@ def evolve(state, hydro, grav, mult, se):
                     else:
                         req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
                         dt_old = dt
-                        req_grav = grav.evolve_model.asynchronous(hy_time+dt)
+                        req_grav = grav.evolve_model.asynchronous(hy_time+USER['dt_factor']*dt)
                         pool.add_request(req_hydro, handle_result, ["hydro", it])
                         pool.add_request(req_grav, handle_result, ["grav", it])
 
@@ -544,7 +544,7 @@ def evolve(state, hydro, grav, mult, se):
 
         # bridge loop control
         it += 1
-        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+        dt = min(USER['dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
         if USER['with_petar']:
             dt_nbody = dt_petar * pow(2., np.floor(np.log2(dt/dt_petar)))

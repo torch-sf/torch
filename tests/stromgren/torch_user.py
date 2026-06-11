@@ -105,7 +105,7 @@ def user_parameters():
 
     # <timestepping>
 
-    p['hy_dt_factor'] = 0.99999  # pin bridge timestep to <= hy_dt_factor*(hydro timestep)
+    p['dt_factor'] = 0.99999  # pin bridge timestep to <= dt_factor*timestep
 
     # <star/n-body gravity>
 
