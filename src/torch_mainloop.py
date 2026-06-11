@@ -215,14 +215,11 @@ def evolve(state, hydro, grav, mult, se):
     it = 1
     dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
     # set initial hydro dt to a power of 2 so PeTar can sync times
-    if USER['with_petar']:
+    if USER['with_petar'] and num_stars > 1:
         # Get maximum dt from torch_user.py
         dt_max = USER['dt_soft_max']
         dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        if num_stars > 0:
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
-        else: # Only enforce dt_soft_max if stars are formed
-            dt = dt_nbody
+        dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -548,13 +545,10 @@ def evolve(state, hydro, grav, mult, se):
         it += 1
         dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
         # set initial hydro dt to a power of 2 so PeTar can sync times
-        if USER['with_petar']:
+        if USER['with_petar'] and num_stars > 1:
             dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
             dt = dt_nbody
-            if num_stars > 0:
-                dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
-            else: # Only enforce dt_soft_max if stars are formed
-                dt = dt_nbody
+            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
 
         num_stars = hydro.get_number_of_particles()  # loop variable
 
