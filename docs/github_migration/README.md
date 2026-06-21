@@ -111,10 +111,10 @@ git push --mirror github
 
 ### Step 4.2: Issues & Pull Requests Migration
 
-Bitbucket issues and closed pull requests (archived as closed GitHub issues) were uploaded to the new repository using the migration script `./files/migrate.py`. The script was executed from the machine account `torch-sf-assistant` so that it would be clear that the migration was performed by the machine account and not a user.
+Bitbucket issues and closed pull requests (archived as closed GitHub issues) were uploaded to the new repository using the migration script `migrate.py`. The script was executed from the machine account `torch-sf-assistant` so that it would be clear that the migration was performed by the machine account and not a user.
 
 ```bash
-python3 ./files/migrate.py
+python3 migrate.py
 ```
 
 Open pull requests were recreated manually on GitHub.
