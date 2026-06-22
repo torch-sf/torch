@@ -6,6 +6,8 @@ We assume that you’re using (1) the bash shell, and (2) conda or a virtualenv
 for Python package management. But, the setup procedure should work for any 
 shell and Python package manager with some adjustments.
 
+The deprecated pdf version of the Quickstart can be found [here](./quickstart.pdf). 
+
 ## Overview
 Torch consists of a collection of Fortran files that extend the FLASH MHD code, 
 bindings for AMUSE for that extended FLASH, and a set of Python scripts that use
@@ -273,7 +275,7 @@ export FLASH_DIR=${PWD}/FLASH4.6.2
 Next, we can download Torch, and set TORCH DIR:
 
 ```
-git clone https://bitbucket.org/torch-sf/torch.git export TORCH_DIR=${PWD}/torch
+git clone https://github.com/torch-sf/torch.git export TORCH_DIR=${PWD}/torch
 ```
 
 Then we can move into the Torch directory, and run its installer:
