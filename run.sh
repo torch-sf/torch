@@ -103,7 +103,7 @@ if [[ ! -f "$TORCH_ENV" ]]; then
 fi
 
 . "$TORCH_ENV"
-. $TORCH_DIR/utils/mpi_setups.sh
+. "$TORCH_DIR/utils/mpi_setups.sh"
 
 #===============================================================================
 # Run the application
