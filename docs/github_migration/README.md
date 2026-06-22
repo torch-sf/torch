@@ -43,7 +43,7 @@ git filter-repo \
   --invert-paths
 ```
 
-*Note: The file cube128 was introduced in the first commit to the repository. This means that all git hashes was rewritten in this step.*
+*Note: The file cube128 was introduced in the first commit to the repository. This means that all git hashes were rewritten in this step.*
 
 ### Step 2.3: Commit Message Standardization
 
