@@ -14,7 +14,7 @@ Torch combines different codes via the `AMUSE`_ framework to model gas
 dynamics, formation of single and binary stars, stellar evolution and feedback, 
 and collisional N-body dynamics.
 
-Stable versions of torch lives on the `main`_ branch, and ongoing development 
+Stable versions of torch live on the `main`_ branch. Ongoing development 
 happens on the `develop`_ branch.
 
 .. _AMUSE: https://www.amusecode.org/
