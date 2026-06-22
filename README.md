@@ -3,15 +3,15 @@ README
 
 Torch is an open-source code used to simulate coupled gas and N-body dynamics in astrophysical systems, primarily for simulating star cluster formation. Torch combines different codes via the [AMUSE](https://www.amusecode.org/) framework to model gas dynamics, formation of single and binary stars, stellar evolution and feedback, and collisional N-body dynamics.
 
-See our [website](https://torch-sf.bitbucket.io/) for more information.
+See our [website](https://torch-sf.github.io/) for more information.
 
-The current stable version is [Torch 2.2](https://bitbucket.org/torch-sf/torch/src/torch-v2.2/).  
-Stable version of Torch lives on the [main](https://bitbucket.org/torch-sf/torch/src/main/) branch, and ongoing development happens on the [develop](https://bitbucket.org/torch-sf/torch/src/develop/) branch.
+The current stable version is [Torch 2.2.1](https://github.com/torch-sf/torch/releases/tag/torch-v2.2.1).  
+Stable version of Torch lives on the [main](https://github.com/torch-sf/torch/tree/main) branch, and ongoing development happens on the [develop](https://github.com/torch-sf/torch/tree/develop) branch.
 
 Quick-start
 -----------
 
-The [quickstart](https://torch-sf.bitbucket.io/quickstart.pdf) is available on our website.
+The [quickstart](https://torch-sf.github.io/docs/manual/Quickstart.html) is available on our website.
 
 Contributing
 ------------
