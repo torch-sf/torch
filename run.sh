@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 #===============================================================================
 # Example job script for Torch
@@ -86,14 +86,14 @@
 #===============================================================================
 # Job setup, update these to match you system.
 #===============================================================================
-## Available systems include: snellius
-SYSTEM="snellius"
+## Available systems include: default, snellius
+SYSTEM="default"
 
 ## Set the path to the torch environment you created.
 TORCH_ENV="path/to/torch.env"
 
 #===============================================================================
-# System configurations, only change these things if you know what you're doing.
+# System configurations 
 #===============================================================================
 set -e
 
@@ -103,17 +103,7 @@ if [[ ! -f "$TORCH_ENV" ]]; then
 fi
 
 . "$TORCH_ENV"
-
-case "$SYSTEM" in
-    snellius)
-        MPI_LAUNCHER="mpirun"
-        MPI_ARGS="--mca orte_base_help_aggregate 0"
-        ;;
-    *)
-        echo "Unknown system: $SYSTEM"
-        exit 1
-        ;;
-esac
+. $TORCH_DIR/utils/mpi_setups.sh
 
 #===============================================================================
 # Run the application
@@ -130,8 +120,8 @@ echo
 
 # Create turbulent sphere test
 cd "$SLURM_SUBMIT_DIR"
-bash "$TORCH_DIR/utils/setup_simulation.sh" || exit 1
-python3 "$TORCH_DIR/utils/ic-generator/turb-sphere.py" -np -s 42 -b 10 -m 1e4 -r 7 -f cube128 || exit 1
+bash "$TORCH_DIR/utils/setup_simulation.sh"
+python3 "$TORCH_DIR/utils/ic-generator/turb-sphere.py" -np -s 42 -b 10 -m 1e4 -r 7 -f cube128
 
 # Launch simulation
 $MPI_LAUNCHER $MPI_ARGS -n 1 python torch_user.py
