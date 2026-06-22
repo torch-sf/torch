@@ -19,7 +19,7 @@ happens on the `develop`_ branch.
 
 .. _AMUSE: https://www.amusecode.org/
 .. _main: https://github.com/torch-sf/torch
-.. _develop: https://https://github.com/torch-sf/torch/tree/develop
+.. _develop: https://github.com/torch-sf/torch/tree/develop
 
 .. toctree::
    :maxdepth: 2
