@@ -128,3 +128,12 @@ GitHub issues were labeled and organized.
 ### Step 5.2: Bitbucket Repository Cleanup
 
 The original Bitbucket repository was archived, and its README was updated with a notice directing users to the new GitHub repository.
+
+### Notes
+Because the commit history was rewritten some publications include references to bitbucket hashes that do not match those on github. Many of these can be found using tags referenced in papers, following is a table of hashes where this is not the case:
+| **Publication** | **Bitbucket hash** | **Github hash** | **git tag (if available)** |
+| --- | --- | --- | --- |
+| Wilhelm 2024 [PhD thesis] | 7c90f85 | 56bfc19 | ppd-v1.0 |
+| Wilhelm et al. (2023) | 7c90f85 | 56bfc19 | ppd-v1.0 |
+| Lewis et al. (2023) | 811d35e (does not exist) | N/A |  |
+| Cournoyer-Cloutier et al. (2021) | 28a2757 | 71ecba4 | binaries-v1.0 |
