@@ -6,7 +6,7 @@ Torch is an open-source code used to simulate coupled gas and N-body dynamics in
 See our [website](https://torch-sf.github.io/) for more information.
 
 The current stable version is [Torch 2.2.1](https://github.com/torch-sf/torch/releases/tag/torch-v2.2.1).  
-Stable version of Torch lives on the [main](https://github.com/torch-sf/torch/tree/main) branch, and ongoing development happens on the [develop](https://github.com/torch-sf/torch/tree/develop) branch.
+The stable versions of Torch live on the [main](https://github.com/torch-sf/torch/tree/main) branch, and ongoing development happens on the [develop](https://github.com/torch-sf/torch/tree/develop) branch.
 
 Quick-start
 -----------
