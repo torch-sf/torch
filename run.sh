@@ -1,31 +1,130 @@
 #!/bin/sh
-#SBATCH --job-name=torch-test
-#SBATCH -n 6
-#SBATCH --time=0-01:00:00
+#
+#===============================================================================
+# Example job script for Torch
+#
+# Unless changed, this example runs a low-resolution turbulent sphere test on 
+# 6 cpus for around 10 minutes. 
+#
+# Copy this file, set the system flag to the relevant machine and submit. The
+# script will copy the files needed for the run, create a copy of the source
+# code, and execute the simulation.
+#
+# Slurm variables are set using the #SBATCH flag. The resources and runtime
+# variables have been preset for this script but additional variables are
+# included but commented out below.
+#
+# To learn more about slurm, check out https://slurm.schedmd.com/sbatch.html
+#===============================================================================
 
-mpiexec --mca orte_base_help_aggregate 0 -n 1 python torch_user.py
+## Name of job
+#SBATCH --job-name=turbsph_test
 
-# Some system/hardware-specific call options
+#---------------------------
+# Resources
+#---------------------------
 
-# On Rome nodes (on e.g. Snellius) an error can occur in wireup.c when starting a worker,
-# this can be fixed with these options:
-#mpiexec --mca orte_base_help_aggregate 0 -x UCX_ATOMIC_MODE=cpu -x UCX_NET_DEVICES=mlx5_0:1 -x UCX_RC_MLX5_MAX_NUM_EPS=inf -n 1 python torch_user.py
+## Number of nodes
+#SBATCH --nodes=1
 
-# Some MPI call options for experimenting
+## Number of tasks
+#SBATCH --ntasks=6
 
-# OpenMPI 4.x or newer defaults to UCX rather than infiniband ports,
-# you may need to override that policy
-#mpiexec  --mca btl_openib_allow_ib 1 -n 1 python torch_user.py
+## Number of tasks per node
+#SBATCH --ntasks-per-node=6
 
-# OpenMPI
-#export OMPI_MCA_mpi_warn_on_fork=0
-#mpirun --mca orte_base_help_aggregate 0 --mca btl_openib_warn_no_device_params_found 0 -n 1 python torch_user.py
+## Number of cpus per task
+#SBATCH --cpus-per-task=1
 
-# Intel MPI
-#mpiexec.hydra -n 1 python torch_user.py
-#-hostfile ./local_host.txt 
-#srun --mpi=pmi2 -n 1 python torch_user.py
+#---------------------------
+# Queue / runtime
+#---------------------------
 
-# MVAPICH2
-#mpirun_rsh -np 1 -hostfile ./local_host.txt MV2_SUPPORT_DPM=1 MV2_ON_DEMAND_THRESHOLD=128 MV2_VBUF_TOTAL_SIZE=128 MV2_IBA_EAGER_THRESHOLD=128 python ./torch_user.py
-##-hostfile local_host.txt 
+## Partition to run on
+#SBATCH --partition=genoa
+
+## Job run time in HH:MM:SS
+#SBATCH --time=00:10:00
+
+#===============================================================================
+# Other settings that might be useful 
+#===============================================================================
+
+## Split log and error messages
+##SBATCH --output=slurm-%j.out
+##SBATCH --error=slurm-%j.err
+
+## Reserve the entire node
+##SBATCH --exclusive
+
+## Request a specific amount of memory
+##SBATCH --mem=8G
+
+## Memory per CPU
+##SBATCH --mem-per-cpu=2G
+
+## Send email notifications
+##SBATCH --mail-type=END,FAIL
+##SBATCH --mail-user=you@example.com
+
+## Run on multiple nodes
+##SBATCH --nodes=2
+##SBATCH --ntasks-per-node=32
+
+## Use OpenMP threads
+##SBATCH --cpus-per-task=8
+
+## Run on a different partition
+##SBATCH --partition=debug
+
+## Use a specific account/project
+##SBATCH --account=my_project
+
+## Specify a QoS
+##SBATCH --qos=normal
+
+#===============================================================================
+# Job setup, update these to match you system.
+#===============================================================================
+## Available systems include: default, snellius
+SYSTEM="default"
+
+## Set the path to the torch environment you created.
+TORCH_ENV="path/to/torch.env"
+
+#===============================================================================
+# System configurations 
+#===============================================================================
+set -e
+
+if [[ ! -f "$TORCH_ENV" ]]; then
+    echo "Could not find $TORCH_ENV"
+    exit 1
+fi
+
+. "$TORCH_ENV"
+. "$TORCH_DIR/utils/mpi_setups.sh"
+
+#===============================================================================
+# Run the application
+#===============================================================================
+echo "System        : $SYSTEM"
+echo "Torch path    : $TORCH_DIR"
+echo "Job ID        : $SLURM_JOB_ID"
+echo "Job name      : $SLURM_JOB_NAME"
+echo "Nodes         : $SLURM_JOB_NODELIST"
+echo "MPI tasks     : $SLURM_NTASKS"
+echo "CPUs per task : $SLURM_CPUS_PER_TASK"
+echo "Started at    : $(date)"
+echo
+
+# Create turbulent sphere test
+cd "$SLURM_SUBMIT_DIR"
+bash "$TORCH_DIR/utils/setup_simulation.sh"
+python3 "$TORCH_DIR/utils/ic-generator/turb-sphere.py" -np -s 42 -b 10 -m 1e4 -r 7 -f cube128
+
+# Launch simulation
+$MPI_LAUNCHER $MPI_ARGS -n 1 python torch_user.py
+
+echo
+echo "Finished at $(date)"

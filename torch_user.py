@@ -13,6 +13,8 @@ Design inspired by TRISTAN-MP, Athena++ architecture.
 
 from __future__ import division, print_function
 
+import re
+
 from amuse.datamodel import Particles
 from amuse.units import units
 
@@ -20,16 +22,31 @@ from torch_param import FlashPar
 from torch_mainloop import run_torch
 
 def get_ntasks_from_run_script(name="run.sh"):
-    """formally -n is --ntasks, de facto same as nprocs"""
-    n = None
+    """
+    Return the number of Slurm tasks requested in a job script.
+    Looks for the following forms
+    #SBATCH -n 6
+    #SBATCH --ntasks 6
+    #SBATCH --ntasks=6
+
+    Keyword Argument
+        name : str
+            Name of the slurm job script.
+    """
+    pattern = re.compile(
+        r"^\s*#SBATCH\s+(?:-n\s+(\d+)|--ntasks(?:=(\d+)|\s+(\d+)))\s*$"
+    )
+
+    ntasks = None
     with open(name) as f:
         for line in f:
-            w = line.split()
-            if len(w) >= 3 and w[0] == '#SBATCH' and w[1] == '-n':
-                assert n is None  # throw error if #SBATCH -n occurs >1x
-                n = int(w[2])
-    assert n is not None
-    return n
+            match = pattern.match(line)
+            if match:
+                assert ntasks is None, "Multiple --ntasks/-n directives found."
+                ntasks = int(next(g for g in match.groups() if g is not None))
+
+    assert ntasks is not None, "No --ntasks/-n directive found."
+    return ntasks
 
 def user_initial_conditions(state, hydro):
     """
