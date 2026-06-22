@@ -1,5 +1,3 @@
 # Developer Guide
 
-The Torch code is currently available on bitbucket [(https://bitbucket.org/torch-sf/torch/src/main/)][1]
-
-[1]: https://bitbucket.org/torch-sf/torch/src/main/
+The Torch code is currently available on [GitHub](https://github.com/torch-sf/torch).
