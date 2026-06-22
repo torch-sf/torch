@@ -29,11 +29,11 @@ happens on the `develop`_ branch.
    
    manual/Quickstart.md
    manual/Installation.md
+   manual/FAQ.md
 .. manual/Torch_Parameters.md
    manual/Flash_Parameters.md
    manual/Known_Systems.md
    manual/Known_Issues.md
-   manual/FAQ.md
 
 .. toctree::
    :maxdepth: 2

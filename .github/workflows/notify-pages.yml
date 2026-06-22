@@ -1,0 +1,19 @@
+name: Notify Pages site
+
+on:
+  push:
+    branches: [docs/website]
+    paths:
+      - 'docs/rtd/**'      # only when the docs source actually changes
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docs rebuild on the Pages site
+        run: |
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PAGES_DISPATCH_PAT }}" \
+            https://api.github.com/repos/torch-sf/torch-sf.github.io/dispatches \
+            -d '{"event_type":"docs-updated"}'
