@@ -6,7 +6,7 @@ We assume that you’re using (1) the bash shell, and (2) conda or a virtualenv
 for Python package management. But, the setup procedure should work for any 
 shell and Python package manager with some adjustments.
 
-The deprecated pdf version of the Quickstart can be found [here](./quickstart.pdf). 
+The deprecated pdf version of the Quickstart can be found [here](/quickstart.pdf). 
 
 ## Overview
 Torch consists of a collection of Fortran files that extend the FLASH MHD code, 
