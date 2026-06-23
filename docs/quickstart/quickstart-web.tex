@@ -339,7 +339,7 @@ We can then activate the environment, and install the Python dependencies:
 
 \begin{lstlisting}[language=bash]
 . /path/to/torch_project/Torch-env/bin/activate
-pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
+pip3 install -U pip wheel scipy scikit-learn astropy jupyter pandas seaborn matplotlib yt
 \end{lstlisting}
 
 
@@ -425,6 +425,36 @@ tar xzf FLASH4.6.2.tar.gz
 export FLASH_DIR=${PWD}/FLASH4.6.2
 \end{lstlisting}
 
+Running the most up-to-date version of Torch, with the VETTAM radiation solver, requires PETSc 3.19.x. 
+Some HPC systems have the correct version of PETSc available as a module; if this is the case, load
+PETSc and skip the step below. If the correct version of PETSc is not installed on your system,
+you can download and compile it as follows:
+
+\begin{lstlisting}[language=bash]
+cd torch_project
+wget https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.19.6.tar.gz
+tar -xvf petsc-3.19.6.tar.gz
+cd petsc-3.19.6
+./configure --with-cc=mpicc --with-cxx=mpic++ --with-fc=mpif90
+\end{lstlisting}
+
+You may need to specify the location of your HDF5 directory with the \texttt{--with-hdf5-dir} flag.
+Once PETSc is compiled, the script will print instructions to make the code. Those will likely be
+as follows:
+
+\begin{lstlisting}[language=bash]
+make PETSC_DIR=torch_project/petsc-3.19.6 PETSC_ARCH=arch-linux-c-debug all
+make PETSC_DIR=torch_project/petsc-3.19.6 PETSC_ARCH=arch-linux-c-debug check
+\end{lstlisting}
+
+To ensure that Torch can find PETSc, add the following lines to your \texttt{Torch.env} file:
+
+\begin{lstlisting}[language=bash]
+export PETSC_DIR=torch_project/petsc-3.19.6 
+export PETSC_ARCH=arch-linux-c-debug all
+export LD_LIBRARY_PATH=${PETSC_DIR}/${PETSC_ARCH}/lib:$LD_LIBRARY_PATH
+\end{lstlisting}
+
 Next, we can download Torch, and set \texttt{TORCH\_DIR}:
 
 \begin{lstlisting}[language=bash]
@@ -457,15 +487,31 @@ module load HDF5/1.14.6-gompi-2025a
 module load make/4.4.1-GCCcore-14.2.0
 module load Python/3.13.1-GCCcore-14.2.0
 
+. /path/to/torch_project/Torch-env/bin/activate
+
+export PETSC_DIR=torch_project/petsc-3.19.6 
+export PETSC_ARCH=arch-linux-c-debug all
+export LD_LIBRARY_PATH=${PETSC_DIR}/${PETSC_ARCH}/lib:$LD_LIBRARY_PATH
+
 FLASH_DIR=/path/to/FLASH4.6.2
 TORCH_DIR=/path/to/torch
-
-. /path/to/torch_project/Torch-env/bin/activate
 
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 \end{lstlisting}
 
-With Torch installed into FLASH, we can now go to the FLASH directory and configure it:
+With Torch installed into FLASH, we can now go to the FLASH directory and configure it. We recommend
+running with the VETTAM radiation solver:
+
+\begin{lstlisting}[language=bash]
+cd $FLASH_DIR
+./setup Cube -auto -3d +amuseUSM +amuseMG +vettam +HandCnew +amuseSinksAndStars \
++amuseWind +enerinj +supportPPMupwind +pm4dev -maxblocks=100 +cube16 --site=torch_auto
+\end{lstlisting}
+
+You may also configure FLASH with the FERVENT radiation solver. It is significantly slower than VETTAM
+for large numbers of sources, and we recommend that new users use VETTAM instead. If you want to use
+FERVENT, for example to continue simulations run with a previous version of Torch, you can configure 
+FLASH with:
 
 \begin{lstlisting}[language=bash]
 cd $FLASH_DIR
@@ -483,6 +529,12 @@ cd $TORCH_DIR
 make -C src/amuse/torch_amuse_flash develop-torch-amuse-flash
 \end{lstlisting}
 
+If you are recompiling after a failed attempt, make sure to clean the directory first:
+
+\begin{lstlisting}[language=bash]
+cd $TORCH_DIR
+make -C src/amuse/torch_amuse_flash distclean
+\end{lstlisting}
 
 With that, your environment should contain a working Torch installation. Time to give
 it a try!
@@ -533,6 +585,12 @@ ln -s $TORCH_DIR/cube128
 cp $TORCH_DIR/torch_user.py                torch_user.py
 cp $TORCH_DIR/flash.par.turbsph_standard   flash.par
 mkdir data
+\end{lstlisting}
+
+If you are running with VETTAM, make sure to also link the following files:
+\begin{lstlisting}[language=bash]
+ln -s $TORCH_DIR/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/*.dat ./
+ln -s $TORCH_DIR/src/flash/source/physics/materialProperties/Opacity/RadTrans/Semenov/opacity.inp ./
 \end{lstlisting}
 
 The file \texttt{torch\_mainloop.py} is the heart of the simulation.  It
@@ -700,6 +758,11 @@ These setup flags are aliases for various FLASH units; the flags are defined in
 Don't forget that after a fresh setup + compile of FLASH, you will need to
 recompile the AMUSE worker too.
 
+% ==========================
+% Additional physics modules
+% ==========================
+\section{Parameters Choices \& Default Values}
+
 % ============
 %     PeTar
 % ============
@@ -708,9 +771,89 @@ recompile the AMUSE worker too.
 Torch is now capable of using \texttt{PeTar} for stellar dynamics. This is recommended for all runs, but particularly for runs with $>5,000$ stars or runs containing many binaries such as those with primordial binaries. To use \texttt{PeTar}, set
 \begin{lstlisting}[language=python]
 p['with_petar'] = True
-p['petar_rout'] = 0.001 | units.pc # outer radius for tree 
+p['r_bin'] = 100 | units.au
+p['r_out'] = 0.03 | units.pc # outer radius for tree 
+p['dt_soft_max'] = 0.125 | units.kyr # maximum PeTar timestep
 \end{lstlisting}
-in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. The default is the standard value used in cluster simulations, but the user should test this value and modify it for their particular use case. For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+in \texttt{torch\_user.py}. \texttt{PeTar} accepts the user parameter \texttt{r\_out} which is a boundary radius between the tree gravity and direct N-body and SDAR. 
+For a thorough understanding of the parameters used in \texttt{PeTar}, users should familiarize themselves with the \href{https://github.com/lwang-astro/PeTar}{README} of the \texttt{PeTar} github and the \texttt{PeTar} \href{https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W/abstract}{methods paper}.
+\texttt{r\_out} and \texttt{dt\_soft\_max} must be set together, to ensure that dynamics are properly resolved at all separations. In the plot below, the different combinations have been chosen for
+binaries with masses 1 M$_{\odot}$ and 0.1 M$_{\odot}$, and correspond to the timestep and \texttt{r\_out} for which an orbit is resolved by 10 or 100 steps, at \texttt{r\_out} or \texttt{r\_in}.
+The recommended usage is to pick a combination of timestep and \texttt{r\_out} along or below the red line, which ensures that orbits with separation \texttt{r\_in} are resolved by 100 steps. 
+The default values (0.03 pc and 125 yr) are shown as the black star, and were chosen to match the upper limit of a FLASH timestep once feedback stars have formed, at a resolution around 0.1-0.2 pc.
+\begin{figure}[!h]
+    \center
+    \includegraphics[width=0.7\textwidth]{fig/petar_dt.pdf}
+    \label{fig:petar_dt}
+\end{figure}
+
+\subsection{VETTAM Radiation Solver}
+\textbf{Additional documentation on the choice of VETTAM parameters to be added here before merging \texttt{develop} into \texttt{main}. If you are not familiar with VETTAM, use the defaults from \texttt{flash.par.turbsph\_standard}.}
+
+\subsection{Primordial Binaries}
+
+The primordial binaries implemented in this branch are based on observations compiled by Moe \& Di Stefano (2017) for solar-type and early-type stars, and on the observations by Winters et al. (2019, as corrected by Offner et al. 2023) 
+for low-mass stars. The sampling routine for binaries is stored in \texttt{primordial\_binaries.py}, which can be readily modified to allow for other prescriptions. The values in the present version however reflect the mass-dependent binary 
+fraction observed for main sequence stars, as well as the mass-dependent period distribution, and the mass- and period-dependent mass ratio and eccentricity distributions. Those distributions are shown in the plots below.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_frac.png}
+\label{fig:binary_frac}
+\caption{Binary fraction as a function of primary mass, based on the multiple star fractions reported in \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_period.png}
+\label{fig:binary_period}
+\caption{Binary period distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} 
+and \href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_mrat.png}
+\label{fig:binary_mass_ratio}
+\caption{Binary mass ratio distribution for each mass range shown above. The distributions are from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)} and 
+\href{https://ui.adsabs.harvard.edu/abs/2023ASPC..534..275O/abstract}{Offner+ (2023)}, and depend on both primary mass and orbital period.}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/binary_ecc.png}
+\label{fig:binary_eccentricity}
+\caption{Binary eccentricity distribution as a function of primary mass, from \href{https://ui.adsabs.harvard.edu/abs/2017ApJS..230...15M/abstract}{Moe \& Di Stefano (2017)}.}
+\end{figure}
+
+To use primordial binaries in your simulations, the following parameters must be set in \texttt{torch\_user.py}:
+\begin{lstlisting}[language=python]
+p['binaries'] = True
+# Not used if binaries is false, can leave to default values                                                                
+p['mult_frac'] = 'field'  #Currently accepted method is 'field'.
+p['pdist'] = 'inner' #Currently accepted methods are 'field' and 'inner'. 
+p['qdist'] = 'field' #Currently accepted method is 'field'. 
+p['edist'] = 'field' #Currently accepted method is 'field'. 
+\end{lstlisting}
+The recommended value for the period distribution is 'inner', which is designed to sample the inner companion in hierarchical triples while 'field' samples a random companion. The 'inner' distribution better reproduces the observed
+close binary population. This choice is most important for massive stars, which have both a large triple fraction and a large fraction of systems with close companions. 
+
+\subsection{Interacting Binaries}
+To use interacting binaries in your simulations, the following parameters must be set in \texttt{torch\_user.py}:
+\begin{lstlisting}[language=python]
+p['with_be'] = True
+p['massloss_method'] = 'seba-puls'
+p['remove_merged'] = True
+p['binaries'] = True # can be set to False, not recommended
+# Feedback channels, interacting binaries have not been tested when those are turned off
+p['with_lyc'] = True
+p['with_pe_heat'] = True
+p['with_sn'] = True
+p['with_winds'] = True
+\end{lstlisting}
+Note that the \texttt{p['min\_feedback\_mass']} parameter now sets the minimum feedback for the primary in a binary system; if the companion is less massive than this mass, the system will still produce feedback.
+
 
 % ============
 % VorAMR Addon
@@ -1136,6 +1279,8 @@ This list includes most major components, but is not comprehensive.
     \item Fervent (radiative transfer):
         \href{https://ui.adsabs.harvard.edu/abs/2015MNRAS.454..380B/abstract}{Baczynski+ 2015},
         \href{http://archiv.ub.uni-heidelberg.de/volltextserver/19189/}{Baczynski 2015, Ph.D thesis}
+    \item VETTAM (radiative transfer):
+        \href{https://ui.adsabs.harvard.edu/abs/2022MNRAS.512..401M/abstract}{Menon+ 2022}
     \item Multigrid (self-gravity):
         \href{https://ui.adsabs.harvard.edu/abs/2008ApJS..176..293R/abstract}{Ricker+ 2008}
     \item BHTree (self-gravity):
@@ -1582,7 +1727,7 @@ export MV2_ENABLE_AFFINITY=0
 \end{lstlisting}
 
 You can then create your virtual environment. Using a CONDA environment should also work, but the instructions below use a standard Python virtual environment.
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cd /home1/10548/cournoyc/TORCH
 python -m venv /home1/10548/cournoyc/TORCH/torch_env
 source /home1/10548/cournoyc/TORCH/torch_env/bin/activate 
@@ -1593,17 +1738,17 @@ pip install --no-cache-dir mpi4py
 \end{lstlisting}
 
 Now, you can install and configure Torch. You should start by running
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cd $TORCH_DIR
 ./install.sh
 \end{lstlisting}
 
 You can then configure FLASH, by following the instructions below. In \texttt{\$FLASH\_DIR/sites}, run:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 cp -r sites/cartesius.surfsara.nl sites/stampede3.tacc.utexas.edu
 \end{lstlisting}
-Then in \texttt{\$FLASH_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
-\begin{lstlisting}
+Then in \texttt{\$FLASH\_DIR/sites/stampede3.tacc.utexas.edu/Makefile.h}, set:
+\begin{lstlisting}[language=bash]
 MPI_PATH   = ${MPI_HOME}
 HDF5_PATH   = ${HDF5_HOME}
 F90FLAGES = -fallow-argument-mismatch
@@ -1611,27 +1756,27 @@ CFLAGS_HDF5 = -I${TACC_HDF5_INC} -DH5_USE_16_API
 LIB_HDF5  = -L ${HDF5_HOME}/lib -Wl,-rpath,${TACC_HDF5_LIB} -lhdf5 -lhdf5_fortran -lz
 \end{lstlisting}
 and replace all instances of \texttt{mpifort} by \texttt{mpif90}. Also change \texttt{setcheckinterval} to \texttt{setswitchinterval} in \texttt{FLASH4.6.2/bin/setup.py}. After this, you can compile FLASH:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 ./setup Cube -auto -3d +amuseusm +amusemg +raype +handcnew +amusesinksandstars +amusewinds +enerinj +supportppmupwind +pm4dev +cube16 -maxblocks=50 --site=stampede3.tacc.utexas.edu
 cd object
 make 
 \end{lstlisting}
 
 Once you have successfully compiled FLASH, you can configure and build AMUSE. Go the AMUSE directory and un the following commands:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 ./configure  # It should find the correct paths on its own
 make framework
 \end{lstlisting}
 To install the AMUSE flash worker, set the following in \texttt{amuse/src/amuse/community/flash/Makefile}:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 opt:   FCFLAGS = -O3 -march=native -fallow-argument-mismatch
 \end{lstlisting}
 In \texttt{amuse/config.mk}, set:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 FCFLAGS=-g -O2 -fPIC -fallow-argument-mismatch
 \end{lstlisting}
 To install the AMUSE petar work, set the following in \texttt{amuse/src/amuse/community/petar/Makefile} (uncomment if commented out) and add the \texttt{-I} flag beofre \texttt{{\$INCLUDE}}:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 # arch
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -D INTRINSIC_X86
@@ -1639,12 +1784,12 @@ CXXFLAGS += -D USE_SIMD
 CXXFLAGS += -D DIV_FIX
 \end{lstlisting}
 From there, you can make the worker codes:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 make flash.code petar.code seba.code kepler.code smalln.code ph4.code
 \end{lstlisting}
 
 SLURM submit script:
-\begin{lstlisting}
+\begin{lstlisting}[language=bash]
 #!/bin/sh
 #SBATCH --job-name=test
 #SBATCH -N 1

@@ -10,7 +10,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !#define debug
-#define debug2
+!#define debug2
 subroutine Particles_wind(dt)
 
 use Particles_data, only : particles, pt_typeInfo, pt_numLocal

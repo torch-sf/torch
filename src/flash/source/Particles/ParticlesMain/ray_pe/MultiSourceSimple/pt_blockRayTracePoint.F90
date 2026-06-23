@@ -24,7 +24,7 @@
 
 !! Note: After reading the paper appendix and calculating some of this,
 !!       I'm adding my own comments to alleviate confusion. - JW
-#define DEBUG
+!#define DEBUG
 recursive subroutine pt_blockRayTracePoint(p,blocko,blockBounds,dr,xpoint,face,dt,facedir)
 
   use Particles_rayData

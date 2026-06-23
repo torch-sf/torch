@@ -2,16 +2,21 @@
 Generate samples from initial mass function (IMF).
 
 Joshua Wall, Drexel University
+
+Modified to account for primordial binaries (CCC, 05/2020, 02/2021, 11/2021)
 """
 
-from __future__ import division, print_function
+
 
 import numpy as np
 from scipy.integrate import quad
+from primordial_binaries import orbits
 
-
-def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
-                              max_samp_mass=150.0, sum_small=False, m_small=1.0):
+def sample_stars(sample_imf_mass, num_bins=100, min_samp_mass=0.08,
+                 max_samp_mass=100.0, sum_small=False, m_small=1.0):
+    """
+    Sample single stars from a Kroupa IMF.
+    """
 
     [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
 
@@ -40,6 +45,41 @@ def sample_stellar_mass(sample_imf_mass, num_bins=10, min_samp_mass=1.0,
     np.random.shuffle(masses)
 
     return masses
+
+
+def sample_binaries(sample_imf_mass, num_bins=100, min_samp_mass=0.08, max_samp_mass=100.0, 
+                    mult_frac='field', pdist='field', qdist='field', edist='field'):
+    """
+    Sample stars from a Kroupa IMF then binaries from a mass-dependant binary population.
+    Curently not supported with agglomeration.
+    """
+
+    [n_stars, bins, lam, norm] = sample_stars_poisson(sample_imf_mass, min_samp_mass, max_samp_mass, num_bins)
+
+    # Now use that to sample the IMF.
+    masses = np.zeros(n_stars.sum())
+    k = 0
+    for i, n in enumerate(n_stars):
+        #print "Pulling ", n, "stars from ranges ", bins[i], "to ", bins[i+1]
+        for j in range(n):
+
+            while (masses[k] == 0):
+
+                m = np.random.uniform(low=bins[i], high=bins[i+1])
+                r = np.random.uniform()
+                p = mkroupa(m, norm)
+
+                if (p/r > 1.0):
+                    masses[k] = m
+
+            k+=1
+
+    np.random.shuffle(masses)
+    masses, system_masses, positions, velocities = orbits(masses, mult_frac=mult_frac,
+                                                          pdist=pdist, qdist=qdist,
+                                                          edist=edist, min_mass=min_samp_mass)
+        
+    return masses, system_masses, positions, velocities
 
 
 def sample_stars_poisson(sink_mass, M_min, M_max, num_bins):

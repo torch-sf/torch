@@ -45,15 +45,15 @@ VARIABLE PEFL
 # don't participate in guardcell fills and are
 # not in checkpoint files.
 
-# photoionizing flux [erg/s]
+# photoionizing flux [erg/cm^2/s]
 VARIABLE UVFL TYPE: GENERIC
-# photoelectric flux [ergs/s]
+# photoelectric flux [erg/cm^2/s]
 VARIABLE FUFL TYPE: GENERIC
 
 # ambient fluxes, non-absorbed complement of above
-# ambient photoionizing flux [erg/s]
+# ambient photoionizing flux [erg/cm^2/s]
 VARIABLE AUVF TYPE: GENERIC
-# ambient photoelectric flux [erg/s]
+# ambient photoelectric flux [erg/cm^2/s]
 VARIABLE AFUF TYPE: GENERIC
 
 #for source coupling

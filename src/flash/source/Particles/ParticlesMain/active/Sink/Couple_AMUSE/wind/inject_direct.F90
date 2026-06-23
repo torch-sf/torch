@@ -38,7 +38,7 @@
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, twind, dt, bgDens)
 
 !#define DEBUG
-#define DEBUG_ENERGY
+!#define DEBUG_ENERGY
 #include "Flash.h"
 #include "constants.h"
 
