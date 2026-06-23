@@ -34,6 +34,12 @@ use Timers_interface, ONLY : Timers_start, Timers_stop  !SA 20240207
 
 implicit none
 
+#include "constants.h"
+#include "Flash_mpi.h"
+#include "Flash.h"
+#include "Particles.h"
+#include "Eos.h"
+
 real, intent(in)       :: dt
 
 ! Injection info for winds.
@@ -47,7 +53,7 @@ real, allocatable      :: locx(:), locy(:), locz(:), locdmdt(:), locv_wind(:), &
 			  locc_time(:), locbgdy(:)
 
 real                   :: mass, twind, bgdy_old
-			  
+
 ! For counting particles.
 integer                :: p_begin, p_end, p_num, p_globalnum, w_numloc
 
@@ -65,14 +71,27 @@ real, parameter :: yr = (60.0d0**2.0)*24.0d0*365.25d0
 real, parameter :: solarMass = 1.989d33
 logical, save          :: first_call = .true.
 
-#include "constants.h"
-#include "Flash_mpi.h"
-#include "Flash.h"
-#include "Particles.h"
-#include "Eos.h"
+#ifdef TRACER_FIELDS
+! For tracer fields
+real*8, allocatable           :: dydt(:,:)
+real, allocatable             :: locdydt(:,:)
+integer, parameter            :: pt_num_tracer_fields = NMASS_SCALARS
+integer, parameter            :: pt_tracer_fields_begin = Y001_PART_PROP
+real, dimension(pt_num_tracer_fields) :: yields
+integer, dimension(pt_num_tracer_fields), save :: pt_tracer_inds
+integer :: itracer
+#endif
 
 if (first_call) then
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
+  
+#ifdef TRACER_FIELDS
+  ! Gather tracer field indices for particle yields.
+  do itracer = 1, pt_num_tracer_fields
+    pt_tracer_inds(itracer) = pt_tracer_fields_begin + (itracer - 1)
+  enddo
+#endif
+
   first_call = .false.
 end if
 
@@ -103,6 +122,11 @@ num_array = 0
 locx = 0.0d0; locy=0.0d0; locz=0.0d0
 locdmdt = 0.0d0; locv_wind=0.0d0; locbgdy=0.0d0; locc_time= 0.0d0
 
+#ifdef TRACER_FIELDS
+allocate(locdydt(p_globalnum,pt_num_tracer_fields))
+locdydt = 0.0d0
+#endif
+
 ! This do loop then loops over each particle and checks if winds are on for that star.
 ! If winds are on, then a separate index w_numloc (which starts at 0) is incremented and
 ! the entry of each of the above arrays which corresponds to the new w_numloc index is
@@ -129,6 +153,12 @@ do p = p_begin, p_end
     locc_time(w_numloc) = particles(CREATION_TIME_PART_PROP, p)
     locbgdy(w_numloc)   = particles(BGDY_PART_PROP,p)
     p_ind(w_numloc)     = p
+
+#ifdef TRACER_FIELDS
+    do itracer = 1,pt_num_tracer_fields
+      locdydt(w_numloc,itracer) = particles(pt_tracer_inds(itracer), p)
+    enddo
+#endif
 
   end if
 end do
@@ -173,6 +203,14 @@ allocate(dmdt(w_num), v_wind(w_num), c_time(w_num), bgdy(w_num))
 x=0.0d0; y=0.0d0; z=0.0d0
 dmdt = 0.0d0; v_wind=0.0d0; mass = 0.0d0; c_time = 0.0d0; bgdy=0.0d0
 
+#ifdef TRACER_FIELDS
+! Reallocate and reset arrays (safety)
+if (allocated(dydt)) deallocate(dydt)
+allocate(dydt(w_num,pt_num_tracer_fields))
+yields = 0.0d0
+dydt = 0.0d0
+#endif
+
 ! Set the displacement for the incoming data based on how many
 ! particles are coming in from each processor. Note the displacement
 ! for the root process is zero, for rank 1 disp = num on root,
@@ -208,6 +246,13 @@ call MPI_AllGatherv(locc_time, w_numloc, FLASH_REAL, c_time, num_array, &
 call MPI_AllGatherv(locbgdy, w_numloc, FLASH_REAL, bgdy, num_array, &
 	       disp, FLASH_REAL, dr_globalComm, ierr)
 
+#ifdef TRACER_FIELDS
+do itracer = 1,pt_num_tracer_fields
+   call MPI_AllGatherv(locdydt(:,itracer), w_numloc, FLASH_REAL, dydt(:,itracer), num_array, &
+	       disp, FLASH_REAL, dr_globalComm, ierr)
+enddo
+#endif
+
 call Timers_stop("MPI_AllGather_winds")
 
 ! Now all procs have an array of each value in the same order, so we can
@@ -225,15 +270,24 @@ do p=1, w_num
   mass  = dmdt(p)*dt ! Total mass injected by this star this step.
   twind = dr_simTime + dt - c_time(p) ! Time since the start of this stars wind.
   bgdy_old = bgdy(p) ! Background density of the gas when the wind started.
+
+#ifdef TRACER_FIELDS
+  do itracer = 1,pt_num_tracer_fields
+    yields(itracer) = dydt(p,itracer)*dt ! Total mass of this tracer field injected by this star this step.
+  enddo
+#endif
+
 #ifdef debug2
     if (dr_globalMe .eq. 0) &
       print*, "Calling inject direct with inj mass, dt, dmdt, vwind, bgdy =", mass, dt, dmdt(p)/solarMass*yr, v_wind(p), bgdy(p)
 #endif
 
   call Timers_start("inject_direct_call")
-
-  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
-
+#ifdef TRACER_FIELDS
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), yields, twind, dt, bgdy(p))
+#else
+  call inject_direct([x(p), y(p), z(p)], mass, v_wind(p), 0.0, twind, dt, bgdy(p)) !Remove duplicate mass -SA 20240207
+#endif
   call Timers_stop("inject_direct_call")
 
 ! If this call to inject_direct calculated the background density, store it on the proper processor.
@@ -255,6 +309,12 @@ deallocate(locx, locy, locz)
 deallocate(locdmdt, locv_wind, locbgdy, locc_time)
 deallocate(dmdt, v_wind, c_time, bgdy)
 deallocate(x, y, z)
+
+#ifdef TRACER_FIELDS
+deallocate(locdydt)
+deallocate(dydt)
+#endif
+
 ! Let the Grid unit know we updated these variables to properly fill guard cells.
 
 call Grid_notifySolnDataUpdate() !(/ EINT_VAR, ENER_VAR, TEMP_VAR, VELX_VAR, VELY_VAR, VELZ_VAR, DENS_VAR /)

@@ -56,7 +56,10 @@ subroutine Simulation_initBlock (blockId)
   real, dimension(NSPECIES) :: massFrac_box
 
   logical :: gcell = .true.
-
+#ifdef TRACER_FIELDS
+  integer  :: itracer
+  real,dimension(NMASS_SCALARS) :: tracerFields
+#endif
      
 !! ---------------------------------------------------------------------------
 
@@ -191,6 +194,19 @@ subroutine Simulation_initBlock (blockId)
         &    +     p *(1.-q)*    r *sim_velzArr(ixp1, iy  , izp1) &
         &    +     p *    q *(1.-r)*sim_velzArr(ixp1, iyp1, iz  ) &
         &    +     p *    q *    r *sim_velzArr(ixp1, iyp1, izp1)
+        
+#ifdef TRACER_FIELDS
+        do itracer = 1, NMASS_SCALARS
+          tracerFields(itracer) = (1.-p)*(1.-q)*(1.-r)*sim_TracerFieldArr(itracer, ix  , iy  , iz  ) &
+          &                     + (1.-p)*(1.-q)*    r *sim_TracerFieldArr(itracer, ix  , iy  , izp1) &
+          &                     + (1.-p)*    q *(1.-r)*sim_TracerFieldArr(itracer, ix  , iyp1, iz  ) &
+          &                     + (1.-p)*    q *    r *sim_TracerFieldArr(itracer, ix  , iyp1, izp1) &
+          &                     +     p *(1.-q)*(1.-r)*sim_TracerFieldArr(itracer, ixp1, iy  , iz  ) &
+          &                     +     p *(1.-q)*    r *sim_TracerFieldArr(itracer, ixp1, iy  , izp1) &
+          &                     +     p *    q *(1.-r)*sim_TracerFieldArr(itracer, ixp1, iyp1, iz  ) &
+          &                     +     p *    q *    r *sim_TracerFieldArr(itracer, ixp1, iyp1, izp1)
+        enddo
+#endif
 
         rho  = max(rho, smlrho)
         pres = max(pres, smallp)
@@ -216,6 +232,11 @@ subroutine Simulation_initBlock (blockId)
         solnData(VELX_VAR,i,j,k)=vx
         solnData(VELY_VAR,i,j,k)=vy
         solnData(VELZ_VAR,i,j,k)=vz
+#ifdef TRACER_FIELDS
+        do itracer = 1, NMASS_SCALARS
+           solnData(MASS_SCALARS_BEGIN+itracer-1,i,j,k) = tracerFields(itracer)
+        enddo
+#endif
 #ifdef TDUS_VAR
         solnData(TDUS_VAR,i,j,k)=sim_tdust
 #endif

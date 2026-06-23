@@ -116,6 +116,9 @@ integer, pointer :: number_new_particles
 
 character(len=4), save :: part_type
 
+#ifdef TRACER_FIELDS
+integer, save :: tracer_pointer = 1
+#endif
 
 contains
 
@@ -197,6 +200,22 @@ end if
 set_particle_pointers = 0
 
 call flush(6)
+END FUNCTION
+
+FUNCTION set_tracer_field_pointer(itracer_in)
+integer   :: set_tracer_field_pointer
+integer, intent(in) :: itracer_in
+
+#ifdef TRACER_FIELDS
+! tracer_pointer starts counting at 1. 
+tracer_pointer = itracer_in
+#else
+    print*, "[set_tracer_field_pointer]: Tried to set tracer_field pointer &
+             but tracer_fields are not compiled in!"
+    call Driver_abortFlash("Tried to set invalid tracer_field pointer.")
+#endif
+
+set_tracer_field_pointer=0
 END FUNCTION
 
 FUNCTION internal_particle_integration_off()
@@ -1965,6 +1984,14 @@ FUNCTION get_global_grid_index_limits(global_indices)
   get_global_grid_index_limits=0
 END FUNCTION
 
+FUNCTION get_number_of_tracer_fields(value)
+
+  INTEGER :: value
+  INTEGER :: get_number_of_tracer_fields
+  value = NMASS_SCALARS
+  get_number_of_tracer_fields=0
+
+END FUNCTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! PARTICLE FUNCTIONS
@@ -2737,6 +2764,148 @@ endif
 #endif
 
 set_particle_creation_time=0
+END FUNCTION
+
+FUNCTION get_particle_tracer_field(tags,tracer,nparts)
+
+  integer :: nparts, MyPe
+  integer :: get_particle_tracer_field, i, j, p, oldj, ierr, counter
+  double precision, dimension(nparts) :: tracer, tags
+  integer :: type_begin, type_end, type_count, offset
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_tracer_index
+  tracer = 0.0
+
+#ifdef TRACER_FIELDS
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE)
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = E001_PART_PROP - 1 + tracer_pointer
+
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    ! Offset for particles location in particles array possibly not starting at
+    ! first index.
+    offset = 0
+    if (type_begin /= 1) offset = type_begin - 1
+
+      allocate(QSindex(type_count))
+      allocate(id_sorted(type_count))
+
+      do p = type_begin, type_end
+        id_sorted(p-offset) = int(particles_pointer(iptag,p),8)
+      end do
+
+      if (type_count .eq. 1) then
+        QSindex = 1
+      else
+        call NewQsort_IN(id_sorted, QSindex)
+      endif
+
+      ! Initial lower bound is 1.
+      j = 1
+
+      do i=1, nparts
+
+        oldj = j
+        j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+        ! If found, set particle attribute accordingly.
+        if (j .ne. -1) then
+          tracer(i) = particles_pointer(part_tracer_index, QSindex(j))
+        else ! If not found (j=-1), the particle is not on this proc. Skip.
+          j = oldj
+          tracer(i) = 0.0
+        end if
+
+      end do ! end if particle list
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  
+  else ! not (type_count .ge. 1)
+    
+    tracer = 0.0
+
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, tracer, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#endif
+#endif
+  get_particle_tracer_field=0
+END FUNCTION
+
+FUNCTION set_particle_tracer_field(tags,tracer,nparts)
+
+  integer :: nparts
+  double precision :: tracer(nparts), tags(nparts)
+  integer :: set_particle_tracer_field, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_tracer_index
+
+#ifdef TRACER_FIELDS
+! Are we tracing tracer_fields?
+#if defined (SINK_PART_TYPE) || defined (ACTIVE_PART_TYPE) 
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = E001_PART_PROP - 1 + tracer_pointer
+     
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+      ! If found, set particle attribute accordingly.
+      ! Note that since the inputs are sorted by tag, the last tag found
+      ! becomes the new lower bound for the next search.
+
+      if (j .ne. -1) then
+        particles_pointer(part_tracer_index, QSindex(j)) = tracer(i)
+        !print*, "Set a local particle attrib on proc ", dr_globalMe
+      else ! If not found (j=-1), the particle is not on this proc. Skip.
+        j = oldj
+      end if
+
+    end do
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+
+  endif
+#endif
+#endif
+  set_particle_tracer_field=0
 END FUNCTION
 
 ! This function should be called on any restart with shared tags
@@ -4262,6 +4431,93 @@ end if
 get_particle_radius=0
 END FUNCTION
 
+FUNCTION get_particle_rotvel(tags,rotvel,nparts)
+  ! Get the particle rotation velocity by tag.
+  integer :: get_particle_rotvel
+  integer :: nparts, MyPe
+  integer :: i, j, p, oldj, ierr
+  double precision, dimension(nparts) :: rotvel, tags
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        rotvel(i) = particles_pointer(ROTVEL_PART_PROP, QSindex(j))
+      else
+        j = oldj
+        rotvel(i) = 0.0
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  else
+    rotvel = 0.0
+  endif
+
+  call MPI_AllReduce(MPI_IN_PLACE, rotvel, nparts, MPI_DOUBLE_PRECISION, &
+                   MPI_SUM, dr_globalcomm, ierr)
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, MyPe)
+  call pt_sinkGatherGlobal()
+  
+  if(MyPe.eq.0) then
+  
+    allocate(QSindex(localnpf))
+    allocate(id_sorted(localnpf))
+  
+    do p = 1, localnpf
+      id_sorted(p) = int(particles_global(iptag,p),8)
+    enddo
+  
+    call NewQsort_IN(id_sorted, QSindex)
+  
+    if(nparts.eq.localnpf)then
+      do i=1, localnpf
+        rotvel(i) = particles_global(ROTVEL_PART_PROP, QSindex(i))
+      enddo
+    else
+      do j=1, nparts
+        do i=1, localnpf
+          if (particles_global(iptag,i) .eq. tags(j)) then
+            rotvel(j) = particles_global(ROTVEL_PART_PROP, i)
+          endif
+        enddo
+      enddo
+    endif
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  end if
+
+#endif
+
+  get_particle_rotvel=0
+END FUNCTION
 
 
 FUNCTION set_particle_position(tags,x,y,z,nparts)
@@ -6397,6 +6653,88 @@ deallocate(id_sorted)
 set_particle_radius=0
 END FUNCTION
 
+FUNCTION set_particle_rotvel(tags, rotvel, nparts)
+  ! Set the rotation velocity of a star.
+  integer :: set_particle_rotvel 
+  integer :: nparts
+  double precision :: rotvel(nparts), tags(nparts)
+  integer :: i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if(type_count.ge.1)then
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    enddo
+
+    if(type_count.eq.1)then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    j = 1
+    do i=1, nparts
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+      if(j.ne.-1)then
+        particles_pointer(ROTVEL_PART_PROP, QSindex(j)) = rotvel(i)
+      else
+        j = oldj
+      endif
+    enddo
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p),8)
+  enddo
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  if(nparts.eq.localnpf)then
+    do i=1, localnpf
+      particles_global(ROTVEL_PART_PROP, QSindex(i)) = rotvel(i)
+    enddo
+  else
+    do j=1, nparts
+      do i=1, localnpf
+        if(particles_global(iptag,i).eq.tags(j))then
+          particles_global(ROTVEL_PART_PROP, i) = rotvel(j)
+        endif
+      enddo
+    enddo
+  endif
+
+  do i=1, localnp
+    particles_local(ROTVEL_PART_PROP,i) = particles_global(ROTVEL_PART_PROP, i)
+  enddo
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+  set_particle_rotvel=0
+END FUNCTION
+
 
 FUNCTION set_particle_wind_mass(tags, dmdt, nparts)
 ! Set the particle's wind dM/dt by tag number.
@@ -6538,6 +6876,137 @@ call Driver_abortFlash("No winds compiled in, but attempting to set wind dmdt.")
 #endif
 
 set_particle_wind_mass=0
+
+END FUNCTION
+
+FUNCTION set_particle_tracer_dydt(tags, dydt, nparts)
+  ! Set the particle's yield injection rate (mass/time) by tag number.
+  integer :: nparts
+  double precision :: dydt(nparts), tags(nparts)
+  integer :: set_particle_tracer_dydt, i, p, j, myProc, local_index, local_tag, oldj
+  integer :: type_begin, type_end, type_count
+  integer*8, dimension(:), allocatable :: QSindex, id_sorted
+  integer :: part_tracer_index
+
+#ifdef TRACER_FIELDS
+#ifdef WIND_INJ
+  ! Are we using winds?
+
+#ifdef bisect
+
+  call get_particle_type_bounds(part_type, type_begin, type_end, type_count)
+
+  if (type_count .ge. 1) then
+     
+    ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+    part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
+
+    ! Sort by particle tag. Note that input array should also be
+    ! ordered by tag number then.
+
+    allocate(QSindex(type_count))
+    allocate(id_sorted(type_count))
+
+    do p = type_begin, type_end
+      id_sorted(p) = int(particles_pointer(iptag,p),8)
+    end do
+
+    if (type_count .eq. 1) then
+      QSindex = 1
+    else
+      call NewQsort_IN(id_sorted, QSindex)
+    endif
+
+    ! Initial lower bound is 1.
+    j = 1
+
+    do i=1, nparts
+
+      oldj = j
+      j = bisect_search(tags(i), j, type_count, type_count, real(id_sorted,8))
+
+      ! If found, set particle attribute accordingly.
+      if (j .ne. -1) then
+        particles_pointer(part_tracer_index, QSindex(j)) = dydt(i)
+      else ! If not found (j=-1), the particle is not on this proc. Skip.
+        j = oldj
+      end if
+
+    end do ! end of nparts
+
+    deallocate(QSindex)
+    deallocate(id_sorted)
+  endif
+
+#else
+
+  call Driver_getMype(GLOBAL_COMM, myProc)
+  call pt_sinkGatherGlobal()
+    
+  ! Find index of tracer_field variable (tracer_pointer starts counting at 1).
+  part_tracer_index = Y001_PART_PROP - 1 + tracer_pointer
+
+  ! Sort by particle tag. Note that input array should also be
+  ! ordered by tag number then.
+
+  allocate(QSindex(localnpf))
+  allocate(id_sorted(localnpf))
+
+  do p = 1, localnpf
+    id_sorted(p) = int(particles_global(iptag,p), 8)
+  end do
+
+  call NewQsort_IN(id_sorted, QSindex)
+
+  ! Are we updating every particle in the simulation?
+  if (nparts .eq. localnpf) then
+    ! Yes, then lets do them all at once.
+
+    do i=1, localnpf
+      particles_global(part_tracer_index, QSindex(i)) = dydt(i)
+    end do
+
+  else
+    ! If not doing them all, have to do it by tag number.
+
+    do j=1, nparts
+      do i=1, localnpf
+        if (particles_global(iptag,i) .eq. tags(j)) then
+          particles_global(part_tracer_index, i) = dydt(j)
+        end if
+      end do
+    end do
+
+  end if
+
+
+  ! The first localnp particles on a processor in particles_global are
+  ! the local particle arrays in order.
+  do i=1, localnp
+    particles_local(part_tracer_index,i) = particles_global(part_tracer_index, i)
+  end do
+
+  deallocate(QSindex)
+  deallocate(id_sorted)
+#endif
+
+#else
+  
+  print*, "[interface.F90]: WARNING! Called particles_set_tracer_dydt but &
+         winds are not compiled into Flash!"
+  call Driver_abortFlash("No winds compiled in, but attempting to set dydt.")
+
+#endif
+
+#else
+
+  print*, "[interface.F90]: WARNING! Called particles_set_tracer_dydt but &
+         tracer_field tracers are not compiled into Flash!"
+  call Driver_abortFlash("No tracer_fields compiled in, but attempting to set dydt.")
+
+#endif
+
+  set_particle_tracer_dydt=0
 
 END FUNCTION
 
@@ -7976,6 +8445,22 @@ return
 END FUNCTION
 #endif
 
+! This function updates a single scalar field. Should be used when updating mass,
+! e.g., together with energy_injection function.
+FUNCTION yield_injection(iscalar, yield, mass, xloc, yloc, zloc)
+
+integer :: yield_injection
+integer, intent(in) :: iscalar
+real*8, intent(in)  :: yield, mass, xloc, yloc, zloc
+
+#ifdef TRACER_FIELDS
+call Particles_yieldInjection(iscalar, yield, mass, xloc, yloc, zloc)
+#else
+print*, "WARNING: Yield injection called without tracer fields, nothing will happen!"
+#endif
+
+yield_injection=0
+END FUNCTION
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  IO stuff

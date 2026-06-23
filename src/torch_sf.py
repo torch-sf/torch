@@ -9,6 +9,9 @@ Joshua Wall, Drexel University
 
 
 
+import os
+import random
+
 import numpy as np
 
 from amuse.datamodel import Particles
@@ -67,7 +70,17 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     coreM    = hydro.get_particle_corem(newtags)
     sType    = hydro.get_particle_stype(newtags)
     radius   = hydro.get_particle_radius(newtags)
-    
+
+    # Properties used for yields
+    if state.yields is not None:
+        rotvel   = hydro.get_particle_rotvel(newtags)
+        if 'Z' in state.yields.tracer_fields:
+            metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
+            hydro.set_tracer_field_pointer(metal_idx+1) # Fortran style counting (start on 1)
+            initial_metal = hydro.get_particle_tracer_field(newtags)
+        else:
+            initial_metal = 0.02
+
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
     add_star.mass = mass
@@ -84,6 +97,10 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     add_star.COcore_mass   = COcoreM
     add_star.core_mass     = coreM
     add_star.age           = relAge
+    
+    if state.yields is not None:
+        add_star.rotvel        = rotvel
+        add_star.initial_metal = initial_metal
 
     add_star.tag  = newtags  # AMUSE stars know their FLASH tags
     add_star.initial_mass = initMass # for SE/SN uses
@@ -318,6 +335,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
 
     hydro.set_particle_pointers('sink')
     num_sinks = hydro.get_number_of_particles()
+    num_tracers = hydro.get_number_of_tracer_fields()
     if num_sinks == 0:
         # can't get sink tags w/ empty list so need to exit early
         hydro.set_particle_pointers('mass')
@@ -333,7 +351,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
         sink_pos = hydro.get_particle_position(sink_tag)
         sink_vel = hydro.get_particle_velocity(sink_tag)
         sink_cs  = hydro.get_sink_mean_cs(sink_tag)
-        
+
+        if num_tracers > 0:
+            sink_tracer_field = []
+            for itrac in range(num_tracers):
+                hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+                sink_tracer_field.append(hydro.get_particle_tracer_field(sink_tag))
+
         if binaries:
             # get all the stars that we can form now
             csum = np.cumsum(state.system_masses[sink_tag])
@@ -392,6 +416,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             # matches gas specific energy P/rho/(gamma-1) for gamma=5/3                                              
             # with cs = sqrt(P/rho) from Particles_sinkCreateAccrete.F90
             # with the maximum value corresponding to gas at T=100K
+            
             spawn_cs = sink_cs.value_in(units.cm/units.s)
             if np.isnan(spawn_cs):
                 spawn_cs = 117200.0
@@ -410,6 +435,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             else:
                 star.position = sink_pos + sink_rad*np.random.rand(nnew,1)*random_three_vector(nnew)
                 star.velocity = sink_vel + (np.random.normal(scale=spawn_cs, size=(nnew,3)) | units.cm/units.s)
+            
+            if state.yields is not None:
+                # For yields tables (assumes solar metallicity)
+                star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
 
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -417,6 +446,13 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+            if state.yields is not None:
+                hydro.set_particle_rotvel(star_tag, star.rotvel)
+
+            if num_tracers > 0:
+                for itrac in range(num_tracers):
+                    hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+                    hydro.set_particle_tracer_field(star_tag, sink_tracer_field[itrac]*np.ones(nnew))
 
             # Initialize cross section values to something reasonable and non-zero.
             # if stellar evolution is off and radiation is on, these values are zero
@@ -446,6 +482,31 @@ def random_three_vector(n=1):
         vec = np.random.normal(size=[n, 3])
         return vec/np.sqrt(np.sum(vec**2, axis=1))[:,None]
 
+def sample_rotation_Prantzos(metallicity, filename='$TORCH_DIR/data/rotation_Prantzos2018.dat'):
+    """
+    Samples discrete rotation velocities [0, 150, 300] km/s from distributions presented in
+    Prantzos et al. (2018). Primary use is in combination with yields from Limongi & Chieffi (2018)
+    divided into these rotation bins.
+
+    If using this function, please cite Prantzos et al., 2018, MNRAS, 476, 3432-3459
+    """
+
+    filename = os.path.expandvars(filename)
+    metallicity = np.asarray(metallicity)
+    rot = np.array([0.0, 150.0, 300.0])
+
+    Z, f_r000, f_r150, f_r300 = np.loadtxt(filename).T
+    probs = np.stack([f_r000, f_r150, f_r300], axis=1)
+
+    # Find nearest index and probability
+    idx = np.abs(Z[:, None] - metallicity[None, :]).argmin(axis=0)
+    p = probs[idx]
+    p = p / p.sum(axis=1, keepdims=True)
+
+    # Inverse CDF sampling
+    cdf = np.cumsum(p, axis=1)
+    r = np.random.random(metallicity.size)
+    return rot[np.sum(r[:, None] > cdf, axis=1)]
     
 if __name__ == '__main__':
     pass

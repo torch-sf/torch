@@ -261,3 +261,6 @@ gridInj::--with-unit=physics/sourceTerms/GridInject
 
 BHTree:--with-unit=physics/Gravity/GravityMain/Poisson/BHTree:useFortran2008=1:--without-unit=physics/Gravity/GravityMain/Poisson/Multigrid:--without-unit=Grid/GridSolvers/Multigrid/PfftTopLevelSolve
 MGHybrid:--with-unit=physics/Gravity/GravityMain/Poisson/Multigrid:--with-unit=Grid/GridSolvers/Multigrid/PfftTopLevelSolve:--without-unit=physics/Gravity/GravityMain/Poisson/BHTree
+
+# Shortcut for tracer fields
+withTracerFields::withTracerFields=true

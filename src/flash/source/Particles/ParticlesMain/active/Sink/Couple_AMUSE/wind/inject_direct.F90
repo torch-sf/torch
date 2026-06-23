@@ -35,10 +35,12 @@
 
 
 
-subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, twind, dt, bgDens)
+subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, twind, dt, bgDens)
 
 !#define DEBUG
 !#define DEBUG_ENERGY
+#include "Flash.h"
+#include "constants.h"
 
 use Grid_data, ONLY: gr_globalNumProcs, gr_meshComm, gr_meshMe
 
@@ -63,8 +65,9 @@ use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
 use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
 
-#include "Flash.h"
-#include "constants.h"
+#ifdef TRACER_FIELDS
+use Particles_windData, ONLY: mass_load_yields, ism_loading
+#endif
 
 implicit none
 
@@ -165,6 +168,15 @@ logical  :: calcBgDens
 !integer  :: blkStar, iStar, jStar, kStar
 !logical  :: hostCell
 
+#ifdef TRACER_FIELDS
+real(dp), intent(in)              :: injectYieldIn(NMASS_SCALARS)
+real(dp),dimension(NMASS_SCALARS) :: injectYield
+real(dp),dimension(NMASS_SCALARS) :: oldTracerField, dTracerField, newTracerField
+real(dp) :: ism_mass
+integer  :: itracer
+#else
+real(dp), intent(in)              :: injectYieldIn
+#endif
 
 ! First, check that the input parameters of the inject_direct call are sensible: -SA 20240207
 if ((injectMassIn .le. tiny(0.0_dp)) .or. (injectVelocityIn .le. tiny(0.0_dp))) then
@@ -187,6 +199,10 @@ if (first_call) then
     call RuntimeParameters_get("perturb_std_dev", perturb_std_dev)
     call RuntimeParameters_get("use_wind_compute_dt", use_wind_compute_dt)
     call Grid_getMinCellSize(delta(1))
+#ifdef TRACER_FIELDS
+    call RuntimeParameters_get("mass_load_yields", mass_load_yields)
+    call RuntimeParameters_get("ism_loading", ism_loading)
+#endif
     delta=delta(1)
     
     ! If we are setting ref_radius to -1, this means we want to
@@ -242,6 +258,11 @@ deltaKinE    = 0.0
 
 injectMass = injectMassIn
 injectVelocity = injectVelocityIn
+
+#ifdef TRACER_FIELDS
+ism_mass = 0.0d0
+injectYield = injectYieldIn
+#endif
 
 call Grid_getMinCellSize(delta(1))
 delta=delta(1)
@@ -429,6 +450,21 @@ if (mass_load) then
         injectMass       = injectMassIn*(1.0d0+mass_load_factor)
     endif
 end if
+
+#ifdef TRACER_FIELDS
+! Mass loading yields is tricky. We must make a choice about where the
+! additional mass comes from. Either it is part of the wind (ism_loading=false),
+! or it is swept up mass in the surrounding of the star (ism_loading=true).
+! This choise determines the abundances of the mass that is swept up.
+if (mass_load_yields) then
+    if (ism_loading) then
+        ! To be multiplied by ISM abundance
+        ism_mass = injectMassIn*mass_load_factor
+    else
+        injectYield = injectYieldIn*(1.0d0+mass_load_factor)
+    endif
+endif
+#endif
 
 #ifdef DEBUG_ENERGY
 if (gr_meshMe == 0) then
@@ -713,6 +749,27 @@ if (iHaveInjectBlk) then
                       totP    = injVel * dDens + oldVel * oldDens
                       newVel  = totP / newDens
                       
+#ifdef TRACER_FIELDS
+                      ! Compute the tracer field density of material which is added to cell.
+                      do itracer = 1, NMASS_SCALARS
+                        if(mass_load_yields.AND.ism_loading) then
+                           ! ism_mass is the additional mass due to mass loading if applied.
+                           ! ism loading implies additional mass is from swept-up material (old tracer field)
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                             & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Tracer field mass per volume
+                        else
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                                                     *oldDens ! Tracer field mass per volume
+                        endif
+                        if(injectYield(itracer).LT.0.0) then
+                           dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
+                        else
+                           dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
+                        endif
+                        newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
+                      enddo
+#endif
+
                       ! How much mass are we really putting in? - JW
                       sumMass = sumMass + dDens*dVol
                       initialKE = 0.5_dp*sum(oldVel**2.0_dp) ! Per particle per unit mass, KE/M = KE / (N * mu * m_H).
@@ -793,7 +850,14 @@ if (iHaveInjectBlk) then
                       solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
                       solndata(DENS_VAR, i, j, k) = newDens
 
-		      
+#ifdef TRACER_FIELDS
+                      ! Update scalar field to new metallicity after wind mass injection
+                      do itracer = 1, NMASS_SCALARS
+                          solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer) &
+                                                                              /newDens
+                      enddo
+#endif
+
 		              if (addKinE .gt. largestKE) largestKE = addKinE*dVol
 		              if (addThermE .gt. largestTE) largestTE = addThermE*dVol
 		      
@@ -882,6 +946,27 @@ if (iHaveInjectBlk) then
                       oldE    = oldDens * sum(oldVel**2)
                       oldP    = oldDens * sqrt(sum(oldVel**2))
 
+#ifdef TRACER_FIELDS
+                      ! Compute the metal density of material which is added to cell.
+                      do itracer = 1, NMASS_SCALARS
+                        if(mass_load_yields.AND.ism_loading) then
+                           ! ism_mass is the additional mass due to mass loading if applied.
+                           ! ism loading implies additional mass is from swept-up material (old metallicity)
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                             & * (oldDens + injectDataOverlap(n,i,j,k)/sumOverlap*ism_mass/dVol) ! Metal mass (per volume)
+                        else
+                           oldTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k) &
+                                                     *oldDens ! Metal mass (per volume)
+                        endif
+                        if(injectYield(itracer).LT.0.0) then
+                           dTracerField(itracer) = solndata(MASS_SCALARS_BEGIN+(itracer-1),i,j,k)*dDens
+                        else
+                           dTracerField(itracer) = injectDataOverlap(n,i,j,k)/sumOverlap*injectYield(itracer)/dVol
+                        endif
+                        newTracerField(itracer) = oldTracerField(itracer) + dTracerField(itracer)
+                      enddo
+#endif
+
                       ! Same as above, but conserving kinetic energy
 
                       newVelSq = oldDens/newDens * sign(oldVel**2,oldVel) &
@@ -891,7 +976,15 @@ if (iHaveInjectBlk) then
                       solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
                       solndata(DENS_VAR, i, j, k) = newDens
                       solndata(ENER_VAR, i, j, k) =  0.5_dp*sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k)
-                      
+
+#ifdef TRACER_FIELDS
+                      ! Update scalar field to new metallicity after wind mass injection
+                      do itracer = 1, NMASS_SCALARS
+                        solndata(MASS_SCALARS_BEGIN+(itracer-1), i, j, k) = newTracerField(itracer) &
+                                                                            /newDens
+                      enddo
+#endif
+
                       newE = newDens * sum(newVel**2)
                       newP = newDens * sqrt(sum(newVel**2))
                       !globalDeltaE = globalDeltaE + 0.5 * (newE - oldE)*dVol

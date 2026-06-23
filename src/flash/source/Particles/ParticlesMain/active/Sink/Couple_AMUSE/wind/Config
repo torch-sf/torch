@@ -70,3 +70,8 @@ PARAMETER var_radius    BOOLEAN     FALSE
 PARAMETER perturb_velocity BOOLEAN  FALSE
 # With what standard deviation would you like to perturb it by?
 PARAMETER perturb_std_dev  REAL     0.05
+
+# Flags when adding yields to the wind.
+PARAMETER mass_load_yields  BOOLEAN FALSE
+# Use abundance of ISM for mass loading.
+PARAMETER ism_loading       BOOLEAN FALSE

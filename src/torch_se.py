@@ -79,6 +79,9 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     npe     = np.zeros(len(state.stars)) | units.s**-1
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
+    if state.yields is not None:
+        num_tracers = hydro.get_number_of_tracer_fields()
+        dy_dt = np.zeros([len(state.stars), num_tracers]) | units.g / units.s
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
@@ -508,6 +511,33 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
                 se_dt = min(se_dt, _tmp)
                 tprint("... SN x={}, y={}, z={}, inj_mass={}, tag={}".format(s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+                
+                if state.yields is not None:
+                    ccsn_yields = np.ones(num_tracers)
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
+                        if tracer == 'wind':
+                            ccsn_yields[itrac] = 0.0
+                        elif tracer == 'ccsn':
+                            ccsn_yields[itrac] = 1.0
+                        elif tracer == 'ignore':
+                            ccsn_yields[itrac] = -1.0
+                        elif tracer in state.yields.elements:
+                            ccsn_yields[itrac] = state.yields.ccsn_yields(
+                                    elements=tracer,
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0] \
+                                / state.yields.ccsn_mloss(
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0]
+                        else:
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
+                    
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
+                        hydro.yield_injection(itrac+1, ccsn_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
 
             # implicitly zeros out feedback properties by not setting
 
@@ -528,6 +558,32 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                                           massloss_method=massloss_method, max_gamma=state.user['max_gamma'])
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
+
+                if state.yields is not None:
+                    wind_yields = np.ones(num_tracers)
+                    for itrac, tracer in enumerate(state.yields.tracer_fields):
+                        if tracer == 'wind':
+                            wind_yields[itrac] = 1.0
+                        elif tracer == 'ccsn':
+                            wind_yields[itrac] = 0.0
+                        elif tracer == 'ignore':
+                            wind_yields[itrac] = -1.0
+                        elif tracer in state.yields.elements:
+                            wind_yields[itrac] = state.yields.wind_yields(
+                                    elements=tracer,
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0] \
+                                / state.yields.wind_mloss(
+                                    mass=s.initial_mass.value_in(units.MSun),
+                                    metal=s.initial_metal,
+                                    rot=s.rotvel.value_in(units.km/units.s),
+                                    interpolate='linear')[0]
+                        else:
+                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
+
+                    dy_dt[i] = dm_dt[i]*wind_yields
 
         # Evolutionary things besides winds could have reduced the stars mass.
         if dm_dt[i]*dt > 0.0|units.MSun:
@@ -552,6 +608,11 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
 
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+
+    if state.yields is not None:
+        for itrac in range(num_tracers):
+            hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+            hydro.set_particle_tracer_dydt(state.stars.tag, dy_dt[:,itrac].as_quantity_in(units.g/units.s))
 
     # Set SeBa properties for checkpoint
     hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)

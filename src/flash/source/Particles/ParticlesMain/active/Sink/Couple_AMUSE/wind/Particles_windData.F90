@@ -20,6 +20,8 @@
 
 module Particles_windData
 
+#include "Flash.h"
+
   implicit none
 
   real*8, save :: min_wind_dt      = 1d99
@@ -35,5 +37,10 @@ module Particles_windData
   logical, save    :: var_radius          =.false.
   logical, save    :: perturb_velocity    =.false.
   real*8,  save    :: perturb_std_dev
+
+#ifdef TRACER_FIELDS
+  logical, save    :: mass_load_yields    =.false. ! Mass load metals
+  logical, save    :: ism_loading         =.false. ! Mass load with ism me
+#endif
 
 end module Particles_windData
