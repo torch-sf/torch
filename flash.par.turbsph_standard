@@ -40,13 +40,13 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For the test problem in cube128 (-7,+7) pc
-xmax            =  2.1602e+19
-xmin            = -2.1602e+19
-ymax            =  2.1602e+19
-ymin            = -2.1602e+19
-zmax            =  2.1602e+19
-zmin            = -2.1602e+19
+# For the test problem in cube128 (-10,+10) pc
+xmax            =  3.086e+19
+xmin            = -3.086e+19
+ymax            =  3.086e+19
+ymin            = -3.086e+19
+zmax            =  3.086e+19
+zmin            = -3.086e+19
 
 
 # remember to update grav boundaries if you change this
