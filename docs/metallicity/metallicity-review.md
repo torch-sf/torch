@@ -1,6 +1,9 @@
 ### Metallicity Review ###
 M-MML starting 23 Jun 2026, then edited by CC-C and M-MML on 29 Jun 2026. _Note that this was created based off of main, and the notes here will be moved to branch created from develop._
 
+# DriverMain/Drive_sourceTerms.F90 #
+This calls `Heat`, `Heatexchange`, `Cool`, `Ionize` in this order; `Heatexchange` is vanilla FLASH; `Heat` calls the `heating_and_cooling` subroutine so `Cool` is not used.
+
 ## RadHeat ##
 active version I believe to be `src/flash/source/physics/sourceTerms/Heat/HeatMain/HeatCool/phenHeat/mol_and_dust/solver/RadHeat.F90`
 
@@ -9,12 +12,21 @@ The header file is `src/flash/source/physics/sourceTerms/Heat/HeatMain/HeatCool/
 ### Cooling ###
 Cooling uses dust cooling from Goldsmith (2001; https://scixplorer.org/abs/2001ApJ...557..736G/abstract).  This is implicitly solar.  To replace that, we can look at Dopcke et al. (2011;  https://scixplorer.org/abs/2011ApJ...729L...3D/abstract).  I've touched base with Ralf K, who suggested emailing Simon G., which I've done (24 June)
 
+# heatCool.F90 #
+The `cooling` function is called by `dei_dt`, which is called in the subroutine `heating_and_cooling`. 
 
-# Heating #
+_Atomic cooling_ : On l.1525, calling *atomic cooling* from Dalgarno and McCray. Difference functions are available for different ionization fractions; this will be replaced by Simon Glover (see notes below). This (combined with the below) will return an output variable used in `dei_dt`.
+
+If `useDustCool` is true, then `molecular_cooling` and `dust_cooling` are also called.
+
+### Heating ###
 Note: _There is a commented out function to fill the guard cells._
 This uses constants.h, which is located at `/src/flash/source/Simulation/SimulationMain/StratBox/constants.h`. _Why is this in the StratBox directory?_ In vanilla FLASH, this is in the top-level `/Simulation` directory. There are no differences between the files.
 
 heat_data is a data file; this will likely be part of replacing the data files from Robi.
+
+# Heat.F90 #
+This call `RadHeat` from `RadHeat.F90` if (1) `IHP_SPEC` is not used or (2) `rt_heatInRad` or `rt_useRadTrans` is not used. `IHP_SPEC` is not defined; therefore, the `RadHeat` routine is used, although both `rt_heatInRad` and `rt_useRadTrans` are true.
 
 # RadHeat.F90 #
 On l. 278, the mean molecular weight mu_mol is hardcoded to 24/11, which is 10% He by number, which corresponds to 40% by weight. This number should be adjusted with metallicity.
@@ -45,6 +57,7 @@ There is a note there stating that his will overestimate cooling in wind bubbles
 The same function also includes collisional cooling of the dust by the gas, for temperature
 dust_t = dust_heat (flux - PE heating) + collisional cooling - dust radiative cooling
 
+
 # Exposed user parameters that will need to be varied #
 * Exposed CR parameters
 * Gzero
@@ -57,7 +70,8 @@ dust_t = dust_heat (flux - PE heating) + collisional cooling - dust radiative co
 * Mean molecular weight -- current set in separate place?
 
 # To review in flash.par #
-On l. 703, tolerance and smallt values are hardcoded -- are those also set in flash.par?
+* On l. 703, tolerance and smallt values are hardcoded -- are those also set in flash.par?
+* Equation of state -- figure out the comment about double-counting mu
 
 
 # Notes from meeting with SCOG #
