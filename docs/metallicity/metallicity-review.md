@@ -12,7 +12,7 @@ Cooling uses dust cooling from Goldsmith (2001; https://scixplorer.org/abs/2001A
 
 # Heating #
 Note: _There is a commented out function to fill the guard cells._
-This uses constants.h, which is located at `/src/flash/source/Simulation/SimulationMain/StratBox/constants.h`. Why is this in the StraBox directory? In vanilla FLASH, this is in the top-level `/Simulation` directory. There are no differences between the files.
+This uses constants.h, which is located at `/src/flash/source/Simulation/SimulationMain/StratBox/constants.h`. _Why is this in the StratBox directory?_ In vanilla FLASH, this is in the top-level `/Simulation` directory. There are no differences between the files.
 
 heat_data is a data file; this will likely be part of replacing the data files from Robi.
 
@@ -26,11 +26,11 @@ Note: _There is a commented out `use heatCool` call on l.48. Why?_
 
 *On l.896, dust_gas_ratio = 0.01 is hardcoded.*
 
-The CR ionization rate is hardcoded to the Milky Way value. See `he_crIonRate`, `he_crIonEnergy`,`he_crIonNH`, `he_crIonExp`; example of use is l. 928. It looks like heating is only CR heating and not background UV heating, which is defined in `cool_vars` as `Gflux`, which is taken from `PEFL`. This also uses
+The CR ionization rate is hardcoded to the Milky Way value. See `he_crIonRate`, `he_crIonEnergy`,`he_crIonNH`, `he_crIonExp`; example of use is l. 928. It looks like heating is only CR heating and not background UV heating, which is defined in `cool_vars` as `Gflux`, which is taken from `PEFL`. 
 
 Check W&D heating constants -- are those universal? They are on l. 985.
 
-On l. 1022, the PE heating routine needs to checked. The reference is Bakes/Tielens 1994, then Wolfire 2003. Use the Wolfire paper to check the "magic numbers", and figure out which ones are metallicity dependent (see equation 20). Check for updates by Wolfire or others, *this needs more research as we currently do not have a metallicity-dependant heating rate*. 
+On l. 1022, the PE heating routine needs to checked. The reference is Bakes/Tielens 1994, then Wolfire 2003. Use the Wolfire paper to check the "magic numbers", and figure out which ones are metallicity dependent (see equation 20). Check for updates by Wolfire or others, *this needs more research as we currently do not have a metallicity-dependent heating rate*. 
 
 On l. 1051, the he_pe_recipe also has several numbers hardcoded, which come from Weingarter & Draine 2001. *Also check those*.
 
@@ -39,6 +39,7 @@ On l. 1051, the he_pe_recipe also has several numbers hardcoded, which come from
 * Gzero
 * Scale height h_uv
 * `dust_sputter_temp` may be relevant, but not changed for now
+
 
 # Notes from meeting with SCOG #
 
