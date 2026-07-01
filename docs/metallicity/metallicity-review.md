@@ -19,12 +19,15 @@ heat_data is a data file; this will likely be part of replacing the data files f
 # RadHeat.F90 #
 On l. 278, the mean molecular weight mu_mol is hardcoded to 24/11, which is 10% He by number, which corresponds to 40% by weight. This number should be adjusted with metallicity.
 
-# heatCode.F90 #
+# heatCool.F90 #
 Note: _There is a commented out `use heatCool` call on l.48. Why?_
+*Note also that we are only following along the `implicit` method, as this is the default choice; for other methods, we do not follow the line of references.*
 
-`mu_mol` is used. It is defined in `RadHeat.F90` then passed around in `OdeData` (see `cool_vars`). This appears to be the only definition of `mu_mol` in the FLASH source files.
+`mu_mol` is used. It is defined in `RadHeat.F90` then passed around in `OdeData` (see `cool_vars`). This appears to be the only definition of `mu_mol` in the FLASH source files, *hardcoded elsewhere?* `mu_mol` is also used to calculate the dust temperature.
 
-*On l.896, dust_gas_ratio = 0.01 is hardcoded.*
+*On l.896, dust_gas_ratio = 0.01 is hardcoded.* This is used in f_ext, on l. 1718, which is a local approximation for self-shielding. *This is hardcoded everywhere else*, as the variable is not used anywhere else. f_ext is used in the local FUV flux calculation.
+
+*Note also that the dust-to-gas ratio is used in VETTAM and likely defined separately there*. 
 
 The CR ionization rate is hardcoded to the Milky Way value. See `he_crIonRate`, `he_crIonEnergy`,`he_crIonNH`, `he_crIonExp`; example of use is l. 928. It looks like heating is only CR heating and not background UV heating, which is defined in `cool_vars` as `Gflux`, which is taken from `PEFL`. 
 
@@ -32,13 +35,29 @@ Check W&D heating constants -- are those universal? They are on l. 985.
 
 On l. 1022, the PE heating routine needs to checked. The reference is Bakes/Tielens 1994, then Wolfire 2003. Use the Wolfire paper to check the "magic numbers", and figure out which ones are metallicity dependent (see equation 20). Check for updates by Wolfire or others, *this needs more research as we currently do not have a metallicity-dependent heating rate*. 
 
-On l. 1051, the he_pe_recipe also has several numbers hardcoded, which come from Weingarter & Draine 2001. *Also check those*.
+On l. 1051, the he_pe_recipe also has several numbers hardcoded, which come from Weingarter & Draine 2001. *Also check those*. The rate should depend on G, T and n_e; the function included in the code is based on eq. 44. This is appropriate between 10-1e4 K and 1e2 K^1/2 cm^3 < G sqrt(T)/n < 1e6 K^1/2 cm^3; this is a safe temperature range because it corresponds to very low densities. The values provided in the table are stated as function of R_v, which is a ratio of visual extinction to reddening. The code currently uses R_v = 3.1, b=6e-5 and B0 (BB for T=3e4 K, cut off at 13.6 eV) from table 2 -- R_v = 3.1 is only appropriate for diffuse cloud. *Further research needed, we might need to replace this.*
+
+On l.1060, a pre-factor of 1e-26 is hardcoded; check if this varies with Z. This pre-factor is also present on l. 1063. This is used in conjunction with he_pe_form (see list of exposed user parameters) and set from Hill+2012.
+
+On l.703, in `get_dust_temperature`, phen_heat and dust_heat represent the same parameter; tdust and tgas cannot drip below he_absTmin, which is set in flash.par. The underlying assumption is that the dust is optically thin to itself; acceptable assumption in our regime from discussion with Simon Glover.
+l. 801: The dust cooling rate is set to lambda_dust = 6.8 * tdust**6
+There is a note there stating that his will overestimate cooling in wind bubbles and should be switched off above 1e5 K.
+The same function also includes collisional cooling of the dust by the gas, for temperature
+dust_t = dust_heat (flux - PE heating) + collisional cooling - dust radiative cooling
 
 # Exposed user parameters that will need to be varied #
 * Exposed CR parameters
 * Gzero
 * Scale height h_uv
+* he_pe_form for photoelectric heating
 * `dust_sputter_temp` may be relevant, but not changed for now
+
+# Parameters that will need to be exposed #
+* Dust-to-gas ratio
+* Mean molecular weight -- current set in separate place?
+
+# To review in flash.par #
+On l. 703, tolerance and smallt values are hardcoded -- are those also set in flash.par?
 
 
 # Notes from meeting with SCOG #
