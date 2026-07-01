@@ -13,17 +13,34 @@ The header file is `src/flash/source/physics/sourceTerms/Heat/HeatMain/HeatCool/
 Cooling uses dust cooling from Goldsmith (2001; https://scixplorer.org/abs/2001ApJ...557..736G/abstract).  This is implicitly solar.  To replace that, we can look at Dopcke et al. (2011;  https://scixplorer.org/abs/2011ApJ...729L...3D/abstract).  I've touched base with Ralf K, who suggested emailing Simon G., which I've done (24 June)
 
 # heatCool.F90 #
-The `cooling` function is called by `dei_dt`, which is called in the subroutine `heating_and_cooling`. 
-
-_Atomic cooling_ : On l.1525, calling *atomic cooling* from Dalgarno and McCray. Difference functions are available for different ionization fractions; this will be replaced by Simon Glover (see notes below). This (combined with the below) will return an output variable used in `dei_dt`.
+The `cooling` function is called by `dei_dt`, which is called in the subroutine `heating_and_cooling`. The subroutine `cooling` begins at l. 1116. The 0.01 ionization fraction is hardcoded here, on l. 1143; *this needs to be updated*. This returns `emin_out`, which is cooling rate in erg cm-3 s-1, which then gets converted to erg g-1 s-1.
 
 If `useDustCool` is true, then `molecular_cooling` and `dust_cooling` are also called.
+
+_Atomic cooling_ : If temperature and densities within range set in flash.par, call `Radloss` subroutine, which calls `cooling`, which is the atomic cooling. This routine will have to be entirely replaced. 
+
+On l.1525, calling *atomic cooling* from Dalgarno and McCray. Different functions are available for different ionization fractions; this will be replaced by Simon Glover (see notes below). This (combined with the below) will return an output variable used in `dei_dt`.
+
+At low densities, this will be replaced by Simon Glover's updates; at high densities, *we need a set of metallicity-dependent cooling curves -- figure out which are the usual ones*.
+
+_Molecular cooling_: On `heatCool.F90`, l.1211, the subroutine `molecular_cooling` is defined. This calls `cool_dat`, which gets the cooling table from `cool.dat`. This is based on Neufeld et al. 1995. 
+
+This is valid over T=10-2500 K, H_2 densities 1e3-1e10 cm^-3, and assumes equilibrium. *This uses a CR ionization rate of 1e-17 per H2 molecular; in flash.par, we use 2e-17 -- is this by H atom?* This uses mu_mol and gets the cooling rate for the corresponding temperature and density from `cool.dat`.
+
+Only one set of abundances is used, based on Galactic abundances.
+
+At our densities, cooling is dominated by CO. CO is not self-shielding, only shielded by dust -- decreases more quickly than H2. *We should look up what did Enzo use before they introduced Grackle*. 
+
+_Dust cooling_: This is deifined on l. 1305 in `heatCool.F90`. It uses cooling rates from Hollenbach and McKee 1989, as reported in Glover and Clark 2011. This includes several constants from Hollenbach & McKee 1989, as reported in Glover & Clark 2012b.
+
+# get_cooling_data.F90 #
+This calls `cool.dat` and creates a variable called `cool_dat`, which containes temperature, densities, and cooling powers. This is called in `heatCool.F90`.
 
 ### Heating ###
 Note: _There is a commented out function to fill the guard cells._
 This uses constants.h, which is located at `/src/flash/source/Simulation/SimulationMain/StratBox/constants.h`. _Why is this in the StratBox directory?_ In vanilla FLASH, this is in the top-level `/Simulation` directory. There are no differences between the files.
 
-heat_data is a data file; this will likely be part of replacing the data files from Robi.
+*Heat_data* is a data file; this will likely be part of replacing the data files from Robi.
 
 # Heat.F90 #
 This call `RadHeat` from `RadHeat.F90` if (1) `IHP_SPEC` is not used or (2) `rt_heatInRad` or `rt_useRadTrans` is not used. `IHP_SPEC` is not defined; therefore, the `RadHeat` routine is used, although both `rt_heatInRad` and `rt_useRadTrans` are true.
@@ -57,6 +74,8 @@ There is a note there stating that his will overestimate cooling in wind bubbles
 The same function also includes collisional cooling of the dust by the gas, for temperature
 dust_t = dust_heat (flux - PE heating) + collisional cooling - dust radiative cooling
 
+On l.1600, the piecewise power-law for radiative cooling is defined in the `Radloss` subroutine. It includes bremßtrahlung (with T^1/2) and other processes -- *look into this*. This is likely a piecewise power-law fit to Delgarno and McCray. 
+
 
 # Exposed user parameters that will need to be varied #
 * Exposed CR parameters
@@ -86,7 +105,7 @@ Below 1e4 K Hill et al can't be scaled with metallicity (OK above) because fine 
 
 Check that Neufeld accounts for density
 
-Glover & Clark 12 Fig 4 shows transition from atomic to molecular & (fine structure cooling as a function of metallicity.
+Glover & Clark 12 Fig 4 shows transition from atomic to molecular & fine structure cooling as a function of metallicity.
 
 Treatment of this is available.
 
@@ -121,7 +140,7 @@ Likely metal dominated at our metallicities; don't need to forbid about dust cou
 
 Need to take both temperature and density into account for cooling. Molecular cooling should already account for that density-dependence. 
 
-Atomic cooling is currently not metallicity-dependent; this will not work at low metallicity. We will need low temperature atomic cooling. See Glover & Clark 2012b, fig. 4. At low metallicity, the atomic to molecular transition is at higher densities; the low density gas needs a temperature and density dependence. We currently have no chemistry, *need a chemistry treatment* to account for this properly. Assuming chemistry tracks density is ok at solar abundance but at low Z, you cannot assume this. The chemistry timescales are longer at low Z, longer than e.g. cloud free-fall time. You therefore need some knowledge of history. 
+Atomic cooling is currently not metallicity-dependent; this will not work at low metallicity. We will need low temperature atomic cooling. See Glover & Clark 2012b, fig. 4 (MNRAS 421, 116). At low metallicity, the atomic to molecular transition is at higher densities; the low density gas needs a temperature and density dependence. We currently have no chemistry, *need a chemistry treatment* to account for this properly. Assuming chemistry tracks density is ok at solar abundance but at low Z, you cannot assume this. The chemistry timescales are longer at low Z, longer than e.g. cloud free-fall time. You therefore need some knowledge of history. 
 
 We may be able to start from the tracer fields (e.g. by using one to trace HII). We would also need to account for the Lyman-Werner band. 
 
