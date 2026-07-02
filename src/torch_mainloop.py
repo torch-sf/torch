@@ -572,7 +572,7 @@ def run_torch(user_initial_conditions, user_parameters):
     
     hydro, grav, mult, se = initialize_workers()
 
-    state = TorchState(hydro, grav, mult, se)
+    state = TorchState(hydro, grav, mult, se, USER)
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash
@@ -600,7 +600,7 @@ def run_torch(user_initial_conditions, user_parameters):
 
     if not state.restart:
         user_initial_conditions(state, hydro)
-        if USER['include_bg_stars']:
+        if USER['with_voramr'] and USER['include_bg_stars']:
             make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, smassive, sink_rad=USER['sink_rad'],
                                   num_bins=USER['sample_imf_bins'], min_samp_mass=USER['min_imf_mass'], 
                                   max_samp_mass=USER['max_imf_mass'], sum_small=USER['sum_small'], m_small=USER['m_small'])

@@ -246,14 +246,22 @@ def make_background_sinks(hydro, scoords, svels, smass, sinitmass, sage, smet, s
 
     for i in range(len(x)):
         # get imf list with arepo star mass
+        # old version where we spawn massive stars separately...
+        #spawn_masses = sample_stellar_mass(
+        #                    max(m[i]-massive[i],0.0|units.g).value_in(units.MSun),
+        #                    num_bins,
+        #                    min_samp_mass=min_samp_mass.value_in(units.MSun),
+        #                    max_samp_mass=7.99,
+        #                    sum_small=sum_small,
+        #                    m_small=m_small.value_in(units.MSun))
+        #spawn_masses = np.append(spawn_masses, massive[i].value_in(units.MSun))
         spawn_masses = sample_stellar_mass(
-                            max(m[i]-massive[i],0.0|units.g).value_in(units.MSun),
+                            m[i].value_in(units.MSun),
                             num_bins,
                             min_samp_mass=min_samp_mass.value_in(units.MSun),
                             max_samp_mass=7.99,
                             sum_small=sum_small,
                             m_small=m_small.value_in(units.MSun))
-        spawn_masses = np.append(spawn_masses, massive[i].value_in(units.MSun))
         nnew = len(spawn_masses)
         if nnew == 0:
             continue

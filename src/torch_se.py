@@ -110,7 +110,7 @@ def stellar_evolution(time, dt, state, hydro, se,
         if went_supernova(s.stellar_type):
             continue
 
-        if s.mass >= min_feedback_mass:
+        if s.initial_mass >= min_feedback_mass:
 
             if with_sn and went_supernova(s.stellar_type):
 

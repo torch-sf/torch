@@ -337,9 +337,50 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             if np.isnan(spawn_vel):
                 spawn_vel = 117200.0
             star.velocity = sink_vel + (np.random.normal(scale=spawn_vel, size=(nnew,3)) | units.cm/units.s)
+
+            tprint(f"[made_stars] sink tag: {sink_tag} star mass: {star.mass}, pos: {star.position}, vel: {star.velocity}")
+            
+            # If a sink is near the domain edge, it is possible to form stars outside the domain. 
+            # Filter these out here, never pass them to FLASH. Still allow them to "form", i.e., 
+            # that sampled mass is still removed from the sink particle's list.
+            xmin = hydro.get_runtime_parameter('xmin') | units.cm
+            xmax = hydro.get_runtime_parameter('xmax') | units.cm
+            ymin = hydro.get_runtime_parameter('ymin') | units.cm
+            ymax = hydro.get_runtime_parameter('ymax') | units.cm
+            zmin = hydro.get_runtime_parameter('zmin') | units.cm
+            zmax = hydro.get_runtime_parameter('zmax') | units.cm
+
+            x = star.position[:, 0]
+            y = star.position[:, 1]
+            z = star.position[:, 2]
+
+            in_bounds = (
+                (x >= xmin) & (x <= xmax) &
+                (y >= ymin) & (y <= ymax) &
+                (z >= zmin) & (z <= zmax)
+            )
+
+            n_outside = np.count_nonzero(~in_bounds)
+
+            if n_outside > 0:
+                tprint(
+                    f"[made_stars] filtered {n_outside}/{nnew} stars formed outside domain "
+                    f"for sink tag {sink_tag}"
+                )
+
+            star = star[in_bounds]
+            nnew = len(star)
+
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
+
+            # Check for the case that all stars formed were outside domain
+            if nnew == 0:
+                formed_stars = False
+                return formed_stars
+
             star_tag = hydro.add_particles(star.x, star.y, star.z)
+            tprint(f"star tag: {star_tag}")
             hydro.set_particle_mass(star_tag, star.mass)
             hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
