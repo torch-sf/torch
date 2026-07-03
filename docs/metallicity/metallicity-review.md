@@ -31,7 +31,7 @@ Only one set of abundances is used, based on Galactic abundances.
 
 At our densities, cooling is dominated by CO. CO is not self-shielding, only shielded by dust -- decreases more quickly than H2. *We should look up what did Enzo use before they introduced Grackle*. 
 
-_Dust cooling_: This is deifined on l. 1305 in `heatCool.F90`. It uses cooling rates from Hollenbach and McKee 1989, as reported in Glover and Clark 2011. This includes several constants from Hollenbach & McKee 1989, as reported in Glover & Clark 2012b.
+_Dust cooling_: This is deifined on l. 1305 in `heatCool.F90`. It uses cooling rates from Hollenbach and McKee 1989, as reported in Glover and Clark 2011. This includes several constants from Hollenbach & McKee 1989, as reported in Glover & Clark 2012b. 
 
 # get_cooling_data.F90 #
 This calls `cool.dat` and creates a variable called `cool_dat`, which containes temperature, densities, and cooling powers. This is called in `heatCool.F90`.
@@ -77,6 +77,28 @@ dust_t = dust_heat (flux - PE heating) + collisional cooling - dust radiative co
 On l.1600, the piecewise power-law for radiative cooling is defined in the `Radloss` subroutine. It includes bremßtrahlung (with T^1/2) and other processes -- *look into this*. This is likely a piecewise power-law fit to Delgarno and McCray. 
 
 
+### Wind routine ###
+
+# inject_direct.F90 #
+Look into `Particles/ParticlesMain/active/Sink/Couple_AMUSE/wind/inject_direct.F90`.
+
+l. 126 defines a variable `gamma_` -- this is from the runtime parameters. 
+There is a constant in the mass-loading routine on l.209, which is the post-shock temperature. This implicitly uses mu = 14/23 = 0.61, which is for fully ionized hydrogen and helium. This may not be appropriate, as several stars are not hot enough to ionize helium. 
+
+The Weaver solution (Weaver+1977, eq. 12) implicitly sets gamma = 5/3, which is based on the adiabatic wind theory by Holzer and Axford 1970. This may have to be changed when we consider molecular hydrogen. See routine on l. 282. Note that this is only called if `variable_radius = .true.`, and the default is `false`. 
+
+On l. 1029, in the sound speed calculation, the constant in the denominator appears to be a hard-coded value of mu. *Check this*. This is within a block with `if use_wind_compute_dt`, and this parameter is set to false by default.
+
+*Check Eos_wrapped routine, as this may have references to metallicity*
+
+### Equation of state ###
+This is located in `/physics/Eos/EosMain/Eos_wrapped.F90`, which is vanilla FLASH. We use this wtih `MODE_DENS_EI`, which uses density and internal energy as inputs. *What does FLASH need to know about the metallicity for the equation of state?*
+
+### Sink formation ###
+This is located in `/src/flash/source/Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_Sinks_and_Stars/Particles_sinkCreateAccrete.F90`.
+Set gamma from example on inject_direct.F90 l. 126 AND make sure that the factor of gamma is applied everywhere in the routine. There is no gamma variable in this file. 
+The value of gamma is hardcoded on l. 1045.
+
 # Exposed user parameters that will need to be varied #
 * Exposed CR parameters
 * Gzero
@@ -87,6 +109,7 @@ On l.1600, the piecewise power-law for radiative cooling is defined in the `Radl
 # Parameters that will need to be exposed #
 * Dust-to-gas ratio
 * Mean molecular weight -- current set in separate place?
+* Gamma (also make sure it's used consistently)
 
 # To review in flash.par #
 * On l. 703, tolerance and smallt values are hardcoded -- are those also set in flash.par?
