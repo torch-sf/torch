@@ -94,6 +94,7 @@ subroutine Particles_MarkRefineDerefine()
 logical, save              :: first_call = .true.
 character(len=80), save    :: grav_boundary_type
 
+    real*8, save           :: wind_radius
 #include "Flash_mpi.h"
 
 
@@ -106,8 +107,11 @@ return
 if (first_call) then
   call RuntimeParameters_get("ref_radius", ref_radius)
   call Grid_getMinCellSize(delta)
-  if (ref_radius < 0.0) &
-      ref_radius = 3.5d0*sqrt(3.0d0)*delta
+  if (ref_radius < 0.0) then
+      wind_radius = 3.5d0*sqrt(3.0d0)*delta
+  else
+      wind_radius = ref_radius
+  endif
   call RuntimeParameters_get("grav_boundary_type", grav_boundary_type)
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
   first_call = .false.
@@ -268,7 +272,9 @@ print*, "z =", z
                          ! Note this has to reflect whether this cell if fully refined would
                          ! contain the particle compared to the ref_radius, since ref_radius is
                          ! at full refinement. - JW
-                         if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. ref_radius) then !else if 
+                         ! Note that ref_radius is being overwriten somewhere so we use dedicated
+                         ! variable wind_radius for this check.
+                         if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. wind_radius) then !else if 
 #ifdef debug
 print*, "rad =", rad, dr_globalMe
 print*, "ref =", ref_radius, dr_globalMe
