@@ -38,10 +38,10 @@ happens on the `develop`_ branch.
    :caption: Wiki
    
    wiki/Torch.md
+   wiki/Stellar_Feedback.md
 .. wiki/Magnetohydrodynamics.md
    wiki/Cooling_Heating.md
    wiki/Star_Formation.md
-   wiki/Stellar_Feedback.md
    wiki/Radiation.md
    wiki/Nbody.md
    wiki/Initial_Conditions.md
