@@ -439,7 +439,7 @@ class YieldSource_unsgrid:
                 return np.ones(shape) * np.nan
         else:
             # Gets indexes of each element. If element not in tables, saves un-indexable index
-            el_inds = [np.where(element == self.elements)[0][0] if element in self.elements else len(self.elements)+1 for element in elements]
+            el_inds = [np.where(element == self.elements)[0][0] if element in self.elements else len(self.elements)+1 for element in self.elements]
             
             # If finds index larger than size of elements, then one element not in list
             if np.any([ind>len(self.elements) for ind in el_inds]):

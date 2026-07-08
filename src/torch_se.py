@@ -106,90 +106,10 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     # This allows us to restart from evolved stars and use the same structure for
     # binary evolution - CCC 26/04/2024
     
-
-    # tprint('%%%%%%% se.particles:', se.particles)
-    tprint('%%%%%%% se Mass:', se.particles.mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_age)
-    tprint('%%%%%%% se Mass:', se.particles.stellar_type)
-    
-    tprint('%%%%%%% state Mass b4:', state.stars.mass)
-    tprint("%%%%%%% state Rel mass b4:", state.stars.relative_mass)
-    tprint("%%%%%%% state Rel age b4:", state.stars.relative_age)
-    tprint("%%%%%%% state Stell type b4:", state.stars.stellar_type)
-    # state.stars_to_se.copy()
-    
-    for _attribute in state.stars.get_attribute_names_defined_in_store():
-        if _attribute in se.particles.get_attribute_names_defined_in_store():
-            # print('att:',_attribute)
-            
-            try:
-                state.stars_to_se.copy_attributes([_attribute])
-                tprint('%%%%% Attribute set:', _attribute)
-            except:
-                tprint('%%%%%%% Skipping prop:', _attribute)
-            # state.stars_to_se.copy_attributes([_attribute])
-            
-    tprint('%%%%%%% state.stars_to_se.copy() %%%%%%%')
-    
-    tprint('%%%%%%% se Mass:', se.particles.mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_age)
-    tprint('%%%%%%% se Mass:', se.particles.stellar_type)
-    
-    tprint('%%%%%%% Mass:', state.stars.mass)
-    tprint("%%%%%%% Rel mass:", state.stars.relative_mass)
-    tprint("%%%%%%% Rel age:", state.stars.relative_age)
-    tprint("%%%%%%% Stell type:", state.stars.stellar_type)
-    
+    state.stars_to_se.copy()
     se.evolve_model(se_time)
-    tprint('%%%%%%% se.evolve_model(se_time) %%%%%%%')
-    tprint('%%%%%%% se Mass:', se.particles.mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_age)
-    tprint('%%%%%%% se Mass:', se.particles.stellar_type)
-    
-    tprint('%%%%%%% Mass:', state.stars.mass)
-    tprint("%%%%%%% Rel mass:", state.stars.relative_mass)
-    tprint("%%%%%%% Rel age:", state.stars.relative_age)
-    tprint("%%%%%%% Stell type:", state.stars.stellar_type)
-    
-    # state.se_to_stars.copy()
-    # Pass information back to stars after end of SE loop
-    for _attribute in se.particles.get_attribute_names_defined_in_store():
-        if _attribute in state.stars.get_attribute_names_defined_in_store():
-            try:
-                state.se_to_stars.copy_attributes([_attribute])
-                tprint('%%%%% Attribute set:', _attribute)
-            except:
-                tprint('%%%%%%% Skipping prop:', _attribute)
-    tprint('%%%%%%% copy_attributes %%%%%%%')
-    tprint('%%%%%%% se Mass:', se.particles.mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_mass)
-    tprint('%%%%%%% se Mass:', se.particles.relative_age)
-    tprint('%%%%%%% se Mass:', se.particles.stellar_type)
-    
-    tprint('%%%%%%% Mass:', state.stars.mass)
-    tprint("%%%%%%% Rel mass:", state.stars.relative_mass)
-    tprint("%%%%%%% Rel age:", state.stars.relative_age)
-    tprint("%%%%%%% Stell type:", state.stars.stellar_type)
+    state.se_to_stars.copy()
 
-    # # Pass information to SE
-    # # Check for new systems, important for binaries
-    # state.binaries.synchronize_to(se.binaries)
-    # # Now pass attributes to binaries
-    # for _attribute in state.binaries.get_attribute_names_defined_in_store():
-    #     if _attribute in se.binaries.get_attribute_names_defined_in_store():
-    #         state.binaries_to_se.copy_attributes([_attribute])
-    # # Evolve model
-    # se.evolve_model(se_time) #Time attached to se.particles.age, which is the "simulation" time
-    
-    # # Pass information back to stars after end of SE loop
-    # for _attribute in se.particles.get_attribute_names_defined_in_store():
-    #     if _attribute in state.stars.get_attribute_names_defined_in_store():
-    #         state.se_to_stars.copy_attributes([_attribute])
-
-    
     
     # Reset the stars' age after the SE step, as the SeBa age is reset to 0
     # at each restart - CCC 22/11/2024
@@ -265,15 +185,18 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 sigpe[i] = sigDust  # TODO magic constant -AT 2019Oct14
             if with_winds:
 
-                tprint('%%%%%%% old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt, massloss_method')
-                tprint(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt, massloss_method)
-                
+                # tprint('%%%%%%% old_mass[i]  ||  s.temperature  ||  s.radius  ||  s.mass  ||  s.luminosity  ||  dt  ||  massloss_method')
+                # tprint(old_mass[i], ' || ', s.temperature,' || ', s.radius,' || ', s.mass,' || ', s.luminosity,' || ', dt,' || ', massloss_method)
+
+                tprint('%%%%%%% vterm:', vterm)
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                           massloss_method=massloss_method)
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
+                tprint('%%%%%%% tmp:', _tmp)
 
-                tprint('%%%%%%% vterm calc:', vterm[i])
+                tprint('%%%%%%% dmdt wind:', dm_dt[i])
+                # tprint('%%%%%%% vterm calc:', vterm[i])
 
                 if state.yields is not None:
                     if state.yields_bin is not None:
@@ -282,21 +205,30 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                         star_params = np.array([[s.initial_mass.value_in(units.MSun),
                                                               s.massratio,
                                                               s.period.value_in(units.day)]])
-                        tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
-                        tprint("%%%%%%% Star's age:", s.age)
-                        tprint("%%%%%%% Star's binyld timescale:", state.yields_bin.timescale(star_params) | units.s)
-                        tprint("%%%%%%% Star's binyld massej:", state.yields_bin.massej(star_params) | units.MSun)
+                        # tprint('%%%%%%% Doing binylds check, binylds:', s.binylds)
+                        # tprint("%%%%%%% Star's age:", s.age)
+                        # tprint("%%%%%%% Star's binyld timescale:", state.yields_bin.timescale(star_params) | units.s)
+                        # tprint("%%%%%%% Star's binyld massej:", state.yields_bin.massej(star_params) | units.MSun)
                         # DEBUG ===========================================================
                         
-                        if s.binylds and s.age > 27600000000 | units.s: # 1.104e11 | units.s: # 33529233868.2 | units.s: # if older than 3.5kyr
+                        # if s.binylds and s.age > 1.95e11 | units.s: # 0.05Myr // # 27600000000 | units.s: # 1.104e11 | units.s: # 33529233868.2 | units.s: # if older than 3.5kyr
+                        if s.binylds and s.age > 33529233868.2 | units.s: # if older than 3.5kyr
+                        # if s.binylds and s.age > state.yields_bin.timescale(star_params) | units.s
                             tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
+
+                            # Using refVel as vterm to avoid mass loading binary material:
+                            wind_target_temp = 5e6 # K, %%%%% should read this param from flash.par %%%%%
+                            refVel = np.sqrt(wind_target_temp/1.38e7)*1e8 | units.cm/units.s
+                            vterm[i] = refVel
+                            tprint('%%%%%%% vterm updated for binaries, now:', vterm)
                             
                             # timescale check ...
                             # state.yields_bin.timescale(star_params)
     
                             # Get inj_mass -- how much mass is being injected by this process
-                            # inj_mass = state.yields_bin.ejected_mass(params) | units.MSun
-                            inj_mass = 2 | units.MSun # Test for now
+                            # inj_mass = state.yields_bin.massej(params) | units.MSun
+                            # inj_mass = 13.599398918900027 | units.MSun # Test for now
+                            inj_mass = 7 | units.MSun
 
                             dm_dt[i] = inj_mass/dt
 
@@ -330,6 +262,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             
                             tprint("%%%%% bin dm_dt =", dm_dt[i])
                             tprint("%%%%% bin dm =", dm_dt[i]*dt)
+                            tprint("%%%%% bin inj_mass =", inj_mass)
 
                             # Testing a high vterm:
                             # vterm[i] = 1.2e9 | units.cm / units.s # 100 000 km/s
@@ -338,9 +271,17 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             
                             # for itrac, tracer in enumerate(state.yields_bin.tracer_fields): # SN %%%%%
                             #     hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
-                                
 
 
+                            print('se.particles BEFORE removing:', se.particles)
+                            # Remove particle in seba before updating props:
+                            rem_star = Particles()
+                            rem_star.add_particle(s)
+                            se.particles.remove_particles(rem_star)
+                            print('se.particles AFTER removing:', se.particles)
+                            
+
+                            
                             # Update props
                             tprint("%%%%%%% Mass before:", s.mass)
                             if dm_dt[i]*dt > 0.0|units.MSun: # !SN %%%%%
@@ -361,7 +302,19 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             s.binylds = 0
                             tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
 
+
                             
+                            print('se.particles BEFORE adding:', se.particles)
+                            # Now add particle to seba again
+                            add_star = Particles()
+                            add_star.add_particle(s)
+                            se.particles.add_particles(add_star)
+                            print('se.particles AFTER adding:', se.particles)
+
+
+
+                            
+                            # Update yields
                             dy_dt[i] = dm_dt[i]*bin_yields # !SN %%%%%
                             
                             tprint("%%%%% bin dy_dt =", dy_dt[i])
@@ -407,19 +360,20 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it is likely missing from the yield tables.")
 
                     dy_dt[i] = dm_dt[i]*wind_yields
-                    tprint("%%%%% wind dm_dt =", dm_dt[i])
-                    tprint("%%%%% wind dm =", dm_dt[i]*dt)
-                    tprint("%%%%% wind dy_dt =", dy_dt[i])
+                    # tprint("%%%%% wind dm_dt =", dm_dt[i])
+                    # tprint("%%%%% wind dm =", dm_dt[i]*dt)
+                    # tprint("%%%%% wind dy_dt =", dy_dt[i])
+                    # tprint("%%%%%%% wind_yields:", wind_yields)
 
         # Evolutionary things besides winds could have reduced the stars mass.
         # CCC 26/04/2024
         if dm_dt[i]*dt > 0.0|units.MSun:
             s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
 
-    tprint('%%%%% Now setting star props')
-    tprint("%%%%% dy_dt =", dy_dt[i])
-    tprint("%%%%% dm_dt =", dm_dt[i])
-    tprint("%%%%% vterm =", vterm)
+    # tprint('%%%%% Now setting star props')
+    # tprint("%%%%% dy_dt =", dy_dt[i])
+    # tprint("%%%%% dm_dt =", dm_dt[i])
+    # tprint("%%%%% vterm =", vterm)
     
     hydro.set_particle_mass(state.stars.tag, state.stars.mass)
 
@@ -450,7 +404,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
     hydro.set_particle_radius(state.stars.tag, state.stars.radius)
     hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
-    tprint('%%%%% Done setting star props')
+    # tprint('%%%%% Done setting star props, end #############################################################################')
     
     return se_dt
 
