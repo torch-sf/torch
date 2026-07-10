@@ -109,6 +109,9 @@ What to do:
 
 
 
+## meeting on July 10
+Shyam has developed simple molecular network tied to VETTAM that might serve to replace the options developed by Simon for fine structure atomic cooling.  This should go public within a week or two after which we can evaluate.
+
 
 
 
