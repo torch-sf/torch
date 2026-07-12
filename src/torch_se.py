@@ -212,8 +212,13 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                         # DEBUG ===========================================================
                         
                         # if s.binylds and s.age > 1.95e11 | units.s: # 0.05Myr // # 27600000000 | units.s: # 1.104e11 | units.s: # 33529233868.2 | units.s: # if older than 3.5kyr
-                        if s.binylds and s.age > 33529233868.2 | units.s: # if older than 3.5kyr
+                        # if s.binylds and s.age > 33529233868.2 | units.s: # if older than 1kyr
                         # if s.binylds and s.age > state.yields_bin.timescale(star_params) | units.s
+                        
+                        # Time offset for test, to not wait until the actual timescale of 4Myr
+                        time_offset = (4.9e6 | units.yr ).value_in(units.s)
+                        timescale = ( state.yields_bin.timescale(star_params)[0] | units.yr ).value_in(units.s)
+                        if s.binylds and s.age > ( timescale - time_offset) | units.s:
                             tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
 
                             # Using refVel as vterm to avoid mass loading binary material:
@@ -224,11 +229,11 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             
                             # timescale check ...
                             # state.yields_bin.timescale(star_params)
-    
+
                             # Get inj_mass -- how much mass is being injected by this process
-                            # inj_mass = state.yields_bin.massej(params) | units.MSun
-                            # inj_mass = 13.599398918900027 | units.MSun # Test for now
-                            inj_mass = 7 | units.MSun
+                            inj_mass = state.yields_bin.massej(star_params)[0] | units.MSun if state.yields_bin.massej(star_params)[0] < 7 else 7 | units.MSun
+                            # Capping at 7 because higher massej has issues
+                            # TODO: if >7, inject in 2-3 consecutive steps, 7Msun every step, until it injects the total expected massej
 
                             dm_dt[i] = inj_mass/dt
 
@@ -273,29 +278,29 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                             #     hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
 
 
-                            print('se.particles BEFORE removing:', se.particles)
+                            # print('se.particles BEFORE removing:', se.particles)
                             # Remove particle in seba before updating props:
                             rem_star = Particles()
                             rem_star.add_particle(s)
                             se.particles.remove_particles(rem_star)
-                            print('se.particles AFTER removing:', se.particles)
+                            # print('se.particles AFTER removing:', se.particles)
                             
 
                             
                             # Update props
-                            tprint("%%%%%%% Mass before:", s.mass)
+                            # tprint("%%%%%%% Mass before:", s.mass)
                             if dm_dt[i]*dt > 0.0|units.MSun: # !SN %%%%%
                                 s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
-                            tprint("%%%%%%% Mass after:", s.mass)
-                            tprint("%%%%%%% Rel mass b4:", s.relative_mass)
+                            # tprint("%%%%%%% Mass after:", s.mass)
+                            # tprint("%%%%%%% Rel mass b4:", s.relative_mass)
                             s.relative_mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
-                            tprint("%%%%%%% Rel mass after:", s.relative_mass)
-                            tprint("%%%%%%% Rel age b4:", s.relative_age)
+                            # tprint("%%%%%%% Rel mass after:", s.relative_mass)
+                            # tprint("%%%%%%% Rel age b4:", s.relative_age)
                             s.relative_age = 0 | units.Myr
-                            tprint("%%%%%%% Rel age after:", s.relative_age)
-                            tprint("%%%%%%% Stell type b4:", s.stellar_type)
+                            # tprint("%%%%%%% Rel age after:", s.relative_age)
+                            # tprint("%%%%%%% Stell type b4:", s.stellar_type)
                             s.stellar_type = 7 | units.stellar_type
-                            tprint("%%%%%%% Stell type after:", s.stellar_type)
+                            # tprint("%%%%%%% Stell type after:", s.stellar_type)
 
                             
                             # Update flag, now that have injected, won't anymore
@@ -304,12 +309,12 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
 
 
                             
-                            print('se.particles BEFORE adding:', se.particles)
+                            # print('se.particles BEFORE adding:', se.particles)
                             # Now add particle to seba again
                             add_star = Particles()
                             add_star.add_particle(s)
                             se.particles.add_particles(add_star)
-                            print('se.particles AFTER adding:', se.particles)
+                            # print('se.particles AFTER adding:', se.particles)
 
 
 

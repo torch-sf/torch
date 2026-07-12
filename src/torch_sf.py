@@ -82,8 +82,11 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
             metal_idx = np.argwhere('Z' == np.asarray(state.yields.tracer_fields))[0][0]
             hydro.set_tracer_field_pointer(metal_idx+1) # Fortran style counting (start on 1)
             initial_metal = hydro.get_particle_tracer_field(newtags)
+            print('%%%%%%%%%%%%%%%% Went in if Z, initial_metal:', initial_metal)
+            print('%%%%%%%%%%%%%%%% Went in if Z, metal_idx:', metal_idx)
         else:
             initial_metal = 0.02
+            print("Didn't go in if Z, initial_metal:", initial_metal)
 
     # Make AMUSE particles for grav code.
     add_star = Particles(num_new_parts)
