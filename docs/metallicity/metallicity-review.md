@@ -273,7 +273,7 @@ On l. 96, `sigDust = 1e-21` is hardcoded; there might be a dependence on the dus
 
  # rt_init.F90 #
  Constants and runtime parameters. On l.67, `rt_abar = 1.0 + rt_abundM*rt_metal` is set; does `Eos_getAbarZbar` reference this value?
- The carbon abundance is hardcoded to  `abu_c = 7.1e-7` on l.77 but *is never used in this directory*. 
+ The carbon abundance is hardcoded to  `abu_c = 7.1e-7` on l.77 but *is never used in this directory*. It is used in calc_ionization.F90.
 
  # rt_petsc.F90 #
  Nothing relevant in this file.
@@ -282,7 +282,7 @@ On l. 96, `sigDust = 1e-21` is hardcoded; there might be a dependence on the dus
 Nothing relevant in this file.
 
 # rt_setOpacity.F90 #
-This calls `sim_A_n` and `sim_A_i`, which are set in flash.par. Those are atomic weights; the default values are 14/11 (10% He by number, neutral) and 14/21 (ionized hydrogen, neutral helium, assuming the same abundances). _Note that this is inconsistent with the values set for `rt_abundM` and `rt_metal` in the default flash.par_.
+This calls `sim_A_n` and `sim_A_i`, which are set in flash.par. Those are atomic weights; the default values are 14/11 (10% He by number, neutral) and 14/21 (ionized hydrogen, neutral helium, assuming the same abundances). _Note that this is inconsistent with the values set for `rt_abundM` and `rt_metal` in the default flash.par_. Note also that the default value (25% by weight) holds across cosmic time; there may be a mild scaling with metallicity.
 
 `dusttoGasRatio` is called here. It is called as a runtime parameter on l.82 in `RadTrans_init.F90`. Note that this is *a different dust-to-gas ratio from the one used above.* This ratio is set to 1 (i.e solar, since it is normalized to solar) by default, while the default value for the other one is 0.01 (also solar). 
 
@@ -292,9 +292,18 @@ Nothing relevant in this file.
 # rt_sinkInject.F90 #
 This calls luminosities per band. We are in the case where NION, NPEP, EION and EPEP are set, which means that we use the values set from SeBa.
 
+# calc_ionization.F90 #
+This does not appear to depend on metallicity. We may want to eventually double-check the implicit equation.
+
+### Equation of state (in vanilla FLASH) ###
+
+# /physics/Eos/EosMain/Gamma/Eos_idealGammaData.F90 #
+`gamma` is a runtime parameter; anything coming from EOS will use that gamma.
+
+# /physics/Eos/EosMain/Gamma/Eos_getAbarZbar.F90 #
+Looking into Simulation_initSpecies.F90, we see that neutral and ionized species are set them. The machinery exists to have separate values of gamma for neutrals and ions but we have not used it so far. Note that we are not setting `sim_gamma_n` or `sim_gamma_i`, as those are the values used if we use a variable gamma.
+
 Things to look at:
-* rt_ionisemodule
-* rt_ionisedata
 * Multispecies.h
 * calc_ionization
 * EOS
