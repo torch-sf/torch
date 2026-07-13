@@ -56,6 +56,8 @@ from torch_se import (
     stellar_evolution,
     binary_evolution,
     remove_merged_stars,
+    static_stellar_evolution,
+    load_or_generate_static_se_table,
 )
 from torch_sf import (
     add_particles_to_grav,
@@ -165,8 +167,9 @@ def initialize_workers():
 
     se = None
 
-    if USER['with_se']:
-
+    if USER['with_se'] and not USER['static_se']:
+        # In static_se mode the feedback table is precomputed with a temporary
+        # SeBa before the workers start, and SeBa is not kept alive during the run.
         se = SeBa()
         se.initialize_code()
 
@@ -315,8 +318,19 @@ def evolve(state, hydro, grav, mult, se):
                 tprint("Identify binaries")
                 state.binaries = state.binaries_from_stars()
 
-            if USER['with_se']:
-                if USER['with_be'] and num_stars > 1:
+            if USER['with_se'] or USER['static_se']:
+                if USER['static_se']:
+                    tprint("Do static (tabulated) stellar evolution")
+                    se_dt = static_stellar_evolution(
+                        hy_time+dt, dt, se_restart_time,
+                        state, hydro, state.static_se_table,
+                        with_lyc          = USER['with_lyc'],
+                        with_pe_heat      = USER['with_pe_heat'],
+                        with_winds        = USER['with_winds'],
+                        with_sn           = USER['with_sn'],
+                        min_feedback_mass = USER['min_feedback_mass'],
+                    )
+                elif USER['with_be'] and num_stars > 1:
                     tprint("Do stellar and binary evolution")
                     se_dt = binary_evolution(
                         hy_time+dt, dt, se_restart_time,
@@ -626,10 +640,18 @@ def run_torch(user_initial_conditions, user_parameters):
             pickle_tree(kdtree, USER['pickle_file_name'])
             vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
     # End VorAMR file init
-    
+
+    # Build (or load) the tabulated stellar-evolution feedback BEFORE the Torch
+    # workers start.  This spawns a temporary SeBa on an otherwise-free rank and
+    # stops it as soon as the table is ready, so hydro gets that rank for the run.
+    static_se_table = None
+    if USER['static_se']:
+        static_se_table = load_or_generate_static_se_table(USER)
+
     hydro, grav, mult, se = initialize_workers()
 
     state = TorchState(hydro, grav, mult, se, USER)
+    state.static_se_table = static_se_table
 
     # VORAMR-LITE Testing - SCL ####################
     #from amuse.community.voramr.interface import Flash

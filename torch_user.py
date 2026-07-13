@@ -153,6 +153,17 @@ def user_parameters():
     p['CE_alpha'] = 1 # efficiency for CE ejection if using the alpha formalism; default is 1.
     p['remove_merged'] = True # remove merged stars
 
+    # <static stellar evolution>
+    # If static_se is on, a temporary SeBa instance builds a tabulated set of
+    # feedback properties (eion, epep, nion, npep, dmdt, vterm, sigh, + SNe)
+    # binned by initial mass and age BEFORE the Torch workers start. SeBa is then
+    # stopped (freeing its rank for hydro) and Torch never calls stellar_evolution;
+    # feedback is looked up from the table instead. See torch_se.py.
+    p['static_se'] = False # use tabulated stellar evolution feedback instead of a live SeBa worker?
+    p['static_se_dt'] = 0.25 | units.Myr # time-bin width over which stellar properties are averaged and stored
+    p['static_se_end_time'] = 1.0 | units.Myr # tabulate/store feedback up to this stellar age; if a star lives past this, the run stops for restart with a larger value
+    p['static_se_dmass'] = 10.0 | units.MSun # size of the stellar-mass bins in the table (range: min_feedback_mass -> max_imf_mass)
+
     # <star particle creation>
 
     p['binaries'] = False
@@ -186,7 +197,9 @@ def user_parameters():
         p['with_multiples'] = False
         p['epsilon'] = 0 | units.RSun
 
-    if p['with_se']:
+    if p['with_se'] and not p['static_se']:
+        # static_se builds its table with a temporary SeBa BEFORE the workers
+        # start and then stops it, so no rank is permanently reserved for SE.
         p['num_hy_workers'] -= 1
 
     if p['with_multiples']:

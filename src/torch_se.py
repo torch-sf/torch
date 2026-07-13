@@ -12,6 +12,10 @@ Includes subroutines to
 
 from __future__ import division, print_function
 
+import os
+import sys
+import pickle
+
 import numpy as np
 from scipy.integrate import quad
 
@@ -560,11 +564,380 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
     hydro.set_particle_radius(state.stars.tag, state.stars.radius)
     hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
-    
+
     return se_dt
 
 
-def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt, 
+# ============================================================================
+# Static (tabulated) stellar evolution
+# ----------------------------------------------------------------------------
+# Instead of running a live SeBa worker every bridge step, precompute the
+# feedback properties (eion, epep, nion, npep, dmdt, vterm, sigh) and supernova
+# information as a function of initial mass and age, store them in a table, and
+# look them up during the run.  This retires the SeBa worker (and its MPI rank)
+# after the table is built.  See the 'static_se' parameters in torch_user.py.
+# ============================================================================
+
+STATIC_SE_TABLE_FILE = 'static_se_table.pkl'
+STATIC_SE_TABLE_VERSION = 1
+STATIC_SE_N_SUB = 8  # sub-samples per time bin used to average the properties
+
+# feedback columns stored in the table, with their cgs units
+_STATIC_SE_COLUMNS = {
+    'eion':  units.erg,
+    'nion':  units.s**-1,
+    'sigh':  units.cm**2,
+    'epep':  units.erg,
+    'npep':  units.s**-1,
+    'dmdt':  units.g / units.s,
+    'vterm': units.cm / units.s,
+}
+
+
+def _static_se_metadata(user):
+    """Parameters that define a static-SE table; used to detect stale tables."""
+    return {
+        'version':            STATIC_SE_TABLE_VERSION,
+        'min_feedback_mass':  user['min_feedback_mass'].value_in(units.MSun),
+        'max_imf_mass':       user['max_imf_mass'].value_in(units.MSun),
+        'static_se_dmass':    user['static_se_dmass'].value_in(units.MSun),
+        'static_se_dt':       user['static_se_dt'].value_in(units.Myr),
+        'static_se_end_time': user['static_se_end_time'].value_in(units.Myr),
+        'massloss_method':    user['massloss_method'],
+        'max_gamma':          user['max_gamma'],
+        'n_sub':              STATIC_SE_N_SUB,
+    }
+
+
+def generate_static_se_table(user):
+    """
+    Build the tabulated stellar-evolution feedback table with a temporary SeBa
+    instance and return a StaticSeTable.  Also writes it to STATIC_SE_TABLE_FILE.
+
+    This spawns (and stops) its own SeBa worker, so it MUST be called before the
+    Torch workers are initialized, while an MPI rank is free.
+    """
+    from amuse.community.seba.interface import SeBa
+
+    dmass     = user['static_se_dmass']
+    dt        = user['static_se_dt']
+    end_time  = user['static_se_end_time']
+    m_lo      = user['min_feedback_mass']
+    m_hi      = user['max_imf_mass']
+    method    = user['massloss_method']
+    max_gamma = user['max_gamma']
+
+    # Mass bins (representative masses): m_lo, m_lo+dmass, ... up to m_hi.
+    mass_bins = np.arange(m_lo.value_in(units.MSun),
+                          m_hi.value_in(units.MSun) + 1e-6,
+                          dmass.value_in(units.MSun)) | units.MSun
+    n_mass = len(mass_bins)
+
+    # Number of time bins covering [0, end_time].
+    dt_myr = dt.value_in(units.Myr)
+    n_time = max(int(np.ceil(end_time.value_in(units.Myr) / dt_myr - 1e-9)), 1)
+
+    tprint("static_se: generating table for {} mass bins ({:.1f} - {:.1f} MSun), "
+           "{} time bins of {} up to {}".format(
+               n_mass, mass_bins.min().value_in(units.MSun),
+               mass_bins.max().value_in(units.MSun), n_time,
+               dt.as_quantity_in(units.Myr), end_time.as_quantity_in(units.Myr)))
+
+    se = SeBa()
+    se.initialize_code()
+    stars = Particles(n_mass)
+    stars.mass = mass_bins
+    se.particles.add_particles(stars)
+
+    # Storage in cgs floats.
+    arrays  = {key: np.zeros((n_mass, n_time)) for key in _STATIC_SE_COLUMNS}
+    sn_time = np.full(n_mass, np.nan)         # Myr
+    sn_rem  = np.full(n_mass, np.nan)         # MSun (remnant mass)
+    sn_co   = np.full(n_mass, np.nan)         # MSun (CO core mass at SN)
+    sn_type = np.full(n_mass, -1, dtype=int)  # SeBa stellar type of remnant
+
+    prev_mass = np.copy(se.particles.mass)
+    w = 1.0 / STATIC_SE_N_SUB
+
+    for k in range(n_time):
+        for j in range(STATIC_SE_N_SUB):
+            # Sub-sample at the center of each sub-interval within time bin k.
+            t_myr = (k + (j + 0.5) / STATIC_SE_N_SUB) * dt_myr
+            se.evolve_model(t_myr | units.Myr)
+
+            for i, s in enumerate(se.particles):
+                # Record supernova once, then treat the star as a remnant.
+                if went_supernova(s.stellar_type):
+                    if np.isnan(sn_time[i]):
+                        sn_time[i] = t_myr
+                        sn_rem[i]  = s.mass.value_in(units.MSun)
+                        sn_co[i]   = s.COcore_mass.value_in(units.MSun)
+                        sn_type[i] = int(s.stellar_type.value_in(units.stellar_type))
+                    continue  # no wind/radiation feedback from a remnant
+
+                eion, nion, sigh = compute_eion_nion_sigh(s.mass, s.temperature, s.radius)
+                epep, npep       = compute_epe_npe(s.temperature, s.radius)
+                dmdt, vterm      = compute_dmdt_vterm(
+                    prev_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
+                    massloss_method=method, max_gamma=max_gamma)
+
+                arrays['eion'][i, k]  += w * eion.value_in(units.erg)
+                arrays['nion'][i, k]  += w * nion.value_in(units.s**-1)
+                arrays['sigh'][i, k]  += w * sigh.value_in(units.cm**2)
+                arrays['epep'][i, k]  += w * epep.value_in(units.erg)
+                arrays['npep'][i, k]  += w * npep.value_in(units.s**-1)
+                arrays['dmdt'][i, k]  += w * dmdt.value_in(units.g / units.s)
+                arrays['vterm'][i, k] += w * vterm.value_in(units.cm / units.s)
+
+            prev_mass = np.copy(se.particles.mass)
+
+    se.stop()  # free the rank for hydro
+
+    table_data = {
+        'metadata':  _static_se_metadata(user),
+        'mass_bins': mass_bins.value_in(units.MSun),
+        'dt_myr':    dt_myr,
+        'n_time':    n_time,
+        'arrays':    arrays,
+        'sn_time':   sn_time,
+        'sn_rem':    sn_rem,
+        'sn_co':     sn_co,
+        'sn_type':   sn_type,
+    }
+
+    try:
+        with open(STATIC_SE_TABLE_FILE, 'wb') as f:
+            pickle.dump(table_data, f)
+        tprint("static_se: wrote table to {}".format(os.path.abspath(STATIC_SE_TABLE_FILE)))
+    except Exception as e:
+        tprint("static_se: WARNING could not write table file: {}".format(e))
+
+    return StaticSeTable(table_data)
+
+
+def load_or_generate_static_se_table(user):
+    """
+    Load the static-SE table from disk if present and consistent with the current
+    parameters; otherwise (re)generate it.  Fault tolerant: any read error or
+    parameter mismatch triggers regeneration.
+
+    Must be called before the Torch workers are initialized (regeneration spawns
+    a temporary SeBa worker that needs a free MPI rank).
+    """
+    want = _static_se_metadata(user)
+    if os.path.exists(STATIC_SE_TABLE_FILE):
+        try:
+            with open(STATIC_SE_TABLE_FILE, 'rb') as f:
+                table_data = pickle.load(f)
+            if table_data.get('metadata') == want:
+                tprint("static_se: loaded existing table {}".format(
+                    os.path.abspath(STATIC_SE_TABLE_FILE)))
+                return StaticSeTable(table_data)
+            tprint("static_se: existing table parameters differ from current "
+                   "settings; regenerating.")
+        except Exception as e:
+            tprint("static_se: could not read table ({}); regenerating.".format(e))
+    else:
+        tprint("static_se: no table found; generating.")
+    return generate_static_se_table(user)
+
+
+class StaticSeTable(object):
+    """Lookup wrapper around a tabulated static-SE dataset."""
+
+    def __init__(self, table_data):
+        self.mass_bins = np.asarray(table_data['mass_bins'])  # MSun
+        self.dt_myr    = table_data['dt_myr']
+        self.n_time    = table_data['n_time']
+        self.arrays    = table_data['arrays']
+        self.sn_time   = table_data['sn_time']
+        self.sn_rem    = table_data['sn_rem']
+        self.sn_co     = table_data['sn_co']
+        self.sn_type   = table_data['sn_type']
+        self.max_age   = (self.n_time * self.dt_myr) | units.Myr
+
+    def _mass_index(self, initial_mass):
+        """Nearest mass bin; clamps over-massive (e.g. merger) stars to the top bin."""
+        m = initial_mass.value_in(units.MSun)
+        return int(np.argmin(np.abs(self.mass_bins - m)))
+
+    def age_bin(self, age):
+        """Time-bin index for a given age (not clamped; caller checks max_age)."""
+        return int(np.floor(age.value_in(units.Myr) / self.dt_myr))
+
+    def feedback(self, initial_mass, age):
+        """
+        Return a dict of feedback quantities (with cgs units) for this star.
+        Values are held constant within a static_se_dt bin.  Over-massive stars
+        clamp to the top mass bin; ages are clamped into [0, n_time) (the caller
+        stops the run via max_age before the top-age clamp matters physically).
+        """
+        i = self._mass_index(initial_mass)
+        k = min(max(self.age_bin(age), 0), self.n_time - 1)
+        return {key: (self.arrays[key][i, k] | unit)
+                for key, unit in _STATIC_SE_COLUMNS.items()}
+
+    def supernova_info(self, initial_mass):
+        """
+        Return (t_sn, remnant_mass, COcore_mass, stellar_type) for this star's
+        mass bin, or None if it does not go supernova within the tabulated window.
+        """
+        i = self._mass_index(initial_mass)
+        if np.isnan(self.sn_time[i]):
+            return None
+        return (self.sn_time[i] | units.Myr,
+                self.sn_rem[i]  | units.MSun,
+                self.sn_co[i]   | units.MSun,
+                int(self.sn_type[i]))
+
+
+def static_stellar_evolution(time, dt, se_restart_time, state, hydro, table,
+    with_lyc=True, with_pe_heat=True, with_winds=True, with_sn=True,
+                             min_feedback_mass=None):
+    """
+    Tabulated analogue of stellar_evolution: never runs SeBa.  Feedback and
+    supernova information are looked up from a StaticSeTable as a function of each
+    star's initial mass and age.  Same call signature/return (se_dt) as
+    stellar_evolution so it drops into the main loop.
+
+    NOTE: time = target time to evolve TO, including the dt already.
+    """
+    assert table is not None
+    assert min_feedback_mass is not None
+
+    # Radius guess for restart with user ICs, matching stellar_evolution (needed
+    # for merger detection).  Under static_se the radius stays at this ZAMS guess.
+    _attributes = state.stars.get_attribute_names_defined_in_store()
+    if 'radius' not in _attributes:
+        state.stars.radius = (1.01 * (state.stars.mass / (1 | units.MSun)) ** 0.57) | units.RSun
+
+    old_mass = np.copy(state.stars.mass)
+
+    dm_dt   = np.zeros(len(state.stars)) | units.g / units.s
+    vterm   = np.zeros(len(state.stars)) | units.cm / units.s
+    nion    = np.zeros(len(state.stars)) | units.s**-1
+    eion    = np.zeros(len(state.stars)) | units.erg
+    sigh    = np.zeros(len(state.stars)) | units.cm**2
+    npe     = np.zeros(len(state.stars)) | units.s**-1
+    epe     = np.zeros(len(state.stars)) | units.erg
+    sigpe   = np.zeros(len(state.stars)) | units.cm**2
+
+    # follow FLASH idiom; return dt after SN deposit
+    se_dt = 1e99 | units.s
+
+    # Ages relative to star formation (matches stellar_evolution).
+    state.stars.age = time - hydro.get_particle_creation_time(state.stars.tag)
+
+    # make list of remnant stars so we don't explode them again
+    remnants = state.stars.tag[went_supernova(state.stars.stellar_type)]
+
+    exceeded = False
+
+    for i, s in enumerate(state.stars):
+
+        if s.tag in remnants or s.initial_mass < min_feedback_mass:
+            continue
+
+        age = s.age
+
+        # Star has outlived the tabulated window -> stop the run for restart.
+        if age > table.max_age:
+            exceeded = True
+            continue
+
+        # --- Supernova from the table ---
+        sn = table.supernova_info(s.initial_mass) if with_sn else None
+        if sn is not None and age >= sn[0]:
+            t_sn, remnant_mass, co_mass, remnant_type = sn
+
+            inj_mass = old_mass[i] - remnant_mass  # minus stellar remnant's mass
+            if inj_mass > 15.0|units.MSun:
+                # expected upper limit for SeBa tracks; see
+                # https://groups.google.com/forum/#!topic/torch-users/rWJd6l_mRBg/discussion
+                tprint("... setting maximum SN inj_mass {} MSun to 15 MSun".format(inj_mass.value_in(units.MSun)))
+                inj_mass = 15.0|units.MSun
+
+            # In SeBa, stars with CO core mass above 15 Msun are direct collapse, so don't inject SN
+            if co_mass <= 15 | units.MSun and inj_mass > 0.0|units.MSun:
+                _tmp = hydro.energy_injection(1e51|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z)
+                se_dt = min(se_dt, _tmp)
+                tprint("... SN (static) x={}, y={}, z={}, inj_mass={}, tag={}".format(
+                    s.x, s.y, s.z, inj_mass.value_in(units.MSun), s.tag))
+
+            # Mark as remnant so it is skipped hereafter; implicitly zeros feedback.
+            s.mass = remnant_mass
+            s.stellar_type = remnant_type | units.stellar_type
+            continue
+
+        # --- Feedback from the table ---
+        fb = table.feedback(s.initial_mass, age)
+        if with_lyc:
+            eion[i] = fb['eion']
+            nion[i] = fb['nion']
+            sigh[i] = fb['sigh']
+        if with_pe_heat:
+            epe[i]   = fb['epep']
+            npe[i]   = fb['npep']
+            sigpe[i] = state.user['sigd'] | units.cm**2
+        if with_winds:
+            dm_dt[i] = fb['dmdt']
+            vterm[i] = fb['vterm']
+
+        # Wind mass loss over the bridge step (dmdt * sim_dt, NOT static_se_dt).
+        if dm_dt[i]*dt > 0.0|units.MSun:
+            s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+
+    hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+
+    hydro.set_particle_nion(state.stars.tag, nion)
+    hydro.set_particle_eion(state.stars.tag, eion.as_quantity_in(units.erg))
+    hydro.set_particle_sigh(state.stars.tag, sigh)
+
+    hydro.set_particle_npep(state.stars.tag, npe)
+    hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg))
+    hydro.set_particle_sigd(state.stars.tag, sigpe)
+
+    hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
+    hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
+
+    # Keep SeBa-checkpoint attributes consistent so restart via
+    # add_particles_to_grav reconstructs stars correctly (stellar_type / radius
+    # must round-trip; the rest are unused for feedback in static mode).
+    state.stars.relative_age = state.stars.age
+    hydro.set_particle_rel_mass(state.stars.tag, state.stars.relative_mass)
+    hydro.set_particle_rel_age(state.stars.tag, state.stars.relative_age)
+    hydro.set_particle_co_corem(state.stars.tag, state.stars.COcore_mass)
+    hydro.set_particle_corem(state.stars.tag, state.stars.core_mass)
+    hydro.set_particle_radius(state.stars.tag, state.stars.radius)
+    hydro.set_particle_stype(state.stars.tag, state.stars.stellar_type.value_in(units.stellar_type))
+
+    if exceeded:
+        _static_se_end_time_exceeded(state)
+
+    return se_dt
+
+
+def _static_se_end_time_exceeded(state):
+    """
+    A star has aged past static_se_end_time, beyond the tabulated feedback.  Write
+    a checkpoint and stop the run: there is no free MPI rank to regenerate the
+    table mid-run.  Restart after increasing static_se_end_time (the changed
+    parameter is detected as stale and the table is rebuilt at the pre-worker
+    stage on the next launch).
+    """
+    tprint("=" * 70)
+    tprint("static_se: a star's age exceeded static_se_end_time = {}.".format(
+        state.user['static_se_end_time'].as_quantity_in(units.Myr)))
+    tprint("static_se: tabulated feedback does not cover this age.")
+    tprint("static_se: writing a checkpoint and stopping.")
+    tprint("static_se: increase static_se_end_time and restart to regenerate the "
+           "table with wider coverage.")
+    tprint("=" * 70)
+    state.force_output(overwrite=state.user['overwrite'])
+    sys.exit(0)
+
+
+def compute_dmdt_vterm(prev_mass, se_temp, se_radius, se_mass, se_lum, dt,
                        massloss_method=None, max_gamma=1):
     """
     Note: prev_mass = mass before dt update, NOT the ZAMS mass
@@ -868,7 +1241,21 @@ def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
             for i in range(len(idx_w)):
                 star1_idx = idx_1[i]
                 star2_idx = idx_2[i]
-                se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                if se is not None:
+                    se.particles[star1_idx].merge_with_other_star(se.particles[star2_idx])
+                else:
+                    # static_se: no SeBa worker to handle the merger, so simply
+                    # add the masses and conserve momentum (COM velocity).
+                    p1 = state.stars[star1_idx]
+                    p2 = state.stars[star2_idx]
+                    m1 = p1.mass
+                    m2 = p2.mass
+                    mtot = m1 + m2
+                    p1.vx = (m1*p1.vx + m2*p2.vx) / mtot
+                    p1.vy = (m1*p1.vy + m2*p2.vy) / mtot
+                    p1.vz = (m1*p1.vz + m2*p2.vz) / mtot
+                    p1.mass = mtot
+                    p1.initial_mass = p1.initial_mass + p2.initial_mass
                 # Save tag of star it merged with
                 state.stars[star2_idx].merged_with = state.stars[star1_idx].tag
                 # Save merged time
@@ -882,11 +1269,19 @@ def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
             tprint("Removing ", len(t), "merged star(s)")
             # Remove from hydro
             hydro.remove_particles(t)
-            # Remove from SE
-            se.particles.remove_particles(stars_rem)
-            # Synchronize to state and copy mass
-            se.particles.synchronize_to(state.stars)
-            state.se_to_stars.copy_attributes(["mass"])
+            if se is not None:
+                # Remove from SE, synchronize to state and copy mass
+                se.particles.remove_particles(stars_rem)
+                se.particles.synchronize_to(state.stars)
+                state.se_to_stars.copy_attributes(["mass"])
+            else:
+                # static_se: drop the merged secondaries from the AMUSE star set
+                # directly and push the updated primary mass/velocity/initial mass
+                # to hydro (the first bridge kick reads velocity back from hydro).
+                state.stars.remove_particles(stars_rem)
+                hydro.set_particle_mass(state.stars.tag, state.stars.mass)
+                hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
+                hydro.set_particle_oldmass(state.stars.tag, state.stars.initial_mass)
             # Remove and re-add to grav
             state.stars.synchronize_to(grav.particles)
             state.stars_to_grav.copy_attributes(["mass"])
