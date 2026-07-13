@@ -115,6 +115,9 @@ The value of gamma is hardcoded on l. 1045.
 * On l. 703, tolerance and smallt values are hardcoded -- are those also set in flash.par?
 * Equation of state -- figure out the comment about double-counting mu
 
+# Parameters to change in flash.par #
+Several parameters will need to change in flash.par. It would be easiest to include a script changing them in a consistent manner when people wish to run at lower/higher metallicities.
+
 
 # Notes from meeting with SCOG #
 
@@ -186,6 +189,125 @@ What to do:
 
 ## meeting on July 10
 Shyam has developed simple molecular network tied to VETTAM that might serve to replace the options developed by Simon for fine structure atomic cooling.  This should go public within a week or two after which we can evaluate.
+
+
+### VETTAM ###
+
+
+Start in the top level directory, `RadTrans/RadTransMain/VETTAM` with the `Config` file.
+
+# Semenov opacities #
+Semenov opacities are available, but are not the default. The underlying assumption in using fixed opacitiies is that the opacity depends only on the gas-to-dust ratio. Note that this ratio scales superlinearly with metallicity at low metallicity; there is a kink in the distribution around 0.1 Zsun. See https://ui.adsabs.harvard.edu/abs/2014A%26A...563A..31R/abstract (Fig. 4)
+
+# Lyman-Werner band #
+Adding the Lyman-Werner band would be necessary if we use Shyam Menon's simple chemistry model. 
+
+# rt_ionHeatCool.F90 #
+This doing radiation heating of the gas.
+Hardcoded parameters: Tneutral = 10.0 K and Tion = 1.e4 K. Those are metallicity dependent and should be set as runtime parameters. 
+This uses either ENER_VAR or TGAS_VAR (l. 53) --> Tion and Tneutral are used only when TGAS_VAR is used. Add if def for the defitions above.
+
+# rt_ionise.F90 #
+*Those notes were from the /OnlyH directory, which is not used.*
+_Look for rt_ionisehydro.F90, which supplies the nenergy and momentum terms on gas due to photoionization_. 
+We are using `IHA_SPEC` and `IHP_SPEC`; we might implicitly be using some pieces of KROME. The comments at the top of the file claim that IHA_SPEC points to the KROME network. On l. 117 to l. 120, mu is set from the mu of ionized and neutral hydrogen. Those values, hA and hpA, are set *somewhere unknown -- figure it out*. 
+
+The `Config` file in the `/VETTAM/Photoionization` directory contains the default runtime parameters associated with VETTAM. 
+
+*Now looking at the thermochemistry directory*
+This uses a recombination coefficient which depends on temperature.
+The subroutine SetIonRates calculates ionization rates based on UEUV_VAR (which is in Flash.h) and hnu.
+
+The energy per ionization of H is set in `Photoionization/Config`. It is set from Kim+2023 as an average value for a star cluster. hnu is also set here. *This must be investigated in greater detail, and how it connects to the eion, epep values we set in Torch. This is critical, as if those values overwrite the eion, epep values, we are losing the spectral information we put in from the stellar evolution.* If we understand correctly what is happening there, the energy per photon does not vary with the stellar source, although the number of photons in each band does. Adding extra bands could alleviate those concerns, as the cross-section varies by band.
+
+# rt_ioniseData.F90 #
+Nothing relevant in this file.
+
+# Photoionization/rt_ionisemodule.F90 #
+This calculates the recombination coefficients. Those depend on temperature but not strongly on metallicity; the only effect would be the extra electrons from the ionized metals.
+
+# Photoionization/rt_ionMomentum.F90 #
+This calculates energies and opacities. *Check opacities*.
+
+# VETTAM/IonHeatCool.F90#
+On l. 236, `mu_mol = 1.3` is hardcoded.
+
+# RadTrans_computeDt.F90 #
+On l. 66, `mu = 0.61` is hardcoded; it is used on l. 215, 247.
+On l. 229, a CFL of 0.3 is hardcoded in the dt_wind routine. Also see l. 271, there is a pre-factor of 0.3 hardcoded in the dt_min_local calculation. Note that on l. 267, cfl_radPressure is used, which is a runtime parameter. If we try to reduce the CFL is hot zone or raise it to speed up the code, this change will not propagate to the routine. On l. 267, the calculation for the dt from momentum injection includes dx**4 -- where is the power of 4 from?
+
+The parameter `rt_gamma1` is set from `gamma - 1`, where `gamma` is a runtime parameter.
+
+# RadTRans_data.F90 #
+Nothing relevant in this file.
+
+# RadTrans_finalize.F90 #
+Nothing relevant in this file.
+
+# RadTrans_init.F90 #
+This gets the runtime parameters.
+
+# RadTrans_interface.F90 #
+Nothing relevant in this file.
+
+# RadTrans.F90 #
+Nothing relevant in this file.
+
+# rt_data.F90 #
+This sets several constants and conversion factors. 
+The hydrogen recombination coefficients are set here (on l.71-72) but are not used anywhere as the values are overwritten by temperature-dependent values. Clean up.
+On l. 96, `sigDust = 1e-21` is hardcoded; there might be a dependence on the dust-to-gas ratio here (see Draine 2011). On l. 97, the dust-to-gas ratio is hardcoded to 0.01. Note that both those parameters are already available in flash.par and called in  `rt_init.F90`.
+
+# rt_dustTemperature.F90 #
+ On l.494, `eos_gamma` from `Eos_data` and l. 496 `eos_gammam1` from `eos_idealGammaData` -- what are those, and how/hy are they different from the gamma - 1 above?
+
+ On l. 585, we call `Eos_getAbarZbar` -- is this an average atomic weight? On l. 584, we use `GAMC_VAR` -- is this a field variable for gamma? Can we use it?
+
+ _Note_: Look into the opacity calculation routine. How do we get `TAUP` and `TAUR`?
+
+ # rt_dustTerms.F90 #
+ Nothing relevant in this file.
+
+ # rt_fillMatrix.F90 #
+ Nothing relevant in this file.
+
+ # rt_init.F90 #
+ Constants and runtime parameters. On l.67, `rt_abar = 1.0 + rt_abundM*rt_metal` is set; does `Eos_getAbarZbar` reference this value?
+ The carbon abundance is hardcoded to  `abu_c = 7.1e-7` on l.77 but *is never used in this directory*. It is used in calc_ionization.F90.
+
+ # rt_petsc.F90 #
+ Nothing relevant in this file.
+
+ # rt_sedEddTensor.F90 #
+Nothing relevant in this file.
+
+# rt_setOpacity.F90 #
+This calls `sim_A_n` and `sim_A_i`, which are set in flash.par. Those are atomic weights; the default values are 14/11 (10% He by number, neutral) and 14/21 (ionized hydrogen, neutral helium, assuming the same abundances). _Note that this is inconsistent with the values set for `rt_abundM` and `rt_metal` in the default flash.par_. Note also that the default value (25% by weight) holds across cosmic time; there may be a mild scaling with metallicity.
+
+`dusttoGasRatio` is called here. It is called as a runtime parameter on l.82 in `RadTrans_init.F90`. Note that this is *a different dust-to-gas ratio from the one used above.* This ratio is set to 1 (i.e solar, since it is normalized to solar) by default, while the default value for the other one is 0.01 (also solar). 
+
+# rt_sinkHydro.F90 #
+Nothing relevant in this file.
+
+# rt_sinkInject.F90 #
+This calls luminosities per band. We are in the case where NION, NPEP, EION and EPEP are set, which means that we use the values set from SeBa.
+
+# calc_ionization.F90 #
+This does not appear to depend on metallicity. We may want to eventually double-check the implicit equation.
+
+### Equation of state (in vanilla FLASH) ###
+
+# /physics/Eos/EosMain/Gamma/Eos_idealGammaData.F90 #
+`gamma` is a runtime parameter; anything coming from EOS will use that gamma.
+
+# /physics/Eos/EosMain/Gamma/Eos_getAbarZbar.F90 #
+Looking into Simulation_initSpecies.F90, we see that neutral and ionized species are set them. The machinery exists to have separate values of gamma for neutrals and ions but we have not used it so far. Note that we are not setting `sim_gamma_n` or `sim_gamma_i`, as those are the values used if we use a variable gamma.
+
+Things to look at:
+* Multispecies.h
+* calc_ionization
+* EOS
+
 
 
 
