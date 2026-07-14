@@ -51,14 +51,15 @@ subroutine Grid_markRefineDerefine()
                         gr_lrefineMaxRedDoByTime,&
                         gr_lrefineMaxRedDoByLogR,&
                         gr_lrefineCenterI,gr_lrefineCenterJ,gr_lrefineCenterK,&
-                        gr_eosModeNow
+                        gr_eosModeNow,gr_meshMe
   use Simulation_data, ONLY: use_deref,deref_xl, deref_xr, deref_yl, &
                         deref_yr, deref_zl, deref_zr, deref_lref
   use tree, ONLY : newchild, refine, derefine, stay, nodetype
 !!$  use physicaldata, ONLY : force_consistency
   use Logfile_interface, ONLY : Logfile_stampVarMask
   use Grid_interface, ONLY : Grid_fillGuardCells, Grid_markDerefineSpecialized
-  use Particles_interface, only: Particles_sinkMarkRefineDerefine
+  use Particles_interface, only: Particles_sinkMarkRefineDerefine, &
+                                 Particles_markRefineDerefine
   implicit none
 
 #include "constants.h"
@@ -138,9 +139,9 @@ subroutine Grid_markRefineDerefine()
   if(gr_lrefineMaxRedDoByLogR) &
        call gr_unmarkRefineByLogRadius(gr_lrefineCenterI,&
        gr_lrefineCenterJ,gr_lrefineCenterK)
-  
+ 
   call Particles_sinkMarkRefineDerefine()
-
+  call Particles_markRefineDerefine()
 
   if(use_deref) then 
     ! set dimensions of derefine region 

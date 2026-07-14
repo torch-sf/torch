@@ -49,7 +49,7 @@ subroutine Particles_MarkRefineDerefine()
     use tree
     use paramesh_dimensions
     use physicaldata, ONLY : unk
-    use Grid_data, ONLY : gr_maxRefine
+    use Grid_data, ONLY : gr_maxRefine, gr_meshMe
 
     use Grid_interface, ONLY : Grid_getListOfBlocks, Grid_getBlkPhysicalSize, & 
          Grid_getCellCoords, Grid_getBlkIndexLimits, Grid_getBlkCenterCoords
@@ -94,6 +94,10 @@ subroutine Particles_MarkRefineDerefine()
 logical, save              :: first_call = .true.
 character(len=80), save    :: grav_boundary_type
 
+#ifdef WIND_INJ
+real*8, save               :: wind_radius
+#endif
+
 #include "Flash_mpi.h"
 
 
@@ -106,18 +110,24 @@ return
 if (first_call) then
   call RuntimeParameters_get("ref_radius", ref_radius)
   call Grid_getMinCellSize(delta)
-  if (ref_radius < 0.0) &
-      ref_radius = 3.5d0*sqrt(3.0d0)*delta
+  if (ref_radius < 0.0) then
+      wind_radius = 3.5d0*sqrt(3.0d0)*delta
+  else
+      wind_radius = ref_radius
+  endif
   call RuntimeParameters_get("grav_boundary_type", grav_boundary_type)
   call RuntimeParameters_get("min_wind_mass", min_wind_mass)
   first_call = .false.
 end if
 #endif
 
+  
+
 ! Local number of massive/active particles.
   p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
   p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
   p_end   = p_num + p_begin - 1
+
 #ifdef debug
 print*, "p_num =", p_num, dr_globalMe
 #endif
@@ -268,10 +278,12 @@ print*, "z =", z
                          ! Note this has to reflect whether this cell if fully refined would
                          ! contain the particle compared to the ref_radius, since ref_radius is
                          ! at full refinement. - JW
-                         if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. ref_radius) then !else if 
+                         if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. wind_radius) then !else if 
 #ifdef debug
+print*, "Particle found on dr_globalMe =", dr_globalMe
 print*, "rad =", rad, dr_globalMe
 print*, "ref =", ref_radius, dr_globalMe
+print*, "wind =", wind_radius, dr_globalMe
 #endif
                             p_found = .true.
                          end if
@@ -289,7 +301,7 @@ print*, "ref =", ref_radius, dr_globalMe
 
           if (p_found) then
 #ifdef debug
- print*, "[Particles_markRefineDerefine]: Particle found!", dr_globalMe
+             print*, "[Particles_markRefineDerefine]: Particle found!", dr_globalMe
 #endif
              if (lrefine(b) .lt. gr_maxRefine) then
                 refine   (b) = .TRUE.

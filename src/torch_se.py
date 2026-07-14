@@ -606,6 +606,12 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
     hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
 
+    print("[WIND INJECTION]:", 
+          time.as_quantity_in(units.Myr),
+          s.mass.as_quantity_in(units.Msun),
+          dm_dt.as_quantity_in(units.Msun/units.yr), 
+          vterm.as_quantity_in(units.km/units.s))
+
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
 
