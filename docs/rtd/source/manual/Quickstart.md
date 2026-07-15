@@ -340,11 +340,13 @@ setup the necessary files.
 ```
 mkdir /path/to/test_simulation
 cd /path/to/test_simulation
-cp $TORCH_DIR/ic/turbsph/setup_simulation.sh
+cp $TORCH_DIR/utils/setup_simulation.sh .
 bash setup_simulation.sh
 ```
 
-Modify the `run.sh` according to you HPC system and submit the job
+Modify the `run.sh` according to your HPC system. This should at least include
+updating both the SYSTEM variable and the TORCH_ENV variable, but you may also
+want to update various slurm variables. You can now submit the job:
 ```
 sbatch run.sh
 ```
@@ -371,6 +373,7 @@ their [website][4] for documenation and examples.
 
 [4]:https://yt-project.org/
 
+For example, if you are using conda you can install `yt` with:
 ```
 conda install yt
 conda clean --all
