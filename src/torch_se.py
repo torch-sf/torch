@@ -79,9 +79,6 @@ def binary_evolution(time, dt, se_restart_time, state, hydro, se,
     npe     = np.zeros(len(state.stars)) | units.s**-1
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
-    if state.yields is not None:
-        num_tracers = hydro.get_number_of_tracer_fields()
-        dy_dt = np.zeros([len(state.stars), num_tracers]) | units.g / units.s
 
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
@@ -471,6 +468,10 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     epe     = np.zeros(len(state.stars)) | units.erg
     sigpe   = np.zeros(len(state.stars)) | units.cm**2
 
+    if state.yields is not None:
+        num_tracers = hydro.get_number_of_tracer_fields()
+        dy_dt = np.zeros([len(state.stars), num_tracers]) | units.g / units.s
+    
     # follow FLASH idiom; return dt after SN deposit
     se_dt = 1e99 | units.s
 
@@ -605,12 +606,6 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
     hydro.set_particle_npep(state.stars.tag, npe)
     hydro.set_particle_epep(state.stars.tag, epe.as_quantity_in(units.erg)) # Set average energy of PE photon
     hydro.set_particle_sigd(state.stars.tag, sigpe) # Set cross section of dust to PE photons.
-
-    print("[WIND INJECTION]:", 
-          time.as_quantity_in(units.Myr),
-          s.mass.as_quantity_in(units.Msun),
-          dm_dt.as_quantity_in(units.Msun/units.yr), 
-          vterm.as_quantity_in(units.km/units.s))
 
     hydro.set_particle_wind_mass(state.stars.tag, dm_dt.as_quantity_in(units.g/units.s))
     hydro.set_particle_wind_vel(state.stars.tag, vterm.as_quantity_in(units.cm/units.s))
