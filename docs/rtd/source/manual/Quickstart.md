@@ -194,8 +194,8 @@ pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
 At this point, it’s probably convenient to create a file you can load that will
 activate the modules and the virtual environment whenever you want to work with
 Torch. To do that, create a file named torch.env in your project directory
-containing the module load commands and the activation of the environment, like
-so:
+containing the module load commands and the activation of the python environment,
+like so:
 
 ```
 module load 2025
@@ -211,9 +211,9 @@ with appropriate modifications for your site. Now you can activate everything in
 one command using `. torch.env` in your project directory (note the period and
 the space at the beginning, they’re required).
 
-With the environment set up and activated, we can install AMUSE and most of the
-codes that Torch uses into it. First, we need to download and unpack it (into
-our project directory):
+With the full environment (both modules and python environment) set up and
+activated, we can install AMUSE and most of the codes that Torch uses into
+it. First, we need to clone the AMUSE repository (into our project directory):
 
 ```
 git clone https://github.com/amusecode/amuse.git
@@ -252,7 +252,7 @@ Note that Torch doesn’t necessarily use all of these, so if you know which one
 you want, then you can install only those. At any rate you can return to the
 AMUSE directory later and use ./setup to install more codes.
 
-With that, we have a virtual environment that is ready to install Torch into.
+With that, we have an environment that is ready to install Torch into.
 
 ## Installing Torch
 
@@ -262,8 +262,8 @@ FLASH homepage [(http://flash.uchicago.edu/site/flashcode)][2] will show you how
 
 [2]: http://flash.uchicago.edu/site/flashcode
 
-Once you have a FLASH4.6.2.tar.gz file in your project directory, you need to
-unpack it, and then set the FLASH DIR environment variable so that the Torch
+Once you have a `FLASH4.6.2.tar.gz` file in your project directory, you need to
+unpack it, and then set the `FLASH_DIR` environment variable so that the Torch
 installer can find it:
 
 ```
@@ -272,7 +272,7 @@ tar xzf FLASH4.6.2.tar.gz
 export FLASH_DIR=${PWD}/FLASH4.6.2
 ```
 
-Next, we can download Torch, and set TORCH DIR:
+Next, we can download Torch, and set `TORCH_DIR`:
 
 ```
 git clone https://github.com/torch-sf/torch.git export TORCH_DIR=${PWD}/torch
@@ -291,8 +291,8 @@ Python parts of Torch available:
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 ```
 
-You will want to add the exports of TORCH DIR and FLASH DIR to your torch.env,
-as well as the PYTHONPATH, like so:
+You will want to add the exports of `TORCH_DIR` and `FLASH_DIR` to your `torch.env`,
+as well as the `PYTHONPATH`, like so:
 
 ```
 module load 2025
@@ -345,31 +345,43 @@ bash setup_simulation.sh
 ```
 
 Modify the `run.sh` according to your HPC system. This should at least include
-updating both the SYSTEM variable and the TORCH_ENV variable, but you may also
-want to update various slurm variables. You can now submit the job:
+updating both the `SYSTEM` variable and the `TORCH_ENV` variable, but you may also
+want to update various slurm variables. The `run.sh` script includes a lot of
+information about slurm, so you may want to read through your options carefully.
+
+If you are running an HPC system that is not one of the availble systems already
+mentioned in `run.sh`, you may need to modify the `$TORCH_DIR/utils/mpi_setups.sh`
+script to add the system variables needed for your HPC setup.
+
+Now that your `run.sh` is ready to go, you can submit the job:
 ```
 sbatch run.sh
 ```
 
-The simulation should take 1–10 minutes to reach 2 Myr. It will use 6 threads: 
+The simulation should take 10–15 minutes to reach 2.5 Myr. It will use 6 threads: 
 3 for FLASH, 1 for n-body integration (petar), 1 for stellar evolution, and 1 
-for AMUSE. At around 1 Myr, a sink particle will form and begin creating stars. 
+for AMUSE. At some point, a sink particle will form and begin creating stars. 
 One or a few $>7\,{\rm M}_{\odot}$ stars may begin blowing a wind, so the time
 step may drop; you may wish to end the simulation early.
 
-If you increase the number of tasks requested, torch user.py will automatically 
+If you increase the number of tasks requested, `torch_user.py` will automatically 
 assign more threads (workers) to FLASH. Log files will be dumped in your current 
-working directory, and simulation outputs will be written to the data directory. 
-If you re-start a simulation, Torch (FLASH) will overwrite existing data, but 
+working directory, and simulation outputs will be written to the `data` directory. 
+
+## Restarting a simulation
+
+If you want to restart a simulation, you need to modify the `flash.par` to specify
+which checkpoint to restart from and which plot and particle files to start outputing.
+For a simple restart, the `$TORCH_DIR/utils/restart.sh` script will handle this for you.
+
+Note that if you restart a simulation, Torch (FLASH) will overwrite existing data, but 
 append to (some) existing logs. You may want to rename or delete your old logs 
 to help keep track of your runs.
 
 ## Analyse the output
 
-To analyze the outputs, we recomend using yt to load the data and create plots.
-There are also scripts available to make basic analysis. First up we can create
-movie frames of all the outputs. For this we need the python package `yt`. See
-their [website][4] for documenation and examples.
+To analyze the outputs, we recomend using `yt` to load the data and create plots.
+See their [website][4] for documenation and examples.
 
 [4]:https://yt-project.org/
 
@@ -379,11 +391,16 @@ conda install yt
 conda clean --all
 ```
 
+<!---
+There are also scripts available to make basic analysis. First up we can create
+movie frames of all the outputs. For this we need the python package `yt`. 
+
 To make the movie frames use `movie.py` available in the `utils`. The default 
 parameters are set for the turbsph test, but can be changed using arguments.
 
 ```
 python $TORCH_DIR/utils/movie.py . -q rho -ap -f
 ```
+-->
 
 Enjoy creating your own Torch setups and simulations!
