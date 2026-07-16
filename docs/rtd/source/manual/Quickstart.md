@@ -181,19 +181,19 @@ Next, we can make a Python virtual environment. This is a directory, which can
 go into your project directory or wherever you want it.
 
 ```
-python3 -m venv /path/to/torch_project/Torch-env
+python3 -m venv /path/to/torch_project/torch-venv
 ```
 
 We can then activate the environment, and install the Python dependencies:
 
 ```
-. /path/to/torch_project/Torch-env/bin/activate
+. /path/to/torch_project/torch-venv/bin/activate
 pip3 install -U pip wheel scipy astropy jupyter pandas seaborn matplotlib yt
 ```
 
 At this point, it’s probably convenient to create a file you can load that will
 activate the modules and the virtual environment whenever you want to work with
-Torch. To do that, create a file named Torch.env in your project directory
+Torch. To do that, create a file named torch.env in your project directory
 containing the module load commands and the activation of the environment, like
 so:
 
@@ -204,11 +204,11 @@ module load OpenMPI/5.0.7-GCC-14.2.0
 module load HDF5/1.14.6-gompi-2025a
 module load make/4.4.1-GCCcore-14.2.0
 module load Python/3.13.1-GCCcore-14.2.0
-. /path/to/torch_project/Torch-env/bin/activate
+. /path/to/torch_project/torch-venv/bin/activate
 ```
 
 with appropriate modifications for your site. Now you can activate everything in
-one command using `. Torch.env` in your project directory (note the period and
+one command using `. torch.env` in your project directory (note the period and
 the space at the beginning, they’re required).
 
 With the environment set up and activated, we can install AMUSE and most of the
@@ -291,7 +291,7 @@ Python parts of Torch available:
 export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 ```
 
-You will want to add the exports of TORCH DIR and FLASH DIR to your Torch.env,
+You will want to add the exports of TORCH DIR and FLASH DIR to your torch.env,
 as well as the PYTHONPATH, like so:
 
 ```
@@ -303,7 +303,7 @@ module load make/4.4.1-GCCcore-14.2.0
 module load Python/3.13.1-GCCcore-14.2.0
 FLASH_DIR=/path/to/FLASH4.6.2
 TORCH_DIR=/path/to/torch
-. /path/to/torch_project/Torch-env/bin/activate export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
+. /path/to/torch_project/torch-venv/bin/activate export PYTHONPATH=$PYTHONPATH:$TORCH_DIR/src
 ```
 
 With Torch installed into FLASH, we can now go to the FLASH directory and
