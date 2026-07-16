@@ -6,31 +6,49 @@
 !!! Authors: Joshua Wall and Andrew Pellegrino
 !!!          Drexel University
 !!!          Summer and Fall 2016
+!!! Refactored: Eric Andersson
+!!!             American Museum of Natural History
+!!!             2026
 !!!
-!!! A routine for injection of stellar winds (radiative type for massive
-!!! stars).
+!!! Inject stellar wind feedback into the computational grid by updating
+!!! the mass, momentum, and energy within a spherical injection region
+!!! around a feedback source. The injection is distributed using a
+!!! fractional overlap kernel and supports both momentum- and
+!!! energy-conserving update schemes, but we discourage the use of the
+!!! latter.
 !!!
-!!! This routine injects both mass and energy in a
-!!! momentum conserving fashion. Note that we require
-!!! both momentum and energy conservation with the
-!!! momentum method.
+!!! Optional features include adaptive injection radii based on the
+!!! estimated wind termination shock, thermal energy compensation,
+!!! velocity perturbations, and wind mass loading.
+!!! These options are controlled through runtime parameters and are
+!!! described in the Torch documentation.
 !!!
-!!! In the momentum method we chose the injection radius such that
-!!! the radius of the free flowing kinetic wind (R_1) is resolved. If it is not resolved
-!!! by the radius, we make the injection radius smaller down to dx. If the
-!!! injection radius is smaller than R_1, we make the injection radius larger
-!!! up to injectionRadiusMax, which is a runtime parameter. The default is
-!!! 5 cells at the diagional in 3d (3.5*sqrt(3.0)*dx).
+!!! The routine performes the following steps:
 !!!
-!!! Note that both this and the further requirement that energy be
-!!! conserved by inelasitc collision of the wind mass and the cell mass
-!!! enforces that under-resolved winds always end up on the grid as
-!!! thermal energy (as they should if the shocked wind region is not
-!!! resolved). In this way, one can argue that the shocked hot wind is
-!!! a result of inelastic collision. - Joshua Wall
-!!!
+!!! 1) Initialize variables and perform initial checks.
+!!!      - Load runtime parameters.
+!!!      - Set the injection radius, energy floor, and related quantities.
+!!! 2) Check the injection region.
+!!!      - Optional: Snap the source to the center of a cell
+!!!        (currently hard-coded to .false.).
+!!!      - Check that the injection region is maximally refined.
+!!! 3) Evaluate and update wind properties.
+!!!      - Optional: Update the injection radius.
+!!!      - Optional: Apply wind mass loading.
+!!! 4) Prepare for injection.
+!!!      - Identify cells within the injection region.
+!!!      - Calculate overlap fractions.
+!!!      - Apply solid-angle weighting.
+!!!      - Optional: Perturb the injection velocity.
+!!! 5) Update the hydrodynamic solution.
+!!!      - Momentum-conserving scheme.
+!!!         * Optional: Conserve energy through a thermal-energy update.
+!!!      - Energy-conserving scheme.
+!!! 6) Finalize and return.
+!!!      - Calculate the wind timestep constraint.
 !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 ! Available compiler flags:
 !   WIND_VERBOSE : Human-readable per-call/per-star diagnostics.
@@ -40,9 +58,6 @@
 #endif
 
 subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, twind, dt, bgDens)
-
-!#define DEBUG
-!#define DEBUG_ENERGY
 
 #include "Flash.h"
 #include "constants.h"
@@ -72,7 +87,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
 
     use RuntimeParameters_interface, ONLY: RuntimeParameters_get
 
-    use tree, ONLY: nodetype, coord, bsize, lnblocks, refine, derefine, stay
+    use tree, ONLY: nodetype, coord, bsize, lnblocks
 
 #ifdef TRACER_FIELDS
     use Particles_windData, ONLY: mass_load_yields, ism_loading
@@ -254,42 +269,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     integer :: nNegativeTherm = 0               ! Check if thermal energy was limited
 #endif
 
-!    ! =========================================================================
-!    ! Unused / Obsolete Variables (Preserved for reference & investigation)
-!    ! =========================================================================
-!    logical :: rampVelocity = .false.
-!    logical :: useTimeStep = .true.
-!    logical, save :: isRestart
-!    real(dp) :: injectVelocityMax
-!    real(dp), save :: rampVel = 0d0          ! Leftover velocity ramping state
-!    real(dp), save :: rampVelStep = 3.0d6    ! Leftover velocity ramping step parameter
-!    real(dp) :: star_x, star_y, star_z       ! Intended for star coordinates; replaced by loc(3)
-!    real(dp) :: totE                         ! Obsolete total energy; now using separate oldE/newE
-!    real(dp) :: ThermE, KinE                 ! Obsolete cell energy components
-!    real(dp) :: oldThermE                    ! Obsolete baseline thermal energy
-!    real(dp) :: finalThermE                  ! Commented out energy calculation buffer
-!    real(dp) :: delr                         ! Unused cell coordinate delta (distance calculation)
-!    real(dp) :: r1, r2                       ! Unused spherical/cell radial coordinates
-!    real(dp) :: maxdir                       ! Unused vector coordinate helper
-!    real(dp) :: rem, dist, mult              ! Unused loop/interpolation variables
-!    integer :: d                             ! Unused dimension index
-!    integer :: m                             ! Unused loop index
-!    integer :: ind_array(3)                  ! Unused index vector buffer
-!    integer :: messages                      ! Unused MPI message counter
-!    integer :: trans_status(MPI_STATUS_SIZE) ! Unused MPI status tracker
-!    real(dp) :: old_dt
-!    real(dp) :: oldE                         ! From old injection 
-!    real(dp) :: idir, jdir, kdir <--- No longer in use.
-!    real(dp) :: newE
-!    real(dp) :: oldP
-!    real(dp) :: newP
-!    real(dp) :: initialKE
-!    real(dp) :: initialTE
-!    real(dp) :: addKinE
-!    real(dp) :: deltaKinE = 0.0_dp
-!    real(dp) :: deltaThermE = 0.0_dp
-!    real(dp) :: deltaE
-
 #ifdef WIND_VERBOSE
         if (gr_meshMe == 0) write(*, 900) "Entered subroutine."
 #endif
@@ -379,11 +358,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         ! Internal energy floor. 10 K for now, add this as a parameter.
         eint_floor = kB * 10.0_dp / ((gamma_ - 1.0_dp) * mu * mH)
     
-!        if (gr_meshMe == 0) then
-!            print*, " Max injection radius / dx = ", injectRadiusMax/delta(1)
-!            print *, "inject_direct.F90 is conserving ", conserved_quant
-!        end if
-
         first_call = .false.
     end if
 
@@ -473,37 +447,20 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                 iHaveInjectBlk = .true.
                 injBlkNum = injBlkNum + 1
 
-!#ifdef DEBUG_MPI
-!                print*, "injBlkNum =", injBlkNum
-!#endif
                 ! Check if this block is maximally refined. If not, it will be flagged for 
                 ! refinement and injection will be aborted.
                 call Grid_getBlkRefineLevel(blockID, refineLevel)
                 
                 if (refineLevel < maxref) then
                     iHaveUnrefined = .true.
-                    refine(blockID) = .true.
-                    derefine(blockID) = .false.
-                    stay(blockID) = .true.
-
 #ifdef WIND_DEBUG
                     write(*, 913) "Unrefined block for rank, blockID, refineLevel", gr_meshMe, blockID, refineLevel
 #endif
-!#ifdef DEBUG_MPI
-!                    print *, "Block ", blockID, " on proc ", gr_meshMe, " is &
-!                        refined to level ", refineLevel, ", should be ", maxref
-!#endif
                 end if
             end if
         end if
     end do
     
-!#ifdef WIND_VERBOSE
-!    if (iHaveUnrefined) then
-!        write(*, 912) "WARNING: unrefined injection blocks, gr_meshMe, refineLevel = ", gr_meshMe, refineLevel
-!    end if
-!#endif
-
     ! Check if any MPI rank has unrefined blocks in injection region. If so, return 
     ! for this timestep. These blocks have been flagged for refinement and should 
     ! eventually reach maximum refinement unless this is blocked elsewhere.
@@ -522,7 +479,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     end if
 
     ! =========================================================================
-    ! Injection region is refined, derive wind properties.
+    ! Evaluate and update wind properties.
     ! =========================================================================
 #ifdef WIND_VERBOSE
     if (gr_meshMe == 0) write(*, 900) "Deriving wind properties"
@@ -531,11 +488,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     ! Start with max radius as default for each time step.
     injectRadius = injectRadiusMax
 
-!    ! Calculate mechanical energy injected by the wind.
-!    ! I'm moving this to later for clarity
-!    injEkinDens = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
-!    write(*,'(A,X,ES13.3e3,X,A)') "Injected specific E =", injEkinDens, "ergs."
-    
     calcBgDens = .false.
     if (var_radius) then
         ! If using a variable injection radius, inject only within the freely
@@ -556,10 +508,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         !   spread out, so the effect should be minor.
 
         if (bgDens == 0.0) then
-!#ifdef DEBUG_ENERGY
-!            if (gr_meshMe == 0) print*, "Calculating background density for this star for the first time."
-!#endif
-
             ! During the first injection step, the background density must be 
             ! calculated. Note that for this first step the injection radius 
             ! will always be injectRadiusMax.
@@ -590,30 +538,8 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
             endif
 #endif
         end if
-
-!        if (gr_meshMe == 0) then
-!#ifdef DEBUG_ENERGY
-!            write(*, '(A,ES13.3e3)') "R_1 from Weaver 77 = ", R_1
-!            write(*, '(A,ES13.3e3)') "# cells from free expansion edge R_1 from Weaver 77 = ", R_1/delta(1)
-!#endif
-!        end if
-
     end if
     
-!#ifdef DEBUG_ENERGY
-!    if (gr_meshMe == 0) &
-!        write(*, '(A,ES13.3e3)') " injection radius / dx = ", injectRadius/delta(1)
-!#endif
-
-
-!#ifdef DEBUG
-!    if (gr_meshMe == 0) then
-!        print *, "inject_direct.F90 is conserving ", conserved_quant
-!        write(*, '(A,ES13.3e3, I4)') " injection radius = ", injectRadius, gr_meshMe
-!        print*, "loc =", loc, gr_meshMe
-!    end if
-!#endif
-
     if (mass_load) then
         ! Mass loading artificially increases the injected mass to lower the wind 
         ! velocity to the reference velocity refVel. The mass loading factor is 
@@ -628,8 +554,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         ! Calculate reference velocity from target temperature (Draine, 2011, eqn 36.28).
         ! Note that this assumes that the gas is ionized.
         refVel = sqrt(wind_target_temp/1.38d7)*1e8
-!        if (gr_meshMe == 0) print*, "[inject_direct]: Reference velocity for wind is", &
-!            refVel, "for reference temp", wind_target_temp
 
         mass_load_factor = 0.0_dp
         if (conserved_quant .eq. "momentum") then
@@ -639,7 +563,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         end if
 
         injectVelocity    = refVel
-        ! injectVelocityMax = injectVelocity    <--- This is never used
         injectMass        = injectMassIn * (1.0_dp + mass_load_factor)
 
 #ifdef TRACER_FIELDS
@@ -674,19 +597,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         endif
 #endif
 
-!
-!#ifdef DEBUG_ENERGY
-!        if (gr_meshMe == 0) then
-!            write(*,'(A,ES10.3)') "Mass load factor = ", mass_load_factor
-!            write(*,'(A,ES10.3,A,ES10.3,A)') "Injecting", injectMassIn/dt/solarMass*yr, &
-!                " solar masses/yr at ", injectVelocityIn, " cm/s"
-!            !write(*,'(A,ES10.3,A,ES10.3,A)') "(", injectMass, " g over ", dt, " seconds)"
-!            write(*,'(A,3ES10.3)') "Star loc  =", loc
-!            write(*,'(A,ES10.3,A)') "For a total of ", &
-!                0.5 * injectMassIn * injectVelocityIn**2/dt, " ergs/s"
-!        end if
-!#endif
-
     end if
 
     ! =========================================================================
@@ -709,10 +619,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         !      with injection region and a vector pointing radially outwards from the 
         !      injection star.
 
-!#ifdef DEBUG_MPI
-!        print *, "Found", injBlkNum, "injection blocks on proc ", gr_meshMe
-!#endif
-
         ! Initialize arrays local to this MPI rank.
         allocate(localInjectBlocks(injBlkNum))
         allocate(injectDataOverlap(injBlkNum, GRID_ILO:GRID_IHI, GRID_JLO:GRID_JHI, GRID_KLO:GRID_KHI))
@@ -721,9 +627,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         injectDataOverlap = 0.0d0
         injectDataVel     = 0.0d0
 
-!#ifdef DEBUG_MPI
-!        print *, "Allocations done"
-!#endif
 #ifdef WIND_VERBOSE
         if (gr_meshMe == 0) write(*, 900) "Finding indices of all inject blocks on each MPI rank."
 #endif
@@ -751,9 +654,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
             end if
         end do
 
-!#ifdef DEBUG_MPI
-!        print *, "Found injection blocks:", localInjectBlocks, "on proc", gr_MeshMe
-!#endif
 #ifdef WIND_VERBOSE
         if (gr_meshMe == 0) write(*, 900) "Calculating overlap fraction in each cell receiving material."
 #endif
@@ -854,8 +754,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                             !   - It is not clear why this correction is only applied when mass_load is false. 
                             !     Arguably, mass loading can be viewed as sweeping up ambient ISM in which
                             !     case it should only be volume weighted (which is the case in a uniform medium).
-                            !   - FIXED! The original expression appears to be missing a factor 4**2 in the final term
-                            !     of the denominator. It is kept unchanged here to preserve previous results.
                             solidAngle   = 4.0_dp*acos(sqrt((1.0_dp+del2/(2.0_dp*rad2)) &
                                        & / (1.0_dp+ del2/(2.0_dp*rad2) + (del2/rad2/4.0_dp)**2.0_dp)))
                             overlap_frac = overlap_frac*solidAngle
@@ -875,16 +773,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
             end do
             call Grid_releaseBlkPtr(blockID, solndata)
         end do
-
-!#ifdef DEBUG_MPI
-!        print *, "Calculated overlaps", gr_meshMe
-!#endif
-!
     end if
-
-!#ifdef DEBUG_MPI
-!    print*, "Proc ", gr_meshMe, " about to call MPI with sumOverlap = ", sumOverlap
-!#endif
 
     ! Sum up overlap fraction from all MPI ranks. Later, we will use the total overlap
     ! to rescale all quantities we inject.
@@ -901,9 +790,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     if (var_radius .and. calcBgDens) then
         ! If this is the first variable-radius injection step, convert the
         ! overlap-weighted density sum into a global overlap-weighted mean density.
-!#ifdef DEBUG_MPI
-!        print*, "Before MPI background density is", bgDens
-!#endif
 
         call MPI_ALLREDUCE(MPI_IN_PLACE, bgDens, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
         bgDens = bgDens / sumOverlap
@@ -912,14 +798,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
 #endif
     end if
  
-
-!#ifdef DEBUG
-!    if (gr_meshMe == 0) then
-!        print *, "Total overlap weight is", sumOverlap
-!        print*, "Background density is", bgDens
-!    end if
-!#endif
-
     if (perturb_velocity) then
         ! Perturb the magnitude of the wind velocity with a normal distribution of
         ! width perturb_std_dev. This introduces small cell-by-cell differences that
@@ -990,21 +868,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                             largestDeltaVel = max(largestDeltaVel, sqrt(sum(injectDataVel(n,i,j,k,:)**2)))
 #endif
                             ip = ip + 1
-                            
-!                            ! This condition checks whether the final velocity is within 50% of the
-!                            ! 5-sigma velocity scale. This is a somewhat unusual stopping criterion.
-!                            ! Consider replacing it with a bounded normal distribution or an explicit
-!                            ! check for pathological cases, such as a negative perturbation factor that
-!                            ! reverses the wind direction.
-!                            if (abs(sqrt(sum(injectDataVel(n,i,j,k,:)**2)) &
-!                                    - injectVelocity*(1.0+5.0*perturb_std_dev)) &
-!                                    /(injectVelocity*(1.0+5.0*perturb_std_dev))> 5.0d-1) then
-!                                write(*,'(A,2ES13.3E3)') "vels don't match: calc vel, inj vel= ",  &
-!                                    sqrt(sum(injectDataVel(n,i,j,k,:)**2)), injectVelocity
-!                                write(*,'(A,3ES13.3E3)') "xvel, yvel zvel =", &
-!                                    injectDataVel(n,i,j,k,1), injectDataVel(n,i,j,k,2), injectDataVel(n,i,j,k,3)
-!                                stop
-!                            end if
                         end if
                     end do
                 end do
@@ -1072,9 +935,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
             MPI_LAND, gr_meshComm, ierr)
 
         if (.not. perturbUsedFullChunk) then
-!            if (gr_meshMe == 0) then
-!                print*, "Error in wind velocity perturbation, RNG stream sampled wrongly"
-!            end if
             call Driver_abortFlash("[inject_direct] Error in wind velocity perturbation, RNG stream sampled wrongly")
         end if
         
@@ -1082,7 +942,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     end if
 
     ! =========================================================================
-    ! Inject material.
+    ! Update hydrodynamic solution.
     ! =========================================================================
     ! Inject mass, momentum/energy, and tracers into each overlapping cell.
     ! Two modes exists and differ in how the post-injection velocity is chosen:
@@ -1100,7 +960,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
     !       New velocity is computed by mixing signed velocity-squared
     !       components. 
     !       TO DISCUSS: This looks like a legacy energy-conserving prescription 
-    !       which has fairly severe algorithmic limitations. Notably, the
+    !       which has severe algorithmic limitations. Notably, the
     !       equivalent implementation for SNe has this version commented out.
     !       We should consider deprecating this verion and remove it from the
     !       code. The more physical way of conserving energy is using momentum
@@ -1267,149 +1127,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                             end if
 #endif
 
-!                            Summary statistics for reporting and sanity checks
-!                            sumMass = sumMass + injDens*dVol         ! Total injected mass 
-!                            initialKE = 0.5_dp * sum(oldVel**2.0_dp) ! Per particle per unit mass, KE/M = KE / (N * mu * m_H).
-!                            initialTE = solndata(EINT_VAR,i,j,k)     ! Per particle per unit mass, TE/M = TE / (N * mu * m_H).
-!
-!                            !oldE = oldDens * sum(oldVel**2)
-!                            oldE = (0.5_dp*sum(oldVel**2.0_dp) + solndata(EINT_VAR,i,j,k))*oldDens
-!                            oldP = oldDens * sqrt(sum((oldVel+0.0_dp)**2.0_dp))
-!
-!                            ! Note in Flash energy is in erg/g so that the energy is the same regardless of refinement. - JW
-!                            ! Also don't forget the already existing internal energy in this cell. - JW
-!
-!                            ! Specific KE added to this cell. - JW
-!                            !                      deltaKinE = (0.5_dp * newDens * sum(newVel**2.0_dp) &
-!                            !				      - 0.5_dp * oldDens * sum(oldVel**2.0_dp)) &
-!                            !				      / newDens
-!                            ! Didn't we already account for mass ratios etc when we inverted the
-!                            ! momentum eqn (i.e. isnt that the point of doing it this way)? - JW
-!                            !addKinE   = 0.5_dp * sum(injVel**2.0_dp)*injDens
-!                            deltaKinE = 0.5_dp * sum(newVel**2.0_dp)*newDens - 0.5_dp * sum(oldVel**2.0_dp)*oldDens
-!                            addKinE = deltaKinE
-!                            ! Thermal energy should be the difference b/t the injected specific E
-!                            ! and the actual specific kinetic energy. - JW
-!
-!                            ! Final TE in this cell = portion of mech
-!                            ! energy added to the cell + the existing TE in cell.
-!                            ! Note what we did here. In order to make up for the energy loss from conserving momentum
-!                            ! we used the original velocity from injEkinDens to ensure that we added back enough energy
-!                            ! in thermal to get back to the proper total energy at the end, and
-!                            ! NOT the modified velocity from mass loading or what was calculated from momentum
-!                            ! conservation. - JW
-!                            if (add_therm_e) then
-!                                ! - KE added to cell. - JW !0.5_dp*injDens*sum(injVel**2.0_dp)/newDens
-!                                !		              finalThermE = injEkinDens*injectDataOverlap(n,i,j,k)/sumOverlap/(newDens*dVol)  &
-!                                !		                  + solndata(EINT_VAR, i, j, k)*oldDens/newDens &
-!                                !				          - deltaKinE
-!                                ! Note I think this is wrong, since the "correct" energy being added is the mass
-!                                ! loaded energy, and the mass loading is the stuff falling in from the shell, which
-!                                ! has zero kinetic energy. So we *should lose some kinetic energy here*!
-!                                !injEtheDens = finalThermE - solndata(EINT_VAR, i, j, k)
-!                                injEtheDens = (injEkinDens*injectDataOverlap(n,i,j,k)/sumOverlap/dVol  &
-!                                    - deltaKinE)
-!
-!                                ! Lets add in the thermal energy of the mass loaded material to be the temperature
-!                                ! the ionized shell material should be on the inner edge, which is 1e4 K.
-!                                ! e = 1/(gamma-1)*k*T/mu - JW
-!                                !injEtheDens = (1.d0/(gamma_-1.0d0)*1.3807d-16*1e4/(1.67e-24*0.61))*injDens
-!                            else
-!                                injEtheDens = 0.0d0
-!                            end if
-!                            !ThermE = (0.5_dp * newDens * sum(newVel**2.0_dp) &
-!                            !       + solndata(EINT_VAR, i, j, k) - oldE
-!                            ! Record the change in TE for debugging.
-!                            deltaThermE = injEtheDens
-!                            ! Now add the "missing" kinetic energy as thermal energy. - JW
-!
-!                            !solndata(EINT_VAR, i, j, k) = solndata(EINT_VAR,i,j,k) + deltaThermE
-!                            ! Shouldn't this have a factor that includes how much more mass we spread the old energy
-!                            ! around to by adding mass to the cell? In other words, this is the internal energy
-!                            ! per particle. So if we had 2 particles at the old TE and 1 particle at the TE of the
-!                            ! mass added to the cell, the new TE = (2*oldTE + 1*new_massTE) / 3 - JW
-!                            solndata(EINT_VAR, i, j, k) = solndata(EINT_VAR,i,j,k)*(oldDens/newDens) + injEtheDens/newDens
-!                            !if (solndata(EINT_VAR,i,j,k) .lt. oldThermE) then
-!                            !  print*, "We lost thermal energy in this cell. oldTE=, newTE=", &
-!                            !  oldThermE, solndata(EINT_VAR,i,j,k)
-!                            !end if
-!
-!                            solndata(ENER_VAR, i, j, k) =  0.5_dp*sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k)
-!                            if (solndata(EINT_VAR,i,j,k)/(0.5_dp*sum(newVel**2.0_dp)) < hy_eswitch) then
-!                                print*, "[inject_direct]: Warning, eintswitch should be kicking on here."
-!                                print*, "eint/ke=",solndata(EINT_VAR,i,j,k)/(0.5_dp*sum(newVel**2.0_dp))
-!                                print*, "eintSwitch=", hy_eswitch
-!                            end if
-!
-!                            ! new velocity is calculated by conserving momentum when injDens moving
-!                            ! at injectVelocity is added to oldDens moving at original velocity
-!
-!                            solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
-!                            solndata(DENS_VAR, i, j, k) = newDens
-!
-!                            if (addKinE .gt. largestKE) largestKE = addKinE*dVol
-!                            if (injEtheDens .gt. largestTE) largestTE = injEtheDens*dVol
-!
-!                            ! Delta E (not specific!) added to this cell. - JW
-!                            deltaE = (deltaKinE + deltaThermE)
-!
-!                            !newE = newDens * sum(newVel**2)
-!                            !newE = sum(newVel**2.0_dp)
-!                            newE = (0.5_dp * sum(newVel**2.0_dp) + solndata(EINT_VAR,i,j,k))*newDens
-!                            !newP = newDens * sqrt(sum(newVel**2))
-!                            newP = sqrt(sum((newMom+0.0_dp)**2.0_dp))
-!                            !globalDeltaE = globalDeltaE + 0.5 * (newE &
-!                            !             - oldE )*dVol
-!
-!
-!#ifdef DEBUG
-!                            if ((injectDataOverlap(n,i,j,k) .le. 0.0_dp) .and. &
-!                                (injDens .gt. 0.0d0 .or. deltaKinE .gt. 0.0d0 .or. deltaThermE .gt. 0.0 &
-!                                .or. abs(newE - oldE) .gt. 0.0d0)) then
-!
-!                                write(*,*) "BS detected! Overlap is zero but someone is up to no good!"
-!                                write(*,'(A,ES13.3E3)') "Delta KE= ", deltaKinE
-!                                write(*,'(A,ES13.3E3)') "Delta TE= ", deltaThermE
-!                                write(*,'(A,ES13.3E3)') "injDens= ", injDens
-!                                write(*,'(A,2ES13.3E3)') "oldDens, newDens= ", oldDens, newDens
-!                                write(*,'(A,6ES13.3E3)') "oldVel, newVel= ", oldVel, newVel
-!                                write(*,'(A,3ES13.3E3)') "injVel =", injVel
-!                                write(*,'(A,2ES13.3E3)') "old KE, old TE= ", initialKE, initialTE
-!                                write(*,'(A,6ES13.3E3)') "new KE, new TE= ", 0.5_dp*sum(newVel**2.0_dp), solndata(EINT_VAR, i, j, k)
-!                                write(*,'(A,ES13.3E3)') "initial Total E= ", oldE
-!                                write(*,'(A,ES13.3E3)') "final Total E= ", newE
-!                                write(*,'(A,ES13.3E3)') "(newE-oldE)= ", (newE-oldE)
-!                                call flush(6)
-!                            end if
-!
-!                            if (injectDataOverlap(n,i,j,k) > 0.0) then
-!                                write(*,'(A,ES13.3E3)') "Delta KE= ", deltaKinE
-!                                write(*,'(A,ES13.3E3)') "Delta TE= ", deltaThermE
-!                                write(*,'(A,ES13.3E3)') "Delta KE= ", addKinE
-!                                write(*,'(A,ES13.3E3)') "Delta TE= ", injEtheDens
-!                                write(*,'(A,ES13.3E3)') "injDens= ", injDens
-!                                write(*,'(A,2ES13.3E3)') "oldDens, newDens= ", oldDens, newDens
-!                                write(*,'(A,6ES13.3E3)') "oldVel, newVel= ", oldVel, newVel
-!                                write(*,'(A,3ES13.3E3)') "injVel =", injVel
-!                                write(*,'(A,2ES13.3E3)') "old KE, old TE= ", initialKE, initialTE
-!                                write(*,'(A,6ES13.3E3)') "new KE, new TE= ", 0.5_dp*sum(newVel**2.0_dp), solndata(EINT_VAR, i, j, k)
-!                                write(*,'(A,ES13.3E3)') "final TE= ", solndata(EINT_VAR, i, j, k)
-!                                write(*,'(A,ES13.3E3)') "initial Total E= ", oldE
-!                                write(*,'(A,ES13.3E3)') "final Total E= ", newE
-!                                write(*,'(A,ES13.3E3)') "deltaE= ", deltaE
-!                                write(*,'(A,ES13.3E3)') "newE-oldE= ", (newE-oldE)
-!                                write(*,'(A,ES13.3E3)') "deltaE - (newE-oldE)= ", deltaE - (newE-oldE)
-!                                write(*,'(A,ES13.3E3)') "globalTE= ", globalTE
-!                                write(*,'(A,ES13.3E3)') "globalKE= ", globalKE
-!                                write(*,'(A,ES13.3E3)') "globalDeltaE= ", globalDeltaE
-!                                call flush(6)
-!                            end if
-!#endif
-!                            globalKE     = globalKE + addKinE*dVol
-!                            globalTE     = globalTE + injEtheDens*dVol
-!                            globalDeltaE = globalDeltaE +  (addKinE + injEtheDens)*dVol !newE - oldE !deltaE
-!                            globalDeltaP = globalDeltaP + injDens * sqrt(sum((injVel)**2.0_dp))*dVol !(newP - oldP)
-
                         end do
                     end do
                 end do
@@ -1437,8 +1154,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                             ! State before injection.
                             oldDens = solndata(DENS_VAR, i, j, k)
                             oldVel  = solndata(VELX_VAR:VELZ_VAR, i, j, k)
-                            ! oldE    = oldDens * sum(oldVel**2)         <--- not used, also missing factor 0.5
-                            ! oldP    = oldDens * sqrt(sum(oldVel**2))   <--- not used
                             
                             ! Injected material.
                             weight  = injectDataOverlap(n,i,j,k) / sumOverlap
@@ -1462,8 +1177,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                             newVelSq = oldDens / newDens * sign(oldVel**2, oldVel) &
                                      + injDens / newDens * sign(injVel**2, injVel)
                             newVel = sign(sqrt(abs(newVelSq)), newVelSq)
-!                            ! newE = newDens * sum(newVel**2)       <--- not used, missing factor 0.5
-!                            ! newP = newDens * sqrt(sum(newVel**2)) <--- not used
 
                             ! Update the hydrodynamic solution
                             solndata(VELX_VAR:VELZ_VAR, i, j, k) = newVel
@@ -1511,96 +1224,10 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
                 end do
 
                 call Grid_releaseBlkPtr(blockID, solndata)
-!#ifdef DEBUG_MPI
-!                print*, "[Particles_wind]: Calling Eos_wrapped on blk, proc, numBlks ",&
-!                    blockID, gr_meshMe, injBlkNum
-!#endif
                 call Eos_wrapped(MODE_DENS_EI, blkLimits, blockID)
             end do
-
-!            
-!            !else if (conserved_quant .eq. "energy_simpson") then
-!            
-!                ! TO DISCUSS: This appears to implement an energy-conserving update inspired 
-!                ! by Simpson et al. (2015). The method attempts increase the kinetic and
-!                ! thermal energy to the specified amount by adding momentum isotropically
-!                ! based on the cloud-in-cell approach. As written, the solve is component-
-!                ! wise and assigns deltaP/injDens as the final velocity, so it is not clear 
-!                ! that it consistently conserves either vector momentum or total energy. 
-!                ! Unless we want to pursue a proper and tested implementation, we should
-!                ! remove this.
-!            
-!            !    do n = 1, injBlkNum
-!            !        blockID = localInjectBlocks(n)
-!            !        call Grid_getBlkPtr(blockID, solndata)
-!
-!            !        do i = GRID_ILO,GRID_IHI
-!            !            do j = GRID_JLO, GRID_JHI
-!            !                do k = GRID_KLO, GRID_KHI
-!            !
-!            !                  injDens = injectDataOverlap(n,i,j,k)/sumOverlap*injectMass/dVol
-!            !                  oldDens = solndata(DENS_VAR,i,j,k)
-!            !                  newDens = solndata(DENS_VAR,i,j,k) + injDens ! m + delta_m
-!            !                  oldVel = solndata(VELX_VAR:VELZ_VAR, i, j, k)
-!            !                  injVel = injectDataVel(n,i,j,k,1:3)
-!            !                  newMom = injVel * injDens + oldVel * oldDens
-!            !                  newVel = newMom / newDens
-!
-!            !                  a_ = 0.5 / newDens
-!            !                  b_ = oldDens * oldVel / newDens
-!            !                  c_ = (oldDens * oldVel)**2 / ( 2 * newDens ) &
-!            !                    - 0.5 * oldDens * oldVel**2 &
-!            !                    - 0.5 * injDens * injVel**2
-!            !                  deltaP = - b_ + sqrt(b_**2 - 4*a_*c_)/(2*a_)
-!
-!            !                  !solndata(EINT_VAR, i, j, k) = totE/newDens - 0.5 * sum(newVel**2)
-!
-!            !                  ! new velocity is calculated by conserving momentum when injDens moving
-!            !                  ! at injectVelocity is added to oldDens moving at original velocity
-!
-!            !                  solndata(VELX_VAR:VELZ_VAR, i, j, k) = deltaP / injDens
-!            !                  solndata(DENS_VAR, i, j, k) = newDens
-!
-!            !                end do
-!            !            end do
-!            !        end do
-!
-!            !        call Grid_releaseBlkPtr(blockID, solndata)
-!            !    end do
-
         end if
-
     end if
-
-!#ifdef DEBUG_ENERGY
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, globalDeltaE, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, globalDeltaP, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, globalTE, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, globalKE, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, largestTE, 1, MPI_DOUBLE_PRECISION, MPI_MAX, gr_meshComm, ierr)
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, largestKE, 1, MPI_DOUBLE_PRECISION, MPI_MAX, gr_meshComm, ierr)
-!
-!#ifdef DEBUG_MPI
-!    print*, "Proc ", gr_meshMe, " about to call MPI with sumMass = ", sumMass
-!#endif
-!
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, sumMass, 1, MPI_DOUBLE_PRECISION, MPI_SUM, gr_meshComm, ierr)
-!
-!    if (gr_meshMe == 0) then
-!        emech = 0.5_dp * injectMassIn * injectVelocityIn**2.0_dp
-!        pmech = injectMassIn * injectVelocityIn
-!        write(*,'(A,ES10.3,A)') "We got ", globalDeltaE/dt, "ergs/s"
-!        write(*,'(A,ES10.3,A)') "We got global TE=", globalTE, "ergs"
-!        write(*,'(A,ES10.3,A)') "We got global KE=", globalKE, "ergs"
-!        write(*,'(A,F10.3,A)') "Error in injected wind total E is ", abs(globalDeltaE - emech)/emech*100, "%"
-!        write(*,'(A,F10.3,A)') "Percentage of energy that is thermal is ", globalTE/abs(globalDeltaE)*100.0, "%"
-!        write(*,'(A,F10.3,A)') "Percentage of energy that is kinetic is ", globalKE/abs(globalDeltaE)*100.0, "%"
-!        write(*,'(A,F10.3,A)') "Error in injected wind P is ", abs(globalDeltaP - pmech)/pmech*100, "%"
-!        write(*,'(A,ES10.3e2,A)') "Largest TE is ", largestTE
-!        write(*,'(A,ES10.3e2,A)') "Largest KE is ", largestKE
-!        write(*,'(A,ES10.3e2,X,A,ES10.3e2)') "Total mass from wind is ", injectMass, "Injected mass is ", sumMass
-!    end if
-!#endif
 
 #ifdef WIND_VERBOSE
     call MPI_ALLREDUCE(MPI_IN_PLACE, nNegativeTherm, 1, MPI_INTEGER, MPI_SUM, gr_meshComm, ierr)
@@ -1635,7 +1262,7 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
 #endif
 
     ! =========================================================================
-    ! Injection completed, now finalize.
+    ! Finalize and return.
     ! =========================================================================
 
 #ifdef WIND_VERBOSE
@@ -1670,9 +1297,6 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
 
         call MPI_ALLREDUCE(MPI_IN_PLACE, min_wind_dt, 1, MPI_DOUBLE_PRECISION, MPI_MIN, gr_meshComm, ierr)
 
-!#ifdef DEBUG_ENERGY
-!        if (gr_meshMe == 0) write(*, 901) "Timestep limited by wind injection: dt = ", min_wind_dt
-!#endif
     endif
 
 #ifdef WIND_VERBOSE
@@ -1684,107 +1308,11 @@ subroutine inject_direct(loc_in, injectMassIn, injectVelocityIn, injectYieldIn, 
         deallocate(localInjectBlocks)
         deallocate(injectDataOverlap)
         deallocate(injectDataVel)
-
-!#ifdef DEBUG_MPI
-!        print *, "Deallocating done for proc", gr_meshMe
-!#endif   
     end if
 
 #ifdef WIND_VERBOSE
     if (gr_meshMe == 0) write(*, 900) "Memory deallocated, exiting inject_direct"
 #endif
-
-!    if (use_wind_compute_dt) then
-!        call MPI_ALLREDUCE(MPI_IN_PLACE, min_wind_dt, 1, MPI_DOUBLE_PRECISION, &
-!            MPI_MIN, gr_meshComm, ierr)
-!    else
-!        min_wind_dt = 1d99
-!    endif
-!
-!
-!if (iHaveInjectBlk) then
-!
-!    ! Update the EOS variables if we have an affected block for only those blocks.
-!
-!    do n=1, injBlkNum
-!        blockID = localInjectBlocks(n)
-!        !#ifdef DEBUG
-!        !        print*, "[Particles_wind]: Calling Eos_wrapped on blk, proc, numBlks ",&
-!        !                                                   blockID, gr_meshMe, injBlkNum
-!        !#endif
-!
-!        ! Moved into the actual loops where values were modified to be
-!        ! absolutely certain the correct blocks get this call. - JW
-!        !call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
-!        !call Eos_wrapped(MODE_DENS_EI, blkLimits, blockID)
-!
-!
-!        ! calculate min. crossing time of wind velocity on all injection blocks
-!        if (use_wind_compute_dt) then
-!
-!            call Grid_getBlkPtr(blockID, solndata)
-!
-!            ! square of the max sound speed in the block
-!            !c_sound^2 = gamma * k * T / m_H
-!
-!            cs2 = gamma_ * 1.3807d-16 * &
-!                solndata(TEMP_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI) &
-!                / 1.6726d-24
-!            !v2 = solndata(VELX_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)**2.0_dp + &
-!            !     solndata(VELY_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)**2.0_dp + &
-!            !     solndata(VELZ_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)**2.0_dp
-!
-!            ! square of magnitude of velocities in all cells of block
-!            v2 = sum(solndata(VELX_VAR:VELZ_VAR,GRID_ILO:GRID_IHI, &
-!                GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)**2.0,1)
-!
-!            ! NOTE NOTE NOTE ! We need to also calculate the Alfven velocity here
-!            ! or otherwise take it into account in Hydro_computeDt (<--- this should be done now. JW) - JW
-!
-!            ! minimum dt to capture wind movement in this block
-!            ! Lets use the hydro CFL here. - JW
-!            !old_dt = minval(delta)/sqrt(cs2 + injectVelocity**2.0_dp)
-!            old_dt = hy_cfl * minval(delta)/sqrt( maxval(cs2 + v2) )
-!            if (old_dt .lt. min_wind_dt) then
-!                min_wind_dt = old_dt
-!            end if
-!#ifdef DEBUG
-!            print*, "Max temp on proc, blk", gr_meshMe, blockID, "is", maxval(solndata(TEMP_VAR,:,:,:))
-!#endif
-!            call Grid_releaseBlkPtr(blockID, solndata)
-!
-!        end if
-!
-!
-!    end do
-!
-!    deallocate(localInjectBlocks)
-!    deallocate(injectDataOverlap)
-!    deallocate(injectDataVel)
-!#ifdef DEBUG_MPI
-!    print *, "Deallocating done for proc", gr_meshMe
-!#endif
-!    !call Grid_fillGuardCells(CENTER, ALLDIR) !, eosMode=MODE_DENS_EI, doEos=.true.)
-!    !#ifdef DEBUG
-!    !    print *, "Guard cells filled on proc", gr_meshMe
-!    !#endif
-!end if
-!
-!
-!if (use_wind_compute_dt) then
-!    call MPI_ALLREDUCE(MPI_IN_PLACE, min_wind_dt, 1, MPI_DOUBLE_PRECISION, &
-!        MPI_MIN, gr_meshComm, ierr)
-!#ifdef DEBUG_ENERGY
-!    if (gr_meshMe == 0) write(*,'(A,ES10.3)') "Timestep set by inject_direct = ", min_wind_dt
-!#endif
-!end if
-!
-!! Moving to outside the inject_direct call and into Particles_wind.
-!!call Grid_fillGuardCells(CENTER, ALLDIR) !, eosMode=MODE_DENS_EI, doEos=.true.)
-!
-!#ifdef DEBUG_MPI
-!    print *, "Exiting inject_direct for proc", gr_meshMe
-!#endif
 
 ! The last digit indicates the number of values printed.
 900 format("[inject_direct] ",A)
