@@ -10,13 +10,10 @@
 !!
 !! DESCRIPTION
 !!
-!!  This routine takes care of grid refinement for particles which have
-!!  feedback (active/massive particles with either FERVENT or my wind
-!!  module included). It enforces refinement in the blocks that contain
-!!  the particles, and in the case of the winds, in any block where the
-!!  wind will be injected. Note here that FERVENT refinement simply
-!!  looks to see if the particle has rays, while the winds check if the
-!!  particle exceeds the minimum mass for a wind. - JW
+!!  This routine takes care of grid refinement for particles which are
+!!  injecting a wind. It enforces refinement in the blocks that contain
+!!  the particles with mass exceeding the minimum mass of wind driving
+!!  stars, and any block where the wind will be injected. 
 !!
 !! ARGUMENTS
 !!
@@ -29,6 +26,7 @@
 !!   refactored for FLASH4 by John Bachan, 2012
 !!   cleaned by Christoph Federrath, 2013
 !!   adapted for active particles J Wall 2016-2017
+!!   modified by Eric Andersson, 2026
 !!
 !!***
 !#define debug
@@ -98,8 +96,8 @@ character(len=80), save    :: grav_boundary_type
 #include "Flash_mpi.h"
 
 
-! If neither feedback method is in, just return.
-#if !defined(FERVENT) && !defined(WIND_INJ) && !defined(VETTAM)
+! If wind feedback method is not in, just return.
+#if !defined(WIND_INJ)
 return
 #endif
 
@@ -212,26 +210,6 @@ print*, "y =", y
 print*, "z =", z
 #endif
 
-#if defined(FERVENT) || defined(VETTAM)
-       ! Any block with a feedback particle in it should be at highest refinement level. - JW
-       ! This part is basically for HII regions to be well resolved initially
-       ! for radiation feedback.
-       do p = 1, pt_numLocal
-          if (particles(EION_PART_PROP, p) > 0.0d0) then 
-            p_blknum = int(particles(BLK_PART_PROP, p))
-            if (lrefine(p_blknum) .lt. gr_maxRefine) then
-               refine(p_blknum) = .true.
-               derefine(p_blknum) = .false.
-               stay(p_blknum) = .true.
-
-            end if
-            if (lrefine(p_blknum) .eq. gr_maxRefine) then
-               derefine(p_blknum) = .false.
-               stay(p_blknum) = .true.
-            end if
-          end if
-       end do
-#endif
        ! Any cell within accretion_radius of sink particle should be at the
        ! highest refinement level (its block, to be precise)
 #if defined(WIND_INJ)
@@ -273,7 +251,8 @@ print*, "z =", z
                          ! contain the particle compared to the ref_radius, since ref_radius is
                          ! at full refinement. - JW
                          ! Note that ref_radius is being overwriten somewhere so we use dedicated
-                         ! variable wind_radius for this check.
+                         ! variable wind_radius for this check. As before, this assumes the wind
+                         ! radius to be a constant. -EA
                          if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. wind_radius) then !else if 
 #ifdef debug
 print*, "rad =", rad, dr_globalMe
