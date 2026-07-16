@@ -44,7 +44,7 @@
 #SBATCH --partition=genoa
 
 ## Job run time in HH:MM:SS
-#SBATCH --time=00:10:00
+#SBATCH --time=00:30:00
 
 #===============================================================================
 # Other settings that might be useful 
