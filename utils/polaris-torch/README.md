@@ -1,7 +1,7 @@
 ## Utility to run Polaris on a Torch simulation snapshot
 First written by Stefan Reissl (flash-to-polaris.py) and Brooke Polak (Polaris-torch.py)
 
-Edited by Donglin Wu (other files)
+Edited by Donglin Wu (all files)
 
 To use:
 
