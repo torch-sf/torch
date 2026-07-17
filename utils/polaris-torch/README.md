@@ -1,7 +1,7 @@
 ## Utility to run Polaris on a Torch simulation snapshot
-First written by Stefan Reissl (flash-to-polaris.py) and Brooke Polak (Polaris-torch.py)
+First written by Stefan Reissl (flash-to-polaris.py) and Brooke Polak (Polaris-torch.py, generate\_polaris\_scripts.py)
 
-Edited by Donglin Wu (all files)
+Edited by Donglin Wu
 
 To use:
 
@@ -9,7 +9,7 @@ To use:
 2. Install python package healpy (and other more common dependencies) 
 3. Edit script generate\_polaris\_scripts.py. This python file includes a function to produce command files for POLARIS. See comments in the script for more details.
 4. Edit script run\_polaris.py. This python file uses generate\_polaris\_scripts.py to write command files for POLARIS and runs terminal command of POLARIS using subprocess. See comments in the script for more details.
-Important parts to be edited: the path to the POLARIS directory, and the path to this directory.
+Important lines to be edited: the path to the POLARIS directory (dir_polaris), and the path to this directory (dir_run).
 5. Run run\_polaris.py, with the following arguments:
 
 | Short option | Argument | Default | Description |
