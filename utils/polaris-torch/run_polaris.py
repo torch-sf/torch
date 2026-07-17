@@ -140,9 +140,9 @@ if run_mode == "detectors_spherical":
 
 
 # Define the directories for POLARIS, Torch output, and the current run
-dir_polaris = "/PATH/TO/POLARIS"  # Replace with the actual path to POLARIS
+dir_polaris = os.environ["POLARIS_DIR"]  # Or replace with the actual path to POLARIS
 dir_torch = args.path_snapshot
-dir_run = "PATH/TO/CURRENT/DIR"  # Replace with the actual path to the current run directory
+dir_run = os.environ["TORCH_DIR"]+'/utils/polaris-torch/'  # Or replace with the actual path to the current run directory
 
 
 
