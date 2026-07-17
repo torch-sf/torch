@@ -142,7 +142,7 @@ if run_mode == "detectors_spherical":
 # Define the directories for POLARIS, Torch output, and the current run
 dir_polaris = "/home/dwu/mendel-nas1/POLARIS/POLARIS/"
 dir_torch = args.path_snapshot
-dir_run = "./"
+dir_run = "/home/dwu/mendel-nas1/torch/utils/polaris-torch/"
 
 
 
