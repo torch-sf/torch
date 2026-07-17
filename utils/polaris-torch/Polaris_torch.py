@@ -320,7 +320,7 @@ class Polaris:
 				print("SED files already exist and star properties haven't changed. Using existing SED files.")
 				for index_star in range(len(stars_x)):
 					if vec_M0[index_star] > mass_Msun[-1]:
-						warnings.warn(f"Star {index_star} has mass {vec_M0[index_star]} Msun, which is above the maximum mass in the SED grid ({mass_Msun[-1]} Msun). Scaling the maximum mass SED by a factor of {f_scale_SED:.4f} for this star.")
+						warnings.warn(f"Star {index_star} has mass {vec_M0[index_star]} Msun, which is above the maximum mass in the SED grid ({mass_Msun[-1]} Msun). Scaling the maximum mass SED for this star.")
 
 					self.sources_string += "  <source_star nr_photons = \""+str(list_num_photons[index_star])+"\">	"+str(stars_x[index_star])+"	"+str(stars_y[index_star])+"	"+str(stars_z[index_star])+"	\""+dir_save_sed+f'/SED_saved_Mmin{minimum_mass}/SED_star{index_star}.dat'+"\"\n"
 
