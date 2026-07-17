@@ -82,12 +82,12 @@ def run_polaris(run_mode, r_dust_to_gas, stellar_metallicity,
 parser = argparse.ArgumentParser()
 parser.add_argument("-r", "--run_mode", default='T_dust', required=True, type=str, 
                     help="The mode in which to run POLARIS (e.g., 'T_dust', 'detectors_images', 'detectors_spherical').")
-parser.add_argument("-p", "--path_snapshot", default='/shared_data/vanir/MCF_torch_data/M4/', required=False, type=str, 
+parser.add_argument("-p", "--path_snapshot", default='./', required=False, type=str, 
                     help="Path to the Torch snapshot file.")
 parser.add_argument("-f", "--file_snapshot", default='', required=False, type=str, 
                     help="Path to the file containing the list of snapshots to run POLARIS on. Each line should contain a comma-separated list of snapshot numbers.")
 parser.add_argument("-l", "--line_snapshot", default=0, required=False, type=int, 
-                    help="The line in the file containing the list of snapshots to run POLARIS on.")
+                    help="The line number in the snapshot list file for POLARIS to process.")
 parser.add_argument("-s", "--snapshot_number", default=None, required=False, type=int, 
                     help="The snapshot number to run POLARIS on.")
 parser.add_argument("-o", "--output_directory", default='', required=True, type=str, 
@@ -142,7 +142,7 @@ if run_mode == "detectors_spherical":
 # Define the directories for POLARIS, Torch output, and the current run
 dir_polaris = "/home/dwu/mendel-nas1/POLARIS/POLARIS/"
 dir_torch = args.path_snapshot
-dir_run = "/home/dwu/mendel-nas1/torch_to_polaris/POLARIS_run_timeseries/"
+dir_run = "./"
 
 
 
