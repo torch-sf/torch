@@ -4,23 +4,17 @@
 # DISCLAIMER: this script is a template converter script made for
 # a specific set of Torch simulations. User discretion advised.
 
-# import h5py
+
+# IMPORTANT: We assume that the Torch-FLASH grid is an octree grid.
+
 import numpy as np
-# from scipy.spatial import Delaunay
-# from scipy.spatial import Voronoi
-# from scipy.spatial import ConvexHull
-# from collections import defaultdict
 import struct
 import sys
-# import bisect
-# import random
 
 from amuse.lab import SeBa, Particles
 from amuse.units import units
 
 
-# from functools import reduce
-# from matplotlib import pyplot as plt
 import yt
 from dust_helper import tau_sp, sublimation_radius
 
