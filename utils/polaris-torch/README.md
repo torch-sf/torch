@@ -15,7 +15,7 @@ Important lines to be edited: the path to the POLARIS directory (dir_polaris), a
 | Short option | Argument | Default | Description |
 |---|---|---|---|
 | `-p` | `path_snapshot` | `'./'` | Path to the Torch snapshot file. |
-| `-f` | `file_snapshot` | `''` | Path to the file containing the list of snapshots to run POLARIS on. Each line should contain a comma-separated list of snapshot numbers. |
+| `-f` | `file_snapshot` | `''` | Path to the file containing the list of snapshots to run POLARIS on. Each line should contain a comma-separated list of snapshot numbers (with no comma at the end). |
 | `-l` | `line_snapshot` | `0` | The line number in the snapshot list file for POLARIS to process. |
 | `-s` | `snapshot_number` | `None` | The snapshot number to run POLARIS on. |
 | `-o` | `output_directory` | `''` | The directory where POLARIS output will be saved. |
@@ -23,4 +23,7 @@ Important lines to be edited: the path to the POLARIS directory (dir_polaris), a
 | `-ns` | `nside` | `7` | The `nside` for the spherical array of detectors to use in POLARIS. |
 | `-el` | `extra_label` | `'run1'` | The extra label to use in the POLARIS command file name. |
 | `-sl` | `sed_label` | `None` | The SED label to use in the POLARIS command file name. |
+
+/example\_run/ contains an example shell script that shows how the arguments work, as well as an example file\_snapshot. 
+
 6. Have fun with the data.
