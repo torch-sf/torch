@@ -163,8 +163,11 @@ class Polaris:
 		ds = yt.load(particle_file)
 		ad = ds.all_data()
 
-		if not ds.particles_exist:
-			raise ValueError("Snapshot does not contain stars.")
+		try:
+			if not ds.particles_exist:
+				raise ValueError("Snapshot does not contain stars.")
+		except:
+			raise ValueError("Snapshot does not contain particles.")
 
 		# Find stars (which has particle_csgm == 0.0) that are more massive than the minimum mass
 		star_idx = np.logical_and(ad['all', 'particle_csgm'] == 0.0, (ad['all', 'particle_old_pmass']*yt.units.g).to("Msun").v >= minimum_mass)
