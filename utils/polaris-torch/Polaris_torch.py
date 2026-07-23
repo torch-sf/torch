@@ -163,6 +163,9 @@ class Polaris:
 		ds = yt.load(particle_file)
 		ad = ds.all_data()
 
+		if not ds.particles_exist:
+			raise ValueError("Snapshot does not contain stars.")
+
 		# Find stars (which has particle_csgm == 0.0) that are more massive than the minimum mass
 		star_idx = np.logical_and(ad['all', 'particle_csgm'] == 0.0, (ad['all', 'particle_old_pmass']*yt.units.g).to("Msun").v >= minimum_mass)
 		stars = Particles(len(ad['all','particle_mass'][star_idx]))
@@ -174,6 +177,9 @@ class Polaris:
 		stars_y = ad['all', 'particle_posy'][star_idx].to('m').v
 		stars_z = ad['all', 'particle_posz'][star_idx].to('m').v
 		
+		if len(stars_x) == 0:
+			raise ValueError(f"Snapshot does not contain stars more massive than {minimum_mass} solar masses.")		
+
 		# Calculate the stellar age in Myr based on the current simulation time and the particle creation time
 		t_evol  = ds.current_time.in_units('Myr').v - (ad['all', 'particle_creation_time'][star_idx]*yt.units.s).to('Myr').v
 
