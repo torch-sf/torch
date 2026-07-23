@@ -161,13 +161,14 @@ class Polaris:
 	def set_stellar_sources_from_torch(self, particle_file, minimum_mass, num_photons=1e6, stellar_metallicity=0.014, 
 									   spectra='blackbody', dir_sed_grid='./', dir_save_sed=None):
 		ds = yt.load(particle_file)
-		ad = ds.all_data()
 
 		try:
 			if not ds.particles_exist:
 				raise ValueError("Snapshot does not contain stars.")
 		except:
 			raise ValueError("Snapshot does not contain particles.")
+
+		ad = ds.all_data()
 
 		# Find stars (which has particle_csgm == 0.0) that are more massive than the minimum mass
 		star_idx = np.logical_and(ad['all', 'particle_csgm'] == 0.0, (ad['all', 'particle_old_pmass']*yt.units.g).to("Msun").v >= minimum_mass)
