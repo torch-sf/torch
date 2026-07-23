@@ -286,7 +286,7 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                                           min_samp_mass=min_imf_mass.value_in(units.MSun),
                                           max_samp_mass=max_imf_mass.value_in(units.MSun),
                                           sum_small=sum_small,
-					  m_small=m_small.value_in(units.MSun)
+										  m_small=m_small.value_in(units.MSun)
                                           )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
