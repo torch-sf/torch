@@ -231,9 +231,22 @@ subroutine init_opacities
 !
       IMPLICIT NONE
 
+      character(len=512) :: filepath, datadir
+      integer :: status
 
+        ! Get environment variable
+      call get_environment_variable("TORCH_DIR", datadir, status=status)
+      if (status /= 0 .or. len_trim(datadir) == 0) then
+         write (*,*) 'init_opacities:  TORCH_DIR env variable not set'
+         call Driver_abortFlash("Error: unable to open file opacity.inp, TORCH_DIR not set")
+         stop
+      end if
+
+      filepath = trim(datadir)//"src/flash/source/physics/materialProperties/Opacity/"// &
+              "RadTrans/Semenov/opacity.inp"
+      
 ! Open input file:
-      OPEN (unit=07,file='opacity.inp',status='old',   &     
+      OPEN (unit=07,file=filepath,status='old',   &     
             access='sequential')
 ! Read input file:
       read(07,'(a3)') model
@@ -566,12 +579,28 @@ end subroutine getOpacity_star
       PARAMETER (kR_H='kR_h2001.dat',&!a file with Rosseland mean gas opacity,
                  kP_H='kP_h2001.dat') !a file with Planck mean gas opacity,
       DIMENSION seq(71*71)    
-!      
+!     
+
+
+      character(len=512) :: filepath, datadir
+      integer :: status
+
+        ! Get environment variable
+      call get_environment_variable("TORCH_DIR", datadir, status=status)
+      if (status /= 0 .or. len_trim(datadir) == 0) then
+         write (*,*) 'init_opacities:  TORCH_DIR env variable not set'
+         call Driver_abortFlash("Error: unable to open kR, kP files, TORCH_DIR not set")
+         stop
+      end if
+
+      filepath = trim(datadir)//"src/flash/source/physics/materialProperties/Opacity/"// &
+              "RadTrans/Semenov/"
+
 ! Open input file: 
       if (ross) then
-         open(unit=10,file=kR_H,status='old',access='sequential')
+         open(unit=10,file=filepath//kR_H,status='old',access='sequential')
       else
-         open(unit=10,file=kP_H,status='old',access='sequential')
+         open(unit=10,file=filepath//kP_H,status='old',access='sequential')
       end if
       rewind 10
 ! Initialization of mean gas opacities:
