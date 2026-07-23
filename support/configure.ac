@@ -13,7 +13,6 @@ AC_LANG_PUSH([C])
 AX_MPI()
 AC_OPENMP()
 AC_SUBST(OPENMP_CFLAGS)
-AX_LIB_HDF5()
 AC_LANG_POP([C])
 
 
@@ -26,12 +25,13 @@ AC_LANG_PUSH([Fortran])
 AX_MPI()
 AC_OPENMP()
 AC_SUBST(OPENMP_FCFLAGS)
-AX_LIB_HDF5()
 TORCH_PETSC(3, 19, 0, 3, 20, 0)
 AC_CHECK_LIB([HYPRE], [HYPRE_SStructGridDestroy], [LIB_HYPRE=-lHYPRE], [])
 AC_SUBST([LIB_HYPRE])
 AC_LANG_POP([Fortran])
 
+# This searches all languages
+AMUSE_LIB_HDF5()
 
 # Generate output
 AC_CONFIG_FILES([Makefile.h])
