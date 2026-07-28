@@ -19,8 +19,9 @@ echo "Number of MPI tasks: $SLURM_NTASKS"
 ## ACTIVATE CONDA OR PYTHON ENVIORNMENT
 echo "Conda environment loaded"
 
-export POLARIS_DIR="/PATH/TO/POLARIS/REPO/"
-export TORCH_DIR="/PATH/TO/TORCH/REPO/"
+## No trailing slash for the following two paths
+export POLARIS_DIR="/PATH/TO/POLARIS/REPO/NO/TRAILING/SLASH"
+export TORCH_DIR="/PATH/TO/TORCH/REPO/NO/TRAILING/SLASH"
 
 python3 "${TORCH_DIR}/utils/polaris-torch/run_polaris.py" -r "T_dust" -p "/PATH/TO/TORCH/DATA" -f "${TORCH_DIR}/utils/polaris-torch/example_run/example_list_snapshot.txt" -l $SLURM_ARRAY_TASK_ID -o "/PATH/TO/OUTPUT/FOLDER/" -ep 1e-2 -el "n2Z_n2D"
 
