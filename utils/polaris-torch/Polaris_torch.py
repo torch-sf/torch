@@ -13,7 +13,7 @@ from spherical_detectors import save_angle_detectors
 from amuse import io
 
 from scipy.interpolate import RegularGridInterpolator
-
+from scipy.integrate import trapezoid
 
 import warnings
 
@@ -297,7 +297,7 @@ class Polaris:
 					SED_interpolated = 10**log_SED_interpolated
 
 					# Scale the SED to the luminosity computed by SeBa
-					f_scale_SED = stars_L[index_star]/np.trapezoid(SED_interpolated, lams_A)
+					f_scale_SED = stars_L[index_star]/trapezoid(SED_interpolated, x=lams_A)
 
 					if vec_M0[index_star] > mass_Msun[-1]:
 						warnings.warn(f"Star {index_star} has mass {vec_M0[index_star]} Msun, which is above the maximum mass in the SED grid ({mass_Msun[-1]} Msun). Scaling the maximum mass SED by a factor of {f_scale_SED:.4f} for this star.")
