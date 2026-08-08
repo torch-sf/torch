@@ -188,14 +188,14 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                 # tprint('%%%%%%% old_mass[i]  ||  s.temperature  ||  s.radius  ||  s.mass  ||  s.luminosity  ||  dt  ||  massloss_method')
                 # tprint(old_mass[i], ' || ', s.temperature,' || ', s.radius,' || ', s.mass,' || ', s.luminosity,' || ', dt,' || ', massloss_method)
 
-                tprint('%%%%%%% vterm:', vterm)
+                # tprint('%%%%%%% vterm:', vterm)
                 _tmp = compute_dmdt_vterm(old_mass[i], s.temperature, s.radius, s.mass, s.luminosity, dt,
                                           massloss_method=massloss_method)
                 dm_dt[i] = _tmp[0]
                 vterm[i] = _tmp[1]
-                tprint('%%%%%%% tmp:', _tmp)
+                # tprint('%%%%%%% tmp:', _tmp)
 
-                tprint('%%%%%%% dmdt wind:', dm_dt[i])
+                # tprint('%%%%%%% dmdt wind:', dm_dt[i])
                 # tprint('%%%%%%% vterm calc:', vterm[i])
 
                 if state.yields is not None:
@@ -216,7 +216,7 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                         # if s.binylds and s.age > state.yields_bin.timescale(star_params) | units.s
                         
                         # Time offset for test, to not wait until the actual timescale of 4Myr
-                        time_offset = (4.9e6 | units.yr ).value_in(units.s)
+                        time_offset = (5e6 | units.yr ).value_in(units.s)
                         timescale = ( state.yields_bin.timescale(star_params)[0] | units.yr ).value_in(units.s)
                         if s.binylds and s.age > ( timescale - time_offset) | units.s:
                             tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
@@ -232,6 +232,9 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
 
                             # Get inj_mass -- how much mass is being injected by this process
                             inj_mass = state.yields_bin.massej(star_params)[0] | units.MSun if state.yields_bin.massej(star_params)[0] < 7 else 7 | units.MSun
+                            
+                            tprint("%%%%%%% t={} Myr, x={}, y={}, z={}, inj_mass={}, star_mass={}, tag={}".format((time-dt).value_in(units.yr)/1e6, s.x.value_in(units.pc), s.y.value_in(units.pc), s.z.value_in(units.pc), inj_mass.value_in(units.MSun), s.mass.value_in(units.Msun), s.tag))
+                            
                             # Capping at 7 because higher massej has issues
                             # TODO: if >7, inject in 2-3 consecutive steps, 7Msun every step, until it injects the total expected massej
 
