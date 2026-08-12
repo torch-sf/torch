@@ -23,6 +23,8 @@ echo "Conda environment loaded"
 export POLARIS_DIR="/PATH/TO/POLARIS/REPO/NO/TRAILING/SLASH"
 export TORCH_DIR="/PATH/TO/TORCH/REPO/NO/TRAILING/SLASH"
 
+python3 "${TORCH_DIR}/utils/polaris-torch/run_polaris.py" -r "T_dust" -p "/PATH/TO/TORCH/DATA" -s 189 -o "/PATH/TO/OUTPUT/FOLDER/" -ep 1e-2 -el "n2Z_n2D"
+
 python3 "${TORCH_DIR}/utils/polaris-torch/run_polaris.py" -r "T_dust" -p "/PATH/TO/TORCH/DATA" -f "${TORCH_DIR}/utils/polaris-torch/example_run/example_list_snapshot.txt" -l $SLURM_ARRAY_TASK_ID -o "/PATH/TO/OUTPUT/FOLDER/" -ep 1e-2 -el "n2Z_n2D"
 
 python3 "${TORCH_DIR}/utils/polaris-torch/run_polaris.py" -r "detectors_spherical"  -ns 7 -sl "sph7_Mmin20" -p "/PATH/TO/TORCH/DATA" -f "${TORCH_DIR}/utils/polaris-torch/example_run/example_list_snapshot.txt" -l $SLURM_ARRAY_TASK_ID -o "/PATH/TO/OUTPUT/FOLDER/" -ep 1e-2 -el "n2Z_n2D"

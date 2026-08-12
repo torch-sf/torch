@@ -149,9 +149,13 @@ dir_run = os.environ["TORCH_DIR"]+'/utils/polaris-torch/'  # Or replace with the
 for snapshot_number in list_snapshot:
     print(f'Running snapshot {snapshot_number}')
     try:
-        run_polaris(run_mode, r_dust_to_gas, 0.01*0.014, 
+        run_polaris(run_mode, 
+                r_dust_to_gas,
+                0.01*0.014, 
                 snapshot_number, 
-                dir_polaris, dir_torch, dir_output,
+                dir_polaris, 
+                dir_torch, 
+                dir_output,
                 extra_label,
                 minimum_mass_stars=20.0,
                 mu=1.3,
@@ -161,7 +165,9 @@ for snapshot_number in list_snapshot:
                 dir_detector_angles_saved=None,
                 N_pixel_image=256,
                 d_to_source=3.086e18,
-                wl_min=0.092*1e-6, wl_max=0.7*1e-6, N_lambda=40)
+                wl_min=0.092*1e-6, 
+                wl_max=0.7*1e-6, 
+                N_lambda=40)
         print(f'Snapshot {snapshot_number} finished.')
     except Exception as e:
         print(e)
