@@ -19,7 +19,7 @@ This tool does not require a full installation of Torch. However, the following 
 ### Step 3: Customize the Python scripts for your application
 Edit script generate\_polaris\_scripts.py. This python file includes a function to produce command files for POLARIS. 
 
-* **IMPORTANT**: The default setting is to use all processors available, which works well for a slurm job. However, if otherwise, please change line 128 of generate\_polaris\_scripts.py to number of processors to be used, e.g., **num_threads="16"**.
+* **IMPORTANT**: The default setting is to use all processors available, which works well for a slurm job that specifies the number of processors to be used. However, if the tool is used without a slurm job, please change line 128 of generate\_polaris\_scripts.py and specify the number of processors to be used, e.g., **num_threads="16"**.
 * This tool assumes the default Torch output naming convention: "turbsph_hdf5_plt_cnt_0001" for grid files and "turbsph_hdf5_part_0001" for particle files. If a different naming convention is used, lines 93 and 94 of generate\_polaris\_scripts.py have to be modified. 
 * The default dust model used is the [THEMIS model](https://www.ias.u-psud.fr/themis/THEMIS_model.html), which is built-in in the standard POLARIS installation. If different dust components should be used, relevant sections (starting line 133) in generate\_polaris\_scripts.py have to be modified. 
 * Besides the changes described above, other modifications are more specialized and are documented in the comments within generate\_polaris\_scripts.py.
