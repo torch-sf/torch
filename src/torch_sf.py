@@ -427,8 +427,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             ])
         
             star = star[inside]
+            # Update nnew to match the stars formed
+            nnew = len(star)
  
-            if len(star) >= 1:
+            if nnew >= 1:
                 
                 # Create new stars in FLASH
                 hydro.set_particle_pointers('mass')
