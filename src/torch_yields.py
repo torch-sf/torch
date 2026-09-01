@@ -527,6 +527,15 @@ class YieldSource_unsgrid:
                  else griddata(self.params, self.massej, int_params[ind_param], method=interpolate)[0] \
                  for ind_param in range(int_params.shape[0]) ]
 
+    def assess_membership(self, int_params, limits):
+        '''
+        Checks if the given parameters lie inside the parameter space from the tables
+        '''
+        return [ np.all((int_params[ind_param] <= limits[:, 0]) & (int_params[ind_param] >= limits[:, 1])) for ind_param in range(int_params.shape[0]) ]
+
+        
+        
+
 
 # Binary yields class, reads those yield tables
 class BinaryYields:
@@ -564,6 +573,11 @@ class BinaryYields:
         timescale = np.array(summ[:,4])
         # Points of parameter space, shape (185,3)
         self.points = np.dstack( (m1s, qs, ps) )[0]
+
+        # Save broad limits of param space for membership check
+        self.limits = np.array( [[np.max(m1s), np.min(m1s)],
+                                 [np.max(qs), np.min(qs)],
+                                 [np.max(ps), np.min(ps)]] )
 
         # Get list of elements from summary file header
         self.elements = self.get_element_list()
@@ -649,6 +663,12 @@ class BinaryYields:
         return self.wind.get_massej(int_params, interpolate=interpolate, extrapolate=extrapolate)
 
     
+    def isinspace(self, int_params)
+        """ Returns whether or not this system lies inside the parameter space for ncmt yields
+        """
+        return self.wind.assess_membership(int_params, self.limits)
+
+    
     def get_element_list(self):
         """ Helper function for reading element list during initialization.
         """
@@ -676,7 +696,7 @@ class BinaryYields:
         """
         # Load summary file
         summ = np.loadtxt(self.summ_path, delimiter=',', skiprows=1, usecols=range(1,43))
-        # Grab yields for each element for all models
+        # Grab timescale for each model
         timescales = np.array( [model[4] for model in summ] )
 
         return timescales

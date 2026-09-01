@@ -376,11 +376,12 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             if state.yields is not None:
                 # For yields tables (assumes solar metallicity)
                 star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
-                # Later add an if here for binary yields
-                # In reality would need to sample some distributions for these values, but for now just this to test - EL
-                star.period = 1.0 | units.s # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                star.massratio = 1.0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                star.binylds = 0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                if state.yields_bin is not None:
+                    # Here we're assuming that none of the newly formed stars are binaries, and assigning these values to guarantee their props lie outside of ncmt parameter space
+                    # In principle, this should be integrated with actual binary formation, where these props would actually make sense
+                    star.period = 0.0 | units.s # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    star.massratio = 0.0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    star.binylds = 0 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             # Create new stars in FLASH
             hydro.set_particle_pointers('mass')
@@ -390,10 +391,10 @@ def make_stars_from_sinks(state, hydro, sink_rad=None):
             hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
             if state.yields is not None:
                 hydro.set_particle_rotvel(star_tag, star.rotvel)
-                # Later add an if here for binary yields
-                hydro.set_particle_period(star_tag, star.period) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                hydro.set_particle_massratio(star_tag, star.massratio) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                hydro.set_particle_binylds(star_tag, star.binylds) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                if state.yields_bin is not None:
+                    hydro.set_particle_period(star_tag, star.period) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    hydro.set_particle_massratio(star_tag, star.massratio) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    hydro.set_particle_binylds(star_tag, star.binylds) # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 
 
             if num_tracers > 0:

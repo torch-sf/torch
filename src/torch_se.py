@@ -218,119 +218,128 @@ def stellar_evolution(time, dt, se_restart_time, state, hydro, se,
                         # Time offset for test, to not wait until the actual timescale of 4Myr
                         time_offset = (5e6 | units.yr ).value_in(units.s)
                         timescale = ( state.yields_bin.timescale(star_params)[0] | units.yr ).value_in(units.s)
-                        if s.binylds and s.age > ( timescale - time_offset) | units.s:
-                            tprint('%%%%%%% This star is yet to inject binary yieldsss, so now will do it :), binylds:', s.binylds)
 
-                            # Using refVel as vterm to avoid mass loading binary material:
-                            wind_target_temp = 5e6 # K, %%%%% should read this param from flash.par %%%%%
-                            refVel = np.sqrt(wind_target_temp/1.38e7)*1e8 | units.cm/units.s
-                            vterm[i] = refVel
-                            tprint('%%%%%%% vterm updated for binaries, now:', vterm)
-                            
-                            # timescale check ...
-                            # state.yields_bin.timescale(star_params)
+                        # Maximum mass to be injected through NCMT in one step, to avoid crashes
+                        max_inj_mass = 7 | units.Msun
 
-                            # Get inj_mass -- how much mass is being injected by this process
-                            inj_mass = state.yields_bin.massej(star_params)[0] | units.MSun if state.yields_bin.massej(star_params)[0] < 7 else 7 | units.MSun
-                            
-                            tprint("%%%%%%% t={} Myr, x={}, y={}, z={}, inj_mass={}, star_mass={}, tag={}".format((time-dt).value_in(units.yr)/1e6, s.x.value_in(units.pc), s.y.value_in(units.pc), s.z.value_in(units.pc), inj_mass.value_in(units.MSun), s.mass.value_in(units.Msun), s.tag))
-                            
-                            # Capping at 7 because higher massej has issues
-                            # TODO: if >7, inject in 2-3 consecutive steps, 7Msun every step, until it injects the total expected massej
+                        # First check if this star is inside the NCMT table parameter space
+                        if state.yields_bin.isinspace(star_params)[0]:
+                            # Then, check if its age is larger than its NCMT ejection time
+                            if s.age > ( timescale - time_offset) | units.s:
+                                # Retrieve total amount of mass this system should inject
+                                inj_mass = state.yields_bin.massej(star_params)[0] | units.MSun
 
-                            dm_dt[i] = inj_mass/dt
-
-                            # Inject energy if sn rout (?)
-                            # _tmp = hydro.energy_injection(1e11|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z) # SN %%%%%
+                                # Check if this star should inject any material (either because it hasn't yet, or because it has injected only part of its total amount)
+                                if (s.binylds==0) or (s.binylds>0 and inj_mass - max_inj_mass*s.binylds > 0):
+                                    
+                                    # Calculate the actual amount of material this system will inject this step
+                                    inj_mass = inj_mass - max_inj_mass*s.binylds
+                                    
+                                    tprint('%%%%%%% This star is yet to inject all or part of its binary yieldsss, so now will do it :), binylds:', s.binylds)
+                                    tprint("%%%%%%% t={} Myr, x={}, y={}, z={}, inj_mass={}, star_mass={}, tag={}".format((time-dt).value_in(units.yr)/1e6, s.x.value_in(units.pc), s.y.value_in(units.pc), s.z.value_in(units.pc), inj_mass.value_in(units.MSun), s.mass.value_in(units.Msun), s.tag))
+                                    
         
+                                    # Using refVel as vterm to avoid mass loading binary material:
+                                    wind_target_temp = 5e6 # K, %%%%% should read this param from flash.par %%%%%
+                                    refVel = np.sqrt(wind_target_temp/1.38e7)*1e8 | units.cm/units.s
+                                    vterm[i] = refVel
+                                    tprint('%%%%%%% vterm updated for binaries, now:', vterm[i])
+                                    tprint('%%%%%%% general vterm:', vterm)
+                                    
+        
+                                    dm_dt[i] = inj_mass/dt
+        
+                                    # Inject energy if sn rout (?)
+                                    # _tmp = hydro.energy_injection(1e11|units.erg, -1.0, inj_mass.in_(units.g), s.x, s.y, s.z) # SN %%%%%
+                
+                                    
+                                    # yield injection stuff ...
+                                    bin_yields = np.ones(num_tracers)
+                                    for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
+                                        if tracer == 'wind' or tracer == 'wind_post' or tracer == 'wind_pre':
+                                            bin_yields[itrac] = 0.0
+                                        elif tracer == 'ccsn':
+                                            bin_yields[itrac] = 0.0
+                                        elif tracer == 'bin':
+                                            bin_yields[itrac] = 1.0
+                                        elif tracer == 'ignore':
+                                            bin_yields[itrac] = -1.0
+                                        elif tracer in state.yields_bin.elements:
+                                            bin_yields[itrac] = state.yields_bin.wind_yields( # Maybe change the name from wind to something else
+                                                    elements=tracer,
+                                                    int_params=star_params)[0] \
+                                                / state.yields_bin.wind_mloss(
+                                                    int_params=star_params )[0]
+                                        else:
+                                            raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
+                                    tprint("%%%%%%% bin_yields:", bin_yields)
+                                    tprint("%%%%%%% star_params:", star_params)
+                                    tprint("%%%%%%% mass [Msun], q, period [day]")
+        
+                                    
+                                    tprint("%%%%% bin dm_dt =", dm_dt[i])
+                                    tprint("%%%%% bin dm =", dm_dt[i]*dt)
+                                    tprint("%%%%% bin inj_mass =", inj_mass)
+        
+                                    # Testing a high vterm:
+                                    # vterm[i] = 1.2e9 | units.cm / units.s # 100 000 km/s
+                                    # tprint('%%%%%%% vterm updated:', vterm[i])
+        
+                                    
+                                    # for itrac, tracer in enumerate(state.yields_bin.tracer_fields): # SN %%%%%
+                                    #     hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
+        
+        
+                                    # print('se.particles BEFORE removing:', se.particles)
+                                    # Remove particle in seba before updating props:
+                                    rem_star = Particles()
+                                    rem_star.add_particle(s)
+                                    se.particles.remove_particles(rem_star)
+                                    # print('se.particles AFTER removing:', se.particles)
+                                    
+        
+                                    
+                                    # Update props
+                                    # tprint("%%%%%%% Mass before:", s.mass)
+                                    if dm_dt[i]*dt > 0.0|units.MSun: # !SN %%%%%
+                                        s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+                                    # tprint("%%%%%%% Mass after:", s.mass)
+                                    # tprint("%%%%%%% Rel mass b4:", s.relative_mass)
+                                    s.relative_mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
+                                    # tprint("%%%%%%% Rel mass after:", s.relative_mass)
+                                    # tprint("%%%%%%% Rel age b4:", s.relative_age)
+                                    s.relative_age = 0 | units.Myr
+                                    # tprint("%%%%%%% Rel age after:", s.relative_age)
+                                    # tprint("%%%%%%% Stell type b4:", s.stellar_type)
+                                    s.stellar_type = 7 | units.stellar_type
+                                    # tprint("%%%%%%% Stell type after:", s.stellar_type)
+        
+                                    
+                                    # Update flag, now that have injected, won't anymore
+                                    s.binylds = 0
+                                    tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
+        
+        
+                                    
+                                    # print('se.particles BEFORE adding:', se.particles)
+                                    # Now add particle to seba again
+                                    add_star = Particles()
+                                    add_star.add_particle(s)
+                                    se.particles.add_particles(add_star)
+                                    # print('se.particles AFTER adding:', se.particles)
+        
+        
+        
+                                    
+                                    # Update yields
+                                    dy_dt[i] = dm_dt[i]*bin_yields # !SN %%%%%
+                                    
+                                    tprint("%%%%% bin dy_dt =", dy_dt[i])
+                                    
+                                    # After injecting bin ylds for this star, keep looping for next star (don't do code below)
+                                    continue
+                            # %% Should get here if this star is not injecting bin ylds, or if bin ylds are not being used to begin with. Otherwise, continue before
                             
-                            # yield injection stuff ...
-                            bin_yields = np.ones(num_tracers)
-                            for itrac, tracer in enumerate(state.yields_bin.tracer_fields):
-                                if tracer == 'wind' or tracer == 'wind_post' or tracer == 'wind_pre':
-                                    bin_yields[itrac] = 0.0
-                                elif tracer == 'ccsn':
-                                    bin_yields[itrac] = 0.0
-                                elif tracer == 'bin':
-                                    bin_yields[itrac] = 1.0
-                                elif tracer == 'ignore':
-                                    bin_yields[itrac] = -1.0
-                                elif tracer in state.yields_bin.elements:
-                                    bin_yields[itrac] = state.yields_bin.wind_yields( # Maybe change the name from wind to something else
-                                            elements=tracer,
-                                            int_params=star_params)[0] \
-                                        / state.yields_bin.wind_mloss(
-                                            int_params=star_params )[0]
-                                else:
-                                    raise ValueError(f"The field {tracer} has not been implemented. In case this is an element, it might be missing from the provided yield tables.")
-                            tprint("%%%%%%% bin_yields:", bin_yields)
-                            tprint("%%%%%%% star_params:", star_params)
-                            tprint("%%%%%%% mass [Msun], q, period [day]")
-
-                            
-                            tprint("%%%%% bin dm_dt =", dm_dt[i])
-                            tprint("%%%%% bin dm =", dm_dt[i]*dt)
-                            tprint("%%%%% bin inj_mass =", inj_mass)
-
-                            # Testing a high vterm:
-                            # vterm[i] = 1.2e9 | units.cm / units.s # 100 000 km/s
-                            # tprint('%%%%%%% vterm updated:', vterm[i])
-
-                            
-                            # for itrac, tracer in enumerate(state.yields_bin.tracer_fields): # SN %%%%%
-                            #     hydro.yield_injection(itrac+1, bin_yields[itrac]*inj_mass.in_(units.g), inj_mass.in_(units.g), s.x, s.y, s.z)
-
-
-                            # print('se.particles BEFORE removing:', se.particles)
-                            # Remove particle in seba before updating props:
-                            rem_star = Particles()
-                            rem_star.add_particle(s)
-                            se.particles.remove_particles(rem_star)
-                            # print('se.particles AFTER removing:', se.particles)
-                            
-
-                            
-                            # Update props
-                            # tprint("%%%%%%% Mass before:", s.mass)
-                            if dm_dt[i]*dt > 0.0|units.MSun: # !SN %%%%%
-                                s.mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
-                            # tprint("%%%%%%% Mass after:", s.mass)
-                            # tprint("%%%%%%% Rel mass b4:", s.relative_mass)
-                            s.relative_mass = min(s.mass, old_mass[i] - dm_dt[i]*dt)
-                            # tprint("%%%%%%% Rel mass after:", s.relative_mass)
-                            # tprint("%%%%%%% Rel age b4:", s.relative_age)
-                            s.relative_age = 0 | units.Myr
-                            # tprint("%%%%%%% Rel age after:", s.relative_age)
-                            # tprint("%%%%%%% Stell type b4:", s.stellar_type)
-                            s.stellar_type = 7 | units.stellar_type
-                            # tprint("%%%%%%% Stell type after:", s.stellar_type)
-
-                            
-                            # Update flag, now that have injected, won't anymore
-                            s.binylds = 0
-                            tprint("%%%%%%% Injected, so won't anymore, binylds:", s.binylds)
-
-
-                            
-                            # print('se.particles BEFORE adding:', se.particles)
-                            # Now add particle to seba again
-                            add_star = Particles()
-                            add_star.add_particle(s)
-                            se.particles.add_particles(add_star)
-                            # print('se.particles AFTER adding:', se.particles)
-
-
-
-                            
-                            # Update yields
-                            dy_dt[i] = dm_dt[i]*bin_yields # !SN %%%%%
-                            
-                            tprint("%%%%% bin dy_dt =", dy_dt[i])
-                            
-                            # After injecting bin ylds for this star, keep looping for next star (don't do code below)
-                            continue
-                    # %% Should get here if this star is not injecting bin ylds, or if bin ylds are not being used to begin with. Otherwise, continue before
-                    
                     tprint("%%%%%%% Doing normal wind!!!!")
                     wind_yields = np.ones(num_tracers)
                     for itrac, tracer in enumerate(state.yields.tracer_fields):
