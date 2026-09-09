@@ -36,3 +36,6 @@ Raise the `pt_maxPerProc` parameter in your `flash.par` by a factor of 10-100, a
 Torch requires a dependency on `rndMT`. 
 You will need to add `rndMT.o` somewhere in your `FLASH` Makefile. 
 
+## Can I expect feedback stars to always be in maximally refined regions?
+
+No, you cannot. While the wind injection routine will refine the injection region to the maximum refinement level, other sources of feedback (e.g., radiation) are not guaranteed to do so. This is by design.
