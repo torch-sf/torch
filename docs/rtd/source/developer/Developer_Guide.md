@@ -21,7 +21,7 @@ In massive cluster formation, there are so many massive stars that the feedback 
 ### Resolution
 
 It can be tempting to start a high resolution run, but when massive stars flood the grid, your simulation will start to grind to a halt. 
->We recommend a smallest cell width no less than $\Delta x\sim0.3~\rm pc$ to ensure the run progresses steadily when $>10^6\rm~K$ gas forms from stellar winds. 
+>We recommend a smallest cell width $\Delta x\sim0.3~\rm pc$ to ensure the run progresses steadily when $>10^6\rm~K$ gas forms from stellar winds. 
 
 ### Mass Loading
 
@@ -30,7 +30,7 @@ There will be a lot of feedback stars, and therefore a lot of stellar winds. The
 
 ### Stellar Evolution
 
-`SeBa` in `Torch` can take up to 30 minutes to complete a single evolution step when ran with >200k stars. This is an ongoing issue that is being worked on. For now, the option to use interpolated values from a pre-tabulated `SeBa` steps is available. This is particularly useful for massive cluster formation, when simulations typically only run for 1 Myr or less. Stellar properties hardly change on this timescale.
+`SeBa` in `Torch` can take up to 30 minutes to complete a single evolution step when ran with $\gtrsim$ 100k stars. This is an ongoing issue that is being worked on. For now, the option to use interpolated values from a pre-tabulated `SeBa` steps is available. This is particularly useful for massive cluster formation, when simulations typically only run for 1 Myr or less. Stellar properties hardly change on this timescale.
 > [OPTIONAL] If SeBa is your bottleneck, consider using static stellar evolution, available on the `feature/static-se` branch. 
 
 ### Initial Conditions
