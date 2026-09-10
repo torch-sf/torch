@@ -7,9 +7,9 @@ winds by updating the mass, velocity and internal energy in an injection region
 around each star driving a wind. The update is performed based on the mechanical
 luminosity of the star
 
-$
+$$
 L_w = \frac{1}{2}\dot{M}\,v_w^2,
-$
+$$
 
 where the mass loss rate $\dot{M}$ and wind velocity $v_w$ are computed and set
 in FLASH using the AMUSE interface. The choice of wind physical parameters 
@@ -25,13 +25,14 @@ massloss_method = 'seba'
 For every method, the mass loss rates are calculated either from a mass loss recipe 
 implemented directly in `torch_se.py` (for the  `'leit'` and `'puls'` options) or
 by the `SeBa` stellar evolution code (from a mass loss prescription in the code). 
-The velocities are set directly in `torch_se.py`. 
+The velocities are set directly in `torch_se.py` for every method. 
 
 The `'leit'` option calculates mass loss rates and velocities based on 
 [Leitherer et. al. 1992][2]. The `'puls'` option calculates them from 
-[Kudritzki & Puls 2000][3] and [Vink et al. 2000][4]. For the `'seba'` option,  
-[Leitherer et. al. 1992][2] is used for the velocities, and the mass loss rates 
-are based on [Vink et al. 2000][4] with a pre-factor of 1/3 to match modern mass loss
+[Kudritzki & Puls 2000][3] and [Vink et al. 2000][4]. For the `'seba'` option, 
+the velocities are set in `torch_se.py` using [Leitherer et. al. 1992][2], and 
+the mass loss rates are set by the `SeBa` stellar evolution code, which is based 
+on [Vink et al. 2000][4] with a pre-factor of 1/3 to match modern mass loss
 rates estimates. An option to use the mass loss rates from `SeBa` with the velocities 
 from Kudritzki & Puls is currently available in the `develop` branch as `'seba_puls'`.
 
@@ -57,19 +58,19 @@ forward shock ($R_2$) of the bubble.
 The injection region is defined by an injection radius $r_{\rm inj}$ set in
 `flash.par` using
 ```
-ref_radius = -1.0.
+ref_radius = -1.0
 ```
 If a negative value is supplied, Torch uses the default
 
-$
+$$
 r_{\rm inj} = 3.5\sqrt{3}\,\Delta,
-$
+$$
 
-where \Delta is the local cell width. The factor of $\sqrt{3}$ ensures
+where $\Delta$ is the local cell width. The factor of $\sqrt{3}$ ensures
 that the kernel extends to the corners of a cube spanning $7\times7\times7$
 cells, corresponding to an effective kernel radius of 3.5 cells along each
 Cartesian direction. Note that the injection radius must be at least
-$\sqrt{3}\Delta$, i.e., spanning the corner of an oct.
+$\sqrt{3}\Delta$, i.e. spanning the corner of an oct.
 
 Rather than treating cells as either fully inside or outside the injection
 region, Torch computes the fractional overlap between each cell and the
@@ -79,11 +80,11 @@ center-weighting. The injection region is illustrated in {numref}`fig-wind-overl
 
 In addition to weighting the injection by the overlap kernel, the injection is 
 modified as a function of radial distance using the solid angle of a square with 
-side legth equal to a cell size following [Mathar (2022)][7]
+side length equal to a cell size following [Mathar (2022)][7]
 
-$
+$$
 \Omega   = 4\cos^{-1}\sqrt{\frac{1+\Delta^2/(2\,r^2)}{1+\Delta^2/(2\,r^2)+(\Delta^2/4\,r^2)^2}}
-$
+$$
 
 
 In this way, the injection is weighted by a radial factor that depends on how much of
@@ -132,7 +133,7 @@ the missing kinetic energy is added back as thermal energy so that the total
 injected mechanical energy is conserved. This provides a momentum-conserving
 update that also conserves the injected mechanical luminosity. Note that if the 
 required thermal correction would be negative, no thermal energy is added to 
-that cell. Furhtermore, without adding this missing energy, the internal energy 
+that cell. Furthermore, without adding this missing energy, the internal energy 
 of the cell is gradually dissipated. In rare cases, this cause cells to reach 
 zero internal energy, thereby triggering a crash.
 
@@ -152,8 +153,9 @@ comparison with earlier implementations and idealized tests, while the
 momentum-conserving method is recommended for most applications.
 
 ### Mass loading
-Torch simulations can be dramatically speed-up by applying mass loading to the 
-injected wind material by setting
+Torch simulations can be dramatically sped-up by applying mass loading to the 
+injected wind material. Therefore cluster-scale production runs often employ 
+mass loading. Mass loading can be turned on by setting
 
 ```text
 mass_load = .true.
@@ -170,8 +172,8 @@ The target temperature is converted to a reference wind velocity assuming a
 fully ionized gas,
 
 $$
-v_{\rm ref} = 10^8 \sqrt{\frac{T_{\rm target}}{1.38\times10^7\,{\rm K}}}
-\ {\rm cm\,s^{-1}},
+v_{\rm ref} = 10^8 \sqrt{\frac{T_{\rm target}}{1.38\times10^7{\rm \, K}}}
+\ {\rm cm \, s^{-1}},
 $$
 
 following Equation 36.28 of [Draine (2011)][7]. The injected wind velocity is then
@@ -231,14 +233,14 @@ If used, the injection radius is updated at each timestep to match the radius
 of the wind termination shock, estimated using the self-similar solution from
 [Weaver et al. (1977)][7]
 
-$
+$$
 R_1 = 0.9\,\alpha^{3/2}\,v_w^{1/10}\,t_w^{2/5}\,\left(\frac{\dot{M}}{\rho_0}\right)^{3/10},
-$
+$$
 
 where $\alpha=0.88$, $\rho_0$ is the mean gas density at the location of the star 
 when the wind turns on, and $t_w$ is the time since the wind turned on. When
-using variable radius, another paramter can be used to limit the minimum radius
-of the injeciton region
+using variable radius, another parameter can be used to limit the minimum radius
+of the injection region
 ```
 min_radius = 0.0
 ```
@@ -284,6 +286,10 @@ zero in that cell, so the local energy compensation is no longer exact.
 ````
 
 ### Resolution test
+
+Figure {numref}`fig-wind-convergence` demonstrates the wind injection mechanism at 
+four different resolutions, corresponding to minimum cell sizes ranging from 0.12 pc
+to 0.015 pc.
 
 ```{figure} ./images/wind_convergence.png
 :name: fig-wind-convergence
