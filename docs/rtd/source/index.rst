@@ -39,6 +39,7 @@ happens on the `develop`_ branch.
    
    wiki/Torch.md
    wiki/Stellar_Feedback.md
+   wiki/VorAMR.md
 .. wiki/Magnetohydrodynamics.md
    wiki/Cooling_Heating.md
    wiki/Star_Formation.md
