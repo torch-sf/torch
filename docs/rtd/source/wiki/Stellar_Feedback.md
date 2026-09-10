@@ -12,29 +12,36 @@ L_w = \frac{1}{2}\dot{M}\,v_w^2,
 $
 
 where the mass loss rate $\dot{M}$ and wind velocity $v_w$ are computed and set
-in FLASH using the AMUSE interface. These velocities and mass loss rates can be
-computed directly from [SeBa][2], from [Leitherer et. al. 1992][3], or from 
-[Kudritzki & Puls 2000][4] and [Vink et al. 2000][5]; the choice is controlled 
-by a parameter in torch_user.py using one of the following arguments:
+in FLASH using the AMUSE interface. The choice of wind physical parameters 
+(i.e. mass loss rate and velocity) is controlled 
+by a parameter in `torch_user.py` using one of the following arguments:
 ```
 massloss_method = 'seba' or 'leit' or 'puls'
 ```
+The methods are compared below. We recommend setting 
+```
+massloss_method = 'seba'
+```
+For every method, the mass loss rates are calculated either from a mass loss recipe 
+implemented directly in `torch_se.py` (for the  `'leit'` and `'puls'` options) or
+by the `SeBa` stellar evolution code (from a mass loss prescription in the code). 
+The velocities are set directly in `torch_se.py`. 
+
+The `'leit'` option calculates mass loss rates and velocities based on 
+[Leitherer et. al. 1992][2]. The `'puls'` option calculates them from 
+[Kudritzki & Puls 2000][3] and [Vink et al. 2000][4]. For the `'seba'` option,  
+[Leitherer et. al. 1992][2] is used for the velocities, and the mass loss rates 
+are based on [Vink et al. 2000][4] with a pre-factor of 1/3 to match modern mass loss
+rates estimates. An option to use the mass loss rates from `SeBa` with the velocities 
+from Kudritzki & Puls is currently available in the `develop` branch as `'seba_puls'`.
 
 [1]: https://ui.adsabs.harvard.edu/abs/2020ApJ...904..192W/abstract
-[2]: https://ui.adsabs.harvard.edu/abs/1996A%26A...309..179P/abstract
-[3]: https://ui.adsabs.harvard.edu/abs/1992ApJ...401..596L/abstract
-[4]: https://ui.adsabs.harvard.edu/abs/2000ARA%26A..38..613K/abstract
-[5]: https://ui.adsabs.harvard.edu/abs/2000A%26A...362..295V/abstract
+[2]: https://ui.adsabs.harvard.edu/abs/1992ApJ...401..596L/abstract
+[3]: https://ui.adsabs.harvard.edu/abs/2000ARA%26A..38..613K/abstract
+[4]: https://ui.adsabs.harvard.edu/abs/2000A%26A...362..295V/abstract
 
-Note that the `SeBa` code currently uses the mass loss rates from Vink et al. (2000) with a
-pre-factor of 1/3 for main sequence stars to match modern wind estimates. The code
-was however written before this update was made; the `seba` mass loss method
-therefore uses the older velocities from Leitherer et al. (1992). An option to use
-the mass loss rates from `SeBa` with the velocities from Kudritzki & Puls is currently
-available in the `develop` branch.
-
-Different options for the wind injection is shown in Figure {numref}`fig-wind-bubbles`
-and described in furhter detail in in this section.
+Different options for the wind injection are shown in Figure {numref}`fig-wind-bubbles`
+and described in further detail in this section.
 
 ```{figure} ./images/wind_bubbles.png
 :name: fig-wind-bubbles
