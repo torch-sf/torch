@@ -4,7 +4,7 @@
 
 ### What resolution should I run at? 
 
-Torch is considered converged at ~0.3 pc resolution. This is the maximum recommended cell size for production simulations. Runs at lower resolution than this produce **unphysical results**.
+Torch is considered well-behaved at ~0.3 pc resolution. This is the maximum recommended cell size for production simulations. Runs at lower resolution than this produce **unphysical results**. Note that convergence testing is underway, and more information will be provided here once those tests are complete.
  
 ### How can I run a vanilla FLASH problem with Torch installed?
 
