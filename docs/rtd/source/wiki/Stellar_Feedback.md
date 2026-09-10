@@ -26,6 +26,13 @@ massloss_method = 'seba' or 'leit' or 'puls'
 [4]: https://ui.adsabs.harvard.edu/abs/2000ARA%26A..38..613K/abstract
 [5]: https://ui.adsabs.harvard.edu/abs/2000A%26A...362..295V/abstract
 
+Note that the `SeBa` code currently uses the mass loss rates from Vink et al. (2000) with a
+pre-factor of 1/3 for main sequence stars to match modern wind estimates. The code
+was however written before this update was made; the `seba` mass loss method
+therefore uses the older velocities from Leitherer et al. (1992). An option to use
+the mass loss rates from `SeBa` with the velocities from Kudritzki & Puls is currently
+available in the `develop` branch.
+
 Different options for the wind injection is shown in Figure {numref}`fig-wind-bubbles`
 and described in furhter detail in in this section.
 
@@ -55,7 +62,7 @@ where \Delta is the local cell width. The factor of $\sqrt{3}$ ensures
 that the kernel extends to the corners of a cube spanning $7\times7\times7$
 cells, corresponding to an effective kernel radius of 3.5 cells along each
 Cartesian direction. Note that the injection radius must be at least
-$\sqrt{3}\Delta$, i.e., spaning the corner of an oct.
+$\sqrt{3}\Delta$, i.e., spanning the corner of an oct.
 
 Rather than treating cells as either fully inside or outside the injection
 region, Torch computes the fractional overlap between each cell and the
@@ -120,7 +127,7 @@ update that also conserves the injected mechanical luminosity. Note that if the
 required thermal correction would be negative, no thermal energy is added to 
 that cell. Furhtermore, without adding this missing energy, the internal energy 
 of the cell is gradually dissipated. In rare cases, this cause cells to reach 
-zero internal energy, thereby triggering a cras.
+zero internal energy, thereby triggering a crash.
 
 #### Energy-conserving injection
 
@@ -184,7 +191,7 @@ M_{\rm inj} = M_{\rm wind}\left(1 + f_{\rm load}\right).
 $$
 
 Figure {numref}`fig-mass-load` illustrates the approximate speed up and mass 
-added as a funciton of the target temperature for a few wind velocities. Note 
+added as a function of the target temperature for a few wind velocities. Note 
 that most feedback stars have wind velocities between 1000-3000 km/s.
 
 ```{figure} ./images/mass_loading.png
@@ -213,7 +220,7 @@ using
 ```
 var_radius = .true.
 ```
-Is used, the injection radius is updated at each timestep to match the radius
+If used, the injection radius is updated at each timestep to match the radius
 of the wind termination shock, estimated using the self-similar solution from
 [Weaver et al. (1977)][7]
 
