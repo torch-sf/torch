@@ -359,7 +359,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         # (which is likely in the unstable regime) directly from the equilibrium
         # cooling curve calculated previously.
         numdens_arr   = rho_arr/musph/mH*mask + rho_arr/mu_amb/mH*(1.0-mask)
-        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr, data_file=cool_curve)
+        ic_dir = os.environ.get('TORCH_DIR')+"/utils/ic-generator/"
+        data_P, T_arr = get_P_and_T_from_Eq_Cooling_Curve(numdens_arr, data_file=ic_dir+cool_curve)
         p_arr = (kB/musph/mH)*mask*rho_arr*T_arr + (kB/mu_amb/mH)*(1.0-mask)*rho_arr*T_arr
     else:
 

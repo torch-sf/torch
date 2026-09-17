@@ -8,16 +8,28 @@
 
           use Driver_interface, ONLY : Driver_abortFlash
 
+          character(len=512) :: filepath, datadir
           integer get_cooling_data, dpts, tpts
           integer i,j
           real cool_dat(dpts, tpts, 3)
 
-          integer io_status
+          integer io_status, status
           real temp, dens, cool_pwr, dummy
 
           get_cooling_data = 0
 
-          open( unit = 99, file = 'cool.dat', status = 'old' &
+          ! Get environment variable
+          call get_environment_variable("TORCH_DIR", datadir, status=status)
+          if (status /= 0 .or. len_trim(datadir) == 0) then
+             write (*,*) 'get_cooling_data:  TORCH_DIR env variable not set'
+             call Driver_abortFlash("Error: unable to open file cool.dat, TORCH_DIR not set")
+             stop  
+          end if
+
+          filepath = trim(datadir)//"src/flash/source/physics/sourceTerms/Heat/HeatMain/"// &
+                  "HeatCool/phenHeat/mol_and_dust/cool.dat"
+
+          open( unit = 99, file = filepath, status = 'old' &
       &          ,iostat = io_status)
 
 
