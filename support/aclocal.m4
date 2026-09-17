@@ -12,7 +12,7 @@
 # PARTICULAR PURPOSE.
 
 m4_ifndef([AC_CONFIG_MACRO_DIRS], [m4_defun([_AM_CONFIG_MACRO_DIRS], [])m4_defun([AC_CONFIG_MACRO_DIRS], [_AM_CONFIG_MACRO_DIRS($@)])])
-m4_include([m4/ax_lib_hdf5.m4])
+m4_include([m4/amuse_lib_hdf5.m4])
 m4_include([m4/ax_mpi.m4])
 m4_include([m4/fortran.m4])
 m4_include([m4/torch_petsc.m4])
