@@ -48,6 +48,7 @@ The Torch code includes contributions by:
 * Lourens Veen
 * Joshua Wall
 * Maite Wilhelm
+* Donglin Wu
 
 In addition to the FLASH and AMUSE codes, Torch also builds upon software by:
 

@@ -66,3 +66,7 @@ tags
 # Website
 # Sphinx build artifacts
 docs/rtd/build/
+
+
+# macOS
+.DS_Store
