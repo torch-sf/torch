@@ -44,7 +44,7 @@
 #SBATCH --partition=genoa
 
 ## Job run time in HH:MM:SS
-#SBATCH --time=00:10:00
+#SBATCH --time=00:30:00
 
 #===============================================================================
 # Other settings that might be useful 
@@ -89,7 +89,8 @@
 ## Available systems include: default, snellius
 SYSTEM="default"
 
-## Set the path to the torch environment you created.
+## Set the path to the script you created for setting your full environment.
+## This should setup both your bash and python environments.
 TORCH_ENV="path/to/torch.env"
 
 #===============================================================================
@@ -118,9 +119,16 @@ echo "CPUs per task : $SLURM_CPUS_PER_TASK"
 echo "Started at    : $(date)"
 echo
 
-# Create turbulent sphere test
+# Setup for turbulent sphere test
 cd "$SLURM_SUBMIT_DIR"
-bash "$TORCH_DIR/utils/setup_simulation.sh"
+
+# Check that we have a data directory
+if [[ ! -d "data" ]]; then
+	echo "No data directory. Did you run $TORCH_DIR/utils/setup_simulation.sh?"
+	exit 1
+fi
+
+# Make initial conditions file for turbulent sphere test
 python3 "$TORCH_DIR/utils/ic-generator/turb-sphere.py" -np -s 42 -b 10 -m 1e4 -r 7 -f cube128
 
 # Launch simulation
