@@ -21,7 +21,7 @@ Developing and working with Torch
 ---------------------------------
 
 Torch is an open-source code with a release brach [main][4] maintained by 
-@torch-sf/developers.
+[@torch-sf/teams/developers][17].
 
 Issue reports, enhancements, etc are very welcome.  We will do our best to address
 issue reports, pull requests, and inquiries, but due to limited resources we cannot
@@ -44,13 +44,13 @@ journals and pre-print services; an example of such policies can be found [here]
 the AAS journals. When applicable, individual members of the developers’ team further 
 abide by the AI use guidelines of their own institutions. All code in the main and
 develop branches is reviewed, tested, and merged directly by members of the
-@torch-sf/developers team. The @torch-sf/developers team consists of human researchers
-with experience running and developing Torch code.
+[@torch-sf/teams/developers][17] team. The [@torch-sf/teams/developers][17] team
+consists of human researchers with experience running and developing Torch code.
 
-The statement above reflects the workflow of the @torch-sf/developers and our policy
-regarding code in the [main][4] and [develop][5] branches. Although the Torch code is
-public and the Torch users’ community is not a formal collaboration, we recommend that
-individual users adhere to those principles in their own work.
+The statement above reflects the workflow of the [@torch-sf/teams/developers][17] and
+our policy regarding code in the [main][4] and [develop][5] branches. Although the Torch
+code is public and the Torch users’ community is not a formal collaboration, we
+recommend that individual users adhere to those principles in their own work.
 
 Acknowledging or citing Torch
 -----------------------------
@@ -128,3 +128,4 @@ Torch also acknowledges the contributions of everyone who helped build FLASH and
 [14]: https://ui.adsabs.harvard.edu/abs/2026AJ....172...12A/abstract
 [15]: flash.rochester.edu/site/flashcode.html
 [16]: www.amusecode.org/copyright
+[17]: https://github.com/orgs/torch-sf/teams/developers
