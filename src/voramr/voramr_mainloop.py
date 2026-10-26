@@ -1,6 +1,14 @@
 from amuse.lab import *
 
-from torch_amuse_flash.interface import Flash
+# Imported lazily: this module is only reachable through the voramr (AMR)
+# path, but torch_mainloop imports it unconditionally, so a top-level import
+# here makes a FLASH build a hard requirement for EVERY Torch run -- including
+# one whose hydro code is LUNA. Nothing else in Torch imports FLASH outside
+# initialize_workers' own selection.
+try:
+    from torch_amuse_flash.interface import Flash
+except ImportError:                      # no FLASH build: fine unless voramr runs
+    Flash = None
 from voramr.kdtree import (
     read_hdf5,
     build_kdtree,
