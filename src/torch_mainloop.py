@@ -205,6 +205,7 @@ def evolve(state, hydro, grav, mult, se):
 
     # Save initial time for stellar evolution
     se_restart_time = hydro.get_time()
+    state.se_restart_time = se_restart_time  # SeBa's clock origin, for add_particles_to_grav
     tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)

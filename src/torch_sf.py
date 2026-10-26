@@ -112,6 +112,14 @@ def add_particles_to_grav(state, hydro, grav, mult, se):
     
     #Add particles to stellar evolution
     if se is not None:
+        # A star added to SeBa starts at SeBa's current clock, which moves only
+        # when SeBa is evolved. Bring an empty SeBa to now first, or the first
+        # stars are born as old as the time they formed at.
+        se_t0 = getattr(state, 'se_restart_time', None)
+        if se_t0 is not None and not add_parts_restart and len(se.particles) == 0:
+            se_now = hydro.get_time() - se_t0
+            if se_now > se.model_time:
+                se.evolve_model(se_now)
         se.particles.add_particles(add_star)
 
     if mult is not None:
