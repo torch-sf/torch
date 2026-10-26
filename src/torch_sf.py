@@ -419,19 +419,24 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
             ymax = hydro.get_runtime_parameter('ymax') | units.cm
             zmin = hydro.get_runtime_parameter('zmin') | units.cm
             zmax = hydro.get_runtime_parameter('zmax') | units.cm
-        
+
             inside = np.logical_and.reduce([
                 star.x < xmax, star.x > xmin,
                 star.y < ymax, star.y > ymin,
                 star.z < zmax, star.z > zmin,
             ])
-        
+
+            if not np.all(inside):
+                tprint(
+                    f"... {np.count_nonzero(~inside)} stars are outside the domain and will not be spawned.",
+                    end='')
+
             star = star[inside]
             # Update nnew to match the stars formed
             nnew = len(star)
  
             if nnew >= 1:
-                
+
                 # Create new stars in FLASH
                 hydro.set_particle_pointers('mass')
                 star_tag = hydro.add_particles(star.x, star.y, star.z)
