@@ -210,11 +210,27 @@ def remove_particles_outside_bndbox(overwrite, state, hydro, grav, mult, se):
             se.particles.remove_particles(se_rem)
         if mult is None:
             grav.particles.synchronize_to(state.stars)
+            if state.user.get('with_petar', False):
+                resync_grav_from_stars(state, grav)
         else:
             mult._inmemory_particles.remove_particles(grav_rem)
             grav.particles.synchronize_to(mult._inmemory_particles)
         
     return
+
+
+def resync_grav_from_stars(state, grav):
+    """Refill the N-body code's own particle set from state.stars, in place.
+
+    PeTar's AMUSE interface gives a new particle the id N+1, N = the number it
+    holds now. After a removal that id belongs to a live star: the two AMUSE
+    keys then read and write one PeTar particle and the other star is lost to
+    Torch. Emptying the set, letting PeTar drop the particles, and re-adding
+    them keeps its ids 1..N. The set object stays, so the channels stay valid.
+    """
+    grav.particles.remove_particles(Particles(keys=grav.particles.key))
+    grav.get_number_of_particles()  # PeTar applies pending removals here
+    grav.particles.add_particles(state.stars)
 
 
 def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,

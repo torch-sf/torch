@@ -20,6 +20,7 @@ from amuse.datamodel import Particles
 from amuse.ext.orbital_elements import *
 
 from ionizingflux import ionizing_photon_flux
+from torch_sf import resync_grav_from_stars
 from torch_stdout import tprint
 
 h = 6.6261e-27 # Planck's constant
@@ -892,11 +893,13 @@ def remove_merged_stars(remove, overwrite, state, hydro, grav, se):
             # Remove and re-add to grav
             state.stars.synchronize_to(grav.particles)
             state.stars_to_grav.copy_attributes(["mass"])
-            if len(grav.particles) != len(state.stars):
+            if state.user.get('with_petar', False) or len(grav.particles) != len(state.stars):
                 # See this issue: https://github.com/amusecode/amuse/issues/518
-                tprint('... forced to re-sync grav from stars')
-                grav.particles = Particles()
-                grav.particles.add_particles(state.stars)
+                # Refill the code's own set: `grav.particles = Particles()` only
+                # rebound the name to a set in memory, and every star added after
+                # it never reached the N-body code.
+                tprint('... re-sync grav from stars')
+                resync_grav_from_stars(state, grav)
             state.out_merged_stars(stars_rem, overwrite)
                
         else:
