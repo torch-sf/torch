@@ -428,8 +428,7 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
 
             if not np.all(inside):
                 tprint(
-                    f"... {np.count_nonzero(~inside)} stars are outside the domain and will not be spawned.",
-                    end='')
+                    f"... {np.count_nonzero(~inside)} stars are outside the domain and will not be spawned.")
 
             star = star[inside]
             # Update nnew to match the stars formed
