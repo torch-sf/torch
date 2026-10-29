@@ -100,12 +100,15 @@ def get_binaries_from_stars(stars, num_stars_for_tree = 10, a_max = 1e4):
 
     # Remove duplicate companions & primaries
     select_by_companion = []
-    seen = set()
+    seen_c = set()
+    seen_p = set()
     for i, (c_id, p_id) in enumerate(zip(_c_id, _p_id)):
-        if c_id not in seen and p_id not in seen:
+        if p_id not in seen_c and c_id not in seen_p and c_id not in seen_c:
+            # Accept system if primary is not previous companion and companion is not
+            # in previously seen pair (including rejected pairs).
             select_by_companion.append(i)
-            seen.add(c_id)
-            seen.add(p_id)
+        seen_c.add(c_id)
+        seen_p.add(p_id)
     select_by_companion = np.array(select_by_companion, dtype=int)
 
     _pmass = _pmass[select_by_companion]
