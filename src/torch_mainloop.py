@@ -63,6 +63,7 @@ from torch_sf import (
     make_stars_from_sinks,
     queue_stars,
     random_three_vector,
+    resync_grav_from_stars,
 )
 from torch_state import TorchState
 from torch_stdout import tprint
@@ -88,6 +89,28 @@ from voramr.voramr_mainloop import (
 from voramr.voramr_stdout import vprint
 
 
+def bridge_dt(dt_full, hy_time, hy_max_time, petar_sync):
+    """The next bridge step: dt_full trimmed to t_end, under PeTar a power of two in kyr capped at dt_soft_max; None at t_end.
+
+    A remainder below USER['t_end_tolerance'] (default 1e-6) of a full step ends
+    the run: the power-of-two trim would otherwise halve it step by step until
+    it is below the clocks' resolution, and PeTar never reaches a target that a
+    sub-resolution tree step cannot advance to (it spins forever).
+    """
+    remaining = hy_max_time - hy_time
+    floor = 1024.0 * np.spacing(hy_max_time.value_in(units.s)) | units.s
+    if remaining <= max(USER.get('t_end_tolerance', 1.0e-6) * dt_full, floor):
+        return None
+    dt = min(dt_full, remaining)
+    if petar_sync:
+        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
+        dt = np.min([dt_nbody.value_in(units.kyr), USER['dt_soft_max'].value_in(units.kyr)]) | units.kyr
+    if dt <= floor:
+        raise RuntimeError("bridge dt {:e} s at t = {:e} s is below the clocks' resolution: no "
+                           "code can advance by it".format(dt.value_in(units.s), hy_time.value_in(units.s)))
+    return dt
+
+
 # ============================================================================
 # Multiples boilerplate - required as of Oct 2019, see AMUSE book.
 
@@ -111,8 +134,18 @@ def stop_smalln():
 
 def initialize_workers():
 
-    # Import amuse worker codes
-    from torch_amuse_flash.interface import Flash
+    # Import amuse worker codes.
+    # USER['hydro_code'] selects the gas solver: 'flash' (the default, and
+    # what Torch has always used) or 'luna'. LUNA is a Python AMUSE community
+    # code (amuse_luna) wrapping a JAX solver, so it is imported the same way
+    # and implements the same interface; everything below this is unchanged.
+    hydro_code = USER['hydro_code'] if 'hydro_code' in USER else 'flash'
+    if hydro_code == 'luna':
+        from amuse_luna.interface import Luna as HydroCode
+    elif hydro_code == 'flash':
+        from torch_amuse_flash.interface import Flash as HydroCode
+    else:
+        raise ValueError("USER['hydro_code'] = {!r}: expected 'flash' or 'luna'".format(hydro_code))
     if USER['with_petar']:
         from amuse.community.petar.interface import Petar
     elif USER['with_multiples']:
@@ -122,8 +155,13 @@ def initialize_workers():
     
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.kyr, 1000.0|units.MSun)
-    # Converter for the hydro code.
-    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+    # Converter for the hydro code. FLASH works in cgs, so 1 cm / 1 g / 1 s is
+    # the identity for it. Another hydro code has its own code units, and
+    # getting this wrong does not fail loudly -- every number simply crosses
+    # the boundary rescaled. USER['hydro_units'] carries that code's triple.
+    hy_units = USER['hydro_units'] if 'hydro_units' in USER else \
+        (1.0|units.cm, 1.0|units.g, 1.0|units.s)
+    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(*hy_units)
 
     if USER['with_ph4']:
         grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
@@ -171,15 +209,15 @@ def initialize_workers():
         se.initialize_code()
 
     if USER['evolve_async']:
-        hydro = Flash(
+        hydro = HydroCode(
             unit_converter=convert2,
             number_of_workers=USER['num_hy_workers'],
             redirection='file',
-            redirect_stdout_file='flash_worker.out',
-            redirect_stderr_file='flash_worker.err',
+            redirect_stdout_file='{}_worker.out'.format(hydro_code),
+            redirect_stderr_file='{}_worker.err'.format(hydro_code),
         )
     else:
-        hydro = Flash(
+        hydro = HydroCode(
             unit_converter=convert2,
             number_of_workers=USER['num_hy_workers'],
             redirection='none',
@@ -203,6 +241,7 @@ def evolve(state, hydro, grav, mult, se):
 
     # Save initial time for stellar evolution
     se_restart_time = hydro.get_time()
+    state.se_restart_time = se_restart_time  # SeBa's clock origin, for add_particles_to_grav
     tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)
@@ -213,13 +252,12 @@ def evolve(state, hydro, grav, mult, se):
 
     # bridge loop control
     it = 1
-    dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-    # set initial hydro dt to a power of 2 so PeTar can sync times
-    if USER['with_petar'] and num_stars > 1:
-        # Get maximum dt from torch_user.py
-        dt_max = USER['dt_soft_max']
-        dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-        dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+    # a power of 2 in kyr so PeTar can sync times; None = already at t_end
+    dt = bridge_dt(min(USER['hy_dt_factor']*hy_dt, se_dt), hy_time, hy_max_time,
+                   USER['with_petar'] and num_stars > 1)
+    at_end = dt is None
+    if at_end:
+        dt = 0.0 | units.s
 
     if not USER['with_petar']: # only initialize PeTar if there are stars
         grav.parameters.begin_time  = hy_time
@@ -247,7 +285,7 @@ def evolve(state, hydro, grav, mult, se):
 
     first_star = 0
 
-    while hy_time < hy_max_time and hy_step < hy_max_steps:
+    while not at_end and hy_time < hy_max_time and hy_step < hy_max_steps:
         
         tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
             it, hy_time.value_in(units.s), dt.value_in(units.s),
@@ -348,9 +386,11 @@ def evolve(state, hydro, grav, mult, se):
                 state.stars_to_grav.copy_attributes(["mass"])
                 if len(grav.particles) != len(state.stars):
                     # See this issue: https://github.com/amusecode/amuse/issues/518
-                    tprint('... forced to re-sync grav from stars')
-                    grav.particles = Particles()
-                    grav.particles.add_particles(state.stars)
+                    # Refill the code's own set: `grav.particles = Particles()` only
+                    # rebinds the name to a set in memory, and every star added after
+                    # it never reaches the N-body code.
+                    tprint('... re-sync grav from stars')
+                    resync_grav_from_stars(state, grav)
             
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
@@ -544,13 +584,13 @@ def evolve(state, hydro, grav, mult, se):
 
         # bridge loop control
         it += 1
-        dt = min(USER['hy_dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-        # set initial hydro dt to a power of 2 so PeTar can sync times
-        if USER['with_petar'] and num_stars > 1:
-            # Get maximum dt from torch_user.py
-            dt_max = USER['dt_soft_max']
-            dt_nbody = pow(2., np.floor(np.log2(dt.value_in(units.kyr)))) | units.kyr
-            dt = np.min([dt_nbody.value_in(units.kyr), dt_max.value_in(units.kyr)]) | units.kyr
+        dt = bridge_dt(min(USER['hy_dt_factor']*hy_dt, se_dt), hy_time, hy_max_time,
+                       USER['with_petar'] and num_stars > 1)
+        at_end = dt is None
+        if at_end:
+            tprint("t_end reached: {:e} s left, below the end-of-run tolerance".format(
+                (hy_max_time - hy_time).value_in(units.s)))
+            dt = 0.0 | units.s
 
         num_stars = hydro.get_number_of_particles()  # loop variable
 

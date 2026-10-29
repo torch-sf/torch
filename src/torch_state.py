@@ -264,7 +264,7 @@ class TorchState(object):
         """Write merged star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "merged_stars.amuse")
-        if stars_fname in listdir(self.output_dir):
+        if path.isfile(stars_fname):
             all_removed_stars = read_set_from_file(stars_fname)
             all_removed_stars.add_particles(removed_stars)
         else:
@@ -276,7 +276,7 @@ class TorchState(object):
         """Write escaped star particles to AMUSE file"""
         stars_fname = path.join(self.output_dir,
                                "escaped_stars.amuse")
-        if stars_fname in listdir(self.output_dir):
+        if path.isfile(stars_fname):
             all_removed_stars = read_set_from_file(stars_fname)
             all_removed_stars.add_particles(removed_stars)
         else:
