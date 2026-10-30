@@ -13,6 +13,8 @@ Design inspired by TRISTAN-MP, Athena++ architecture.
 
 from __future__ import division, print_function
 
+import re
+
 from amuse.datamodel import Particles
 from amuse.units import units
 from amuse.ext.orbital_elements import generate_binaries, new_binary_from_orbital_elements
@@ -23,33 +25,31 @@ from torch_mainloop import run_torch
 from amuse.io import write_set_to_file, read_set_from_file
 
 def get_ntasks_from_run_script(name="run.sh"):
-    """formally -n is --ntasks, de facto same as nprocs"""
-    n = None
-    nodes = None
-    cores = None
-    import os
-    # Check for slurm ntasks
-    n = int(os.getenv("SLURM_NTASKS"))
-    if n is None:
-        with open(name) as f:
-            for line in f:
-                w = line.split()
-                if len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--ntasks-per-node'):
-                    assert cores is None  # throw error if #SBATCH -n occurs >1x
-                    cores = int(''.join(char for char in w[1] if char.isdigit()))
-                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-N'):
-                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
-                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
-                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('--nodes'):
-                    assert nodes is None  # throw error if #SBATCH -N or --nodes occurs >1x
-                    nodes = int(''.join(char for char in w[1] if char.isdigit()))
-                elif len(w) >= 2 and w[0] == '#SBATCH' and w[1].startswith('-n'):
-                    assert n is None
-                    n = int(''.join(char for char in w[1] if char.isdigit()))
-        if n is None:
-            n = nodes*cores
-    assert n is not None
-    return n
+    """
+    Return the number of Slurm tasks requested in a job script.
+    Looks for the following forms
+    #SBATCH -n 6
+    #SBATCH --ntasks 6
+    #SBATCH --ntasks=6
+
+    Keyword Argument
+        name : str
+            Name of the slurm job script.
+    """
+    pattern = re.compile(
+        r"^\s*#SBATCH\s+(?:-n\s+(\d+)|--ntasks(?:=(\d+)|\s+(\d+)))\s*$"
+    )
+
+    ntasks = None
+    with open(name) as f:
+        for line in f:
+            match = pattern.match(line)
+            if match:
+                assert ntasks is None, "Multiple --ntasks/-n directives found."
+                ntasks = int(next(g for g in match.groups() if g is not None))
+
+    assert ntasks is not None, "No --ntasks/-n directive found."
+    return ntasks
 
 def user_initial_conditions(state, hydro):
     """
