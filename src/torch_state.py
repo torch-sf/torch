@@ -202,9 +202,9 @@ class TorchState(object):
         # If a plt file was written, dump star properties
         if hy_pltnum > self.pltnum:
             self.out_stars(overwrite)
-            self.pltnum = hy_pltnum
             if (self.user['with_be'] or self.user['binaries']):
                 self.out_binaries(overwrite)
+            self.pltnum = hy_pltnum
         elif hy_pltnum < self.pltnum:
             raise Exception("Error: hy_pltnum={} < pltnum={}".format(hy_pltnum, self.pltnum))
 
