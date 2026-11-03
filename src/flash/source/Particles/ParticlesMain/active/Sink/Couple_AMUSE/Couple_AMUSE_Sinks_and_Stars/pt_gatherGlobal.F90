@@ -1,4 +1,4 @@
-!!****if* source/Particles/ParticlesMain/active/Sink/pt_sinkGatherGlobal
+!!****if* source/Particles/ParticlesMain/active/Sink/Couple_AMUSE/Couple_AMUSE_Sinks_and_Stars/pt_gatherGlobal
 !!
 !! NAME
 !!
@@ -11,9 +11,9 @@
 !!
 !! DESCRIPTION
 !!
-!!  Fills the global particle list with a copy of all sink particles on all
-!!  processors. Note that the global sink particle list is not ordered in the same
-!!  way on all processors. It always contains the local sink particles in the first
+!!  Fills the global particle list with a copy of all particles on all
+!!  processors. Note that the global particle list is not ordered in the same
+!!  way on all processors. It always contains the local particles in the first
 !!  1:localnp indexes after the call is finished. If optional arguments are given,
 !!  only specified particle properties are communicated across all processors.
 !!
@@ -31,6 +31,7 @@
 !!   modified by Nathan Goldbaum, 2012
 !!   refactored for FLASH4 by John Bachan, 2012
 !!   modified to use on regular particles by Josh Wall 2017
+!!   fixed by introducing pt_maxPart by Eric Andersson 2026
 !!
 !!***
 
@@ -39,7 +40,7 @@ subroutine pt_gatherGlobal(propinds, nprops)
    ! Get particle information from all processors
    ! i.e., update allproc_particles from particles
 
-   use Particles_Data, ONLY : particles, allproc_particles, pt_numLocal, pt_numGlobal
+   use Particles_Data, ONLY : particles, allproc_particles, pt_numLocal, pt_numGlobal, pt_maxPart
    use Particles_sinkData, ONLY : recv_buff, send_buff, MAX_MSGS
                             !& pt_sinkParticleProps, sink_maxSinks
    use Particles_data, ONLY : pt_globalMe, pt_globalNumProcs, pt_globalComm
@@ -81,6 +82,14 @@ subroutine pt_gatherGlobal(propinds, nprops)
 
    end if
 
+   ! Get the total number of particles across all MPI ranks
+   pt_numGlobal = 0
+   call MPI_ALLREDUCE(pt_numLocal, pt_numGlobal, 1, FLASH_INTEGER, MPI_SUM, pt_globalComm, ierr)
+
+   if (pt_numGlobal>pt_maxPart) then
+     call Driver_abortFlash("[pt_gatherGlobal] Total number of particles exceeds pt_maxPart.")
+   end if
+
    ! see if we only have to communicate specified particle properties
    if (present(propinds) .and. present(nprops)) then
      nprops_to_communicate = nprops
@@ -97,16 +106,6 @@ subroutine pt_gatherGlobal(propinds, nprops)
        allproc_particles(prop_index,1:pt_numLocal) = particles(prop_index,1:pt_numLocal)
      end do
    endif
-
-   ! Get the total number of particles on each processor and the total number overall
-   pt_numGlobal = 0
-
-   ! Get the total number of sink particles on all processors
-   call MPI_ALLREDUCE(pt_numLocal, pt_numGlobal, 1, FLASH_INTEGER, MPI_SUM, pt_globalComm, ierr)
-   
-!   if (localnpf .gt. sink_maxSinks) then
-!     call Driver_abortFlash("pt_sinkGatherGlobal: Number of all sink particles exceeds sink_maxSinks. Increase.")
-!   end if
 
    np_offset = pt_numLocal
 
