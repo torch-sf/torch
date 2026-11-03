@@ -58,7 +58,7 @@ subroutine Grid_markRefineDerefine()
 !!$  use physicaldata, ONLY : force_consistency
   use Logfile_interface, ONLY : Logfile_stampVarMask
   use Grid_interface, ONLY : Grid_fillGuardCells, Grid_markDerefineSpecialized
-  use Particles_interface, only: Particles_sinkMarkRefineDerefine
+  use Particles_interface, only: Particles_sinkMarkRefineDerefine, Particles_MarkRefineDerefine
   implicit none
 
 #include "constants.h"
@@ -140,6 +140,7 @@ subroutine Grid_markRefineDerefine()
        gr_lrefineCenterJ,gr_lrefineCenterK)
   
   call Particles_sinkMarkRefineDerefine()
+  call Particles_MarkRefineDerefine()
 
 
   if(use_deref) then 
