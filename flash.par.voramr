@@ -37,6 +37,7 @@ refine_on_particle_count = .true.
 min_particles_per_blk    = 4096 # Assumes 16x16x16 blocks
 max_particles_per_blk    = 4096 
 pt_maxPerProc            = 10000000 # Enough to fit all particles on one proc
+pt_maxPart   = 10000000
 #refine_var_2 = "dens"
 refineonjeanslength = .true. #.false.
 
