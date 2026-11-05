@@ -14,6 +14,7 @@ from binary_identification import get_binaries_from_stars
 
 from torch_param import FlashPar
 from torch_stdout import tprint
+from torch_monitor import TorchMonitor
 
 class TorchState(object):
     """
@@ -29,6 +30,12 @@ class TorchState(object):
         self.se    = se
         self.user  = user_params
         
+        # Monitor MPI requsets to avoid indefinite blocking.
+        if self.user['monitor_minutes'] is not None:
+            self.monitor = TorchMonitor(timeout_minutes=self.user['monitor_minutes'])
+        else:
+            self.monitor = None
+
         # "Global" AMUSE-level data structures
         self.all_masses = {}
         self.stars = Particles(0)
