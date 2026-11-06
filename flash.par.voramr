@@ -139,7 +139,6 @@ tmax            = 6.30e8 # 0.00002 Myr
 dtinit          = 3.15e8 # 0.00001 Myr
 dtmin           = 3.15e7 # 0.000001 Myr
 dtmax           = 3.15e12
-dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 2.0
 
 wall_clock_checkpoint       = 0.432e+05

@@ -111,7 +111,6 @@ dtmax = 1e13
 dtmin = 1.0e1
 tmax   = 3.1536e13 # 1 Myr
 nend   = 5000000
-dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 1.1 #10.0
 
 gr_pmrpConserve = .true.

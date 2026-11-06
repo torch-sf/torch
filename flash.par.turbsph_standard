@@ -104,7 +104,6 @@ tmax            = 7.8892315e13 # 2.5 Myr
 dtinit          = 3.15e8
 dtmin           = 3.15e7
 dtmax           = 3.15e12
-dr_shortenLastStepBeforeTMax = .false. # Setting true works but causes crash in amuse preventing graceful exit.
 tstep_change_factor = 2.0
 
 wall_clock_checkpoint       = 0.432e+05

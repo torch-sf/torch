@@ -269,7 +269,7 @@ def evolve(state, hydro, grav, mult, se):
 
     first_star = 0
 
-    while hy_time < hy_max_time and hy_step < hy_max_steps:
+    while (abs(hy_max_time-hy_time) > (1e4|units.s)) and hy_step < hy_max_steps:
         
         tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
             it, hy_time.value_in(units.s), dt.value_in(units.s),
