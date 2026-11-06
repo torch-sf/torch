@@ -63,6 +63,7 @@ from torch_sf import (
     make_stars_from_sinks,
     queue_stars,
     random_three_vector,
+    resync_grav_from_stars,
 )
 from torch_state import TorchState
 from torch_stdout import tprint
@@ -204,6 +205,7 @@ def evolve(state, hydro, grav, mult, se):
 
     # Save initial time for stellar evolution
     se_restart_time = hydro.get_time()
+    state.se_restart_time = se_restart_time  # SeBa's clock origin, for add_particles_to_grav
     tprint('Set restart time to t=', se_restart_time)
 
     # stellar evolution timestep (hack for SN)
@@ -353,9 +355,11 @@ def evolve(state, hydro, grav, mult, se):
                 state.stars_to_grav.copy_attributes(["mass"])
                 if len(grav.particles) != len(state.stars):
                     # See this issue: https://github.com/amusecode/amuse/issues/518
-                    tprint('... forced to re-sync grav from stars')
-                    grav.particles = Particles()
-                    grav.particles.add_particles(state.stars)
+                    # Refill the code's own set: `grav.particles = Particles()` only
+                    # rebinds the name to a set in memory, and every star added after
+                    # it never reaches the N-body code.
+                    tprint('... re-sync grav from stars')
+                    resync_grav_from_stars(state, grav)
             
                 # sync mass to gravity code(s) from stars
                 if num_stars > 1:
