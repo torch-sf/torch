@@ -3,7 +3,7 @@
 
 
 import numpy as np
-from os import path, listdir
+from os import path
 import pickle
 
 from amuse.datamodel import Particles
