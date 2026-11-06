@@ -1922,11 +1922,10 @@ FUNCTION initialize_code()
   INTEGER :: initialize_code, part_init
   call Driver_initParallel()
   call Driver_initFlash()
-  ! Make sure that when we exit an evolve step, Flash actually only
-  ! evolves to the end time given.
-
+  
+  ! Must shorten last timestep to ensure sync between hydro and gravity.
   call RuntimeParameters_set("dr_shortenLastStepBeforeTMax",.true.)
-  call RuntimeParameters_get("dr_shortenLastStepBeforeTMax",dr_shortenLastStepBeforeTMax)
+
   !call Driver_init()
   restart = .false.
 #if defined(SINK_PART_TYPE) || defined(ACTIVE_PART_TYPE)
