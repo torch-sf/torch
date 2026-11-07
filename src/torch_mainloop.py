@@ -729,11 +729,15 @@ def run_torch(user_initial_conditions, user_parameters):
         
     finally:
         tprint("Evolution reached final time. Simulation will finalize and exit.")
-        hydro.timer_summary()
-        hydro.cleanup_code()
-        hydro.stop()
-        #grav.stop()
-        #kep.stop()
-        #stop_smalln()
-        #del multiples
+        if hydro is not None:
+            hydro.timer_summary()
+            hydro.cleanup_code()
+            hydro.stop()
+        if grav is not None:
+            grav.stop()
+        if se is not None:
+            se.stop()
+        if mult is not None:
+            kep.stop()
+            stop_smalln()
 
