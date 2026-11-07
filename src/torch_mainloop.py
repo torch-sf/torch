@@ -728,9 +728,10 @@ def run_torch(user_initial_conditions, user_parameters):
         evolve(state, hydro, grav, mult, se)
         
     finally:
-        pass
-        #hydro.timer_summary()
-        #hydro.cleanup_code()
+        tprint("Evolution reached final time. Simulation will finalize and exit.")
+        hydro.timer_summary()
+        hydro.cleanup_code()
+        hydro.stop()
         #grav.stop()
         #kep.stop()
         #stop_smalln()
