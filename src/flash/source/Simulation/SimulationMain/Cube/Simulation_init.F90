@@ -27,7 +27,7 @@ subroutine Simulation_init()
   use Simulation_data
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
-  use Driver_interface, ONLY : Driver_abortFlash, Driver_getMype, Driver_getComm
+  use Driver_interface, ONLY : Driver_fatalError, Driver_getMype, Driver_getComm
   use Logfile_interface, ONLY : Logfile_stamp
   
   implicit none
@@ -136,17 +136,17 @@ subroutine Simulation_init()
 
   ! allocate field arrays for cubeFile data
   allocate(sim_densArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_densArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_densArr in Simulation_init.F90")
   allocate(sim_presArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_presArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_presArr in Simulation_init.F90")
   allocate(sim_gpotArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_gpotArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_gpotArr in Simulation_init.F90")
   allocate(sim_velxArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velxArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_velxArr in Simulation_init.F90")
   allocate(sim_velyArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velyArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_velyArr in Simulation_init.F90")
   allocate(sim_velzArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
-  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velzArr")
+  if (istat .ne. 0) call Driver_fatalError("Could not allocate sim_velzArr in Simulation_init.F90")
 
   if (sim_myPE .eq. MASTER_PE) then
     do i = 1,sim_nCD(IAXIS)
@@ -176,6 +176,5 @@ subroutine Simulation_init()
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
   call MPI_Bcast(sim_velzArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS), &
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
-
 
 end subroutine Simulation_init

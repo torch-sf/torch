@@ -24,7 +24,8 @@
 !!***
 
 subroutine Driver_abortFlash (errorMessage)
-  
+ 
+  use Driver_interface, ONLY : Driver_fatalError
   use Driver_data, ONLY : dr_globalMe,dr_globalComm, dr_eachProcWritesOwnAbortLog, &
        dr_abortPause
   use Logfile_interface, ONLY : Logfile_stampMessage, Logfile_stamp, Logfile_open, Logfile_close, &
@@ -71,12 +72,6 @@ subroutine Driver_abortFlash (errorMessage)
      print *, "DRIVER_ABORT: ", errorMessage  
   end if
 
-  if (dr_globalMe .eq. MASTER_PE) then
-     print *, "Writing out checkpoint and plot files, hope it helps find what broke!"
-  end if
-  call IO_writeCheckpoint()
-  call IO_writePlotfile(.true.)  ! mark forced
-
   write (peMessage(len_trim(peMessage)+1:), *) dr_globalMe
 
   ! make a complete string out of error message
@@ -108,12 +103,17 @@ subroutine Driver_abortFlash (errorMessage)
 
   call Logfile_close()
 
+  if (dr_globalMe .eq. MASTER_PE) then
+     print *, "Writing out checkpoint and plot files, hope it helps find what broke!"
+  end if
+  call IO_writeCheckpoint()
+  call IO_writePlotfile(.true.)  ! mark forced
+
   if (dr_abortPause > 0) then
      call dr_sleep(dr_abortPause)
   end if
-
-  call MPI_Abort (dr_globalComm, errcode, ierr)
-  stop            ! should not make it here
-
+  
+  call Driver_fatalError(errorMessage)
+  
   return
 end subroutine Driver_abortFlash

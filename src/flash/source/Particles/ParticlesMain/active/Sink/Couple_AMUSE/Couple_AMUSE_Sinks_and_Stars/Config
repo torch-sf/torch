@@ -40,3 +40,8 @@ D Injection radius for winds, or if no winds, refinement radius for
 D blocks around active/massive particles.
 D ref_radius REAL -1.0
 PARAMETER ref_radius            REAL   -1.0
+
+D Maximum number of particles.
+D Needed to allocate memory for global particle array.
+D pt_maxPart INT 1000
+PARAMETER pt_maxPart            INTEGER 1000
