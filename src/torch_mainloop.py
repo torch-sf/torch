@@ -66,6 +66,7 @@ from torch_sf import (
 )
 from torch_state import TorchState
 from torch_stdout import tprint
+from torch_monitor import MonitorWorker, TorchMonitor
 
 from voramr.hdf5_convert import (
     extract_data,
@@ -119,7 +120,11 @@ def initialize_workers():
         from amuse.community.kepler.interface import Kepler
         from amuse.community.smalln.interface import SmallN
         from amuse.couple import multiples
-    
+
+    if USER['monitor_minutes'] is not None:
+        # Assumes all calls to worker functions are sequential and non-overlapping.
+        monitor = TorchMonitor(timeout_minutes=USER['monitor_minutes'])
+
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.yr, 1.0|units.MSun)
     # Converter for the hydro code.
@@ -127,6 +132,8 @@ def initialize_workers():
 
     if USER['with_ph4']:
         grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
+        if USER['monitor_minutes'] is not None:
+            grav = MonitorWorker(grav, monitor)
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.force_sync = 1  # end exactly at requested time
@@ -136,12 +143,16 @@ def initialize_workers():
                      redirection='file',
                      redirect_stdout_file='petar_worker.out',
                      redirect_stderr_file='petar_worker.err')
+        if USER['monitor_minutes'] is not None:
+            grav = MonitorWorker(grav, monitor)
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out']
         grav.parameters.dt_soft = USER['dt_soft']
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
+        if USER['monitor_minutes'] is not None:
+            grav = MonitorWorker(grav, monitor)
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
         grav.parameters.dt_param = 0.02  # timestep size control, default 0.03
 
@@ -158,6 +169,8 @@ def initialize_workers():
         kep.initialize_code()
 
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
+        if USER['monitor_minutes'] is not None:
+            mult = MonitorWorker(mult, monitor)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
         mult.check_tidal_perturbation    = True
@@ -169,6 +182,8 @@ def initialize_workers():
     if USER['with_se']:
 
         se = SeBa()
+        if USER['monitor_minutes'] is not None:
+            se = MonitorWorker(se, monitor)
         se.initialize_code()
 
     if USER['evolve_async']:
@@ -186,6 +201,8 @@ def initialize_workers():
             redirection='none',
         )
 
+    if USER['monitor_minutes'] is not None:
+        hydro = MonitorWorker(hydro, monitor)
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
@@ -252,7 +269,7 @@ def evolve(state, hydro, grav, mult, se):
 
     first_star = 0
 
-    while hy_time < hy_max_time and hy_step < hy_max_steps:
+    while (hy_max_time-hy_time > (1e4|units.s)) and hy_step < hy_max_steps:
         
         tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
             it, hy_time.value_in(units.s), dt.value_in(units.s),
@@ -315,56 +332,63 @@ def evolve(state, hydro, grav, mult, se):
             ### Stellar evolution.
             ### ------------------
 
-            if (USER['with_be'] or USER['binaries']) and num_stars > 1:
-                # Also identify binaries at runtime if no BE
-                tprint("Identify binaries")
-                state.binaries = state.binaries_from_stars()
+            if state.monitor is not None:
+                state.monitor.start("Stellar evolution step timed out.")
+            try:
+                if (USER['with_be'] or USER['binaries']) and num_stars > 1:
+                    # Also identify binaries at runtime if no BE
+                    tprint("Identify binaries")
+                    state.binaries = state.binaries_from_stars()
 
-            if USER['with_se']:
-                if USER['with_be'] and num_stars > 1:
-                    tprint("Do stellar and binary evolution")
-                    se_dt = binary_evolution(
-                        hy_time+dt, dt, se_restart_time,
-                        state, hydro, se,
-                        with_lyc          = USER['with_lyc'],
-                        with_pe_heat      = USER['with_pe_heat'],
-                        with_winds        = USER['with_winds'],
-                        with_sn           = USER['with_sn'],
-                        massloss_method   = USER['massloss_method'],
-                        min_feedback_mass = USER['min_feedback_mass'],
-                        CE_method         = USER['CE_method'],
-                        CE_alpha          = USER['CE_alpha'],
-                    )
-                else:
-                    tprint("Do stellar evolution")
-                    se_dt = stellar_evolution(
-                        hy_time+dt, dt, se_restart_time,
-                        state, hydro, se,
-                        with_lyc          = USER['with_lyc'],
-                        with_pe_heat      = USER['with_pe_heat'],
-                        with_winds        = USER['with_winds'],
-                        with_sn           = USER['with_sn'],
-                        massloss_method   = USER['massloss_method'],
-                        min_feedback_mass = USER['min_feedback_mass'],
-                    )
+                if USER['with_se']:
+                    if USER['with_be'] and num_stars > 1:
+                        tprint("Do stellar and binary evolution")
+                        se_dt = binary_evolution(
+                            hy_time+dt, dt, se_restart_time,
+                            state, hydro, se,
+                            with_lyc          = USER['with_lyc'],
+                            with_pe_heat      = USER['with_pe_heat'],
+                            with_winds        = USER['with_winds'],
+                            with_sn           = USER['with_sn'],
+                            massloss_method   = USER['massloss_method'],
+                            min_feedback_mass = USER['min_feedback_mass'],
+                            CE_method         = USER['CE_method'],
+                            CE_alpha          = USER['CE_alpha'],
+                        )
+                    else:
+                        tprint("Do stellar evolution")
+                        se_dt = stellar_evolution(
+                            hy_time+dt, dt, se_restart_time,
+                            state, hydro, se,
+                            with_lyc          = USER['with_lyc'],
+                            with_pe_heat      = USER['with_pe_heat'],
+                            with_winds        = USER['with_winds'],
+                            with_sn           = USER['with_sn'],
+                            massloss_method   = USER['massloss_method'],
+                            min_feedback_mass = USER['min_feedback_mass'],
+                        )
 
-                # Synchronize to grav after SE/BE
-                state.stars.synchronize_to(grav.particles)
-                state.stars_to_grav.copy_attributes(["mass"])
-                if len(grav.particles) != len(state.stars):
-                    # See this issue: https://github.com/amusecode/amuse/issues/518
-                    tprint('... forced to re-sync grav from stars')
-                    grav.particles = Particles()
-                    grav.particles.add_particles(state.stars)
-            
-                # sync mass to gravity code(s) from stars
-                if num_stars > 1:
-                    state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
-                    state.stars_to_grav.copy_attributes(["radius"])
-                    state.stars_to_grav.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
-                    if USER['with_multiples']:
-                        mult.channel_from_code_to_memory.copy() # grav  -> multiples
-                        state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
+                    # Synchronize to grav after SE/BE
+                    state.stars.synchronize_to(grav.particles)
+                    state.stars_to_grav.copy_attributes(["mass"])
+
+                    if len(grav.particles) != len(state.stars):
+                        # See this issue: https://github.com/amusecode/amuse/issues/518
+                        tprint('... forced to re-sync grav from stars')
+                        grav.particles = Particles()
+                        grav.particles.add_particles(state.stars)
+
+                    # sync mass to gravity code(s) from stars
+                    if num_stars > 1:
+                        state.stars_to_grav.copy_attributes(["mass"])  # AMUSE -> grav singles
+                        state.stars_to_grav.copy_attributes(["radius"])
+                        state.stars_to_grav.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])
+                        if USER['with_multiples']:
+                            mult.channel_from_code_to_memory.copy() # grav  -> multiples
+                            state.stars_to_mult_grav_copy("mass")   # AMUSE -> multiples, grav COM
+            finally:
+                if state.monitor is not None:
+                    state.monitor.stop()
 
             ### --------------
             ### Evolve models.
@@ -376,35 +400,40 @@ def evolve(state, hydro, grav, mult, se):
                 # amuse/src/amuse/test/suite/compile_tests/test_python_implementation.py
                     tprint("Advance grav and hydro asynchronously")
 
-                    if USER['with_multiples']:
-                        req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        pool.add_request(req_hydro, handle_result, ["hydro", it])
-                        tprint("... hydro submitted")
+                    if state.monitor is not None:
+                        state.monitor.start("Timed out during asynchronous evolution.")
+                    try:
+                        if USER['with_multiples']:
+                            req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
+                            pool.add_request(req_hydro, handle_result, ["hydro", it])
+                            tprint("... hydro submitted")
 
-                        # Multiples is not a worker code, so we can't send it to
-                        # the AsyncRequestsPool.
-                        mult.evolve_model(hy_time+dt)
-                        tprint("... grav advanced")
+                            # Multiples is not a worker code, so we can't send it to
+                            # the AsyncRequestsPool.
+                            mult.evolve_model(hy_time+dt)
+                            tprint("... grav advanced")
 
-                        pool.wait()
-                        tprint("... both grav and hydro advanced")
+                            pool.wait()
+                            tprint("... both grav and hydro advanced")
 
-                    else:
-                        req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
-                        dt_old = dt
-                        req_grav = grav.evolve_model.asynchronous(hy_time+USER['dt_factor']*dt)
-                        pool.add_request(req_hydro, handle_result, ["hydro", it])
-                        pool.add_request(req_grav, handle_result, ["grav", it])
+                        else:
+                            req_hydro = hydro.evolve_model.asynchronous(hy_time+dt)
+                            dt_old = dt
+                            req_grav = grav.evolve_model.asynchronous(hy_time+USER['dt_factor']*dt)
+                            pool.add_request(req_hydro, handle_result, ["hydro", it])
+                            pool.add_request(req_grav, handle_result, ["grav", it])
 
-                        pool.wait()
-                        if pool_table_hydro and pool_table_hydro[-1] == it:
-                            tprint("... hydro advanced")
-                        elif pool_table_grav and pool_table_grav[-1] == it:
-                                tprint("... grav advanced")
-                            
-                        pool.wait()
-                        tprint("... both grav and hydro advanced")
+                            pool.wait()
+                            if pool_table_hydro and pool_table_hydro[-1] == it:
+                                tprint("... hydro advanced")
+                            elif pool_table_grav and pool_table_grav[-1] == it:
+                                    tprint("... grav advanced")
 
+                            pool.wait()
+                            tprint("... both grav and hydro advanced")
+                    finally:
+                        if state.monitor is not None:
+                            state.monitor.stop()
 
                 else:  # evolve models sequentially
 
@@ -424,14 +453,19 @@ def evolve(state, hydro, grav, mult, se):
                     hydro.evolve_model(grav.get_time())
 
                 # sync position & velocity to stars + hydro from gravity code(s)
-                state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
-                if USER['with_multiples']:
-                    mult.update_leaves_pos_vel()  # grav COM -> multiples; updates tree.particle and leaves (but not root, weirdly)
-                    mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # multiples AND grav singles -> AMUSE
-                hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
-                hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
+                if state.monitor is not None:
+                    state.monitor.start("Timed out when synchronizing stars.")
+                try:
+                    state.grav_to_stars.copy_attributes(["x", "y", "z", "vx", "vy", "vz"])  # grav singles -> AMUSE
+                    if USER['with_multiples']:
+                        mult.update_leaves_pos_vel()  # grav COM -> multiples; updates tree.particle and leaves (but not root, weirdly)
+                        mult.stars.copy_values_of_attributes_to(["x", "y", "z", "vx", "vy", "vz"], state.stars)  # multiples AND grav singles -> AMUSE
+                    hydro.set_particle_position(state.stars.tag, state.stars.x,  state.stars.y,  state.stars.z)  # AMUSE -> hydro
+                    hydro.set_particle_velocity(state.stars.tag, state.stars.vx, state.stars.vy, state.stars.vz)
+                finally:
+                    if state.monitor is not None:
+                        state.monitor.stop()
 
-                                
             else: # num_stars=1
 
                 tprint("Evolving hydro without grav to reach t =", hy_time+dt)
@@ -465,110 +499,125 @@ def evolve(state, hydro, grav, mult, se):
         ### --------------------------------
         ### Queue and create star particles.
         ### --------------------------------
+        if state.monitor is not None:
+            state.monitor.start("Timed out when queing and creating stars.")
+        try:
+            ### ----------------------------
+            ### Remove stars outside domain.
+            ### ----------------------------
+            # updates all of grav,stars,hydro,mult; can accept mult=None
+            remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
+            hydro.particles_sort()  # also checks for stars outside domain
 
-        ### ----------------------------
-        ### Remove stars outside domain.
-        ### ----------------------------
-        # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
-        hydro.particles_sort()  # also checks for stars outside domain
+            tprint("Star formation check")
+            # Change structure to write checkpoint if sink formed
+            queued_stars = queue_stars(state, hydro,
+                                       min_imf_mass=USER['min_imf_mass'],
+                                       max_imf_mass=USER['max_imf_mass'],
+                                       sample_imf_mass=USER['sample_imf_mass'],
+                                       sample_imf_bins=USER['sample_imf_bins'],
+                                       sum_small=USER['sum_small'],
+                                       m_small=USER['m_small'],
+                                       binaries=USER['binaries'],
+                                       mult_frac=USER['mult_frac'],
+                                       pdist=USER['pdist'],
+                                       qdist=USER['qdist'],
+                                       edist=USER['edist'] )
+            # Write checkpoint at sink formation to have a record of the binaries and stars to be formed
+            if queued_stars:
+                state.force_output(overwrite=USER['overwrite'])
+            made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'], binaries=USER['binaries'])  # in hydro
+            if made_stars:
+                add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
 
-        tprint("Star formation check")
-        # Change structure to write checkpoint if sink formed
-        queued_stars = queue_stars(state, hydro,
-                                   min_imf_mass=USER['min_imf_mass'],
-                                   max_imf_mass=USER['max_imf_mass'],
-                                   sample_imf_mass=USER['sample_imf_mass'],
-                                   sample_imf_bins=USER['sample_imf_bins'],
-                                   sum_small=USER['sum_small'],
-                                   m_small=USER['m_small'],
-                                   binaries=USER['binaries'],
-                                   mult_frac=USER['mult_frac'],
-                                   pdist=USER['pdist'],
-                                   qdist=USER['qdist'],
-                                   edist=USER['edist'] )
-        #Write checkpoint at sink formation to have a record of the binaries and stars to be formed                                                                                     
-        if queued_stars:
-            state.force_output(overwrite=USER['overwrite'])
-        made_stars = make_stars_from_sinks(state, hydro, sink_rad=USER['sink_rad'], binaries=USER['binaries'])  # in hydro
-        if made_stars:
-            add_particles_to_grav(state, hydro, grav, mult, se)  # push stars hydro->amuse, hydro->grav
-
-        ### ----------------------------
-        ### Remove stars outside domain.
-        ### ----------------------------
-        # updates all of grav,stars,hydro,mult; can accept mult=None
-        remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
-        hydro.particles_sort()  # also checks for stars outside domain
+            ### ----------------------------
+            ### Remove stars outside domain.
+            ### ----------------------------
+            # updates all of grav,stars,hydro,mult; can accept mult=None
+            remove_particles_outside_bndbox(USER['overwrite'], state, hydro, grav, mult, se)
+            hydro.particles_sort()  # also checks for stars outside domain
+        finally:
+            if state.monitor is not None:
+                state.monitor.stop()
 
         ### -------------------
         ### Second bridge kick.
         ### -------------------
+        if state.monitor is not None:
+            state.monitor.start("Timed out during second brigde kick.")
+        try:
+            num_stars = hydro.get_number_of_particles()
 
-        num_stars = hydro.get_number_of_particles()
-        
-        if num_stars > 0 and USER['with_bridge']:  # in case all stars exited domain
-            tprint("Second bridge kick")
-            kick_number = 2  # recompute grav pot (BGPT), accel (BGA{X,Y,Z}) from stars
-            hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
-            tprint("... grid kicked")
-            hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
-            tprint("... stars kicked")
+            if num_stars > 0 and USER['with_bridge']:  # in case all stars exited domain
+                tprint("Second bridge kick")
+                kick_number = 2  # recompute grav pot (BGPT), accel (BGA{X,Y,Z}) from stars
+                hydro.get_gravity_particles_on_gas(0.5*dt, kick_number)  # star->gas, star->sink kick
+                tprint("... grid kicked")
+                hydro.get_gravity_gas_on_particles(0.5*dt, kick_number)  # gas->star, sink->star kick
+                tprint("... stars kicked")
 
-            # sync velocity to stars + gravity code(s) from hydro
-            state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
+                # sync velocity to stars + gravity code(s) from hydro
+                state.stars.velocity = hydro.get_particle_velocity(state.stars.tag)  # hydro -> AMUSE
 
-            if num_stars > 1: # Don't run N-body with one star
-                state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
-                if USER['with_multiples']:
-                    mult.channel_from_code_to_memory.copy()     # grav  -> multiples
-                    state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+                if num_stars > 1: # Don't run N-body with one star
+                    state.stars_to_grav.copy_attributes(["vx", "vy", "vz"])              # AMUSE -> grav singles
+                    if USER['with_multiples']:
+                        mult.channel_from_code_to_memory.copy()     # grav  -> multiples
+                        state.stars_to_mult_grav_copy("velocity")   # AMUSE -> multiples, grav COM
+        finally:
+            if state.monitor is not None:
+                state.monitor.stop()
 
         ### ---------------------------------------------
         ### Output FLASH and Torch plot,checkpoint files.
         ### ---------------------------------------------
+        if state.monitor is not None:
+            state.monitor.start("Timed out during when creating output.")
+        try:
+            tprint("Output check")
+            state.output(overwrite=USER['overwrite'])
 
-        tprint("Output check")
-        state.output(overwrite=USER['overwrite'])
+            ### ----------------------
+            ### Prepare for next loop.
+            ### ----------------------
 
-        ### ----------------------
-        ### Prepare for next loop.
-        ### ----------------------
+            # FLASH loop control
+            hy_dt = hydro.get_timestep()
+            hy_step = hydro.get_current_step() + 1  # need +1 because AMUSE coupling changes FLASH nstep logic
+            hy_time = hydro.get_time()
 
-        # FLASH loop control
-        hy_dt = hydro.get_timestep()
-        hy_step = hydro.get_current_step() + 1  # need +1 because AMUSE coupling changes FLASH nstep logic
-        hy_time = hydro.get_time()
+            # grav loop control
+            gr_time = grav.get_time()
 
-        # grav loop control
-        gr_time = grav.get_time()
+            # bridge loop control
+            it += 1
+            dt = min(USER['dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
+            # set initial hydro dt to a power of 2 so PeTar can sync times
+            if USER['with_petar']:
+                dt_nbody = dt_petar * pow(2., np.floor(np.log2(dt/dt_petar)))
+                if num_stars > 0:
+                    dt = dt_nbody
+                    if dt_nbody < dt_petar:
+                        tprint("dt_soft > dt_flash: Lowering dt_soft")
+                        grav.parameters.dt_soft = dt
 
-        # bridge loop control
-        it += 1
-        dt = min(USER['dt_factor']*hy_dt, se_dt, hy_max_time-hy_time)
-        # set initial hydro dt to a power of 2 so PeTar can sync times
-        if USER['with_petar']:
-            dt_nbody = dt_petar * pow(2., np.floor(np.log2(dt/dt_petar)))
-            if num_stars > 0:
-                dt = dt_nbody
-                if dt_nbody < dt_petar:
-                    tprint("dt_soft > dt_flash: Lowering dt_soft")
-                    grav.parameters.dt_soft = dt
+            num_stars = hydro.get_number_of_particles()  # loop variable
 
-        num_stars = hydro.get_number_of_particles()  # loop variable
-
-        if USER['with_petar']:
-            # only assert time-sync with PeTar if stars have formed
-            if first_star==1:
+            if USER['with_petar']:
+                # only assert time-sync with PeTar if stars have formed
+                if first_star==1:
+                    assert abs(hy_time - gr_time) <= (1e4|units.s)
+                    #print("hydro-grav time = ",hy_time - gr_time)
+            else:
                 assert abs(hy_time - gr_time) <= (1e4|units.s)
-                #print("hydro-grav time = ",hy_time - gr_time)
-        else:
-            assert abs(hy_time - gr_time) <= (1e4|units.s)
-        assert num_stars == len(state.stars)
-        if USER['with_multiples']:
-            assert num_stars == len(mult.stars)
-        else:
-            assert num_stars == len(grav.particles)
+            assert num_stars == len(state.stars)
+            if USER['with_multiples']:
+                assert num_stars == len(mult.stars)
+            else:
+                assert num_stars == len(grav.particles)
+        finally:
+            if state.monitor is not None:
+                state.monitor.stop()
     return
 
 # ============================================================================
@@ -600,83 +649,95 @@ def run_torch(user_initial_conditions, user_parameters):
     tprint("Num grav workers: {:d}".format(USER['num_grav_workers']))
     tprint("AMUSE overwrite: {}".format(USER['overwrite']))
 
-    if USER['npy_seed'] is not None:
-        np.random.seed(USER['npy_seed'])
-    if USER['with_voramr']:
-        tprint("Initializing with VorAMR.")
-        if USER['convert_file']:
-            vprint("Converting  provided hdf5 file.")
-            coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sfmtime, smet = extract_data(USER['source_file'],
-                                                                apply_consts=True)
-            coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
-                                                                               scoords, svels,
-                                                                               use_com_coords=False)
-            write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
-                                 scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet,
-                                 USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
+    if USER['monitor_minutes'] is not None:
+        monitor = TorchMonitor(timeout_minutes=USER['monitor_minutes'])
+        monitor.start("Timed out during initialization.")
+    try:
+        if USER['npy_seed'] is not None:
+            np.random.seed(USER['npy_seed'])
+        if USER['with_voramr']:
+            tprint("Initializing with VorAMR.")
+            if USER['convert_file']:
+                vprint("Converting  provided hdf5 file.")
+                coords, vels, dens, mass, eint, gpot, scoords, svels, smass, sinitmass, sfmtime, smet = extract_data(USER['source_file'],
+                                                                    apply_consts=True)
+                coords_cor, vels_cor, scoords_cor, svels_cor = rescale_coords_vels(coords, vels, mass,
+                                                                                   scoords, svels,
+                                                                                   use_com_coords=False)
+                write_corrected_file(USER['input_file'], coords_cor, vels_cor, dens, mass, eint, gpot,
+                                     scoords_cor, svels_cor, smass, sinitmass, sfmtime, smet,
+                                     USER['use_localRef'], USER['local_ref'], USER['center_local_ref'])
 
-            #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
-            coords, field_set = read_hdf5("interp-data.hdf5")
-        else:
-            vprint("Using unconverted source file.")
-            coords, field_set = read_hdf5(USER['source_file'])
+                #coords, field_set = read_hdf5("kdtree-"+USER['input_file'])
+                coords, field_set = read_hdf5("interp-data.hdf5")
+            else:
+                vprint("Using unconverted source file.")
+                coords, field_set = read_hdf5(USER['source_file'])
 
-        # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
-        #vprint('About to call write_voramr_data_to_txt_file')
-        #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['use_localRef'], USER['local_ref'])
+            # FLASH parallel TXT read (pt_initVoronoiPositions-TXT.F90) is still in dev. -SCL
+            #vprint('About to call write_voramr_data_to_txt_file')
+            #write_voramr_data_to_txt_file('test-txt.txt', coords_cor, USER['use_localRef'], USER['local_ref'])
 
-        vprint("Building field interpolator.")
-        kdtree = build_kdtree(coords, field_set)
-        if(USER['pickle_kdtree']):
-            pickle_tree(kdtree, USER['pickle_file_name'])
-            vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
-    # End VorAMR file init
-    
-    hydro, grav, mult, se = initialize_workers()
+            vprint("Building field interpolator.")
+            kdtree = build_kdtree(coords, field_set)
+            if(USER['pickle_kdtree']):
+                pickle_tree(kdtree, USER['pickle_file_name'])
+                vprint('Pickled kdtree: {}'.format(USER['pickle_file_name']))
+        # End VorAMR file init
 
-    state = TorchState(hydro, grav, mult, se, USER)
+        hydro, grav, mult, se = initialize_workers()
 
-    # VORAMR-LITE Testing - SCL ####################
-    #from amuse.community.voramr.interface import Flash
-    #convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
-    #hydro = Flash(
-    #    unit_converter=convert2,
-    #    number_of_workers=1,#USER['num_hy_workers'],
-    #    redirection='file',
-    #    redirect_stdout_file='voramr_worker.out',
-    #    redirect_stderr_file='voramr_worker.err',
-    #    )
-    ###################################################
-    # After hydro initialize, interpolate data onto grid if using VorAMR.
-    if USER['with_voramr']:
-        vprint("Interpolating external data to FLASH grid via VorAMR.")
-        leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
-        interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
-        vprint("Done interpolating. VorAMR complete.")
-        #hydro.hydro.write_chpt()
-        #vprint("Wrote checkpoint.")
+        state = TorchState(hydro, grav, mult, se, USER)
 
-    state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
-    
-    if not state.restart:
-        user_initial_conditions(state, hydro)
-    elif state.restart and USER['restart_with_user_ics']:
-        # massage the hydro particle structures so that particles from user ICs
-        # look like they came from restart checkpoint file.
-        hydro.set_starting_local_tag_numbers()
-        user_initial_conditions(state, hydro)
-        hydro.clear_new_tags()
+        # VORAMR-LITE Testing - SCL ####################
+        #from amuse.community.voramr.interface import Flash
+        #convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+        #hydro = Flash(
+        #    unit_converter=convert2,
+        #    number_of_workers=1,#USER['num_hy_workers'],
+        #    redirection='file',
+        #    redirect_stdout_file='voramr_worker.out',
+        #    redirect_stderr_file='voramr_worker.err',
+        #    )
+        ###################################################
+        # After hydro initialize, interpolate data onto grid if using VorAMR.
+        if USER['with_voramr']:
+            vprint("Interpolating external data to FLASH grid via VorAMR.")
+            leaf_blocks, proc_blocks = get_leaf_blocks(hydro, cellsPerBlock=USER['cellsPerBlock'], numBlocks=USER['numBlocks'])
+            interpolate_fields(hydro, leaf_blocks, proc_blocks, kdtree, nprocs=USER['num_hy_workers'], cellsPerBlock=USER['cellsPerBlock'])
+            vprint("Done interpolating. VorAMR complete.")
+            #hydro.hydro.write_chpt()
+            #vprint("Wrote checkpoint.")
+
+        state.initial_io(overwrite=USER['overwrite'], refresh=USER['restart_with_new_rng'])
+
+        if not state.restart:
+            user_initial_conditions(state, hydro)
+        elif state.restart and USER['restart_with_user_ics']:
+            # massage the hydro particle structures so that particles from user ICs
+            # look like they came from restart checkpoint file.
+            hydro.set_starting_local_tag_numbers()
+            user_initial_conditions(state, hydro)
+            hydro.clear_new_tags()
+    finally:
+        if USER['monitor_minutes'] is not None:
+            monitor.stop()
 
     try:
 
         evolve(state, hydro, grav, mult, se)
         
     finally:
-        pass
-        #hydro.timer_summary()
-        #hydro.cleanup_code()
-        #grav.stop()
-        #kep.stop()
-        #stop_smalln()
-        #del multiples
+        tprint("Evolution reached final time. Simulation will finalize and exit.")
+        if hydro is not None:
+            hydro.timer_summary()
+            hydro.cleanup_code()
+            hydro.stop()
+        if grav is not None:
+            grav.stop()
+        if se is not None:
+            se.stop()
+        if mult is not None:
+            kep.stop()
+            stop_smalln()
 

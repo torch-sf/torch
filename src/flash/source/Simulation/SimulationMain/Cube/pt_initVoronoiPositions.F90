@@ -35,6 +35,7 @@
 !!REORDER(4): solnData
 subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
 
+  use Driver_interface, ONLY: Driver_fatalError
   use Particles_data, ONLY: pt_numLocal, particles, pt_maxPerProc, &
        pt_posInitialized, pt_meshMe, pt_globalMe, pt_meshComm, &
        pt_indexList, pt_indexCount
@@ -207,7 +208,7 @@ subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
                 pt_numLocal = pt_numLocal + 1
                 if (pt_numLocal .gt. pt_maxPerProc) then
                         print*,"ABOVE PT_MAXPERPROC!!!!!"
-                     call Driver_abortFlash('Particles_initPositions: Particle number exceeds pt_maxPerProc. Increase.')
+                     call Driver_fatalError('Particles_initPositions: Particle number exceeds pt_maxPerProc. Increase.')
                 endif
                 ps = pt_numLocal
                 particles(:,ps) = 0

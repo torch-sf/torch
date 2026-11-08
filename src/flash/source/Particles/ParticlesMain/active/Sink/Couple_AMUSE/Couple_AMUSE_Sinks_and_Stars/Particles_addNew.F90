@@ -43,7 +43,7 @@ subroutine Particles_addNew (count, x, y, z, num_part_made, local_tags, ptype_in
   use Particles_sinkData, only : local_tag_number ! Global tags for both particles and particles_local - JW
   use Grid_interface, only : Grid_getBlkIDFromPos
   use Driver_data, only : dr_simTime
-  use Driver_interface, ONLY : Driver_abortFlash
+  use Driver_interface, ONLY : Driver_fatalError
 
   implicit none
   
@@ -107,7 +107,7 @@ do i=1, count
 
     pt_numLocal = pt_numLocal + 1
     if (pt_numLocal .GT. pt_maxPerProc) &
-       call Driver_abortFlash('Particles_addNew: Particle number exceeds pt_maxPerProc. Increase.')
+       call Driver_fatalError('[Particles_addNew] Local particle number exceeds pt_maxPerProc.')
 
     num_part_made = num_part_made + 1
     pno = pt_numLocal

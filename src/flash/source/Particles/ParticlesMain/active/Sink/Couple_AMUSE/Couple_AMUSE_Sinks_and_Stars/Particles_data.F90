@@ -70,7 +70,7 @@ module Particles_data
 
 ! Run-time parameters, for grid initialization
   integer, save      :: pt_maxPerProc  ! for Lattice
-
+  integer, save      :: pt_maxPart
 
 ! Guard Cell masks, initialized in Particles_init
   logical, save      :: pt_gcMaskForAdvance(NUNK_VARS) !This one is for Particles_advance

@@ -111,7 +111,6 @@ dtmax = 1e13
 dtmin = 1.0e1
 tmax   = 3.1536e13 # 1 Myr
 nend   = 5000000
-dr_shortenLastStepBeforeTMax = .true.
 tstep_change_factor = 1.1 #10.0
 
 gr_pmrpConserve = .true.
@@ -314,6 +313,7 @@ dust_sputter_temp = 3e6 # See fig 25.4 in Draine's book
 
 # maximum number of total particles, not just rays
 pt_maxPerProc = 10000
+pt_maxPart   = 10000
 
 ph_sampling     = 4.0 #2 Rays per cell.
 ph_initHPlevel  = 4   #2 HP sphere is 12*(ph_initHPlevel**2)
