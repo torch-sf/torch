@@ -18,15 +18,13 @@ def user_initial_conditions(state, hydro):
     primary, secondary = generate_binaries(
                             primary_mass = 0.5 | units.MSun,
                             secondary_mass = 0.5 | units.MSun,
-                            semi_major_axis = 1.0 | units.au,
+                            semi_major_axis = 600.0 | units.au,
     )
 
     # The above returns two particlesets; make a particleset from the two particles
     stars = Particles()
     stars.add_particle(primary[0])   
     stars.add_particle(secondary[0])
-
-    print(stars.mass, stars.vx, stars.x)
 
     star_tag = hydro.add_particles(stars.x, stars.y, stars.z)
     hydro.set_particle_mass(star_tag, stars.mass)

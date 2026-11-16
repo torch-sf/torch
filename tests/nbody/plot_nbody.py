@@ -36,7 +36,7 @@ if __name__=="__main__":
     fig, ax1 = plt.subplots()
     ax1.plot(t.value_in(units.Myr), a.value_in(units.au), color='k', alpha=0.5, label='Kepler orbit')
 
-    amuse_files, flash_files = find_snapshots('data', 'nbody')
+    amuse_files, flash_files = find_snapshots('data', 'binary1au')
     for i in range(len(amuse_files)):
         amuse_file = amuse_files[i]
         flash_file = flash_files[i]
@@ -53,8 +53,6 @@ if __name__=="__main__":
     
     ax1.set_ylabel('Semi-major axis (au)')
     ax1.set_xlabel('Time (Myr)')
-    #ax1.set_xlim(0, 0.1)
-    #ax1.set_ylim(-1, 2)
 
     fig.tight_layout()
     plt.legend(frameon=False)
