@@ -80,6 +80,9 @@ class TorchMonitor:
     def start(self, abort_message):
         """ Start monitor thread.
         """
+        if self.timer is not None:
+            raise RuntimeError("Cannot start monitor while it is already running.")
+
         self.timer = threading.Timer(self.timeout, self.abort, 
             args=(abort_message,))
         self.timer.daemon = True
