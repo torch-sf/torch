@@ -122,8 +122,9 @@ def initialize_workers():
         from amuse.couple import multiples
 
     if USER['monitor_minutes'] is not None:
+        # TorchMonitor for workers
         # Assumes all calls to worker functions are sequential and non-overlapping.
-        monitor = TorchMonitor(timeout_minutes=USER['monitor_minutes'])
+        _monitor = TorchMonitor(timeout_minutes=USER['monitor_minutes'])
 
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.yr, 1.0|units.MSun)
@@ -133,7 +134,7 @@ def initialize_workers():
     if USER['with_ph4']:
         grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
         if USER['monitor_minutes'] is not None:
-            grav = MonitorWorker(grav, monitor)
+            grav = MonitorWorker(grav, _monitor)
         grav.parameters.set_defaults()
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.force_sync = 1  # end exactly at requested time
@@ -144,7 +145,7 @@ def initialize_workers():
                      redirect_stdout_file='petar_worker.out',
                      redirect_stderr_file='petar_worker.err')
         if USER['monitor_minutes'] is not None:
-            grav = MonitorWorker(grav, monitor)
+            grav = MonitorWorker(grav, _monitor)
         grav.parameters.epsilon_squared = USER['epsilon']**2.0
         grav.parameters.r_bin = USER['r_bin']
         grav.parameters.r_out = USER['r_out']
@@ -152,7 +153,7 @@ def initialize_workers():
     else:
         grav = Hermite(convert, number_of_workers=USER['num_grav_workers'], redirection='none')
         if USER['monitor_minutes'] is not None:
-            grav = MonitorWorker(grav, monitor)
+            grav = MonitorWorker(grav, _monitor)
         grav.parameters.end_time_accuracy_factor = 0.0  # end exactly at requested time
         grav.parameters.dt_param = 0.02  # timestep size control, default 0.03
 
@@ -170,7 +171,7 @@ def initialize_workers():
 
         mult = multiples.Multiples(grav, new_smalln, kep, constants.G)
         if USER['monitor_minutes'] is not None:
-            mult = MonitorWorker(mult, monitor)
+            mult = MonitorWorker(mult, _monitor)
         mult.global_debug                = 0
         mult.neighbor_veto               = True
         mult.check_tidal_perturbation    = True
@@ -183,7 +184,7 @@ def initialize_workers():
 
         se = SeBa()
         if USER['monitor_minutes'] is not None:
-            se = MonitorWorker(se, monitor)
+            se = MonitorWorker(se, _monitor)
         se.initialize_code()
 
     if USER['evolve_async']:
@@ -202,7 +203,7 @@ def initialize_workers():
         )
 
     if USER['monitor_minutes'] is not None:
-        hydro = MonitorWorker(hydro, monitor)
+        hydro = MonitorWorker(hydro, _monitor)
     hydro.initialize_code()
     hydro.set_particle_pointers('mass')  # code convention: hydro should point to star prtl by default
 
@@ -650,6 +651,7 @@ def run_torch(user_initial_conditions, user_parameters):
     tprint("AMUSE overwrite: {}".format(USER['overwrite']))
 
     if USER['monitor_minutes'] is not None:
+        # Monitor for initialization, remainder of the code will use monitor in TorchState.
         monitor = TorchMonitor(timeout_minutes=USER['monitor_minutes'])
         monitor.start("Timed out during initialization.")
     try:

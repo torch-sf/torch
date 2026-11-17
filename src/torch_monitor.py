@@ -1,5 +1,40 @@
+"""
+torch_monitor
+=============
+
+Holds classes TorchMonitor and MonitorWorkers, which are used to limit the time code
+is allowed to execute.
+
+TorchMonitor
+    An instance of TorchMonitor can be used to wrap code in start and stop statements.
+    If the code exceeds the time specified by the TorchMonitor, it will print a failure 
+    message and ask slurm to abort the job.
+
+    The try, finally statments ensures that a monitor is stopped even if an expection is
+    raised.
+
+MonitorWorker
+    Wrapper that monitors function calls to an underlying AMUSE worker, allowing
+    worker calls to be monitored without modifying the worker itself.
+    This is achieved by overriding two special Python methods:
+
+    __getattr__
+        Overridden to be called when an attribute does not exist on the MonitorWorker 
+        instance, instead retrieving the attribute from the underlying worker.
+        Non-callable attributes are returned directly, while callable attributes 
+        are wrapped in a function that starts the TorchMonitor before execution 
+        and stops it afterward, even if an exception is raised. The wrapped function 
+        retains its original metadata and additional public attributes.
+
+    __setattr__ 
+        Overridden to forward attribute assignment to the underlying worker unless 
+        they are _worker and _monitor, which are stored directly on the wrapper using
+        object.__setattr__ to avoid recursive calls to __setattr__.
+
+    Note that __getattr__ only intercepts attributes that are not already defined on
+    the wrapper, whereas __setattr__ intercepts all attribute assignments.
+"""
 import os
-import time
 import threading
 import subprocess
 from functools import wraps
@@ -23,6 +58,8 @@ class TorchMonitor:
         monitor.stop()
     """
 
+    slurm_timeout = 10 # Maximum wait time in seconds
+
     def __init__(self, timeout_minutes=30):
         """ Initialize monitor for timeout_minutes minutes.
         """
@@ -36,7 +73,7 @@ class TorchMonitor:
 
         jobid = os.environ.get("SLURM_JOB_ID")
         if jobid:
-            subprocess.run(["scancel", jobid], timeout=10)
+            subprocess.run(["scancel", jobid], timeout=self.slurm_timeout)
 
         os._exit(1)
 
@@ -70,7 +107,7 @@ class MonitorWorker:
         """
         if any(arg is None for arg in (worker, monitor)):
             raise ValueError("MonitorWorker requires a valid worker and monitor")
-        
+
         object.__setattr__(self, "_worker", worker)
         object.__setattr__(self, "_monitor", monitor)
 
@@ -103,7 +140,7 @@ class MonitorWorker:
                 return attr(*args, **kwargs)
             finally:
                 self._monitor.stop()
-        
+
         # Handle attributes assigned to callable attributes.
         for key in dir(attr):
             if not key.startswith("_") and not hasattr(monitor_call, key):
@@ -111,5 +148,5 @@ class MonitorWorker:
                     setattr(monitor_call, key, getattr(attr, key))
                 except (AttributeError, TypeError):
                     pass
-        
+
         return monitor_call
