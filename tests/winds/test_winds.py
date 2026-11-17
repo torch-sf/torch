@@ -343,16 +343,16 @@ class TestWinds:
 
         if self.plot:
             fig=plt.figure()
-            plt.xlabel(r"Stellar mass loss [${\rm M}_{\odot}\,{\rm yr}^{-1}$]")
-            plt.ylabel(r"Stellar age [Myr]")
+            plt.ylabel(r"Stellar mass loss [${\rm M}_{\odot}\,{\rm yr}^{-1}$]")
+            plt.xlabel(r"Stellar age [Myr]")
             plt.plot(age_list[1:], dmdt_list, ".k")
             plt.axhline(dmdt.value_in(units.MSun / units.yr), color='r')
             plt.savefig(self.saveto / 'dmdt.png', dpi=120, bbox_inches="tight")
             plt.close(fig)
 
             fig=plt.figure()
-            plt.xlabel(r"Wind velocity [${\rm km\, s}^{-1}$]")
-            plt.ylabel(r"Stellar age [Myr]")
+            plt.ylabel(r"Wind velocity [${\rm km\, s}^{-1}$]")
+            plt.xlabel(r"Stellar age [Myr]")
             plt.plot(age_list[1:], vterm_list, '.k')
             plt.axhline(vterm.value_in(units.km / units.s), color='r')
             plt.savefig(self.saveto / 'vterm.png', dpi=120, bbox_inches="tight")
@@ -476,7 +476,7 @@ class TestWinds:
                 for ax in axs:
                     ax.tick_params(axis='both', labelsize=7)
                 axs[-1].set_xlabel("Radius [pc]", fontsize=8)
-                axs[0].text(0.95, 0.4, f"Time = {ds.current_time.to("kyr").value:.0f}", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
+                axs[0].text(0.95, 0.3, f"Time = {ds.current_time.to("kyr").value:.0f} kyr", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
                 axs[0].text(0.95, 0.5, r"Density [${g\ \rm cm}^{-3}$]", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
                 axs[1].text(0.95, 0.5, r"Temperature [K]", transform=axs[1].transAxes, ha='right', va='center', fontsize=8)
                 axs[2].text(0.95, 0.5, r"Pressure [${\rm dyne}\, {\rm cm}^{-2}$]", transform=axs[2].transAxes, ha='right', va='center', fontsize=8)
@@ -547,6 +547,8 @@ class TestWinds:
             plt.gca().tick_params(axis='both', labelsize=7)
             plt.xlabel('Time [kyr]', fontsize=10)
             plt.ylabel('Radius [pc]', fontsize=10)
+            plt.yscale('log')
+            plt.xscale('log')
             plt.plot([],[], '-k', label = 'Simulation')
             plt.plot([],[], '--k', label = 'Weaver et al. (1977)')
             for quantity, c in zip(["R1", "R2"],["r", "b"]):
