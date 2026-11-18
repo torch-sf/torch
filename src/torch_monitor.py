@@ -2,8 +2,8 @@
 torch_monitor
 =============
 
-Holds classes TorchMonitor and MonitorWorkers, which are used to limit the time code
-is allowed to execute.
+Holds classes TorchMonitor and MonitorWorkers, which are used to limit the time a 
+segment of code is allowed to take to complete.
 
 TorchMonitor
     An instance of TorchMonitor can be used to wrap code in start and stop statements.
@@ -14,7 +14,7 @@ TorchMonitor
     because it ensures that a monitor is stopped even if an expection is raised.
 
 MonitorWorker
-    Wrapper that monitors function calls to an underlying AMUSE worker, allowing
+    Wrapper that monitors function calls by an underlying AMUSE worker, allowing
     worker calls to be monitored without modifying the worker itself.
     This is achieved by overriding two special Python methods:
 
