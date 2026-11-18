@@ -468,20 +468,9 @@ subroutine RadHeat (blockCount,blockList,dt,time)
    call MPI_allReduce(MPI_IN_PLACE, overheated, 1, FLASH_LOGICAL, &
                       MPI_LOR, dr_globalcomm, ierr)
    if (overheated) then
-      if (dr_globalMe .eq. MASTER_PE) then
-        print *, "Writing checkpoint and plot files, hope it helps find what broke!"
-      end if
-      call IO_writeCheckpoint()
-      call IO_writePlotfile(.true.)  ! mark forced
-      ! WEIRD BEHAVIOR: if Driver_abortFlash(...) is wrapped within
-      !
-      !    if (dr_globalMe .eq. MASTER_PE) then
-      !      call Driver_abortFlash("Temp too high at beginning or end of RadHeat loop.")
-      !    end if
-      !
       ! the code stalls in IO_writeCheckpoint(); therefore make sure
       ! all procs call Driver_abortFlash(...).  ! -AT 2019 June 06
-      call Driver_abortFlash("Temp too high at beginning or end of RadHeat loop.")
+      call Driver_abortFlash("Temp too high at beginning or end of RadHeat loop. Aborting with output", withOutput=.true.)
    endif
 #endif
 
