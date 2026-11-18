@@ -196,10 +196,12 @@ SUBROUTINE rt_setOpacity()
           !Destroy dust opacities due to thermal sputtering if gas temperatures > 10^6 K
           !TODO: Implement non-thermal sputtering
           if(solnData(TEMP_VAR,i,j,k) .gt. he_dust_sputter_temp) then
-            opac_planck = 1.0e-27 ! set floor to prevent NANs in boundary conditions
-            opac_rosseland = 1.0e-27
+            opac_planck = 1.0e-26 ! set floor to prevent NANs in boundary conditions
+            opac_rosseland = 1.0e-26
           endif
 #endif
+        opac_planck = max(opac_planck,1.0e-26)
+        opac_rosseland = max(opac_rosseland,1.0e-26)
 
           !Total EUV opacity = dust + hydrogen gas opacity (non-zero only for EUV band)
           solnData(TAUP_VAR,i,j,k) = opac_planck + opac_gas
