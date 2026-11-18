@@ -27,7 +27,9 @@ ulimit -s unlimited
 export OMP_STACKSIZE=128M
 export OMP_NUM_THREADS=1
 
-mkdir data
+mkdir data_binary1au
+mkdir data_binary55au
+mkdir data_binary600au
 
 # Create uniform n=0.1 cm^-3, T=100K ICs for N-body tests
 python $TORCH_DIR/utils/ic-generator/turb-uniform.py -rho 0.1 -temp=100 -o nbody_ic
@@ -40,4 +42,4 @@ mpirun --mca orte_base_help_aggregate 0 -n 1 python $TORCH_DIR/tests/nbody/run_b
 cp $TORCH_DIR/tests/nbody/flash.par.binary600au flash.par
 mpirun --mca orte_base_help_aggregate 0 -n 1 python $TORCH_DIR/tests/nbody/run_binary600au.py
 
-#python $TORCH_DIR/tests/nbody/plot_nbody.py
+python $TORCH_DIR/tests/nbody/plot_nbody.py

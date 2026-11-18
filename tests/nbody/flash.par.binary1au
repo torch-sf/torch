@@ -5,7 +5,7 @@
 basenm          = "binary1au_"
 log_file        = "binary1au.log"
 run_comment     = "Test for 1 au binary orbit"
-output_directory= "./data"
+output_directory= "./data_binary1au"
 
 
 # ==============================
