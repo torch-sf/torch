@@ -10,8 +10,8 @@ TorchMonitor
     If the code exceeds the time specified by the TorchMonitor, it will print a failure 
     message and ask slurm to abort the job.
 
-    The try, finally statments ensures that a monitor is stopped even if an expection is
-    raised.
+    Using try, finally statments around monitors is not necessary but highly recomended
+    because it ensures that a monitor is stopped even if an expection is raised.
 
 MonitorWorker
     Wrapper that monitors function calls to an underlying AMUSE worker, allowing
@@ -36,6 +36,7 @@ MonitorWorker
 """
 import os
 import threading
+import time
 import subprocess
 from functools import wraps
 
@@ -47,18 +48,17 @@ class TorchMonitor:
     and kills the slurm job if not completed after some time.
 
     Usage:
+        monitor = TorchMonitor(timeout_minutes=10)
+        monitor.start(abort_message="AMUSE request timed out.")
 
-    monitor = TorchMonitor(timeout_minutes=10)
-    monitor.start(abort_message="AMUSE request timed out.")
-
-    try:
-        # MPI blocking call
-        pool.wait()
-    finally:
-        monitor.stop()
+        try:
+            # MPI blocking call
+            pool.wait()
+        finally:
+            monitor.stop()
     """
 
-    slurm_timeout = 10 # Maximum wait time in seconds
+    abort_delay = 10 # [seconds] Delay abort to allow other monitors to report failures.
 
     def __init__(self, timeout_minutes=30):
         """ Initialize monitor for timeout_minutes minutes.
@@ -70,10 +70,11 @@ class TorchMonitor:
         """ Abort function triggered after self.timeout seconds.
         """
         tprint(f"Failure: {reason}", flush=True)
+        time.sleep(self.abort_delay)
 
         jobid = os.environ.get("SLURM_JOB_ID")
         if jobid:
-            subprocess.run(["scancel", jobid], timeout=self.slurm_timeout)
+            subprocess.run(["scancel", jobid], timeout=10)
 
         os._exit(1)
 
@@ -138,7 +139,7 @@ class MonitorWorker:
         def monitor_call(*args, **kwargs):
             """ Wrap function in TorchMonitor start() and stop().
             """
-            self._monitor.start(f"AMUSE call timed out in {name}")
+            self._monitor.start(f"Worker function call timed out in {name}")
             try:
                 return attr(*args, **kwargs)
             finally:
