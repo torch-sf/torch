@@ -20,17 +20,11 @@ Module Driver_interface
 # include "constants.h"
 
   interface
-    subroutine Driver_abortFlash (errorMessage)
+    subroutine Driver_abortFlash (errorMessage, writeOutput)
       implicit none
       character(len=*), intent(in) :: errorMessage
+      logical, intent(in), optional :: writeOutput
     end subroutine Driver_abortFlash
-  end interface
-  
-  interface
-    subroutine Driver_fatalError (errorMessage)
-      implicit none
-      character(len=*), intent(in) :: errorMessage
-    end subroutine Driver_fatalError
   end interface
   
   interface

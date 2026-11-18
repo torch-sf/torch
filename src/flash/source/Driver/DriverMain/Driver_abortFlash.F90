@@ -23,9 +23,8 @@
 !!
 !!***
 
-subroutine Driver_abortFlash (errorMessage)
+subroutine Driver_abortFlash (errorMessage, withOutput)
  
-  use Driver_interface, ONLY : Driver_fatalError
   use Driver_data, ONLY : dr_globalMe,dr_globalComm, dr_eachProcWritesOwnAbortLog, &
        dr_abortPause
   use Logfile_interface, ONLY : Logfile_stampMessage, Logfile_stamp, Logfile_open, Logfile_close, &
@@ -37,11 +36,11 @@ subroutine Driver_abortFlash (errorMessage)
 #include "constants.h"          
 #include "Flash.h"
 
+  logical, intent(in), optional :: withOutput
   character(len=*), intent(in) :: errorMessage
   character(len=MAX_STRING_LENGTH*2) :: errorMessagePlusAbort
   character(len=28)                  :: dateTimeStr
   logical, parameter :: forceStampMessage = .false. !disabled alternative
-
   ! To be passed to MPI_Abort
   integer, parameter::      errcode = 1
   integer :: logUnit
@@ -51,6 +50,9 @@ subroutine Driver_abortFlash (errorMessage)
   character(len=MAX_STRING_LENGTH):: peMessage = &
             & "[DRIVER_ABORT] Driver_abort() called by PE "
 
+  
+  writeOutput = .false.
+  if (present(withOutput)) writeOutput = withOutput
 
   if (dr_globalMe .eq. MASTER_PE) then
      print *, " "
@@ -103,17 +105,32 @@ subroutine Driver_abortFlash (errorMessage)
 
   call Logfile_close()
 
-  if (dr_globalMe .eq. MASTER_PE) then
-     print *, "Writing out checkpoint and plot files, hope it helps find what broke!"
-  end if
-  call IO_writeCheckpoint()
-  call IO_writePlotfile(.true.)  ! mark forced
+  ! Print error message
+  write(error_unit, '(A,I0,2A)') &
+       "[DRIVER_FATAL] PE ", dr_globalMe, ": ", trim(errorMessage)
+  flush(error_unit)
+
+#ifdef __GFORTRAN__
+  ! Print traceback (only GNU Fortran)
+  call backtrace()
+#endif
+
+  if (writeOutput) then
+     if (dr_globalMe .eq. MASTER_PE) then
+        print *, "Writing checkpoint and plot files"
+     end if
+     call IO_writeCheckpoint()
+     call IO_writePlotfile(.true.)  ! mark forced
+  endif
 
   if (dr_abortPause > 0) then
      call dr_sleep(dr_abortPause)
   end if
   
-  call Driver_fatalError(errorMessage)
+  ! Terminate all MPI processes
+  call MPI_Abort(dr_globalComm, errcode, ierr)
+
+  stop 1
   
   return
 end subroutine Driver_abortFlash
