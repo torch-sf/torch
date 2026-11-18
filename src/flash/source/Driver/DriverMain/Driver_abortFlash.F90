@@ -25,6 +25,7 @@
 
 subroutine Driver_abortFlash (errorMessage, withOutput)
  
+  use iso_fortran_env, ONLY : error_unit
   use Driver_data, ONLY : dr_globalMe,dr_globalComm, dr_eachProcWritesOwnAbortLog, &
        dr_abortPause
   use Logfile_interface, ONLY : Logfile_stampMessage, Logfile_stamp, Logfile_open, Logfile_close, &
@@ -41,6 +42,8 @@ subroutine Driver_abortFlash (errorMessage, withOutput)
   character(len=MAX_STRING_LENGTH*2) :: errorMessagePlusAbort
   character(len=28)                  :: dateTimeStr
   logical, parameter :: forceStampMessage = .false. !disabled alternative
+  logical :: writeOutput
+
   ! To be passed to MPI_Abort
   integer, parameter::      errcode = 1
   integer :: logUnit
