@@ -470,7 +470,7 @@ subroutine RadHeat (blockCount,blockList,dt,time)
    if (overheated) then
       ! the code stalls in IO_writeCheckpoint(); therefore make sure
       ! all procs call Driver_abortFlash(...).  ! -AT 2019 June 06
-      call Driver_abortFlash("Temp too high at beginning or end of RadHeat loop. Aborting with output", withOutput=.true.)
+      call Driver_abortFlash("Temp too high at beginning or end of RadHeat loop. Aborting with output", .true.)
    endif
 #endif
 
