@@ -270,6 +270,9 @@ def evolve(state, hydro, grav, mult, se):
 
     first_star = 0
 
+    # Run is considered complete when it has evolved to the final hydro time within 
+    # an acceptable grace period. The grace period is the time that Torch accepts as 
+    # an error when checking if two workers are in sync.
     while (hy_max_time-hy_time > (1e4|units.s)) and hy_step < hy_max_steps:
         
         tprint("Bridge step: it={}, t={:e}, dt={:e}".format(
