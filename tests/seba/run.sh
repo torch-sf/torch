@@ -33,11 +33,11 @@ mkdir data
 python $TORCH_DIR/tests/seba/run_seba_amuse.py
 
 # Create uniform n=0.1 cm^-3, T=100K ICs for stellar evolution tests
-#python $TORCH_DIR/utils/ic-generator/turb-uniform.py -rho 0.1 -temp=100 -o seba_ic
+python $TORCH_DIR/utils/ic-generator/turb-uniform.py -rho 0.1 -temp=100 -o seba_ic
 
 # Run test for SeBa in Torch, without restart and with restarts
-#cp $TORCH_DIR/tests/seba/flash.par.seba flash.par
-#mpirun --mca orte_base_help_aggregate 0 -n 1 python $TORCH_DIR/tests/seba/run_seba_torch.py
+cp $TORCH_DIR/tests/seba/flash.par.seba flash.par
+mpirun --mca orte_base_help_aggregate 0 -n 1 python $TORCH_DIR/tests/seba/run_seba_torch.py
 
 # Plot the results
 python $TORCH_DIR/tests/seba/plot_seba.py

@@ -7,7 +7,7 @@ from amuse.io import write_set_to_file
 
 def evolve_star_from_sf(
     mass = 20 | units.Msun,
-    t_end = 10 | units.Myr,
+    t_end = 5 | units.Myr,
     t_step = 0.1 | units.kyr,
 ):
 
@@ -27,11 +27,9 @@ def evolve_star_from_sf(
 
     return snapshots
 
-evolved_star = evolve_star_from_sf(mass = 10 | units.Msun)
-write_set_to_file(evolved_star, 'data/seba_amuse_10Msun.amuse', overwrite_file=True)
-evolved_star = evolve_star_from_sf(mass = 20 | units.Msun)
+evolved_star = evolve_star_from_sf(mass = 20 | units.Msun, t_end = 10 | units.Myr)
 write_set_to_file(evolved_star, 'data/seba_amuse_20Msun.amuse', overwrite_file=True)
-evolved_star = evolve_star_from_sf(mass = 40 | units.Msun)
+evolved_star = evolve_star_from_sf(mass = 40 | units.Msun, t_end = 10 | units.Myr)
 write_set_to_file(evolved_star, 'data/seba_amuse_40Msun.amuse', overwrite_file=True)
 evolved_star = evolve_star_from_sf(mass = 80 | units.Msun)
 write_set_to_file(evolved_star, 'data/seba_amuse_80Msun.amuse', overwrite_file=True)

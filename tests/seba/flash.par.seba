@@ -12,7 +12,7 @@ output_directory= "./data"
 # Simulation/SimulationMain/Cube
 # ==============================
 
-sim_cubeFile        ="./nbody_ic"
+sim_cubeFile        ="./seba_ic"
 
 # ionised gas fraction
 sim_init_Hp = 1e-4
@@ -40,7 +40,7 @@ gamma = 1.66666666666666667
 # =============
 
 # Computational domain
-# For the test problem in nbody_ic (-10,+10) pc
+# For the test problem in seba_ic (-10,+10) pc
 xmax            =  3.086e+19
 xmin            = -3.086e+19
 ymax            =  3.086e+19
@@ -102,10 +102,10 @@ gr_pmrpConserve          = .true.
 # ==================================================
 restart         = .false.
 nend            = 999999999
-tmax            = 3.16e12 # > 0.1 Myr
+tmax            = 3.15e14 # > 10 Myr
 dtinit          = 3.15e8
 dtmin           = 3.15e7
-dtmax           = 3.1556926e10 # limit timestep to desired output cadence
+dtmax           = 3.1556926e10 # Limit timestep to 1 kyr to match timesteps with massive stars.
 dr_shortenLastStepBeforeTMax = .false. # Setting true works but causes crash in amuse preventing graceful exit.
 tstep_change_factor = 2.0
 
@@ -113,13 +113,13 @@ wall_clock_checkpoint       = 0.432e+05
 wall_clock_time_limit       = 1.0e99
 checkpointFileNumber        = 0
 checkpointFileIntervalStep  = 0
-checkpointFileIntervalTime  = 3.1556926e12 # 0.1 Myr
+checkpointFileIntervalTime  = 3.1556926e13 # 1 Myr
 plotFileNumber              = 0
 plotFileIntervalStep        = 0
-plotFileIntervalTime        = 3.1556926e10 # 1 kyr
+plotFileIntervalTime        = 3.1556926e12 # 0.1 Myr
 particleFileNumber          = 0
 particleFileIntervalStep    = 0
-particleFileIntervalTime    = 3.1556926e10 # 1 kyr
+particleFileIntervalTime    = 3.1556926e12 # 0.1 Myr
 
 # Time step limiting for positive definiteness
 # New in FLASH4.5, see Sec 7.1.5.1 of Flash User's Guide
