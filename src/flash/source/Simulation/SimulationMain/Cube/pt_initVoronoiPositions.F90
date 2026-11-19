@@ -35,6 +35,7 @@
 !!REORDER(4): solnData
 subroutine pt_initVoronoiPositions (partPosInitialized,updateRefine)
 
+  use Driver_interface, ONLY: Driver_abortFlash
   use Particles_data, ONLY: pt_numLocal, particles, pt_maxPerProc, &
        pt_posInitialized, pt_meshMe, pt_globalMe, pt_meshComm, &
        pt_indexList, pt_indexCount

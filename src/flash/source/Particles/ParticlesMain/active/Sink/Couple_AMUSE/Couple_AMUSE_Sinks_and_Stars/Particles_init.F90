@@ -98,6 +98,7 @@ subroutine Particles_init ( restart)
 
     ! space allocation, for Particles_init
   call RuntimeParameters_get ("pt_maxPerProc", pt_maxPerProc)
+  call RuntimeParameters_get ("pt_maxPart", pt_maxPart)
 
   ! geometry, for Particles_initPositions
   call RuntimeParameters_get("geometry",pt_str_geometry)
@@ -196,7 +197,7 @@ subroutine Particles_init ( restart)
   ! Note this is always initialized to NONEXISTANT.
   ! Call pt_gatherGlobal to properly fill.
   if (.not. allocated(allproc_particles)) &
-       allocate (allproc_particles(NPART_PROPS,pt_maxPerProc), stat=ierr)
+       allocate (allproc_particles(NPART_PROPS,pt_maxPart), stat=ierr)
   if (ierr /= 0) then
      call Driver_abortFlash("Particles_init:  could not allocate particle array")
   endif

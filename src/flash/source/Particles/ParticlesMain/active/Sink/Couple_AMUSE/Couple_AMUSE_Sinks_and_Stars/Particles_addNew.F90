@@ -107,7 +107,7 @@ do i=1, count
 
     pt_numLocal = pt_numLocal + 1
     if (pt_numLocal .GT. pt_maxPerProc) &
-       call Driver_abortFlash('Particles_addNew: Particle number exceeds pt_maxPerProc. Increase.')
+       call Driver_abortFlash('[Particles_addNew] Local particle number exceeds pt_maxPerProc.')
 
     num_part_made = num_part_made + 1
     pno = pt_numLocal

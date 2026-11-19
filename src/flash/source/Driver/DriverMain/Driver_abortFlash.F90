@@ -23,8 +23,9 @@
 !!
 !!***
 
-subroutine Driver_abortFlash (errorMessage)
-  
+subroutine Driver_abortFlash (errorMessage, withOutput)
+ 
+  use iso_fortran_env, ONLY : error_unit
   use Driver_data, ONLY : dr_globalMe,dr_globalComm, dr_eachProcWritesOwnAbortLog, &
        dr_abortPause
   use Logfile_interface, ONLY : Logfile_stampMessage, Logfile_stamp, Logfile_open, Logfile_close, &
@@ -36,10 +37,12 @@ subroutine Driver_abortFlash (errorMessage)
 #include "constants.h"          
 #include "Flash.h"
 
+  logical, intent(in), optional :: withOutput
   character(len=*), intent(in) :: errorMessage
   character(len=MAX_STRING_LENGTH*2) :: errorMessagePlusAbort
   character(len=28)                  :: dateTimeStr
   logical, parameter :: forceStampMessage = .false. !disabled alternative
+  logical :: writeOutput
 
   ! To be passed to MPI_Abort
   integer, parameter::      errcode = 1
@@ -50,6 +53,9 @@ subroutine Driver_abortFlash (errorMessage)
   character(len=MAX_STRING_LENGTH):: peMessage = &
             & "[DRIVER_ABORT] Driver_abort() called by PE "
 
+  
+  writeOutput = .false.
+  if (present(withOutput)) writeOutput = withOutput
 
   if (dr_globalMe .eq. MASTER_PE) then
      print *, " "
@@ -70,12 +76,6 @@ subroutine Driver_abortFlash (errorMessage)
   else
      print *, "DRIVER_ABORT: ", errorMessage  
   end if
-
-  if (dr_globalMe .eq. MASTER_PE) then
-     print *, "Writing out checkpoint and plot files, hope it helps find what broke!"
-  end if
-  call IO_writeCheckpoint()
-  call IO_writePlotfile(.true.)  ! mark forced
 
   write (peMessage(len_trim(peMessage)+1:), *) dr_globalMe
 
@@ -108,12 +108,32 @@ subroutine Driver_abortFlash (errorMessage)
 
   call Logfile_close()
 
+  ! Print error message
+  write(error_unit, '(A,I0,2A)') &
+       "[DRIVER_FATAL] PE ", dr_globalMe, ": ", trim(errorMessage)
+  flush(error_unit)
+
+#ifdef __GFORTRAN__
+  ! Print traceback (only GNU Fortran)
+  call backtrace()
+#endif
+
+  if (writeOutput) then
+     if (dr_globalMe .eq. MASTER_PE) then
+        print *, "Writing checkpoint and plot files"
+     end if
+     call IO_writeCheckpoint()
+     call IO_writePlotfile(.true.)  ! mark forced
+  endif
+
   if (dr_abortPause > 0) then
      call dr_sleep(dr_abortPause)
   end if
+  
+  ! Terminate all MPI processes
+  call MPI_Abort(dr_globalComm, errcode, ierr)
 
-  call MPI_Abort (dr_globalComm, errcode, ierr)
-  stop            ! should not make it here
-
+  stop 1
+  
   return
 end subroutine Driver_abortFlash
