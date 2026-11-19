@@ -14,14 +14,12 @@ Torch combines different codes via the `AMUSE`_ framework to model gas
 dynamics, formation of single and binary stars, stellar evolution and feedback, 
 and collisional N-body dynamics.
 
-The current stable version is `Torch 2.2`_.  
-Stable version of torch lives on the `main`_ branch, and ongoing development 
+Stable versions of torch live on the `main`_ branch. Ongoing development 
 happens on the `develop`_ branch.
 
 .. _AMUSE: https://www.amusecode.org/
-.. _Torch 2.2: https://bitbucket.org/torch-sf/torch/src/torch-v2.2/
-.. _main: https://bitbucket.org/torch-sf/torch/src/main/
-.. _develop: https://bitbucket.org/torch-sf/torch/src/develop/
+.. _main: https://github.com/torch-sf/torch
+.. _develop: https://github.com/torch-sf/torch/tree/develop
 
 .. toctree::
    :maxdepth: 2
@@ -29,21 +27,22 @@ happens on the `develop`_ branch.
    
    manual/Quickstart.md
    manual/Installation.md
+   manual/FAQ.md
 .. manual/Torch_Parameters.md
    manual/Flash_Parameters.md
    manual/Known_Systems.md
    manual/Known_Issues.md
-   manual/FAQ.md
 
 .. toctree::
    :maxdepth: 2
    :caption: Wiki
    
    wiki/Torch.md
+   wiki/Stellar_Feedback.md
+   wiki/VorAMR.md
 .. wiki/Magnetohydrodynamics.md
    wiki/Cooling_Heating.md
    wiki/Star_Formation.md
-   wiki/Stellar_Feedback.md
    wiki/Radiation.md
    wiki/Nbody.md
    wiki/Initial_Conditions.md
