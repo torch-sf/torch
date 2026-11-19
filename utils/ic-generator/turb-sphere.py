@@ -276,7 +276,7 @@ def dens_pot_3darr_noextrap(r_rarr, rho_rarr, NCD, CD):
 def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
                    kmin, kmax, Eslp, Bmag, filename, write_data,
                    Ts_from_cool_curve=False,
-                   cool_curve='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat',
+                   cool_curve='../../hAc_b_2.0E-17_e_0.021_FUV_1.69.dat',
                    rho_match=False,
                    with_plots=True):
 
@@ -500,8 +500,8 @@ def make_data_cube(Msph, Rsph, box, n0, Tsph, T_amb, musph, mu_amb, vir_rat,
         f.close()
 
 
-def get_P_and_T_from_Eq_Cooling_Curve(numdens, data_file='hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
-
+def get_P_and_T_from_Eq_Cooling_Curve(numdens, data_file='../../hAc_b_2.0E-17_e_0.021_FUV_1.69.dat'):
+    print("Cooling curve file: ", data_file)
     [time, ndens, temp, ei, pk, xHp, mu_mol, tdust] = np.loadtxt(
                                                    data_file, unpack=True)
 
