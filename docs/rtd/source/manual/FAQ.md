@@ -2,6 +2,39 @@
 
 ## General
 
+### Is it possible to create an output before FLASH crashes?
+
+It might be possible to use the output functionality in Driver_abortFlash. Pass .true. 
+to the optional parameter withOutput, and FLASH will attempt to write an output before 
+aborting. Note that this functionality is not available everywhere in FLASH. For example, 
+Driver_abortFlash must be called by every FLASH MPI rank. If you test this, please 
+report back on whether it works.
+
+### Why is my simulation stalling when one of the workers encounters a problem?
+
+There is a known issue in Torch where the AMUSE communicator gets stuck waiting
+indefinitely when one of the workers crashes. This is documented in PR #207, and the 
+current solution is to use the TorchMonitor available in src/torch_monitor.py to force 
+the simulation to exit if it stalls. Use the parameter `monitor_minutes` in 
+torch_user.py to limit how long your simulation is allowed to stall.
+
+### Why is my simulation failing with abort messages related to exceeding pt_maxPerProc?
+
+There is legacy code that uses pt_maxPerProc to refer to the total particle and ray 
+count in FLASH. Your issue is likely related to these counts exceeding this limit. The 
+intention is for pt_maxPerProc to refer only to the particle count per processor, but 
+there might still be places that have not been updated. Your simulation can likely 
+continue if pt_maxPerProc is increased, but please report the problem as an issue on our 
+GitHub repository.
+
+### Can I set dr_shortenLastStepBeforeTMax=.false. in flash.par?
+
+The Torch interface enforces dr_shortenLastStepBeforeTMax=.true. because the hydro and 
+gravity workers are otherwise highly prone to going out of sync during the last timestep. 
+The AMUSE interface.py must be edited locally to allow 
+dr_shortenLastStepBeforeTMax=.false., but this can cause issues during the last timestep 
+and is therefore not recommended.
+
 ### What resolution should I run at? 
 
 Torch is considered well-behaved at ~0.3 pc resolution. This is the maximum recommended cell size for production simulations. Runs at lower resolution than this produce **unphysical results**. Note that convergence testing is underway, and more information will be provided here once those tests are complete.
