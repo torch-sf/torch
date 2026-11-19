@@ -16,6 +16,7 @@
 !!  way on all processors. It always contains the local particles in the first
 !!  1:localnp indexes after the call is finished. If optional arguments are given,
 !!  only specified particle properties are communicated across all processors.
+!!  The subroutine is based on pt_sinkGatherGlobal.
 !!
 !! ARGUMENTS
 !!
