@@ -111,8 +111,18 @@ def stop_smalln():
 
 def initialize_workers():
 
-    # Import amuse worker codes
-    from torch_amuse_flash.interface import Flash
+    # Import amuse worker codes.
+    # USER['hydro_code'] selects the gas solver: 'flash' (the default, and
+    # what Torch has always used) or 'luna'. LUNA is a Python AMUSE community
+    # code (amuse_luna) wrapping a JAX solver, so it is imported the same way
+    # and implements the same interface; everything below this is unchanged.
+    hydro_code = USER['hydro_code'] if 'hydro_code' in USER else 'flash'
+    if hydro_code == 'luna':
+        from amuse_luna.interface import Luna as HydroCode
+    elif hydro_code == 'flash':
+        from torch_amuse_flash.interface import Flash as HydroCode
+    else:
+        raise ValueError("USER['hydro_code'] = {!r}: expected 'flash' or 'luna'".format(hydro_code))
     if USER['with_petar']:
         from amuse.community.petar.interface import Petar
     elif USER['with_multiples']:
@@ -122,8 +132,13 @@ def initialize_workers():
     
     # Converter for the N-body code.
     convert = nbody.nbody_to_si(1.0|units.yr, 1.0|units.MSun)
-    # Converter for the hydro code.
-    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(1.0|units.cm, 1.0|units.g, 1|units.s)
+    # Converter for the hydro code. FLASH works in cgs, so 1 cm / 1 g / 1 s is
+    # the identity for it. Another hydro code has its own code units, and
+    # getting this wrong does not fail loudly -- every number simply crosses
+    # the boundary rescaled. USER['hydro_units'] carries that code's triple.
+    hy_units = USER['hydro_units'] if 'hydro_units' in USER else \
+        (1.0|units.cm, 1.0|units.g, 1.0|units.s)
+    convert2 = generic_unit_converter.ConvertBetweenGenericAndSiUnits(*hy_units)
 
     if USER['with_ph4']:
         grav = ph4(convert, number_of_workers=USER['num_grav_workers'], mode='cpu', redirection='none')
@@ -172,15 +187,15 @@ def initialize_workers():
         se.initialize_code()
 
     if USER['evolve_async']:
-        hydro = Flash(
+        hydro = HydroCode(
             unit_converter=convert2,
             number_of_workers=USER['num_hy_workers'],
             redirection='file',
-            redirect_stdout_file='flash_worker.out',
-            redirect_stderr_file='flash_worker.err',
+            redirect_stdout_file='{}_worker.out'.format(hydro_code),
+            redirect_stderr_file='{}_worker.err'.format(hydro_code),
         )
     else:
-        hydro = Flash(
+        hydro = HydroCode(
             unit_converter=convert2,
             number_of_workers=USER['num_hy_workers'],
             redirection='none',
