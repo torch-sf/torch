@@ -123,6 +123,21 @@ subroutine Simulation_init()
   if (sim_myPE.EQ.MASTER_PE) then
      if (use_deref) call Logfile_stamp('derefining outside region of interest', "[Simulation_init]")
   endif
+  
+#ifdef TRACER_FIELDS
+  call RuntimeParameters_get('sim_nTracerFields', sim_nTracerFields)
+  
+! Check for consistent setup.
+  if (NMASS_SCALARS .ne. sim_nTracerFields) then
+    if (sim_myPE .eq. MASTER_PE) then
+      print*, "Number of mass scalars is not consistent with sim_nTracerFields: ", &
+        "NMASS_SCALARS, sim_nTracerFields = ", &
+        NMASS_SCALARS, sim_nTracerFields
+
+    end if
+    call Driver_abortFlash("Inconsitency between number of tracer fields and mass scalars. Check flash.par and Simulation Config.")
+  endif
+#endif
 
   sim_abar = 1.0 + sim_abundM*sim_metal
 
@@ -147,15 +162,26 @@ subroutine Simulation_init()
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velyArr")
   allocate(sim_velzArr(sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
   if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_velzArr")
+  
+#ifdef TRACER_FIELDS
+  allocate(sim_TracerFieldArr(NMASS_SCALARS, sim_nCD(IAXIS), sim_nCD(JAXIS), sim_nCD(KAXIS)), stat=istat)
+  if (istat .ne. 0) call Driver_abortFlash("Could not allocate sim_TracerFieldArr")
+#endif
 
   if (sim_myPE .eq. MASTER_PE) then
     do i = 1,sim_nCD(IAXIS)
       do j = 1,sim_nCD(JAXIS)
         do k = 1,sim_nCD(KAXIS)
+#ifdef TRACER_FIELDS
+          read(55,*) ii,jj,kk, sim_densArr(i,j,k), sim_presArr(i,j,k), &
+          & sim_velxArr(i,j,k), sim_velyArr(i,j,k), sim_velzArr(i,j,k), &
+          & sim_gpotArr(i,j,k), sim_TracerFieldArr(:,i,j,k)
+#else
           read(55,*) ii,jj,kk, sim_densArr(i,j,k), sim_presArr(i,j,k), &
           & sim_velxArr(i,j,k), sim_velyArr(i,j,k), sim_velzArr(i,j,k), &
           & sim_gpotArr(i,j,k)
           !print *, i,ii, j, jj, k, kk, sim_densArr(i,j,k), sim_presArr(i,j,k), sim_gpotArr(i,j,k)
+#endif
         enddo
 !        read(55,*)
       enddo
@@ -176,6 +202,10 @@ subroutine Simulation_init()
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
   call MPI_Bcast(sim_velzArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS), &
   & FLASH_REAL, MASTER_PE, sim_comm, istat)
+#ifdef TRACER_FIELDS
+  call MPI_Bcast(sim_TracerFieldArr, sim_nCD(IAXIS)*sim_nCD(JAXIS)*sim_nCD(KAXIS)*NMASS_SCALARS, &
+  & FLASH_REAL, MASTER_PE, sim_comm, istat)
+#endif
 
 
 end subroutine Simulation_init

@@ -20,6 +20,7 @@ module Simulation_data
 
   implicit none
 #include "constants.h"
+#include "Flash.h"
 
   !! *** Runtime Parameters *** !!
   character(len=255),save :: sim_cubeFile
@@ -33,6 +34,12 @@ module Simulation_data
   real, allocatable, save :: sim_densArr(:,:,:), sim_presArr(:,:,:)
   real, allocatable, save :: sim_gpotArr(:,:,:), sim_velxArr(:,:,:)
   real, allocatable, save :: sim_velyArr(:,:,:), sim_velzArr(:,:,:)
+  
+#ifdef TRACER_FIELDS
+  !! Arrays and variables for tracer fields.
+  integer, save :: sim_nTracerFields
+  real, allocatable, save :: sim_TracerFieldArr(:,:,:,:)
+#endif
 
 ! single fluid stuff
 

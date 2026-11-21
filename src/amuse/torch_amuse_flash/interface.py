@@ -45,6 +45,13 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_tracer_field_pointer():
+        function = LegacyFunctionSpecification()
+        function.addParameter('itracer_in', dtype='i', direction=function.IN)
+        function.result_type = 'int32'
+        return function
+
+    @legacy_function
     def cleanup_code():
         function = LegacyFunctionSpecification()
         function.result_type = 'int32'
@@ -521,6 +528,15 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         #function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
+    
+    @legacy_function
+    def yield_injection():
+        function = LegacyFunctionSpecification()
+        function.addParameter('iscalar', dtype='i', direction=function.IN)
+        for x in ['yield', 'mass','xloc','yloc','zloc']:
+            function.addParameter(x, dtype='d', direction=function.IN)
+        function.result_type = 'i'
+        return function
 
     #@legacy_function
     #def wind_injection():
@@ -532,6 +548,13 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         ##function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         #function.result_type = 'i'
         #return function
+ 
+    @legacy_function
+    def get_number_of_tracer_fields():
+        function = LegacyFunctionSpecification()
+        function.addParameter('value', dtype='int32', direction=function.OUT)
+        function.result_type='i'
+        return function
 
 ########################################
 # Particle Stuff
@@ -808,6 +831,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_particle_rotvel():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rotvel', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
     def set_particle_sigh():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -858,6 +891,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def set_particle_tracer_dydt():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('dydt', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+    @legacy_function
+
     def set_particle_wind_vel():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -959,6 +1002,16 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         return function
 
     @legacy_function
+    def get_particle_rotvel():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('rotvel', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
     def get_particle_sigh():
         function = LegacyFunctionSpecification()
         function.must_handle_array = True
@@ -1004,6 +1057,26 @@ class FlashInterface(CodeInterface, HydrodynamicsInterface):
         function.must_handle_array = True
         function.addParameter('tags', dtype='d', direction=function.IN)
         function.addParameter('creation_time', dtype='d', direction=function.IN)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def get_particle_tracer_field():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('tracer', dtype='d', direction=function.OUT)
+        function.addParameter('nparts',dtype='i',direction=function.LENGTH)
+        function.result_type = 'i'
+        return function
+
+    @legacy_function
+    def set_particle_tracer_field():
+        function = LegacyFunctionSpecification()
+        function.must_handle_array = True
+        function.addParameter('tags', dtype='d', direction=function.IN)
+        function.addParameter('tracer', dtype='d', direction=function.IN)
         function.addParameter('nparts',dtype='i',direction=function.LENGTH)
         function.result_type = 'i'
         return function
@@ -1326,6 +1399,12 @@ class Flash(CommonCode):
         )
 
         object.add_method(
+            'set_tracer_field_pointer',
+            object.NO_UNIT,
+            object.ERROR_CODE
+        )
+
+        object.add_method(
             'evolve_model',
             (time,),
             (object.ERROR_CODE,)
@@ -1596,12 +1675,25 @@ class Flash(CommonCode):
              mass, length, length, length),
             (time, object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'yield_injection',
+            (object.NO_UNIT, mass, mass, 
+             length, length, length),
+            (object.ERROR_CODE)
+        )
 
         #object.add_method(
             #'wind_injection',
             #(mass, mass, length, length, length),
             #(time, object.ERROR_CODE)
         #)
+
+        object.add_method(
+            'get_number_of_tracer_fields',
+            (),
+            (object.NO_UNIT,object.ERROR_CODE,)
+        )
 
 ###################################
 ######### Particles
@@ -1765,6 +1857,12 @@ class Flash(CommonCode):
             (object.INDEX), 
             (length, object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'get_particle_rotvel',
+            (object.INDEX), 
+            (length/time, object.ERROR_CODE)
+        )
 
         object.add_method(
             'get_particle_sigh',
@@ -1781,6 +1879,18 @@ class Flash(CommonCode):
         object.add_method(
             'set_particle_oldmass',
             (object.INDEX, mass),
+            (object.ERROR_CODE)
+        )
+
+        object.add_method(
+            'get_particle_tracer_field',
+            (object.INDEX),
+            (object.NO_UNIT, object.ERROR_CODE)
+        )
+        
+        object.add_method(
+            'set_particle_tracer_field',
+            (object.INDEX, object.NO_UNIT),
             (object.ERROR_CODE)
         )
 
@@ -1831,6 +1941,12 @@ class Flash(CommonCode):
             (object.INDEX, length), 
             (object.ERROR_CODE)
         )
+        
+        object.add_method(
+            'set_particle_rotvel',
+            (object.INDEX, length/time),
+            (object.ERROR_CODE)
+        )
 
         object.add_method(
             'set_particle_sigh',
@@ -1858,6 +1974,12 @@ class Flash(CommonCode):
 
         object.add_method(
             'set_particle_wind_mass',
+            (object.INDEX, mass/time),
+            (object.ERROR_CODE)
+        )
+
+        object.add_method(
+            'set_particle_tracer_dydt',
             (object.INDEX, mass/time),
             (object.ERROR_CODE)
         )
@@ -2078,6 +2200,7 @@ class Flash(CommonCode):
         for state in ['EDIT', 'RUN']:
             for methodname in [
                     'set_particle_pointers',
+                    'set_tracer_field_pointer',
                     'get_grid_state',
                     'set_grid_state',
                     'set_block_state', # VorAMR addition - SCL
@@ -2127,7 +2250,9 @@ class Flash(CommonCode):
                     'get_current_step',
                     'get_restart',
                     'energy_injection',
+                    'yield_injection',
 #                    'wind_injection',
+                    'get_number_of_tracer_fields',
                     'get_number_of_particles',
                     'get_accel_gas_on_particles',
                     'get_particle_position',
@@ -2150,6 +2275,8 @@ class Flash(CommonCode):
                     'set_particle_mass',
                     'get_particle_oldmass',
                     'set_particle_oldmass',
+                    'get_particle_tracer_field',
+                    'set_particle_tracer_field',
                     'get_particle_nion',
                     'set_particle_nion',
                     'get_particle_eion',
@@ -2166,6 +2293,8 @@ class Flash(CommonCode):
                     'set_particle_stype',
                     'get_particle_radius',
                     'set_particle_radius',
+                    'get_particle_rotvel',
+                    'set_particle_rotvel',
                     'get_particle_sigh',
                     'set_particle_sigh',
                     'set_particle_npep',
@@ -2174,6 +2303,7 @@ class Flash(CommonCode):
                     'set_particle_gpot',
                     'get_particle_gpot',
                     'set_particle_wind_mass',
+                    'set_particle_tracer_dydt',
                     'set_particle_wind_vel',
                     'get_particle_tags',
                     'get_particle_proc',

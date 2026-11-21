@@ -47,7 +47,7 @@ subroutine Particles_MarkRefineDerefine()
     use tree
     use paramesh_dimensions
     use physicaldata, ONLY : unk
-    use Grid_data, ONLY : gr_maxRefine
+    use Grid_data, ONLY : gr_maxRefine, gr_meshMe
 
     use Grid_interface, ONLY : Grid_getListOfBlocks, Grid_getBlkPhysicalSize, & 
          Grid_getCellCoords, Grid_getBlkIndexLimits, Grid_getBlkCenterCoords
@@ -92,7 +92,10 @@ subroutine Particles_MarkRefineDerefine()
 logical, save              :: first_call = .true.
 character(len=80), save    :: grav_boundary_type
 
-    real*8, save           :: wind_radius
+#ifdef WIND_INJ
+real*8, save               :: wind_radius
+#endif
+
 #include "Flash_mpi.h"
 
 
@@ -116,10 +119,13 @@ if (first_call) then
 end if
 #endif
 
+  
+
 ! Local number of massive/active particles.
   p_begin = pt_typeInfo(PART_TYPE_BEGIN,ACTIVE_PART_TYPE)
   p_num   = pt_typeInfo(PART_LOCAL,ACTIVE_PART_TYPE)
   p_end   = p_num + p_begin - 1
+
 #ifdef debug
 print*, "p_num =", p_num, dr_globalMe
 #endif
@@ -255,8 +261,10 @@ print*, "z =", z
                          ! radius to be a constant. -EA
                          if (rad/(2.**(gr_maxRefine-lrefine(b)-1)) .le. wind_radius) then !else if 
 #ifdef debug
+print*, "Particle found on dr_globalMe =", dr_globalMe
 print*, "rad =", rad, dr_globalMe
 print*, "ref =", ref_radius, dr_globalMe
+print*, "wind =", wind_radius, dr_globalMe
 #endif
                             p_found = .true.
                          end if
@@ -274,7 +282,7 @@ print*, "ref =", ref_radius, dr_globalMe
 
           if (p_found) then
 #ifdef debug
- print*, "[Particles_markRefineDerefine]: Particle found!", dr_globalMe
+             print*, "[Particles_markRefineDerefine]: Particle found!", dr_globalMe
 #endif
              if (lrefine(b) .lt. gr_maxRefine) then
                 refine   (b) = .TRUE.

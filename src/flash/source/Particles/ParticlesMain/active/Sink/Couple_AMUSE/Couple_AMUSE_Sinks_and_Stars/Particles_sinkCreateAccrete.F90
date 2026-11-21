@@ -137,7 +137,13 @@ subroutine Particles_sinkCreateAccrete(dt)
                   POSX_PART_PROP, POSY_PART_PROP, POSZ_PART_PROP, &
                   VELX_PART_PROP, VELY_PART_PROP, VELZ_PART_PROP, &
                   X_ANG_PART_PROP, Y_ANG_PART_PROP, Z_ANG_PART_PROP /)
-                  
+
+#ifdef TRACER_FIELDS
+  integer, dimension(pt_num_tracer_fields), save :: gather_tracer_inds
+  integer :: itracer
+  real, dimension(pt_num_tracer_fields, maxsinks) :: tracer_mass
+#endif
+
   integer :: blk_refine_level
   
   real :: gas_mean_vel_x, gas_mean_vel_y, gas_mean_vel_z, &
@@ -174,6 +180,13 @@ subroutine Particles_sinkCreateAccrete(dt)
     iYcoord  = JAXIS
     iZcoord  = KAXIS
     izn = CENTER
+
+#ifdef TRACER_FIELDS
+    ! Gather tracer field indices for particles.
+    do itracer = 1, pt_num_tracer_fields
+      gather_tracer_inds(itracer) = pt_tracer_fields_begin + (itracer - 1)
+    enddo
+#endif
 
     call RuntimeParameters_get("sink_density_thresh", density_thresh)
     call RuntimeParameters_get("sink_accretion_radius", accretion_radius)
@@ -626,6 +639,9 @@ subroutine Particles_sinkCreateAccrete(dt)
   ang_x(:)      = 0.
   ang_y(:)      = 0.
   ang_z(:)      = 0.
+#ifdef TRACER_FIELDS
+  tracer_mass = 0.
+#endif
 
   ! do it again, but only loop over affected blocks and
   ! add mass to particles
@@ -832,6 +848,13 @@ subroutine Particles_sinkCreateAccrete(dt)
                         ang_z(pno_to_accrete)    = ang_z(pno_to_accrete) + &
                              & (distx*solnData(ively,ip,jp,kp)-disty*solnData(ivelx,ip,jp,kp))*mass
 
+#ifdef TRACER_FIELDS
+                        ! Save tracer field mass, convert to fraction later.
+                        do itracer = 1, pt_num_tracer_fields
+                          tracer_mass(itracer, pno_to_accrete) = tracer_mass(itracer, pno_to_accrete) + &
+                             & solnData(MASS_SCALARS_BEGIN+(itracer-1),ip,jp,kp)*mass
+                        enddo
+#endif
                     end if
 
                   end if
@@ -870,10 +893,22 @@ subroutine Particles_sinkCreateAccrete(dt)
       particles_local(iplx,lp) = ang_x(lp)
       particles_local(iply,lp) = ang_y(lp)
       particles_local(iplz,lp) = ang_z(lp)
+#ifdef TRACER_FIELDS
+      ! Convert from mass to fraction
+      if (tot_mass(lp) .ne. 0.0) then
+         do itracer = 1, pt_num_tracer_fields
+            particles_local(gather_tracer_inds(itracer),lp) = tracer_mass(itracer,lp)/tot_mass(lp)
+         enddo
+      endif
+#endif
    end do
 
    ! Exchange information across CPUs
    call pt_sinkGatherGlobal(gather_propinds, gather_nprops)
+#ifdef TRACER_FIELDS
+   ! Handle information exchange for tracer fields separately.
+   call pt_sinkGatherGlobal(gather_tracer_inds, pt_num_tracer_fields)
+#endif
 
    npart = localnp
 
@@ -902,6 +937,13 @@ subroutine Particles_sinkCreateAccrete(dt)
             ang_x(lp) = ang_x(lp) + particles_global(iplx,nlp)
             ang_y(lp) = ang_y(lp) + particles_global(iply,nlp)
             ang_z(lp) = ang_z(lp) + particles_global(iplz,nlp)
+#ifdef TRACER_FIELDS
+            do itracer = 1,pt_num_tracer_fields
+               tracer_mass(itracer,lp) = tracer_mass(itracer,lp) &
+                 + particles_global(gather_tracer_inds(itracer), nlp) &
+                 * particles_global(ipm, nlp)
+            enddo
+#endif
          end if
       end do
 
@@ -940,6 +982,14 @@ subroutine Particles_sinkCreateAccrete(dt)
          particles_local(iplz,lp) = particles_local(iplz,lp) + ang_z(lp) - particles_local(ipm,lp) * &
                                     ( (particles_local(ipx,lp)-px_old)*particles_local(ipvy,lp) - &
                                       (particles_local(ipy,lp)-py_old)*particles_local(ipvx,lp)  )
+#ifdef TRACER_FIELDS
+         ! Tracer field update
+         do itracer = 1,pt_num_tracer_fields
+            particles_local(gather_tracer_inds(itracer),lp) = (particles_local(gather_tracer_inds(itracer),lp) * &
+                                    & particles_local(iold_pmass,lp) + tracer_mass(itracer,lp)) / &
+                                    & particles_local(ipm,lp)
+         enddo
+#endif
       end if ! mass was accreted
 
       particles_local(ipmdot,lp) = (particles_local(ipm,lp) - particles_local(iold_pmass,lp)) / dt

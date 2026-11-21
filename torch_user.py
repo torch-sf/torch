@@ -149,6 +149,8 @@ def user_parameters():
     p['massloss_method'] = 'seba_puls' # use SeBa mass loss rates and velocities from Kudritzki and Puls 2000, ARA&A.
     p['max_gamma'] = 0.8 # maximum Eddington factor with which to calculate wind velocities. Default value of 0.8 is based on upper limit for non-interacting stars, see Vink 2022, ARA&A Fig. 5.
     p['min_feedback_mass'] = 7.0 | units.MSun
+    p['with_yields'] = True
+    p['tracer_fields'] = ['ignore', 'ignore', 'ignore', 'wind', 'ccsn', 'H', 'Fe', 'O', 'Na']
     p['CE_method'] = 'wind' # method for CE ejection. Default is 'wind' but the alpha formalism ('alpha') or the SN injection scheme ('SN')are also availaible
     p['CE_alpha'] = 1 # efficiency for CE ejection if using the alpha formalism; default is 1.
     p['remove_merged'] = True # remove merged stars
