@@ -399,7 +399,9 @@ class TestWinds:
             profile = np.interp(centers, centers[valid], profile[valid])
 
             if log:
-                profile = np.log10(profile)
+                valid = profile > 0
+                profile[valid] = np.log10(profile[valid])
+                profile[~valid] = np.nan
 
             if smooth > 0:
                 profile = gaussian_filter1d(profile, smooth)
@@ -503,7 +505,9 @@ class TestWinds:
         return {"time": time_arr | units.s,
                 "momentum": momentum_arr | units.g * units.cm / units.s,
                 "R1": R1_arr | units.cm,
-                "R2": R2_arr | units.cm}
+                "R2": R2_arr | units.cm,
+                "dlnR1/dlnt": np.gradient(np.log(R1_arr), np.log(time_arr)) | units.no_unit,
+                "dlnR2/dlnt": np.gradient(np.log(R2_arr), np.log(time_arr)) | units.no_unit}
 
     def _expected(self):
         """
@@ -517,7 +521,9 @@ class TestWinds:
         return {"R1": self.weaver.wind_termination_shock_radius(t, self.dmdt, self.vterm, self.rho0),
                 "RC": self.weaver.contact_discontinuity_radius(t, self.dmdt, self.vterm, self.rho0),
                 "R2": self.weaver.forward_shock_radius(t, self.dmdt, self.vterm, self.rho0),
-                "momentum": self.weaver.shell_momentum(t, self.dmdt, self.vterm, self.rho0)}
+                "momentum": self.weaver.shell_momentum(t, self.dmdt, self.vterm, self.rho0),
+                "dlnR1/dlnt": np.full_like(t, 2/5) | units.no_unit,
+                "dlnR2/dlnt": np.full_like(t, 3/5) | units.no_unit}
 
     def _assert_agreement(self, measured, expected, name):
         """
@@ -583,6 +589,15 @@ class TestWinds:
 
         self._assert_agreement(self.wind_evolution["momentum"], expected["momentum"], "Shell momentum")
 
+    def test_bubble_evolution_slope(self):
+        """
+        Compare slope of dR/dt.
+        """
+        expected = self._expected()
+
+        for quantity in ("dlnR1/dlnt", "dlnR2/dlnt"):
+            self._assert_agreement(self.wind_evolution[quantity], expected[quantity], quantity)
+
 def main():
 
     parser = argparse.ArgumentParser(description="Test Torch wind bubble against Weaver (1977).")
@@ -609,6 +624,7 @@ def main():
     test = TestWinds(args.directory, args.number_checks, args.tolerance, plot=args.plot)
     test.test_momentum_evolution()
     test.test_time_evolution()
+    test.test_bubble_evolution_slope()
 
 if __name__ == "__main__":
     main()
