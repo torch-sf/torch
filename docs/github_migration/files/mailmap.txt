@@ -1,0 +1,29 @@
+Brooke Polak <bp4928@gmail.com> <bpolak@int1.local.snellius.surf.nl>
+Brooke Polak <bp4928@gmail.com> bp4928 <bp4928@login2.stampede3.tacc.utexas.edu>
+Brooke Polak <bp4928@gmail.com> brookepo <bp4928@gmail.com>
+Brooke Polak <bp4928@gmail.com> brookepo <brookepo@bitbucket.org>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@mpa-garching.mpg.de>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@gra-login2.graham.sharcnet>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@int2.bullx>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@mcmaster.ca>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@nia-login03.scinet.local>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> <cournoyc@nia-login07.scinet.local>
+Claude Cournoyer-Cloutier <cournoyc@MPA-Garching.MPG.DE> cournoyc <42814821+ClaudeCC97@users.noreply.github.com>
+Eric Andersson <eandersson@amnh.org> <eaherrgarden@gmail.com>
+Eric Andersson <eandersson@amnh.org> <eandersson@mendel-head.mendel.sdmz.amnh.org>
+Eric Andersson <eandersson@amnh.org> <eric@astro.lu.se>
+Lourens Veen <l.veen@esciencecenter.nl> LourensVeen <l.veen@esciencecenter.nl>
+Maite Wilhelm <wilhelm@strw.leidenuniv.nl> Martijn Wilhelm <mwilhelm@int2.bullx>
+Maite Wilhelm <wilhelm@strw.leidenuniv.nl> Martijn Wilhelm <mwilhelm@int2.local.snellius.surf.nl>
+Maite Wilhelm <wilhelm@strw.leidenuniv.nl> Martijn Wilhelm <mwilhelm@int4.local.snellius.surf.nl>
+Maite Wilhelm <wilhelm@strw.leidenuniv.nl> wilhelm <wilhelm@strw.leidenuniv.nl>
+Maite Wilhelm <wilhelm@strw.leidenuniv.nl> MJCWilhelm <martijn@wilhelm4all.nl>
+Sean Lewis <scl63@drexel.edu> <slewis@int1.local.snellius.surf.nl>
+Sean Lewis <scl63@drexel.edu> <slewis@int4.local.snellius.surf.nl>
+Sean Lewis <scl63@drexel.edu> <slewis@int5.local.snellius.surf.nl>
+Sean Lewis <scl63@drexel.edu> <slewis@int6.local.snellius.surf.nl>
+Sean Lewis <scl63@drexel.edu> <slewis@login1.stampede2.tacc.utexas.edu>
+Sean Lewis <scl63@drexel.edu> <slewis@login2.stampede2.tacc.utexas.edu>
+Sean Lewis <scl63@drexel.edu> <slewis@login3.stampede2.tacc.utexas.edu>
+Sean Lewis <scl63@drexel.edu> <slewis@login4.stampede2.tacc.utexas.edu>
+William Farner <wrf28@drexel.edu> willfarner <admin@admins-MBP-2.hsd1.mi.comcast.net>

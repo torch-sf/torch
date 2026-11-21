@@ -35,6 +35,7 @@ myst_enable_extensions = [
 autodoc_mock_imports = ["numpy", "matplotlib", "scipy", "amuse"]
 source_suffix = ['.rst', '.md']
 master_doc = "index"
+numfig = True
 
 templates_path = ['_templates']
 exclude_patterns = ['.DS_Store']

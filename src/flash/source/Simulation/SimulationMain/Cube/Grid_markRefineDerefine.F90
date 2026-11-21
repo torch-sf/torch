@@ -60,6 +60,7 @@ subroutine Grid_markRefineDerefine()
   use Grid_interface, ONLY : Grid_fillGuardCells, Grid_markDerefineSpecialized
   use Particles_interface, only: Particles_sinkMarkRefineDerefine, &
                                  Particles_markRefineDerefine
+  
   implicit none
 
 #include "constants.h"

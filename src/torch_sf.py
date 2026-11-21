@@ -302,7 +302,8 @@ def queue_stars(state, hydro, min_imf_mass=None, max_imf_mass=None,
                                           num_bins=sample_imf_bins,
                                           min_samp_mass=min_imf_mass.value_in(units.MSun),
                                           max_samp_mass=max_imf_mass.value_in(units.MSun),
-                                          sum_small=sum_small
+                                          sum_small=sum_small,
+										  m_small=m_small.value_in(units.MSun)
                                           )
             
                 tprint("... sink tag {}".format(sink_tag), end='')
@@ -440,28 +441,58 @@ def make_stars_from_sinks(state, hydro, sink_rad=None, binaries=False):
                 # For yields tables (assumes solar metallicity)
                 star.rotvel = sample_rotation_Prantzos(nnew*[0.02]) | units.km / units.s
 
-            # Create new stars in FLASH
-            hydro.set_particle_pointers('mass')
-            star_tag = hydro.add_particles(star.x, star.y, star.z)
-            hydro.set_particle_mass(star_tag, star.mass)
-            hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-            hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
-            if state.yields is not None:
-                hydro.set_particle_rotvel(star_tag, star.rotvel)
+            # Spawn only the stars located within the simulation domain
+            xmin = hydro.get_runtime_parameter('xmin') | units.cm
+            xmax = hydro.get_runtime_parameter('xmax') | units.cm
+            ymin = hydro.get_runtime_parameter('ymin') | units.cm
+            ymax = hydro.get_runtime_parameter('ymax') | units.cm
+            zmin = hydro.get_runtime_parameter('zmin') | units.cm
+            zmax = hydro.get_runtime_parameter('zmax') | units.cm
 
-            if num_tracers > 0:
-                for itrac in range(num_tracers):
-                    hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
-                    hydro.set_particle_tracer_field(star_tag, sink_tracer_field[itrac]*np.ones(nnew))
+            inside = np.logical_and.reduce([
+                star.x < xmax, star.x > xmin,
+                star.y < ymax, star.y > ymin,
+                star.z < zmax, star.z > zmin,
+            ])
 
-            # Initialize cross section values to something reasonable and non-zero.
-            # if stellar evolution is off and radiation is on, these values are zero
-            # which causes non-convergence in vettam. 
-            if state.user['with_lyc'] or state.user['with_pe_heat']: 
-                star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
-                star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
-                hydro.set_particle_sigh(star_tag, star.sigh)
-                hydro.set_particle_sigd(star_tag, star.sigd)
+            if not np.all(inside):
+                tprint(
+                    f"... {np.count_nonzero(~inside)} stars are outside the domain and will not be spawned.")
+
+            star = star[inside]
+            # Update nnew to match the stars formed
+            nnew = len(star)
+ 
+            if nnew >= 1:
+
+                # Create new stars in FLASH
+                hydro.set_particle_pointers('mass')
+                star_tag = hydro.add_particles(star.x, star.y, star.z)
+                hydro.set_particle_mass(star_tag, star.mass)
+                hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
+                hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+
+                if state.yields is not None:
+                    hydro.set_particle_rotvel(star_tag, star.rotvel)
+
+                if num_tracers > 0:
+                    for itrac in range(num_tracers):
+                        hydro.set_tracer_field_pointer(itrac+1) # Fortran style counting (start on 1)
+                        hydro.set_particle_tracer_field(star_tag, sink_tracer_field[itrac]*np.ones(nnew))
+
+                # Initialize cross section values to something reasonable and non-zero.
+                # if stellar evolution is off and radiation is on, these values are zero
+                # which causes non-convergence in vettam. 
+                if state.user['with_lyc'] or state.user['with_pe_heat']: 
+                    star.sigd     = np.ones(nnew)*state.user['sigd'] | units.cm*units.cm
+                    star.sigh     = np.ones(nnew)*3.0e-18 | units.cm*units.cm
+                    hydro.set_particle_sigh(star_tag, star.sigh)
+                    hydro.set_particle_sigd(star_tag, star.sigd)
+                else:
+                    pass
+
+            else:
+                formed_stars = False
 
     # if we made no stars, need to reset pointers
     hydro.set_particle_pointers('mass')

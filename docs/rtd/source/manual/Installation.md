@@ -22,6 +22,25 @@ export PETSC_ARCH=arch-linux-c-debug
 export LD_LIBRARY_PATH=$PETSC_ARCH/lib:$LD_LIBRARY_PATH
 ```
 
+Note that installing Petsc only works with Python 3.11 or less. This version of python is only needed once to install Petsc on your machine. If you want to use a newer version of Python with Torch, here are instructions to make a Python 3.11 environment specifically for installing Petsc. 
+
+Run:
+```
+wget https://www.python.org/ftp/python/3.11.8/Python-3.11.8.tgz
+tar -xzf Python-3.11.8.tgz
+cd Python-3.11.8
+./configure --prefix=$HOME/python-3.11 --enable-optimizations
+make -j
+make install
+```
+Now python lives in `$HOME/python-3.11`.
+
+Create a specific venv with this version with:
+
+`$HOME/python-3.11/bin/python3.11 -m venv python3.11-petsc`
+
+Then activate this environment, install Petsc, and deactivate the environment.
+
 Compiling VETTAM:
 
 In the FLASH Makefile.h:

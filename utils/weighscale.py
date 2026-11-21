@@ -59,10 +59,12 @@ total = np.sum(rho) * (box_sizes*2/nblock)**3  # g
 amb = np.amin(rho) * (box_sizes*2)**3 \
       * (1 - 4*np.pi/3*r0_vals**3/(box_sizes*2)**3)
 
+dens = 3*(total-amb)/(4*np.pi*r0_vals**3)
+
 print("Rsph (pc)", r0_vals/cmpc)
 print("box halfwidth (pc)", box_sizes/cmpc)
 print("Total mass (Msun):".format(fname), total / Msun)
 print("Ambient mass (Msun):", amb / Msun)
 print("Total - ambient mass (Msun):", (total - amb) / Msun)
 
-print("t_freefall (Myr):", (3*np.pi/32/G * r0_vals**3/(total-amb))**0.5 / (1e6*year))
+print("t_freefall (Myr):", (3*np.pi/(32*G*dens))**0.5 / (1e6*year))
