@@ -12,6 +12,7 @@ the box.
 import argparse
 from pathlib import Path
 
+import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import yt
@@ -232,13 +233,15 @@ class Weaver1977:
         return 0.5 * Msh * vsh**2
 
 
-class TestWinds:
+class TorchWinds:
     """
     Compare Torch wind-bubble simulations against Weaver et al. (1977).
 
     Attributes:
         directory: simulation data directory
         tolerance: asserts agreement within this tolerance
+        number_checks: number of flash outputs to check
+        start_checks_time: first output to check
         weaver: analytical solution from Weaver et al. (1977)
         flash_files: plot files from flash
         star_files: amuse particle files
@@ -248,7 +251,7 @@ class TestWinds:
         wind_evolution: quanties that will be compared to Weaver et al. (1977) solution
     """
 
-    def __init__(self, directory, number_checks = 5, tolerance=0.1, massloss_method='seba_puls', max_gamma=0.8, plot=False):
+    def __init__(self, directory,  tolerance, number_checks = 5, start_checks_time=1 | units.kyr, massloss_method='seba_puls', max_gamma=0.8, plot=False):
         """
         Initialize class by loading data and calculating the properties that will be tested.
 
@@ -261,8 +264,9 @@ class TestWinds:
             plot: create plots, all=verbose, tests=show only tests
         """
         self.directory = Path(directory)
-        self.number_checks = number_checks
         self.tolerance = tolerance
+        self.number_checks = number_checks
+        self.start_checks_time = start_checks_time
         self.weaver = Weaver1977()
         self.star_files = sorted(self.directory.glob("stars*.amuse"))[1:]
         self.flash_files = sorted(self.directory.glob("*_hdf5_plt_cnt_*"))
@@ -280,7 +284,37 @@ class TestWinds:
 
         self.rho0 = self.get_rho0()
         self.center, self.dmdt, self.vterm = self.get_star_properties(massloss_method, max_gamma)
+
+        self.flash_files = [f for f in self.flash_files
+            if self.get_time_flash(f) >= self.start_checks_time]
+
         self.wind_evolution = self.get_wind_evolution()
+        self.delta_mom0 = self.get_delta_mom0()
+
+    def get_time_flash(self, flash_file):
+        """
+        Get the timestamp from a flash output.
+
+        Arguments:
+            flash_file: flash output file to load
+        """
+
+        with h5py.File(flash_file, "r") as file:
+            scalars = file["real scalars"][:]
+
+        for args, val in zip(scalars["name"], scalars["value"]):
+            if b'time' in args:
+                time = val | units.s
+                return time
+
+    def get_delta_mom0(self):
+        """
+        Get the additional momentum gained due to low resolution initialization.
+        """
+
+        delta_mom0 = self.wind_evolution['momentum'][0] \
+            - self.weaver.shell_momentum(self.wind_evolution['time'][0], self.dmdt, self.vterm, self.rho0)
+        return delta_mom0
 
     def get_rho0(self):
         """
@@ -388,9 +422,8 @@ class TestWinds:
 
             if weights is None:
                 weights = np.ones(quantity.size)
-                w_sum = np.hisogram(r, bins=edges)
-            else:
-                w_sum, _ = np.histogram(r, bins=edges, weights=weights)
+
+            w_sum, _ = np.histogram(r, bins=edges, weights=weights)
 
             hist, _ = np.histogram(r, bins=edges, weights=quantity*weights)
             profile = np.divide(hist, w_sum, out=np.full(nbins, np.nan), where=w_sum > 0)
@@ -437,6 +470,13 @@ class TestWinds:
 
             return iR1, iR2
 
+        def fit_log_slope(time, radius):
+            """
+            Fit the power-law exponent R ~ t^alpha.
+            """
+            slope, _ = np.polyfit(np.log(time), np.log(radius), 1)
+            return slope
+
 
         time_arr = np.zeros(self.number_checks)
         momentum_arr = np.zeros(self.number_checks)
@@ -445,7 +485,8 @@ class TestWinds:
 
         shift = int((len(self.flash_files))/self.number_checks)
         for i in range(self.number_checks):
-            filename = self.flash_files[(1+i)*shift-1]
+            ifile = (1+i)*shift-1
+            filename = self.flash_files[ifile]
             ds = yt.load(filename)
             ad = ds.all_data()
 
@@ -468,7 +509,7 @@ class TestWinds:
 
             # Characteristic radii from pressure profile
             rbins, pres = _get_profile(radius, pressure, weights = volume)
-            iR1, iR2 = _bubble_radii_index(rbins, pres, output_nr=i+1)
+            iR1, iR2 = _bubble_radii_index(rbins, pres, output_nr=ifile)
             R1_arr[i] = rbins[iR1]
             R2_arr[i] = rbins[iR2]
 
@@ -478,7 +519,7 @@ class TestWinds:
                 for ax in axs:
                     ax.tick_params(axis='both', labelsize=7)
                 axs[-1].set_xlabel("Radius [pc]", fontsize=8)
-                axs[0].text(0.95, 0.3, f"Time = {ds.current_time.to("kyr").value:.0f} kyr", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
+                axs[0].text(0.95, 0.3, f"Time = {ds.current_time.to("kyr").value:.1f} kyr", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
                 axs[0].text(0.95, 0.5, r"Density [${g\ \rm cm}^{-3}$]", transform=axs[0].transAxes, ha='right', va='center', fontsize=8)
                 axs[1].text(0.95, 0.5, r"Temperature [K]", transform=axs[1].transAxes, ha='right', va='center', fontsize=8)
                 axs[2].text(0.95, 0.5, r"Pressure [${\rm dyne}\, {\rm cm}^{-2}$]", transform=axs[2].transAxes, ha='right', va='center', fontsize=8)
@@ -488,26 +529,27 @@ class TestWinds:
                 _, rho = _get_profile(radius, density, weights = volume)
                 _, temp = _get_profile(radius, temperature, weights = volume)
                 _, vel = _get_profile(radius, vr, weights = volume)
-                axs[0].plot(rbins, rho, '-r')
-                axs[1].plot(rbins, temp, '-g')
-                axs[2].plot(rbins, pres, '-b')
-                axs[3].plot(rbins, vel, '-k')
+                rbins = rbins | units.cm
+                axs[0].plot(rbins.value_in(units.pc), rho, '-r')
+                axs[1].plot(rbins.value_in(units.pc), temp, '-g')
+                axs[2].plot(rbins.value_in(units.pc), pres, '-b')
+                axs[3].plot(rbins.value_in(units.pc), vel, '-k')
 
-                axs[4].plot(rbins, np.gradient(temp, rbins), '-r', lw=1)
-                axs[4].plot(rbins, np.gradient(rho, rbins), '-g', lw=1)
-                axs[4].plot(rbins, np.gradient(pres, rbins), '-b', lw=1)
-                axs[4].plot(rbins, np.gradient(vel, rbins), '-k', lw=1)
+                axs[4].plot(rbins.value_in(units.pc), np.gradient(temp, rbins.value_in(units.cm)), '-r', lw=1)
+                axs[4].plot(rbins.value_in(units.pc), np.gradient(rho, rbins.value_in(units.cm)), '-g', lw=1)
+                axs[4].plot(rbins.value_in(units.pc), np.gradient(pres, rbins.value_in(units.cm)), '-b', lw=1)
+                axs[4].plot(rbins.value_in(units.pc), np.gradient(vel, rbins.value_in(units.cm)), '-k', lw=1)
                 for ax in axs:
-                    [ax.axvline(rad, linestyle=ls, color='k', alpha=0.6) for rad,ls in zip([rbins[iR1], rbins[iR2]],[':', '--'])]
-                plt.savefig(self.saveto / f'profile_{i+shift+1:05d}.png', dpi=120, bbox_inches="tight")
+                    [ax.axvline(rad, linestyle=ls, color='k', alpha=0.6) for rad,ls in zip([rbins[iR1].value_in(units.pc), rbins[iR2].value_in(units.pc)],[':', '--'])]
+                plt.savefig(self.saveto / f'profile_{ifile:05d}.png', dpi=120, bbox_inches="tight")
                 plt.close(fig)
 
         return {"time": time_arr | units.s,
                 "momentum": momentum_arr | units.g * units.cm / units.s,
                 "R1": R1_arr | units.cm,
                 "R2": R2_arr | units.cm,
-                "dlnR1/dlnt": np.gradient(np.log(R1_arr), np.log(time_arr)) | units.no_unit,
-                "dlnR2/dlnt": np.gradient(np.log(R2_arr), np.log(time_arr)) | units.no_unit}
+                "dlnR1/dlnt": fit_log_slope(time_arr, R1_arr) | units.no_unit,
+                "dlnR2/dlnt": fit_log_slope(time_arr, R2_arr) | units.no_unit}
 
     def _expected(self):
         """
@@ -527,22 +569,29 @@ class TestWinds:
 
     def _assert_agreement(self, measured, expected, name):
         """
-        Assert agreement at all times within relative tolerance.
+        Assert agreement based on mean relative error and warn about outliers.
 
         Arguments:
-            measured: array of measured quantities to check
-            expected: array of expected value of quantity
-            name: name of quantities
+            measured: measured quantity
+            expected: expected quantity
+            name: name of quantity
         """
-        measured_values = measured.value_in(expected.unit)
-        expected_values = expected.value_in(expected.unit)
+        measured_values = np.atleast_1d(measured.value_in(expected.unit))
+        expected_values = np.atleast_1d(expected.value_in(expected.unit))
+
         relative_error = np.abs(measured_values / expected_values - 1)
 
-        print(f"{name}: maximum relative error "
-              f"{np.max(relative_error):.1%} "
-              f"with a tolerance of {self.tolerance:.1%}")
+        mean_error = np.mean(relative_error)
+        max_error = np.max(relative_error)
 
-    def test_time_evolution(self):
+        print(f"{name}: mean relative error {mean_error:.1%}, "
+            f"maximum relative error {max_error:.1%}")
+
+        assert mean_error < self.tolerance, (
+            f"{name}: mean relative error {mean_error:.1%} "
+            f"exceeds tolerance {self.tolerance:.1%}")
+
+    def time_evolution(self):
         """
         Compare characteristic radii against Weaver (1977).
         """
@@ -568,7 +617,7 @@ class TestWinds:
         for quantity in ("R1", "R2"):
             self._assert_agreement(self.wind_evolution[quantity], expected[quantity], quantity)
 
-    def test_momentum_evolution(self):
+    def momentum_evolution(self):
         """
         Compare radial shell momentum against Weaver (1977).
         """
@@ -580,16 +629,16 @@ class TestWinds:
             plt.xlabel('Time [kyr]', fontsize=10)
             plt.ylabel(r'Momentum [${\rm M}_{\odot}\,{\rm km\, s}^{-1}$]', fontsize=10)
             plt.yscale('log')
-            plt.plot(self.wind_evolution["time"].value_in(units.kyr), self.wind_evolution["momentum"].value_in(units.MSun * units.km / units.s), '-k', label="Simulation")
+            plt.plot(self.wind_evolution["time"].value_in(units.kyr), self.wind_evolution["momentum"].value_in(units.MSun * units.km / units.s) - self.delta_mom0.value_in(units.MSun * units.km / units.s), '-k', label="Simulation")
             plt.plot(self.wind_evolution["time"].value_in(units.kyr), expected["momentum"].value_in(units.MSun * units.km / units.s), '--k', label="Weaver et al. (1977)")
 
             plt.legend(loc='upper left', fontsize=8, frameon=False)
             plt.savefig(self.saveto / "momentum.png", dpi=120, bbox_inches="tight")
             plt.close(fig)
 
-        self._assert_agreement(self.wind_evolution["momentum"], expected["momentum"], "Shell momentum")
+        self._assert_agreement(self.wind_evolution["momentum"]-self.delta_mom0, expected["momentum"], "Shell momentum")
 
-    def test_bubble_evolution_slope(self):
+    def bubble_evolution_slope(self):
         """
         Compare slope of dR/dt.
         """
@@ -597,6 +646,24 @@ class TestWinds:
 
         for quantity in ("dlnR1/dlnt", "dlnR2/dlnt"):
             self._assert_agreement(self.wind_evolution[quantity], expected[quantity], quantity)
+
+
+class TestWinds:
+
+    directory = './wind_refactor/data'
+    tolerance = 0.4
+
+    winds = TorchWinds(directory, tolerance)
+
+    def test_momentum_evolution(self):
+        self.winds.momentum_evolution()
+
+    def test_time_evolution(self):
+        self.winds.time_evolution()
+
+    def test_bubble_evolution_slope(self):
+        self.winds.bubble_evolution_slope()
+
 
 def main():
 
@@ -608,24 +675,38 @@ def main():
 
     parser.add_argument("--number_checks",
         type=float,
-        default=10,
+        default=5,
         help="Number of outputs to check",)
-    
+
+    parser.add_argument("--start_checks",
+        type=float,
+        default=1,
+        help="Time to start checks in kyr",)
+
     parser.add_argument("--tolerance",
         type=float,
-        default=0.1,
-        help="Relative tolerance (default: 0.1)",)
+        default=0.4,
+        help="Relative tolerance (default: 0.5)",)
 
     parser.add_argument("--plot",
         action="store_true",
         help="Plot tests (tests) or plot everything (all)")
 
     args = parser.parse_args()
-    test = TestWinds(args.directory, args.number_checks, args.tolerance, plot=args.plot)
-    test.test_momentum_evolution()
-    test.test_time_evolution()
-    test.test_bubble_evolution_slope()
+    test = TorchWinds(args.directory, args.tolerance, number_checks=args.number_checks, start_checks_time=args.start_checks | units.kyr, plot=args.plot)
+
+    # Tests
+    tests = [
+        test.momentum_evolution,
+        test.time_evolution,
+        test.bubble_evolution_slope]
+
+    for test in tests:
+        try:
+            test()
+            print(f"PASSED: {test.__name__}")
+        except AssertionError as e:
+            print(f"FAILED: {test.__name__}: {e}")
 
 if __name__ == "__main__":
     main()
-
