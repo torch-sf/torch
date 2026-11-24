@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yt
 from scipy.ndimage import gaussian_filter1d
+from matplotlib.patches import FancyBboxPatch
 
 from amuse.io import read_set_from_file
 from amuse.units import units
@@ -238,7 +239,8 @@ class TorchWinds:
     Compare Torch wind-bubble simulations against Weaver et al. (1977).
 
     Attributes:
-        directory: simulation data directory
+        directory: simulation directory
+        datadir: simulation data directory
         tolerance: asserts agreement within this tolerance
         number_checks: number of flash outputs to check
         start_checks_time: first output to check
@@ -256,7 +258,7 @@ class TorchWinds:
         Initialize class by loading data and calculating the properties that will be tested.
 
         Arguments:
-            directory: simulation data directory
+            directory: simulation directory
             number_checks: number of outputs to check
             tolerance: asserts agreement within this tolerance
             massloss_method: mass loss method assumed by Torch
@@ -264,12 +266,21 @@ class TorchWinds:
             plot: create plots, all=verbose, tests=show only tests
         """
         self.directory = Path(directory)
+        self.datadir = self.directory / "data"
         self.tolerance = tolerance
-        self.number_checks = number_checks
+        self.star_files = sorted(self.datadir.glob("stars*.amuse"))[1:]
+        self.flash_files = sorted(self.datadir.glob("*_hdf5_plt_cnt_*"))
+
         self.start_checks_time = start_checks_time
+        self.flash_files = [f for f in self.flash_files
+            if self.get_time_flash(f) >= self.start_checks_time]
+
+        if number_checks == 0:
+            self.number_checks = len(self.flash_files)
+        else: 
+            self.number_checks = number_checks
+
         self.weaver = Weaver1977()
-        self.star_files = sorted(self.directory.glob("stars*.amuse"))[1:]
-        self.flash_files = sorted(self.directory.glob("*_hdf5_plt_cnt_*"))
         self.plot = plot
 
         if self.plot:
@@ -285,11 +296,11 @@ class TorchWinds:
         self.rho0 = self.get_rho0()
         self.center, self.dmdt, self.vterm = self.get_star_properties(massloss_method, max_gamma)
 
-        self.flash_files = [f for f in self.flash_files
-            if self.get_time_flash(f) >= self.start_checks_time]
-
         self.wind_evolution = self.get_wind_evolution()
         self.delta_mom0 = self.get_delta_mom0()
+
+        if self.plot:
+            self.plot_final_output()
 
     def get_time_flash(self, flash_file):
         """
@@ -393,6 +404,112 @@ class TorchWinds:
             plt.close(fig)
 
         return center, dmdt, vterm
+
+    def get_flash_wind_params(self):
+        """
+        Parse a flash.par file and return a dictionary of the wind parameters.
+        """
+        params = {}
+
+        with open(self.directory / "flash.par", 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    k = k.strip().lower()
+                    # Remove comments and whitespace/quotes
+                    v = v.split('#')[0].strip().strip('"').strip("'")
+                    params[k] = v
+
+        return {
+            'cons_quant': params.get('cons_quant', 'momentum'),
+            'add_therm_e': params.get('add_therm_e', '.true.'),
+            'mass_load': params.get('mass_load', '.false.'),
+            'var_radius': params.get('var_radius', '.false.'),
+            'perturb_velocity': params.get('perturb_velocity', '.false.'),
+        }
+
+    def plot_final_output(self, 
+            xlim = [-1.28, 1.28],
+            ylim = [-1.28, 1.28],
+            extent = [-1.28, 1.28, -1.28, 1.28],
+            vmin = -1.5,
+            vmax = 2.5):
+        """
+        Creates slice plot of final output.
+        """
+
+        def _get_frame(ds, quantity, unit, width=(1.0, "unitary"), res=[256, 256]):
+            """ Helper function to create slice plot. """
+            sl = ds.slice('z', 0.5)
+            frb = sl.to_frb(width, res)
+            if unit == 'None':
+                return np.array(frb[quantity])
+            else:
+                return np.array(frb[quantity].to(unit))
+
+        def _draw_weaver_ticks():
+            """Helper function to draw Weaver et al. (1977) bubble solution"""
+
+            params = (self.wind_evolution['time'][-1], self.dmdt, self.vterm, self.rho0)
+            r1 = self.weaver.wind_termination_shock_radius(*params).value_in(units.pc)
+            rc = self.weaver.contact_discontinuity_radius(*params).value_in(units.pc)
+            r2 = self.weaver.forward_shock_radius(*params).value_in(units.pc)
+
+            y_span = [-0.15, 0.15]
+            plt.plot([r1, r1], y_span, color='red', linestyle='-', linewidth=1.0)
+            plt.plot([rc, rc], y_span, color='red', linestyle='-', linewidth=1.0)
+            plt.plot([r2, r2], y_span, color='red', linestyle='-', linewidth=1.0)
+
+            # Label them inside the figure next to the lines
+            plt.text(r1, 0.18, "$R_1$", ha='center', va='bottom', fontsize=10, color='red', fontweight='bold')
+            plt.text(rc-0.03, 0.18, "$R_c$", ha='center', va='bottom', fontsize=10, color='red', fontweight='bold')
+            plt.text(r2+0.05, 0.18, "$R_2$", ha='center', va='bottom', fontsize=10, color='red', fontweight='bold')
+
+        fig = plt.figure(figsize=(4.2, 3.6))
+        plt.xlabel('x [pc]', fontsize=11)
+        plt.ylabel('y [pc]', fontsize=11)
+        plt.xlim(*xlim)
+        plt.ylim(*ylim)
+        plt.gca().set_aspect('equal')
+        plt.gca().label_outer()
+
+        ds = yt.load(self.flash_files[-1])
+        dens = _get_frame(ds, 'density', 'mp/cm**3')
+        im = plt.imshow(np.log10(dens), cmap='viridis', extent=extent, vmin=vmin, vmax=vmax, origin='lower')
+
+        _draw_weaver_ticks()
+        flash_params = self.get_flash_wind_params()
+        label = [f"{name} = {flash_params[name]}" for name in flash_params]
+        box = FancyBboxPatch(
+            (0.03, 0.905-0.035*(len(flash_params))),
+            0.48,
+            0.06+(len(flash_params))*0.035,
+            transform=plt.gca().transAxes,
+            facecolor='white',
+            edgecolor='none',
+            alpha=0.8,
+            boxstyle="round,pad=0.01")
+        plt.gca().add_patch(box)
+        plt.text(0.04, 0.96, "Wind bubble test", transform=plt.gca().transAxes, 
+                 va='top', ha='left', fontsize=7.5,
+                 color='black', fontweight='bold')
+        plt.text(0.05, 0.92, "\n".join(label), transform=plt.gca().transAxes, 
+                 va='top', ha='left', fontsize=6.5, color='black')
+        plt.text(0.95, 0.95, f"{ds.current_time.in_units('kyr').value:.2f} kyr", 
+                 transform=plt.gca().transAxes, 
+                 va='top', ha='right', 
+                 fontsize=9)
+        plt.text(0.95, 0.05, r"$\Delta x=$" + f"{ds.index.get_smallest_dx().to("pc").value:.2f} pc", 
+                 transform=plt.gca().transAxes, 
+                 va='bottom', ha='right', 
+                 fontsize=9)
+        cbar_ax = fig.add_axes([0.85, 0.11, 0.03, 0.77])
+        fig.colorbar(im, cax=cbar_ax, label=r"$\log_(n\ [{\rm cm}^{-3}])$")
+        plt.savefig(self.saveto / f'slice.png', dpi=240, bbox_inches="tight")
+        plt.close(fig)
 
     def get_wind_evolution(self):
         """
@@ -629,6 +746,7 @@ class TorchWinds:
             plt.xlabel('Time [kyr]', fontsize=10)
             plt.ylabel(r'Momentum [${\rm M}_{\odot}\,{\rm km\, s}^{-1}$]', fontsize=10)
             plt.yscale('log')
+            plt.xscale('log')
             plt.plot(self.wind_evolution["time"].value_in(units.kyr), self.wind_evolution["momentum"].value_in(units.MSun * units.km / units.s) - self.delta_mom0.value_in(units.MSun * units.km / units.s), '-k', label="Simulation")
             plt.plot(self.wind_evolution["time"].value_in(units.kyr), expected["momentum"].value_in(units.MSun * units.km / units.s), '--k', label="Weaver et al. (1977)")
 
@@ -650,7 +768,7 @@ class TorchWinds:
 
 class TestWinds:
 
-    directory = './wind_refactor/data'
+    directory = './wind_refactor'
     tolerance = 0.4
 
     winds = TorchWinds(directory, tolerance)
@@ -674,19 +792,19 @@ def main():
         help="Simulation directory")
 
     parser.add_argument("--number_checks",
-        type=float,
+        type=int,
         default=5,
-        help="Number of outputs to check",)
+        help="Number of outputs to check")
 
     parser.add_argument("--start_checks",
         type=float,
         default=1,
-        help="Time to start checks in kyr",)
+        help="Time to start checks in kyr")
 
     parser.add_argument("--tolerance",
         type=float,
         default=0.4,
-        help="Relative tolerance (default: 0.5)",)
+        help="Relative tolerance (default: 0.4)")
 
     parser.add_argument("--plot",
         action="store_true",
