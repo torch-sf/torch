@@ -768,10 +768,12 @@ class TorchWinds:
 
 class TestWinds:
 
-    directory = './wind_refactor'
+    directory = './'
     tolerance = 0.4
 
-    winds = TorchWinds(directory, tolerance)
+    @classmethod
+    def setup_class(cls):
+        cls.winds = TorchWinds(cls.directory, cls.tolerance)
 
     def test_momentum_evolution(self):
         self.winds.momentum_evolution()

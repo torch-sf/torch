@@ -1,5 +1,9 @@
-from torch_user import *
 from functools import wraps
+
+from amuse.community.seba.interface import SeBa
+
+from torch_user import *
+from torch_stdout import tprint
 
 # User ics for test 
 def user_initial_conditions(state, hydro):
@@ -12,17 +16,57 @@ def user_initial_conditions(state, hydro):
     """
 
     # ------------------------------------------------------------------------
-    # Wind bubble tests
+    # Wind bubble test
+    # Single stars with initial mass and target age selected to get roughly 
+    # constant mass loss rate (1e-6 Msun/yr) and wind velocity (2e3 km/s) for 
+    # 4 kyr. Star is initialized at center of box and evolved by SeBa to reach
+    # the appropriate stage.
 
-    star          = Particles(1)
-    star.mass     = 60 | units.MSun
+    # Create star
+    initial_mass = 52.0 | units.Msun
+    target_age = 3.198 | units.Myr
+
+    star = Particles(1)
+    star.mass = initial_mass
+    star.initial_mass = initial_mass
     star.position = [0, 0, 0] | units.cm
     star.velocity = [0, 0, 0] | units.cm/units.s
 
-    star_tag = hydro.add_particles(star.x, star.y, star.z)
-    hydro.set_particle_mass(star_tag, star.mass)
-    hydro.set_particle_velocity(star_tag, star.vx, star.vy, star.vz)
-    hydro.set_particle_oldmass(star_tag, star.mass) # Save initial stellar mass for SE code.
+    # Evolve star to target age using a temporary SeBa worker.
+    seba = SeBa()
+    try:
+        seba.parameters.metallicity = 0.02
+        seba.particles.add_particles(star)
+        seba.evolve_model(target_age)
+
+        # Copy evolved stellar properties.
+        for _attribute in seba.particles.get_attribute_names_defined_in_store():
+            seba.particles.new_channel_to(star).copy_attributes([_attribute])
+    finally:
+        seba.stop()
+
+    # Store evolved star in hydro
+    tag = hydro.add_particles(star.x, star.y, star.z)
+    creation_time = hydro.get_time() - star.age
+    hydro.set_particle_mass(tag, star.mass)
+    hydro.set_particle_velocity(tag, star.vx, star.vy, star.vz)
+    hydro.set_particle_oldmass(tag, star.mass)
+    hydro.set_particle_creation_time(tag, creation_time)
+    hydro.set_particle_rel_age(tag, star.relative_age)
+    hydro.set_particle_rel_mass(tag, star.relative_mass)
+    hydro.set_particle_corem(tag, star.core_mass)
+    hydro.set_particle_co_corem(tag, star.COcore_mass)
+    hydro.set_particle_stype(tag, star.stellar_type.value_in(units.stellar_type))
+    hydro.set_particle_radius(tag, star.radius)
+
+    tprint("Initialized wind test problem. The following star has been added:")
+    for attribute, unit in zip(
+        ["age", "mass", "radius", "temperature", "luminosity", "stellar_type"],
+        [units.Myr, units.Msun, units.Rsun, units.K, units.Lsun, None]):
+        if unit is None:
+            tprint(attribute+": ", getattr(star[0], attribute), unit)
+        else:
+            tprint(attribute+": ", getattr(star[0], attribute).value_in(unit), unit)
 
     return
 
