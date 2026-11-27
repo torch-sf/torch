@@ -742,10 +742,12 @@ class TorchBlastwave:
 
 class TestSNe:
 
-    directory = './sne/'
+    directory = './'
     tolerance = 0.1
 
-    sne = TorchBlastwave(directory, tolerance)
+    @classmethod
+    def setup_class(cls):
+        cls.sne = TorchBlastwave(cls.directory, cls.tolerance)
 
     def test_momentum_evolution(self):
         self.sne.momentum_evolution()
@@ -773,7 +775,7 @@ def main():
 
     parser.add_argument("--start_checks",
         type=float,
-        default=7,
+        default=0.5,
         help="Time to start checks in kyr")
 
     parser.add_argument("--plot",

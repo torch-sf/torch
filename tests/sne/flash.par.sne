@@ -100,7 +100,7 @@ gr_pmrpConserve          = .true.
 # ==================================================
 restart         = .false.
 nend            = 999999999
-tmax            = 1.57788e12 # 50 kyr
+tmax            = 7.8894e11 # 25 kyr
 dtinit          = 1.57788e8
 dtmin           = 1.57788e4
 dtmax           = 1.57788e10
@@ -110,7 +110,7 @@ wall_clock_checkpoint       = 0.432e+05
 wall_clock_time_limit       = 1.0e99
 checkpointFileNumber        = 0
 checkpointFileIntervalStep  = 0
-checkpointFileIntervalTime  = 3.15576e11 # 10 kyr
+checkpointFileIntervalTime  = 1.57788e11 # 5 kyr
 plotFileNumber              = 0
 plotFileIntervalStep        = 0
 plotFileIntervalTime        = 3.15576e10 # 1 kyr
